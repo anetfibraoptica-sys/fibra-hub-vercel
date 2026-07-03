@@ -252,7 +252,7 @@ function renderizarClientesReceitaNet(clientes){
   const tbody = document.getElementById("listaClientesReceita");
   if(!tbody) return;
   if(!clientes.length){
-    tbody.innerHTML = '<tr class="linha-clicavel" onclick="abrirClienteCadastro(encodeURIComponent(primeiroValor(c, ['loginPppoe','login','usuario','user','name','pppoe','nome','cliente','razaoSocial'])))"><td colspan="5" class="sem-clientes">Nenhum cliente importado encontrado. Importe o CSV na aba Importação.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" class="sem-clientes">Nenhum cliente importado encontrado. Importe o CSV na aba Importação.</td></tr>';
     return;
   }
   tbody.innerHTML = clientes.map(c=>{
