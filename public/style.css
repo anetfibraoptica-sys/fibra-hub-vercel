@@ -3957,3 +3957,39 @@ tbody tr:hover {
 .offline-text {
   color: #ef4444 !important;
 }
+
+
+/* Integração MikroTik dentro da aba Resumo */
+.resumo-mikrotik-integrado {
+  margin-top: 16px;
+  padding-top: 12px;
+}
+.resumo-mikrotik-integrado h3 {
+  margin: 8px 0 12px 0;
+}
+.resumo-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(120px, 1fr));
+  gap: 10px;
+}
+.resumo-mini-grid div {
+  background: rgba(255,255,255,.04);
+  border-radius: 10px;
+  padding: 10px;
+}
+.resumo-mini-grid span {
+  display: block;
+  opacity: .75;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+.resumo-mini-grid b {
+  display: block;
+  font-size: 14px;
+}
+.online-text {
+  color: #22c55e !important;
+}
+.offline-text {
+  color: #ef4444 !important;
+}
