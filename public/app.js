@@ -1,4 +1,3 @@
-
 function qs(id){
   return document.getElementById(id);
 }
@@ -8,15 +7,33 @@ function val(id){
   return el ? el.value : "";
 }
 
-function setVal(id, valor){
-  const el = qs(id);
-  if(el) el.value = valor || "";
+function setLoginOk(usuario, token){
+  localStorage.setItem("fibra_logado", "sim");
+  localStorage.setItem("fibraLogado", "1");
+  localStorage.setItem("fibra_token", token || "fibra-admin");
+  localStorage.setItem("fibra_usuario", usuario || "admin");
+  localStorage.setItem("usuarioLogado", usuario || "admin");
 }
 
 async function login(){
-  const usuario = val("usuario") || val("login") || val("user");
-  const senha = val("senha") || val("password") || val("pass");
+  const usuario = (val("usuario") || val("login") || val("user")).trim();
+  const senha = (val("senha") || val("password") || val("pass")).trim();
+  const msg = qs("loginMsg");
 
+  if(!usuario || !senha){
+    if(msg) msg.textContent = "Informe usuário e senha.";
+    else alert("Informe usuário e senha.");
+    return;
+  }
+
+  // Login padrão local para garantir acesso inicial ao painel.
+  if(usuario === "admin" && senha === "admin"){
+    setLoginOk("admin", "fibra-admin");
+    window.location.href = "dashboard.html";
+    return;
+  }
+
+  // Fallback pela API, caso depois sejam cadastrados usuários no backend/banco.
   try{
     const r = await fetch("/api/login", {
       method: "POST",
@@ -27,16 +44,16 @@ async function login(){
     const d = await r.json();
 
     if(d.ok){
-      localStorage.setItem("fibra_logado", "sim");
-      localStorage.setItem("fibra_token", d.token || "fibra-admin");
-      localStorage.setItem("fibra_usuario", usuario);
+      setLoginOk(usuario, d.token || "fibra-admin");
       window.location.href = "dashboard.html";
       return;
     }
 
-    alert(d.erro || "Usuário ou senha inválidos.");
+    if(msg) msg.textContent = d.erro || "Usuário ou senha inválidos.";
+    else alert(d.erro || "Usuário ou senha inválidos.");
   }catch(e){
-    alert("Erro ao fazer login.");
+    if(msg) msg.textContent = "Erro ao conectar na API de login. Use admin/admin para acesso inicial.";
+    else alert("Erro ao conectar na API de login.");
   }
 }
 
@@ -48,394 +65,22 @@ function protegerPagina(){
   const pagina = window.location.pathname.split("/").pop();
   if(pagina === "" || pagina === "index.html" || pagina === "login.html") return;
 
-  if(localStorage.getItem("fibra_logado") !== "sim"){
+  const ok = localStorage.getItem("fibra_logado") === "sim" || localStorage.getItem("fibraLogado") === "1";
+  if(!ok){
     window.location.href = "index.html";
   }
 }
 
 function sair(){
   localStorage.removeItem("fibra_logado");
+  localStorage.removeItem("fibraLogado");
   localStorage.removeItem("fibra_token");
   localStorage.removeItem("fibra_usuario");
+  localStorage.removeItem("usuarioLogado");
   window.location.href = "index.html";
 }
 
-function abrirMenu(){
-  document.body.classList.add("menu-open");
-}
-
-function fecharMenu(){
-  document.body.classList.remove("menu-open");
-}
-
-let socket = null;
-
-
-
-
-function getClienteForm(){
-  return {
-    servidor: val("servidorCliente"),
-    nome: val("nome"),
-    cpf: val("cpf"),
-    telefone: val("telefone"),
-    cep: val("cep"),
-    endereco: val("endereco"),
-    numero: val("numero"),
-    complemento: val("complemento"),
-    bairro: val("bairro"),
-    referencia: val("referencia"),
-    plano: val("plano"),
-    pppoe: String(val("pppoe") || "").trim(),
-    acessoRemoto: val("acessoRemoto"),
-    senha: val("senha"),
-    vencimento: val("vencimento"),
-    valor: val("valor"),
-    observacoes: val("observacoes")
-  };
-}
-
-async function salvarCliente(){
-  const cliente = getClienteForm();
-  const editId = new URLSearchParams(window.location.search).get("id");
-  const url = editId ? "/api/clientes/" + editId : "/api/clientes";
-  const method = editId ? "PUT" : "POST";
-
-  const r = await fetch(url, {
-    method,
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify(cliente)
-  });
-
-  const d = await r.json();
-
-  if(d.ok){
-    if(editId){
-      if(d.migracaoErro){
-        alert("Cliente atualizado, mas houve erro ao migrar no MikroTik: " + d.migracaoErro);
-      }else if(d.migracao && d.migracao.migrado){
-        alert("Cliente atualizado e migrado para o novo servidor.");
-      }else{
-        alert("Cliente atualizado com sucesso.");
-      }
-      window.location.href = "clientes.html";
-      return;
-    }
-
-    if(d.pppoeCriado){
-      alert("Cliente salvo e PPPoE criado no MikroTik.");
-    }else{
-      alert("Cliente salvo, mas PPPoE não foi criado: " + (d.pppoeErro || "verifique a API do MikroTik"));
-    }
-  }else{
-    alert("Erro: " + (d.erro || "falha ao salvar"));
-  }
-}
-
-async function carregarClientesBanco(){
-  const tbody = qs("clientesBancoTabela");
-  if(!tbody) return;
-
-  try{
-    const r = await fetch("/api/clientes");
-    const clientes = await r.json();
-
-    if(!Array.isArray(clientes) || !clientes.length){
-      tbody.innerHTML = "<tr><td colspan='13'>Nenhum cliente cadastrado ainda.</td></tr>";
-      return;
-    }
-
-    tbody.innerHTML = clientes.map(c => `
-      <tr>
-        <td>${c.nome || "--"}</td>
-        <td>${c.servidor || "--"}</td>
-        <td>${c.telefone || "--"}</td>
-        <td>${c.cep || "--"}</td>
-        <td>${c.bairro || "--"}</td>
-        <td>${c.numero || "--"}</td>
-        <td>${c.complemento || "--"}</td>
-        <td>${c.plano || "--"}</td>
-        <td>${c.pppoe || "--"}</td>
-        <td>${c.valor || "--"}</td>
-        <td>${c.status || "ativo"}</td>
-        <td>
-          <button class="small-btn" onclick="verCliente(${c.id})">Ver</button>
-          <button class="small-btn" onclick="editarCliente(${c.id})">Editar</button>
-          <button class="small-btn" onclick="excluirCliente(${c.id})">Excluir</button>
-        </td>
-      </tr>
-    `).join("");
-  }catch(e){
-    tbody.innerHTML = "<tr><td colspan='13'>Erro ao carregar clientes.</td></tr>";
-  }
-}
-
-function verCliente(id){
-  window.location.href = "cliente.html?id=" + id;
-}
-
-function editarCliente(id){
-  window.location.href = "cadastro.html?id=" + id;
-}
-
-async function excluirCliente(id){
-  if(!confirm("Excluir este cliente?")) return;
-  const r = await fetch("/api/clientes/" + id, {method:"DELETE"});
-  const d = await r.json();
-  if(d.ok){
-    alert("Cliente excluído.");
-    carregarClientesBanco();
-  }else{
-    alert("Erro ao excluir.");
-  }
-}
-
-async function carregarClienteParaEditar(){
-  const id = new URLSearchParams(window.location.search).get("id");
-  if(!id) return;
-
-  const r = await fetch("/api/clientes/" + id);
-  const c = await r.json();
-
-  if(c.erro){
-    alert(c.erro);
-    return;
-  }
-
-  setVal("servidorCliente", c.servidor);
-  setVal("nome", c.nome);
-  setVal("cpf", c.cpf);
-  setVal("telefone", c.telefone);
-  setVal("cep", c.cep);
-  setVal("endereco", c.endereco);
-  setVal("numero", c.numero);
-  setVal("complemento", c.complemento);
-  setVal("bairro", c.bairro);
-  setVal("referencia", c.referencia);
-  setVal("plano", c.plano);
-  setVal("pppoe", c.pppoe);
-  setVal("acessoRemoto", c.acesso_remoto || c.acessoRemoto);
-  setVal("senha", c.senha);
-  setVal("vencimento", c.vencimento);
-  setVal("valor", c.valor);
-  setVal("observacoes", c.observacoes);
-}
-
-async function carregarClienteDetalhes(){
-  const id = new URLSearchParams(window.location.search).get("id");
-  const box = qs("clienteDetalhes");
-  if(!id || !box) return;
-
-  const r = await fetch("/api/clientes/" + id);
-  const c = await r.json();
-
-  if(c.erro){
-    box.innerHTML = "<section class='panel'>Cliente não encontrado.</section>";
-    return;
-  }
-
-  box.innerHTML = `
-    <div id="statusMikrotikCliente"></div>
-    <div class="grid-2">
-      <div class="panel">
-        <h3>Dados do Cliente</h3>
-        <p><b>Nome:</b> ${c.nome || "--"}</p>
-        <p><b>CPF/CNPJ:</b> ${c.cpf || "--"}</p>
-        <p><b>Telefone:</b> ${c.telefone || "--"}</p>
-        <p><b>Status:</b> ${c.status || "ativo"}</p>
-      </div>
-      <div class="panel">
-        <h3>Internet</h3>
-        <p><b>Servidor:</b> ${c.servidor || "--"}</p>
-        <p><b>Plano:</b> ${c.plano || "--"}</p>
-        <p><b>PPPoE:</b> ${c.pppoe || "--"}</p>
-        <p><b>Senha:</b> ${c.senha || "--"}</p>
-      </div>
-    </div>
-    <div class="panel">
-      <h3>Endereço</h3>
-      <p><b>CEP:</b> ${c.cep || "--"}</p>
-      <p><b>Endereço:</b> ${c.endereco || "--"}, Nº ${c.numero || "--"}</p>
-      <p><b>Complemento:</b> ${c.complemento || "--"}</p>
-      <p><b>Bairro:</b> ${c.bairro || "--"}</p>
-      <p><b>Ponto de referência:</b> ${c.referencia || "--"}</p>
-    </div>
-    <div class="panel">
-      <h3>Ações</h3>
-      <button onclick="bloquearCliente(${c.id})">🔴 Bloquear</button>
-      <button onclick="desbloquearCliente(${c.id})">🟢 Desbloquear</button>
-      <button onclick="liberarConfianca(${c.id})">⭐ Liberar em Confiança</button>
-      <button onclick="abrirRemotoPainel(${c.id})">🌐 Acessar pelo Painel</button>
-      <button onclick="editarCliente(${c.id})">✏️ Editar Cliente</button>
-    </div>
-  `;
-
-  carregarStatusMikroTikCliente(c.id);
-}
-
-async function carregarStatusMikroTikCliente(id){
-  const box = qs("statusMikrotikCliente");
-  if(!box) return;
-
-  box.innerHTML = `<div class="panel"><h3>Status de Conexão</h3><p>Consultando MikroTik...</p></div>`;
-
-  try{
-    const r = await fetch(`/api/clientes/${id}/status-mikrotik`);
-    const s = await r.json();
-
-    if(!s.ok){
-      box.innerHTML = `<div class="panel"><h3>Status de Conexão</h3><p>Erro: ${s.erro}</p></div>`;
-      return;
-    }
-
-    let extra = "";
-    if(s.ip) extra += `<p><b>IP atual:</b> ${s.ip}</p>`;
-    if(s.uptime) extra += `<p><b>Tempo conectado:</b> ${s.uptime}</p>`;
-    if(s.caller_id) extra += `<p><b>MAC/Caller ID:</b> ${s.caller_id}</p>`;
-    if(s.confianca_ate) extra += `<p><b>Confiança até:</b> ${new Date(s.confianca_ate).toLocaleDateString("pt-BR")}</p>`;
-
-    let botoesRemoto = "";
-    if((s.status === "online" || s.status === "confianca") && s.ip){
-      botoesRemoto = `
-        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
-          <button class="small-btn" onclick="abrirRemotoPainel(${id})">🌐 Acessar pelo Painel</button>
-          <button class="small-btn" onclick="window.open('http://${s.ip}', '_blank')">🌐 Abrir HTTP</button>
-          <button class="small-btn" onclick="window.open('https://${s.ip}', '_blank')">🔒 Abrir HTTPS</button>
-          <button class="small-btn" onclick="window.open('http://${s.ip}:8291', '_blank')">🖥️ Abrir Winbox</button>
-        </div>
-      `;
-    }
-
-    box.innerHTML = `
-      <div class="panel">
-        <h3>Status de Conexão</h3>
-        <h2>${s.texto}</h2>
-        <p>${s.detalhe || ""}</p>
-        <p><b>PPPoE:</b> ${s.pppoe || "--"}</p>
-        <p><b>Servidor:</b> ${s.servidor || "--"}</p>
-        ${extra}
-        ${botoesRemoto}
-      </div>
-    `;
-  }catch(e){
-    box.innerHTML = `<div class="panel"><h3>Status de Conexão</h3><p>Erro ao consultar o MikroTik.</p></div>`;
-  }
-}
-
-function abrirRemotoPainel(id){
-  window.open(`/remoto/${id}`, "_blank");
-}
-
-async function bloquearCliente(id){
-  if(!confirm("Bloquear este cliente no MikroTik?")) return;
-  const r = await fetch(`/api/clientes/${id}/bloquear`, {method:"POST"});
-  const d = await r.json();
-  if(d.ok){
-    alert("Cliente bloqueado com sucesso.");
-    location.reload();
-  }else{
-    alert("Erro ao bloquear: " + d.erro);
-  }
-}
-
-async function desbloquearCliente(id){
-  if(!confirm("Desbloquear este cliente no MikroTik?")) return;
-  const r = await fetch(`/api/clientes/${id}/desbloquear`, {method:"POST"});
-  const d = await r.json();
-  if(d.ok){
-    alert("Cliente desbloqueado com sucesso.");
-    location.reload();
-  }else{
-    alert("Erro ao desbloquear: " + d.erro);
-  }
-}
-
-async function liberarConfianca(id){
-  const dias = prompt("Liberar em confiança por quantos dias?", "7");
-  if(!dias) return;
-
-  const r = await fetch(`/api/clientes/${id}/confianca`, {
-    method:"POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({dias:Number(dias)})
-  });
-
-  const d = await r.json();
-
-  if(d.ok){
-    alert("Cliente liberado em confiança.");
-    location.reload();
-  }else{
-    alert("Erro ao liberar em confiança: " + d.erro);
-  }
-}
-
-async function buscarCep(){
-  const cep = String(val("cep") || "").replace(/\D/g, "");
-  if(cep.length !== 8) return;
-
-  try{
-    const r = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
-    const d = await r.json();
-    if(!d.erro){
-      setVal("endereco", d.logradouro || "");
-      setVal("bairro", d.bairro || "");
-    }
-  }catch(e){}
-}
-
-document.addEventListener("DOMContentLoaded", () => {
-  const form = document.querySelector("form");
-  if(form && (qs("usuario") || qs("login"))){
-    form.addEventListener("submit", (e) => {
-      e.preventDefault();
-      login();
-    });
-  }
-
-  const cep = qs("cep");
-  if(cep){
-    cep.addEventListener("blur", buscarCep);
-  }
-
-  const botoes = Array.from(document.querySelectorAll("button"));
-  for(const b of botoes){
-    const texto = (b.textContent || "").toLowerCase();
-    if(texto.includes("entrar") || texto.includes("login") || texto.includes("acessar painel")){
-      b.onclick = (e) => {
-        if(e) e.preventDefault();
-        login();
-      };
-    }
-  }
-});
-
-
-
-let fibraUltimoStatus = {};
-let fibraServidores = [];
-
-function normalizarNomeServidor(nome){
-  const n = String(nome || "").toUpperCase();
-  if(n.includes("COLONIA") || n.includes("COLÔNIA")) return "COLONIA ANTONIO ALEIXO";
-  if(n.includes("ARMANDO")) return "ARMANDO MENDES";
-  return nome || "--";
-}
-
-function servidorOnline(s){
-  if(typeof s.online === "boolean") return s.online;
-  const t = s.atualizadoEm ? new Date(s.atualizadoEm).getTime() : 0;
-  if(!t) return false;
-  return (Date.now() - t) < 15000;
-}
-
-function escolherServidorPrincipal(lista){
-  if(!Array.isArray(lista) || !lista.length) return null;
-  const colonia = lista.find(s => String(s.identity || "").toUpperCase().includes("COLONIA"));
-  return colonia || lista[0];
-}
-
-async function carregarDashboard(){
+function carregarDashboard(){
   try{
     const r = await fetch("/api/servidores?_=" + Date.now());
     if(r.ok){
@@ -2168,11 +1813,15 @@ function fibraClientesDeServidoresFinal(dados){
     lista.forEach(c => {
       clientes.push({
         pop: pop,
-        nome: c.nome || c.name || c.cliente || "--",
+        servidor: c.servidor || pop,
+        login: c.usuario || c.name || c.login || c.user || "",
+        nome: c.nome || c.name || c.cliente || c.usuario || "--",
         plano: c.plano || c.profile || "PPPoE",
         ip: c.ip || c.address || "--",
         uptime: c.uptime || "--",
-        mac: c.mac || c["caller-id"] || "--"
+        mac: c.mac || c.callerId || c["caller-id"] || "--",
+        service: c.service || "pppoe",
+        raw: c
       });
     });
   });
@@ -2195,8 +1844,8 @@ function fibraHtmlClientesFinal(clientes){
   }
 
   return clientes.map(c => `
-    <tr>
-      <td>${c.nome}</td>
+    <tr class="linha-clicavel" onclick='abrirClienteOnline(${JSON.stringify(c).replace(/'/g, "&apos;")})' title="Clique para abrir os dados do cliente">
+      <td>${c.login || c.nome}</td>
       <td>${c.pop}</td>
       <td>${c.plano}</td>
       <td>${c.ip}</td>
@@ -2590,3 +2239,185 @@ window.addEventListener("pageshow", fecharMenuMobileSeguro);
   setTimeout(removerGraficoTempoReal, 500);
   setTimeout(removerGraficoTempoReal, 1500);
 })();
+
+
+/* ============================================================
+   CORREÇÃO: CLIQUE NO CLIENTE ABRE A FICHA / DADOS DO CLIENTE
+   - Clientes online PPPoE: salva o cliente clicado e abre cliente.html
+   - Consulta de clientes: salva o cadastro completo e abre cadastro.html
+   - Cadastro: carrega automaticamente o cliente salvo/clicado
+============================================================ */
+
+function fibraEscapeHtml(v){
+  return String(v ?? "").replace(/[&<>"']/g, s => ({
+    "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"
+  }[s]));
+}
+
+function fibraPrimeiroValorCliente(c, campos){
+  for(const campo of campos){
+    const v = c && c[campo];
+    if(v !== undefined && v !== null && String(v).trim() !== "") return String(v).trim();
+  }
+  return "";
+}
+
+function fibraSetCampoCliente(ids, valor){
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.value = valor || "";
+  });
+}
+
+function fibraGetClientesLocal(){
+  try{
+    const clientes = JSON.parse(localStorage.getItem("clientes") || "[]");
+    return Array.isArray(clientes) ? clientes : [];
+  }catch(e){
+    return [];
+  }
+}
+
+function fibraChaveLoginCliente(c){
+  return String(
+    fibraPrimeiroValorCliente(c, ["loginPppoe","login","usuario","user","name","pppoe"]) ||
+    fibraPrimeiroValorCliente(c, ["nome","cliente","razaoSocial"])
+  ).toLowerCase().trim();
+}
+
+function abrirClienteOnline(cliente){
+  try{
+    localStorage.setItem("clienteOnlineSelecionado", JSON.stringify(cliente || {}));
+    localStorage.setItem("clienteEditarLogin", cliente.login || cliente.nome || "");
+  }catch(e){}
+  window.location.href = "cliente.html";
+}
+
+function fibraAbrirCadastroCliente(c){
+  try{
+    localStorage.setItem("clienteSelecionadoCompleto", JSON.stringify(c || {}));
+    localStorage.setItem("clienteEditarLogin", fibraChaveLoginCliente(c));
+  }catch(e){}
+  window.location.href = "cadastro.html";
+}
+
+function carregarClienteSelecionadoNoCadastro(){
+  let c = null;
+
+  try{
+    const direto = localStorage.getItem("clienteSelecionadoCompleto");
+    if(direto) c = JSON.parse(direto);
+  }catch(e){}
+
+  if(!c){
+    const login = String(localStorage.getItem("clienteEditarLogin") || "").toLowerCase().trim();
+    if(login){
+      c = fibraGetClientesLocal().find(x => fibraChaveLoginCliente(x) === login);
+    }
+  }
+
+  if(!c) return false;
+
+  fibraSetCampoCliente(["cadLogin"], fibraPrimeiroValorCliente(c, ["loginPppoe","login","usuario","user","name","pppoe"]));
+  fibraSetCampoCliente(["cadSenha"], fibraPrimeiroValorCliente(c, ["senhaPppoe","senha","password"]));
+  fibraSetCampoCliente(["cadNome"], fibraPrimeiroValorCliente(c, ["nome","cliente","razaoSocial"]));
+  fibraSetCampoCliente(["cadCpf"], fibraPrimeiroValorCliente(c, ["cpfCnpj","cpf","cnpj","documento"]));
+  fibraSetCampoCliente(["cadRg"], fibraPrimeiroValorCliente(c, ["rgIe","rg","ie"]));
+  fibraSetCampoCliente(["cadNascimento"], fibraPrimeiroValorCliente(c, ["dataNascimento","nascimento"]));
+  fibraSetCampoCliente(["cadEmail"], fibraPrimeiroValorCliente(c, ["email","e_mail"]));
+  fibraSetCampoCliente(["cadTelefone1"], fibraPrimeiroValorCliente(c, ["telefone1","telefone","celular","fone"]));
+  fibraSetCampoCliente(["cadTelefone2"], fibraPrimeiroValorCliente(c, ["telefone2","celular2","fone2"]));
+  fibraSetCampoCliente(["cadTelefone3"], fibraPrimeiroValorCliente(c, ["telefone3","celular3","fone3"]));
+
+  fibraSetCampoCliente(["cadCep"], fibraPrimeiroValorCliente(c, ["cep"]));
+  fibraSetCampoCliente(["cadEndereco"], fibraPrimeiroValorCliente(c, ["endereco","logradouro","rua"]));
+  fibraSetCampoCliente(["cadReferencia"], fibraPrimeiroValorCliente(c, ["referencia","pontoReferencia"]));
+  fibraSetCampoCliente(["cadComplemento"], fibraPrimeiroValorCliente(c, ["complemento"]));
+  fibraSetCampoCliente(["cadBairro"], fibraPrimeiroValorCliente(c, ["bairro"]));
+  fibraSetCampoCliente(["cadCidade"], fibraPrimeiroValorCliente(c, ["cidade","localidade"]) || "Manaus");
+  fibraSetCampoCliente(["cadUf"], fibraPrimeiroValorCliente(c, ["uf","estado"]) || "AM");
+
+  fibraSetCampoCliente(["cadVencimento"], fibraPrimeiroValorCliente(c, ["diaVencimento","vencimento"]));
+  fibraSetCampoCliente(["cadPlano"], fibraPrimeiroValorCliente(c, ["plano","profile"]));
+  fibraSetCampoCliente(["cadValor"], fibraPrimeiroValorCliente(c, ["valorMensal","valor"]));
+  fibraSetCampoCliente(["cadPop"], fibraPrimeiroValorCliente(c, ["popServidor","servidor","servidorReceita"]));
+  fibraSetCampoCliente(["cadIp"], fibraPrimeiroValorCliente(c, ["ip","address"]));
+  fibraSetCampoCliente(["cadMac"], fibraPrimeiroValorCliente(c, ["mac","callerId","caller-id"]));
+  fibraSetCampoCliente(["cadProfile"], fibraPrimeiroValorCliente(c, ["profile","plano"]));
+  fibraSetCampoCliente(["cadObservacao"], fibraPrimeiroValorCliente(c, ["observacao","observacoes"]));
+
+  if(typeof atualizarResumoCadastro === "function") atualizarResumoCadastro();
+
+  const titulo = document.querySelector(".topbar h1");
+  if(titulo) titulo.textContent = "Cadastro de Cliente - Editando";
+
+  return true;
+}
+
+// Sobrescreve a função original sem apagar o restante do cadastro.
+const __carregarCadastroOriginalFibra = window.carregarCadastroClienteHub;
+window.carregarCadastroClienteHub = function(){
+  const carregou = carregarClienteSelecionadoNoCadastro();
+  if(!carregou && typeof __carregarCadastroOriginalFibra === "function"){
+    __carregarCadastroOriginalFibra();
+  }else if(typeof atualizarResumoCadastro === "function"){
+    atualizarResumoCadastro();
+  }
+};
+
+function carregarClienteDetalhes(){
+  const box = document.getElementById("clienteDetalhes");
+  if(!box) return;
+
+  let c = null;
+  try{
+    const salvo = localStorage.getItem("clienteOnlineSelecionado");
+    if(salvo) c = JSON.parse(salvo);
+  }catch(e){}
+
+  if(!c){
+    const login = String(localStorage.getItem("clienteEditarLogin") || "").toLowerCase().trim();
+    c = fibraGetClientesLocal().find(x => fibraChaveLoginCliente(x) === login);
+  }
+
+  if(!c){
+    box.innerHTML = '<section class="panel"><h3>Cliente não selecionado</h3><p>Volte para Clientes Online ou Consulta de Clientes e clique em um cliente.</p></section>';
+    return;
+  }
+
+  const login = fibraPrimeiroValorCliente(c, ["login","usuario","name","loginPppoe","pppoe"]);
+  const nome = fibraPrimeiroValorCliente(c, ["nome","cliente","razaoSocial"]) || login;
+  const servidor = fibraPrimeiroValorCliente(c, ["servidor","pop","popServidor"]);
+  const ip = fibraPrimeiroValorCliente(c, ["ip","address"]);
+  const mac = fibraPrimeiroValorCliente(c, ["mac","callerId","caller-id"]);
+  const uptime = fibraPrimeiroValorCliente(c, ["uptime"]);
+  const plano = fibraPrimeiroValorCliente(c, ["plano","profile"]) || "PPPoE";
+  const telefone = fibraPrimeiroValorCliente(c, ["telefone1","telefone","celular","fone"]);
+  const endereco = fibraPrimeiroValorCliente(c, ["endereco","logradouro","rua"]);
+
+  box.innerHTML = `
+    <div class="grid-2">
+      <section class="panel">
+        <h3>Dados do Cliente</h3>
+        <p><b>Login:</b> ${fibraEscapeHtml(login || "--")}</p>
+        <p><b>Nome:</b> ${fibraEscapeHtml(nome || "--")}</p>
+        <p><b>Telefone:</b> ${fibraEscapeHtml(telefone || "--")}</p>
+        <p><b>Endereço:</b> ${fibraEscapeHtml(endereco || "--")}</p>
+        <p><b>Status:</b> 🟢 Online</p>
+      </section>
+      <section class="panel">
+        <h3>Conexão PPPoE</h3>
+        <p><b>Servidor:</b> ${fibraEscapeHtml(servidor || "--")}</p>
+        <p><b>Plano/Profile:</b> ${fibraEscapeHtml(plano || "--")}</p>
+        <p><b>IP:</b> ${fibraEscapeHtml(ip || "--")}</p>
+        <p><b>MAC/Caller ID:</b> ${fibraEscapeHtml(mac || "--")}</p>
+        <p><b>Tempo conectado:</b> ${fibraEscapeHtml(uptime || "--")}</p>
+      </section>
+    </div>
+    <section class="panel">
+      <h3>Ações</h3>
+      <button onclick="localStorage.setItem('clienteSelecionadoCompleto', localStorage.getItem('clienteOnlineSelecionado') || '{}'); location.href='cadastro.html'">Abrir no Cadastro</button>
+      <button onclick="history.back()">Voltar</button>
+    </section>
+  `;
+}

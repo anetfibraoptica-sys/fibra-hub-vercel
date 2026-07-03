@@ -251,7 +251,13 @@ function filtrarClientesReceitaNet(){
 }
 function abrirClienteCadastro(login){
   const l = decodeURIComponent(login || "");
+  const lista = window.__clientesReceitaNet || getClientesBase();
+  const cliente = lista.find(c => {
+    const loginC = normalizarTexto(primeiroValor(c, ["loginPppoe","login","usuario","user","name","pppoe"]));
+    return loginC === normalizarTexto(l);
+  });
   if(l) localStorage.setItem("clienteEditarLogin", l);
+  if(cliente) localStorage.setItem("clienteSelecionadoCompleto", JSON.stringify(cliente));
   window.location.href = "cadastro.html";
 }
 </script>

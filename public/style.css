@@ -3872,3 +3872,8 @@ body,
     padding-left:8px !important;
   }
 }
+
+
+/* Clique em cliente */
+.linha-clicavel, .clientes-receita-table tbody tr { cursor: pointer; }
+.linha-clicavel:hover, .clientes-receita-table tbody tr:hover { filter: brightness(1.18); }
