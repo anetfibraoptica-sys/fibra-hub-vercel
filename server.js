@@ -1003,6 +1003,86 @@ app.get("/api/mikrotik/test", async (req, res) => {
   }
 });
 
+
+async function consultarOnlineServidor(nomeServidor) {
+  const cfg = servidorConfig(nomeServidor);
+
+  if (!cfg.host || !cfg.user || !cfg.pass) {
+    return {
+      ok: false,
+      servidor: cfg.key,
+      erro: "Variáveis do MikroTik não configuradas para " + cfg.key,
+      clientes: []
+    };
+  }
+
+  try {
+    const resp = await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+      "/ppp/active/print"
+    ]], 15000);
+
+    const rows = parseRouterosRows(resp).map((c) => ({
+      name: c.name || "",
+      usuario: c.name || "",
+      address: c.address || "",
+      ip: c.address || "",
+      callerId: c["caller-id"] || "",
+      uptime: c.uptime || "",
+      service: c.service || "",
+      servidor: cfg.key
+    }));
+
+    return {
+      ok: true,
+      servidor: cfg.key,
+      total: rows.length,
+      clientes: rows
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      servidor: cfg.key,
+      erro: error.message,
+      clientes: []
+    };
+  }
+}
+
+app.get("/api/online", async (req, res) => {
+  try {
+    const [armando, colonia] = await Promise.all([
+      consultarOnlineServidor("ARMANDO"),
+      consultarOnlineServidor("COLONIA")
+    ]);
+
+    const clientes = [
+      ...(armando.clientes || []),
+      ...(colonia.clientes || [])
+    ];
+
+    res.json({
+      ok: armando.ok || colonia.ok,
+      atualizadoEm: new Date().toISOString(),
+      total: clientes.length,
+      servidores: {
+        armando,
+        colonia
+      },
+      clientes
+    });
+  } catch (error) {
+    res.status(500).json({
+      ok: false,
+      erro: error.message
+    });
+  }
+});
+
+app.get("/api/pppoe/online", async (req, res) => {
+  return app._router.handle(req, res, () => {});
+});
+
+
 io.on("connection",(socket)=>{
   socket.emit("hub-update", geral());
   socket.emit("mikrotik-update", geral());
