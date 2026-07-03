@@ -1,0 +1,19 @@
+{
+  "name": "mikrotik-bridge-api",
+  "version": "1.0.0",
+  "description": "API Bridge para conectar painel Fibra Hub ao MikroTik pela VPN",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.19.2",
+    "routeros-client": "^1.0.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4"
+  }
+}

@@ -2551,3 +2551,42 @@ window.addEventListener("pageshow", fecharMenuMobileSeguro);
     }catch(e){}
   });
 })();
+
+
+/* ============================================================
+   AJUSTE: REMOVER GRÁFICO EM TEMPO REAL
+   Mantém dashboard, clientes online e atualização dos dados,
+   mas impede a criação/exibição do canvas graficoTempoReal.
+============================================================ */
+(function(){
+  function removerGraficoTempoReal(){
+    const canvas = document.getElementById("graficoTempoReal");
+    if(canvas){
+      const bloco = canvas.closest(".panel") || canvas.parentElement;
+      if(bloco) bloco.remove();
+    }
+
+    document.querySelectorAll(".panel").forEach(panel => {
+      const titulo = (panel.querySelector("h3")?.textContent || "").toLowerCase();
+      if(titulo.includes("gráfico ao vivo") || titulo.includes("grafico ao vivo")){
+        panel.remove();
+      }
+    });
+  }
+
+  window.garantirGrafico = function(){
+    removerGraficoTempoReal();
+  };
+
+  window.desenharGraficoFibra = function(){
+    removerGraficoTempoReal();
+  };
+
+  window.fibraGraficoPermitido = function(){
+    return false;
+  };
+
+  document.addEventListener("DOMContentLoaded", removerGraficoTempoReal);
+  setTimeout(removerGraficoTempoReal, 500);
+  setTimeout(removerGraficoTempoReal, 1500);
+})();
