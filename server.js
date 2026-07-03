@@ -1004,23 +1004,16 @@ app.get("/api/mikrotik/test", async (req, res) => {
 });
 
 
+
 async function consultarOnlineServidor(nomeServidor) {
   const cfg = servidorConfig(nomeServidor);
 
   if (!cfg.host || !cfg.user || !cfg.pass) {
-    return {
-      ok: false,
-      servidor: cfg.key,
-      erro: "Variáveis do MikroTik não configuradas para " + cfg.key,
-      clientes: []
-    };
+    return { ok: false, servidor: cfg.key, erro: "Variáveis do MikroTik não configuradas para " + cfg.key, clientes: [], total: 0 };
   }
 
   try {
-    const resp = await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
-      "/ppp/active/print"
-    ]], 15000);
-
+    const resp = await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [["/ppp/active/print"]], 15000);
     const rows = parseRouterosRows(resp).map((c) => ({
       name: c.name || "",
       usuario: c.name || "",
@@ -1028,23 +1021,40 @@ async function consultarOnlineServidor(nomeServidor) {
       ip: c.address || "",
       callerId: c["caller-id"] || "",
       uptime: c.uptime || "",
-      service: c.service || "",
+      service: c.service || "pppoe",
       servidor: cfg.key
     }));
 
+    return { ok: true, servidor: cfg.key, total: rows.length, clientes: rows };
+  } catch (error) {
+    return { ok: false, servidor: cfg.key, erro: error.message, clientes: [], total: 0 };
+  }
+}
+
+async function consultarStatusServidor(nomeServidor) {
+  const cfg = servidorConfig(nomeServidor);
+  if (!cfg.host || !cfg.user || !cfg.pass) {
+    return { ok: false, servidor: cfg.key, erro: "Variáveis do MikroTik não configuradas para " + cfg.key };
+  }
+
+  try {
+    const [identityResp, resourceResp] = await Promise.all([
+      routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [["/system/identity/print"]], 12000),
+      routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [["/system/resource/print"]], 12000)
+    ]);
+    const identity = parseRouterosRows(identityResp)[0] || {};
+    const resource = parseRouterosRows(resourceResp)[0] || {};
     return {
       ok: true,
       servidor: cfg.key,
-      total: rows.length,
-      clientes: rows
+      identity: identity.name || cfg.key,
+      cpu: resource["cpu-load"] || resource.cpu || "0",
+      uptime: resource.uptime || "--",
+      freeMemory: resource["free-memory"] || "",
+      totalMemory: resource["total-memory"] || ""
     };
   } catch (error) {
-    return {
-      ok: false,
-      servidor: cfg.key,
-      erro: error.message,
-      clientes: []
-    };
+    return { ok: false, servidor: cfg.key, erro: error.message };
   }
 }
 
@@ -1054,34 +1064,33 @@ app.get("/api/online", async (req, res) => {
       consultarOnlineServidor("ARMANDO"),
       consultarOnlineServidor("COLONIA")
     ]);
-
-    const clientes = [
-      ...(armando.clientes || []),
-      ...(colonia.clientes || [])
-    ];
-
+    const clientes = [ ...(armando.clientes || []), ...(colonia.clientes || []) ];
     res.json({
       ok: armando.ok || colonia.ok,
       atualizadoEm: new Date().toISOString(),
       total: clientes.length,
-      servidores: {
-        armando,
-        colonia
-      },
+      servidores: { armando, colonia },
       clientes
     });
   } catch (error) {
-    res.status(500).json({
-      ok: false,
-      erro: error.message
-    });
+    res.status(500).json({ ok: false, erro: error.message });
   }
 });
 
-app.get("/api/pppoe/online", async (req, res) => {
-  return app._router.handle(req, res, () => {});
+app.get("/api/status-mikrotik", async (req, res) => {
+  try {
+    const [armando, colonia, online] = await Promise.all([
+      consultarStatusServidor("ARMANDO"),
+      consultarStatusServidor("COLONIA"),
+      Promise.all([consultarOnlineServidor("ARMANDO"), consultarOnlineServidor("COLONIA")])
+    ]);
+    armando.pppoeOnline = online[0].total || 0;
+    colonia.pppoeOnline = online[1].total || 0;
+    res.json({ ok: armando.ok || colonia.ok, atualizadoEm: new Date().toISOString(), servidores: { armando, colonia } });
+  } catch (error) {
+    res.status(500).json({ ok: false, erro: error.message });
+  }
 });
-
 
 io.on("connection",(socket)=>{
   socket.emit("hub-update", geral());
