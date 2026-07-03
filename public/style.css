@@ -3916,8 +3916,3 @@ body,
 .linha-clicavel:hover {
   filter: brightness(1.18);
 }
-
-
-/* Linhas clicáveis na aba Clientes */
-.linha-clicavel { cursor: pointer; }
-.linha-clicavel:hover { filter: brightness(1.18); }

@@ -107,16 +107,7 @@
             <div class="clientes-table-title">Clientes</div>
             <table class="clientes-receita-table">
               <thead>
-                <tr class="linha-clicavel" onclick="abrirClienteCadastro(encodeURIComponent(primeiroValor(c, ['loginPppoe','login','usuario','user','name','pppoe','nome','cliente','razaoSocial'])))">
-                  <th class="status-col"></th>
-                  <th>Login</th>
-                  <th>Nome</th>
-                  <th>Endereço</th>
-                  <th>Contato</th>
-                </tr>
-              </thead>
-              <tbody id="listaClientesReceita">
-                <tr class="linha-clicavel" onclick="abrirClienteCadastro(encodeURIComponent(primeiroValor(c, ['loginPppoe','login','usuario','user','name','pppoe','nome','cliente','razaoSocial'])))"><td colspan="5">Carregando clientes...</td></tr>
+                <tr><td colspan="5">Carregando clientes...</td></tr>
               </tbody>
             </table>
           </div>
@@ -126,12 +117,9 @@
   </main>
 </div>
 
-<script src="/socket.io/socket.io.js">
-window.addEventListener("pageshow", function(){
-  carregarClientesReceitaNet();
-});
-</script>
-<script src="app.js">
+<script src="/socket.io/socket.io.js"></script>
+<script src="app.js"></script>
+<script>
 window.addEventListener("pageshow", function(){
   carregarClientesReceitaNet();
 });
@@ -252,7 +240,7 @@ function renderizarClientesReceitaNet(clientes){
   const tbody = document.getElementById("listaClientesReceita");
   if(!tbody) return;
   if(!clientes.length){
-    tbody.innerHTML = '<tr><td colspan="5" class="sem-clientes">Nenhum cliente importado encontrado. Importe o CSV na aba Importação.</td></tr>';
+    tbody.innerHTML = '<tr class="linha-clicavel" onclick="abrirClienteCadastro(encodeURIComponent(primeiroValor(c, ['loginPppoe','login','usuario','user','name','pppoe','nome','cliente','razaoSocial'])))"><td colspan="5" class="sem-clientes">Nenhum cliente importado encontrado. Importe o CSV na aba Importação.</td></tr>';
     return;
   }
   tbody.innerHTML = clientes.map(c=>{
@@ -261,7 +249,7 @@ function renderizarClientesReceitaNet(clientes){
     const endereco = montarEnderecoCliente(c);
     const contato = montarContatoCliente(c);
     return `
-    <tr class="linha-clicavel" onclick="abrirClienteCadastro(encodeURIComponent(primeiroValor(c, ['loginPppoe','login','usuario','user','name','pppoe','nome','cliente','razaoSocial'])))">
+      <tr onclick="abrirClienteCadastro('${encodeURIComponent(login)}')">
         <td class="status-col">${statusIconeCliente(c)}</td>
         <td class="login-col">${login || "--"}</td>
         <td class="nome-col">${nome}</td>
@@ -300,11 +288,9 @@ function abrirClienteCadastro(login){
   });
 
   if(l) localStorage.setItem("clienteEditarLogin", l);
-
   if(cliente){
     localStorage.setItem("clienteSelecionadoCompleto", JSON.stringify(cliente));
     localStorage.setItem("clienteCadastroSelecionado", JSON.stringify(cliente));
-    localStorage.setItem("clienteEditar", JSON.stringify(cliente));
   }
 
   window.location.href = "cadastro.html?cliente=" + encodeURIComponent(l) + "&t=" + Date.now();
