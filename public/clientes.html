@@ -107,7 +107,7 @@
             <div class="clientes-table-title">Clientes</div>
             <table class="clientes-receita-table">
               <thead>
-                <tr>
+                <tr class="linha-clicavel" onclick="abrirClienteCadastro(encodeURIComponent(primeiroValor(c, ['loginPppoe','login','usuario','user','name','pppoe','nome','cliente','razaoSocial'])))">
                   <th class="status-col"></th>
                   <th>Login</th>
                   <th>Nome</th>
@@ -116,7 +116,7 @@
                 </tr>
               </thead>
               <tbody id="listaClientesReceita">
-                <tr><td colspan="5">Carregando clientes...</td></tr>
+                <tr class="linha-clicavel" onclick="abrirClienteCadastro(encodeURIComponent(primeiroValor(c, ['loginPppoe','login','usuario','user','name','pppoe','nome','cliente','razaoSocial'])))"><td colspan="5">Carregando clientes...</td></tr>
               </tbody>
             </table>
           </div>
@@ -252,7 +252,7 @@ function renderizarClientesReceitaNet(clientes){
   const tbody = document.getElementById("listaClientesReceita");
   if(!tbody) return;
   if(!clientes.length){
-    tbody.innerHTML = '<tr><td colspan="5" class="sem-clientes">Nenhum cliente importado encontrado. Importe o CSV na aba Importação.</td></tr>';
+    tbody.innerHTML = '<tr class="linha-clicavel" onclick="abrirClienteCadastro(encodeURIComponent(primeiroValor(c, ['loginPppoe','login','usuario','user','name','pppoe','nome','cliente','razaoSocial'])))"><td colspan="5" class="sem-clientes">Nenhum cliente importado encontrado. Importe o CSV na aba Importação.</td></tr>';
     return;
   }
   tbody.innerHTML = clientes.map(c=>{
@@ -292,13 +292,20 @@ function filtrarClientesReceitaNet(){
 function abrirClienteCadastro(login){
   const l = decodeURIComponent(login || "");
   const lista = window.__clientesReceitaNet || getClientesBase();
+
   const cliente = lista.find(c => {
     const loginC = normalizarTexto(primeiroValor(c, ["loginPppoe","login","usuario","user","name","pppoe"]));
-    return loginC === normalizarTexto(l);
+    const nomeC = normalizarTexto(primeiroValor(c, ["nome","cliente","razaoSocial"]));
+    return loginC === normalizarTexto(l) || nomeC === normalizarTexto(l);
   });
+
   if(l) localStorage.setItem("clienteEditarLogin", l);
-  if(cliente) localStorage.setItem("clienteSelecionadoCompleto", JSON.stringify(cliente));
-  window.location.href = "cliente.html";
+  if(cliente){
+    localStorage.setItem("clienteSelecionadoCompleto", JSON.stringify(cliente));
+    localStorage.setItem("clienteCadastroSelecionado", JSON.stringify(cliente));
+  }
+
+  window.location.href = "cadastro.html?cliente=" + encodeURIComponent(l) + "&t=" + Date.now();
 }
 
 window.addEventListener("pageshow", function(){

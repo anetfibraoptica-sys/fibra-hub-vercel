@@ -852,4 +852,14 @@ document.addEventListener("DOMContentLoaded", function(){
 });
 
 </script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function(){
+  setTimeout(function(){
+    if(typeof fibraPreencherCadastroClienteSelecionado === "function"){
+      fibraPreencherCadastroClienteSelecionado();
+    }
+  }, 500);
+});
+</script>
 </body></html>

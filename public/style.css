@@ -3907,3 +3907,12 @@ body,
   color: #dbeafe;
   font-size: 13px;
 }
+
+
+/* Clique em clientes */
+.linha-clicavel {
+  cursor: pointer;
+}
+.linha-clicavel:hover {
+  filter: brightness(1.18);
+}

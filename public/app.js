@@ -2377,3 +2377,133 @@ function fibraGetBaseClientesImportados(){
   }
   return [];
 }
+
+
+
+/* ============================================================
+   CORREÇÃO: AO CLICAR EM CLIENTES, ABRIR CADASTRO PREENCHIDO
+============================================================ */
+
+function fibraNorm(v){
+  return String(v || "").toLowerCase().trim();
+}
+
+function fibraCampo(c, campos){
+  for(const campo of campos){
+    const v = c && c[campo];
+    if(v !== undefined && v !== null && String(v).trim() !== "") return String(v).trim();
+  }
+  return "";
+}
+
+function fibraSet(ids, valor){
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.value = valor || "";
+  });
+}
+
+function fibraClientesBase(){
+  const chaves = ["clientes", "clientesReceitaNet", "fibra_clientes", "clientes_importados"];
+  for(const chave of chaves){
+    try{
+      const raw = localStorage.getItem(chave);
+      if(!raw) continue;
+      const lista = JSON.parse(raw);
+      if(Array.isArray(lista) && lista.length) return lista;
+    }catch(e){}
+  }
+  return [];
+}
+
+function fibraLocalizarClienteSelecionado(){
+  let c = null;
+
+  try{
+    c = JSON.parse(localStorage.getItem("clienteSelecionadoCompleto") || "null");
+  }catch(e){}
+
+  if(!c){
+    try{
+      c = JSON.parse(localStorage.getItem("clienteCadastroSelecionado") || "null");
+    }catch(e){}
+  }
+
+  const params = new URLSearchParams(location.search);
+  const busca = fibraNorm(
+    params.get("cliente") ||
+    localStorage.getItem("clienteEditarLogin") ||
+    ""
+  );
+
+  if((!c || !Object.keys(c).length) && busca){
+    c = fibraClientesBase().find(x => {
+      const login = fibraNorm(fibraCampo(x, ["loginPppoe","login","usuario","user","name","pppoe"]));
+      const nome = fibraNorm(fibraCampo(x, ["nome","cliente","razaoSocial"]));
+      return login === busca || nome === busca;
+    });
+  }
+
+  return c;
+}
+
+function fibraPreencherCadastroClienteSelecionado(){
+  const c = fibraLocalizarClienteSelecionado();
+  if(!c) return false;
+
+  // Dados pessoais
+  fibraSet(["cadNome","nome","clienteNome"], fibraCampo(c, ["nome","cliente","razaoSocial","name"]));
+  fibraSet(["cadCpf","cpf","documento"], fibraCampo(c, ["cpfCnpj","cpf","cnpj","documento"]));
+  fibraSet(["cadRg","rg"], fibraCampo(c, ["rgIe","rg","ie"]));
+  fibraSet(["cadNascimento","nascimento"], fibraCampo(c, ["dataNascimento","nascimento"]));
+  fibraSet(["cadEmail","email"], fibraCampo(c, ["email","e_mail"]));
+  fibraSet(["cadTelefone1","telefone","telefone1"], fibraCampo(c, ["telefone1","telefone","celular","fone"]));
+  fibraSet(["cadTelefone2","telefone2"], fibraCampo(c, ["telefone2","celular2","fone2"]));
+  fibraSet(["cadTelefone3","telefone3"], fibraCampo(c, ["telefone3","celular3","fone3"]));
+
+  // Endereço
+  fibraSet(["cadCep","cep"], fibraCampo(c, ["cep"]));
+  fibraSet(["cadEndereco","endereco","logradouro"], fibraCampo(c, ["endereco","logradouro","rua"]));
+  fibraSet(["cadNumero","numero"], fibraCampo(c, ["numero","num"]));
+  fibraSet(["cadReferencia","referencia"], fibraCampo(c, ["referencia","pontoReferencia"]));
+  fibraSet(["cadComplemento","complemento"], fibraCampo(c, ["complemento"]));
+  fibraSet(["cadBairro","bairro"], fibraCampo(c, ["bairro"]));
+  fibraSet(["cadCidade","cidade"], fibraCampo(c, ["cidade","localidade"]) || "Manaus");
+  fibraSet(["cadUf","uf"], fibraCampo(c, ["uf","estado"]) || "AM");
+
+  // Acesso PPPoE / plano
+  fibraSet(["cadLogin","login","loginPppoe"], fibraCampo(c, ["loginPppoe","login","usuario","user","name","pppoe"]));
+  fibraSet(["cadSenha","senha","senhaPppoe"], fibraCampo(c, ["senhaPppoe","senha","password"]));
+  fibraSet(["cadPlano","plano"], fibraCampo(c, ["plano","profile"]));
+  fibraSet(["cadValor","valor"], fibraCampo(c, ["valorMensal","valor","mensalidade"]));
+  fibraSet(["cadVencimento","vencimento"], fibraCampo(c, ["diaVencimento","vencimento"]));
+  fibraSet(["cadPop","servidor"], fibraCampo(c, ["popServidor","servidor","servidorReceita"]));
+  fibraSet(["cadIp","ip"], fibraCampo(c, ["ip","address"]));
+  fibraSet(["cadMac","mac"], fibraCampo(c, ["mac","callerId","caller-id"]));
+  fibraSet(["cadProfile","profile"], fibraCampo(c, ["profile","plano"]));
+  fibraSet(["cadObservacao","observacao"], fibraCampo(c, ["observacao","observacoes"]));
+
+  const titulo = document.querySelector(".topbar h1, h1");
+  if(titulo && location.pathname.includes("cadastro")) titulo.textContent = "Cadastro de Cliente - Editando";
+
+  const aviso = document.getElementById("cadastroClienteCarregado");
+  if(aviso){
+    aviso.innerHTML = "Cliente carregado da aba Clientes.";
+  }else{
+    const form = document.querySelector("form") || document.querySelector("main") || document.body;
+    const div = document.createElement("div");
+    div.id = "cadastroClienteCarregado";
+    div.className = "import-status-clientes";
+    div.innerHTML = "Cliente carregado da aba Clientes.";
+    form.prepend(div);
+  }
+
+  if(typeof atualizarResumoCadastro === "function") atualizarResumoCadastro();
+  return true;
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  if(location.pathname.endsWith("cadastro.html")){
+    setTimeout(fibraPreencherCadastroClienteSelecionado, 300);
+  }
+});
