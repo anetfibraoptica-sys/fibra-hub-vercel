@@ -3993,3 +3993,22 @@ tbody tr:hover {
 .offline-text {
   color: #ef4444 !important;
 }
+
+
+/* Status correto no resumo */
+.online-text {
+  color: #22c55e !important;
+  font-weight: 800;
+}
+.offline-text {
+  color: #ef4444 !important;
+  font-weight: 800;
+}
+.identificado-online {
+  background: #16a34a !important;
+  color: #fff !important;
+}
+.identificado-offline {
+  background: #e11d48 !important;
+  color: #fff !important;
+}

@@ -937,12 +937,17 @@ document.addEventListener("DOMContentLoaded", function(){
 
 
 
+
+
+
 <script>
-/* Atualiza a própria aba RESUMO do cadastro com status MikroTik */
+/* Correção: Online/Offline no campo STATUS, nunca no campo LOGIN */
 (function(){
   function campo(c, campos){
     for(const k of campos){
-      if(c && c[k] !== undefined && c[k] !== null && String(c[k]).trim() !== "") return String(c[k]).trim();
+      if(c && c[k] !== undefined && c[k] !== null && String(c[k]).trim() !== "") {
+        return String(c[k]).trim();
+      }
     }
     return "";
   }
@@ -963,114 +968,120 @@ document.addEventListener("DOMContentLoaded", function(){
     return c || {};
   }
 
-  function procurarElementoPorTexto(rotulo){
-    const todos = Array.from(document.querySelectorAll("p, div, span, small, b, strong, label"));
-    const r = norm(rotulo);
-    return todos.find(el => norm(el.textContent).startsWith(r));
+  function localizarElementoPorTextoExato(texto){
+    const alvo = norm(texto);
+    const els = Array.from(document.querySelectorAll("p, div, span, small, b, strong, label"));
+    return els.find(el => norm(el.textContent).replace(":", "") === alvo);
   }
 
-  function atualizarBlocoResumo(rotulo, valor, classe){
-    const el = procurarElementoPorTexto(rotulo);
-    if(el){
-      const texto = el.textContent;
-      if(texto.includes(":")){
-        el.innerHTML = `<b>${rotulo}</b>: <span class="${classe || ""}">${valor || "—"}</span>`;
-      }else{
-        // Se o layout usa label em cima e valor em outro elemento, tenta atualizar o próximo irmão.
-        const prox = el.nextElementSibling;
-        if(prox) {
-          prox.textContent = valor || "—";
-          if(classe) prox.className = (prox.className || "") + " " + classe;
-        } else {
-          el.innerHTML = `<b>${rotulo}</b><br><span class="${classe || ""}">${valor || "—"}</span>`;
-        }
-      }
+  function localizarLinhaPorRotulo(rotulo){
+    const r = norm(rotulo);
+    const els = Array.from(document.querySelectorAll("p, div, span, small, b, strong, label"));
+    return els.find(el => {
+      const txt = norm(el.textContent);
+      return txt === r || txt === (r + ":") || txt.startsWith(r + " ");
+    });
+  }
+
+  function atualizarValorDoRotulo(rotulo, valor, classe){
+    const label = localizarLinhaPorRotulo(rotulo);
+    if(!label) return false;
+
+    const valorFinal = valor || "—";
+
+    // Caso o label e valor estejam no mesmo elemento: "Status • Offline"
+    const txt = label.textContent || "";
+    if(txt.includes(":") || norm(txt).startsWith(norm(rotulo))){
+      label.innerHTML = `<b>${rotulo}</b>: <span class="${classe || ""}">${valorFinal}</span>`;
       return true;
     }
+
+    // Caso label fique em cima e o valor no próximo elemento.
+    if(label.nextElementSibling){
+      label.nextElementSibling.textContent = valorFinal;
+      if(classe) label.nextElementSibling.className = classe;
+      return true;
+    }
+
     return false;
   }
 
-  function garantirResumoMikrotik(){
-    let box = document.getElementById("resumoMikrotikIntegrado");
-    if(box) return box;
-
-    // Procura a área de Resumo para inserir dentro dela.
-    const titulos = Array.from(document.querySelectorAll("h1,h2,h3,strong,b,div"));
-    let resumo = null;
-
-    for(const t of titulos){
-      if(norm(t.textContent) === "resumo"){
-        resumo = t.closest("section, .panel, .card, .resumo, div");
-        break;
+  function limparOnlineDoLogin(login){
+    // Corrige o erro visual: "Login: ● Online" deve voltar a ser apenas Login + login.
+    const els = Array.from(document.querySelectorAll("p, div, span, small, b, strong"));
+    for(const el of els){
+      const txt = norm(el.textContent);
+      if(txt.includes("login") && txt.includes("online")){
+        el.innerHTML = `<b>Login</b>: ${login || "—"}`;
       }
     }
-
-    if(!resumo) resumo = document.querySelector("main") || document.body;
-
-    box = document.createElement("div");
-    box.id = "resumoMikrotikIntegrado";
-    box.className = "resumo-mikrotik-integrado";
-    box.innerHTML = `
-      <hr>
-      <h3>Servidor</h3>
-      <div class="resumo-mini-grid">
-        <div><span>Servidor</span><b id="resumoServidorMikrotik">—</b></div>
-        <div><span>Interface</span><b id="resumoInterfaceMikrotik">—</b></div>
-        <div><span>IP Atual</span><b id="resumoIpAtualMikrotik">—</b></div>
-        <div><span>MAC / Caller ID</span><b id="resumoMacMikrotik">—</b></div>
-        <div><span>Uptime</span><b id="resumoUptimeMikrotik">—</b></div>
-        <div><span>Status</span><b id="resumoStatusMikrotik" class="offline-text">● Offline</b></div>
-      </div>
-    `;
-
-    resumo.appendChild(box);
-    return box;
   }
 
-  function setId(id, valor, classe){
-    const el = document.getElementById(id);
-    if(!el) return;
-    el.textContent = valor || "—";
-    if(classe) el.className = classe;
+  function garantirLoginCorreto(login){
+    // Tenta atualizar a área do Login sem colocar status nela.
+    const els = Array.from(document.querySelectorAll("p, div, span, small, b, strong"));
+    for(const el of els){
+      const txt = norm(el.textContent);
+      if(txt === "login" || txt === "login:" || txt.startsWith("login ")) {
+        if(el.nextElementSibling){
+          el.nextElementSibling.textContent = login || "—";
+        } else {
+          el.innerHTML = `<b>Login</b>: ${login || "—"}`;
+        }
+        return;
+      }
+    }
   }
 
-  function aplicarStatus(info){
-    const online = !!info;
-    garantirResumoMikrotik();
+  function alterarBotaoIdentificado(online){
+    const els = Array.from(document.querySelectorAll("button, span, div, b"));
+    for(const el of els){
+      const t = norm(el.textContent);
+      if(t.includes("não identificado") || t.includes("nao identificado") || t.includes("identificado")){
+        el.textContent = online ? "Identificado" : "Não Identificado";
+        el.classList.remove("identificado-online","identificado-offline");
+        el.classList.add(online ? "identificado-online" : "identificado-offline");
+        return;
+      }
+    }
+  }
 
-    setId("resumoServidorMikrotik", info ? (info.servidor || "—") : "—");
-    setId("resumoInterfaceMikrotik", info ? (info.service || "pppoe") : "—");
-    setId("resumoIpAtualMikrotik", info ? (info.ip || info.address || "—") : "—");
-    setId("resumoMacMikrotik", info ? (info.callerId || info.mac || info["caller-id"] || "—") : "—");
-    setId("resumoUptimeMikrotik", info ? (info.uptime || "—") : "—");
-    setId("resumoStatusMikrotik", online ? "● Online" : "● Offline", online ? "online-text" : "offline-text");
-
-    // Também tenta atualizar textos já existentes na aba Resumo.
-    atualizarBlocoResumo("Status", online ? "● Online" : "● Offline", online ? "online-text" : "offline-text");
-    atualizarBlocoResumo("Servidor", info ? (info.servidor || "—") : "—");
-    atualizarBlocoResumo("Interface", info ? (info.service || "pppoe") : "—");
-    atualizarBlocoResumo("IP Atual", info ? (info.ip || info.address || "—") : "—");
-    atualizarBlocoResumo("Profile", info ? (info.profile || info.service || "pppoe") : "—");
-
-    // Preenche inputs se existirem, sem alterar visual.
-    const ids = {
+  function atualizarInputs(info){
+    const mapa = {
       cadIp: info ? (info.ip || info.address || "") : "",
       cadMac: info ? (info.callerId || info.mac || info["caller-id"] || "") : "",
       cadPop: info ? (info.servidor || "") : "",
       cadProfile: info ? (info.profile || info.service || "pppoe") : ""
     };
-    Object.entries(ids).forEach(([id, val]) => {
+
+    Object.entries(mapa).forEach(([id, val]) => {
       const el = document.getElementById(id);
       if(el && val) el.value = val;
     });
   }
 
-  async function atualizarResumoComMikrotik(){
+  function aplicarNaAbaResumo(info, login){
+    const online = !!info;
+
+    limparOnlineDoLogin(login);
+    garantirLoginCorreto(login);
+
+    atualizarValorDoRotulo("Status", online ? "● Online" : "● Offline", online ? "online-text" : "offline-text");
+    atualizarValorDoRotulo("Servidor", info ? (info.servidor || "—") : "—");
+    atualizarValorDoRotulo("IP Atual", info ? (info.ip || info.address || "—") : "—");
+    atualizarValorDoRotulo("Interface", info ? (info.service || "pppoe") : "—");
+    atualizarValorDoRotulo("Profile", info ? (info.profile || info.service || "pppoe") : "—");
+
+    alterarBotaoIdentificado(online);
+    atualizarInputs(info);
+  }
+
+  async function consultarStatus(){
     const cliente = clienteSelecionado();
-    const login = norm(campo(cliente, ["loginPppoe","login","usuario","user","name","pppoe"]));
+    const login = campo(cliente, ["loginPppoe","login","usuario","user","name","pppoe"]);
 
     if(!login){
-      aplicarStatus(null);
+      aplicarNaAbaResumo(null, "");
       return;
     }
 
@@ -1079,18 +1090,19 @@ document.addEventListener("DOMContentLoaded", function(){
       const dados = await resp.json();
       const lista = dados.clientes || [];
 
-      const encontrado = lista.find(c => norm(c.usuario || c.name || c.login || c.user) === login);
+      const encontrado = lista.find(c => norm(c.usuario || c.name || c.login || c.user) === norm(login));
 
-      aplicarStatus(encontrado || null);
+      aplicarNaAbaResumo(encontrado || null, login);
     }catch(e){
       console.error("Erro ao consultar MikroTik:", e);
-      aplicarStatus(null);
+      aplicarNaAbaResumo(null, login);
     }
   }
 
   window.addEventListener("DOMContentLoaded", function(){
-    setTimeout(atualizarResumoComMikrotik, 800);
-    setTimeout(atualizarResumoComMikrotik, 2000);
+    setTimeout(consultarStatus, 700);
+    setTimeout(consultarStatus, 1700);
+    setTimeout(consultarStatus, 3000);
   });
 })();
 </script>
