@@ -1009,4 +1009,12 @@ io.on("connection",(socket)=>{
 });
 
 const PORT=process.env.PORT || 3000;
-initDb().finally(()=>server.listen(PORT,()=>console.log("Fibra+ Hub 2 Servidores rodando na porta "+PORT)));
+
+// Na Vercel, o Express precisa ser exportado como função serverless.
+// Fora da Vercel, continua rodando normal com npm start.
+if (process.env.VERCEL) {
+  initDb().catch(err => console.error("Erro ao iniciar banco:", err.message));
+  module.exports = app;
+} else {
+  initDb().finally(() => server.listen(PORT, () => console.log("Fibra+ Hub 2 Servidores rodando na porta " + PORT)));
+}
