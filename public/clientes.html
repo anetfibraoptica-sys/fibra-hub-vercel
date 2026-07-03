@@ -107,8 +107,8 @@
             <div class="clientes-table-title">Clientes</div>
             <table class="clientes-receita-table">
               <thead>
-                <tr class="linha-clicavel" onclick="abrirClienteCadastro(encodeURIComponent(primeiroValor(c, ['loginPppoe','login','usuario','user','name','pppoe','nome','cliente','razaoSocial'])))">
-                  <th class="status-col"></th>
+                <tr>
+                  <th class="status-col">Status</th>
                   <th>Login</th>
                   <th>Nome</th>
                   <th>Endereço</th>
@@ -116,7 +116,7 @@
                 </tr>
               </thead>
               <tbody id="listaClientesReceita">
-                <tr><td colspan="5">Carregando clientes...</td></tr>
+                <tr class="linha-clicavel" onclick="abrirClienteCadastro(encodeURIComponent(primeiroValor(c, ['loginPppoe','login','usuario','user','name','pppoe','nome','cliente','razaoSocial'])))"><td colspan="5">Carregando clientes...</td></tr>
               </tbody>
             </table>
           </div>
@@ -126,17 +126,21 @@
   </main>
 </div>
 
-<script src="/socket.io/socket.io.js"></script>
-<script>
+<script src="/socket.io/socket.io.js">
 window.addEventListener("pageshow", function(){
   carregarClientesReceitaNet();
+  setTimeout(consultarOnlineMikrotikClientes, 800);
 });
+setInterval(consultarOnlineMikrotikClientes, 30000);
 </script>
-<script src="app.js"></script>
-<script>
+<script src="app.js">
 window.addEventListener("pageshow", function(){
   carregarClientesReceitaNet();
+  setTimeout(consultarOnlineMikrotikClientes, 800);
 });
+setInterval(consultarOnlineMikrotikClientes, 30000);
+</script>
+<script>
 function normalizarTexto(v){
   return String(v || "").toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g,"");
 }
@@ -163,11 +167,11 @@ function getClientesBase(){
   return [];
 }
 function statusIconeCliente(c){
-  const status = normalizarTexto(primeiroValor(c, ["status","situacao","statusCobranca"]));
-  if(status.includes("bloque") || status.includes("cancel")){
-    return '<span class="cliente-status bloqueado">♟</span>';
+  if(c && c.__onlineData){
+    return '<span class="cliente-status online" title="Online no MikroTik">🟢</span>';
   }
-  return '<span class="cliente-status ativo">✓</span>';
+
+  return '<span class="cliente-status offline" title="Offline no MikroTik">🔴</span>';
 }
 function montarEnderecoCliente(c){
   const endereco = primeiroValor(c, ["endereco","logradouro","rua"]);
@@ -224,6 +228,7 @@ function carregarClientesReceitaNet(){
   atualizarContadores(clientes);
   renderizarClientesReceitaNet(clientes);
   mostrarStatusImportacao(clientes);
+  consultarOnlineMikrotikClientes();
 }
 function mostrarStatusImportacao(clientes){
   let info = document.getElementById("statusImportacaoClientes");
@@ -248,6 +253,61 @@ function mostrarStatusImportacao(clientes){
   }
 }
 
+
+let mapaOnlineMikrotik = {};
+let ultimaConsultaOnlineMikrotik = 0;
+
+function loginClienteReceita(c){
+  return normalizarTexto(primeiroValor(c, ["loginPppoe","login","usuario","user","name","pppoe"]));
+}
+
+async function consultarOnlineMikrotikClientes(){
+  try{
+    const resp = await fetch("/api/online?t=" + Date.now(), { cache: "no-store" });
+    const dados = await resp.json();
+
+    mapaOnlineMikrotik = {};
+
+    (dados.clientes || []).forEach(c => {
+      const login = normalizarTexto(c.usuario || c.name || c.login || "");
+      if(login){
+        mapaOnlineMikrotik[login] = c;
+      }
+    });
+
+    ultimaConsultaOnlineMikrotik = Date.now();
+
+    const base = window.__clientesReceitaNet || getClientesBase();
+    if(base && base.length){
+      renderizarClientesReceitaNet(base);
+    }
+
+  }catch(e){
+    console.log("Erro ao consultar /api/online:", e);
+  }
+}
+
+function aplicarStatusOnlineCliente(c){
+  const login = loginClienteReceita(c);
+  const online = mapaOnlineMikrotik[login];
+
+  if(online){
+    c.__onlineData = online;
+    c.statusOnline = "online";
+    c.ipAtual = online.ip || online.address || "";
+    c.uptimeAtual = online.uptime || "";
+    c.servidorAtual = online.servidor || "";
+  }else{
+    delete c.__onlineData;
+    c.statusOnline = "offline";
+    c.ipAtual = "";
+    c.uptimeAtual = "";
+    c.servidorAtual = "";
+  }
+
+  return c;
+}
+
 function renderizarClientesReceitaNet(clientes){
   const tbody = document.getElementById("listaClientesReceita");
   if(!tbody) return;
@@ -256,6 +316,7 @@ function renderizarClientesReceitaNet(clientes){
     return;
   }
   tbody.innerHTML = clientes.map(c=>{
+    c = aplicarStatusOnlineCliente(c);
     const login = primeiroValor(c, ["loginPppoe","login","usuario","user"]);
     const nome = primeiroValor(c, ["nome","cliente","razaoSocial"]) || login || "--";
     const endereco = montarEnderecoCliente(c);
@@ -263,7 +324,7 @@ function renderizarClientesReceitaNet(clientes){
     return `
       <tr onclick="abrirClienteCadastro('${encodeURIComponent(login)}')">
         <td class="status-col">${statusIconeCliente(c)}</td>
-        <td class="login-col">${login || "--"}</td>
+        <td class="login-col">${login || "--"}${c.__onlineData ? `<div class="online-detalhes">IP: ${c.ipAtual || "--"} • ${c.servidorAtual || "--"} • ${c.uptimeAtual || "--"}</div>` : ""}</td>
         <td class="nome-col">${nome}</td>
         <td class="endereco-col">${endereco || "--"}</td>
         <td class="contato-col">${contato}</td>
@@ -310,7 +371,9 @@ function abrirClienteCadastro(login){
 
 window.addEventListener("pageshow", function(){
   carregarClientesReceitaNet();
+  setTimeout(consultarOnlineMikrotikClientes, 800);
 });
+setInterval(consultarOnlineMikrotikClientes, 30000);
 </script>
 
 <script>
@@ -381,35 +444,3 @@ window.addEventListener("pageshow", function(){
 
 </body>
 </html>
-
-<script>
-async function integrarOnlineMikrotik(){
-  try{
-    const resp = await fetch('/api/online');
-    const dados = await resp.json();
-    const online = {};
-    (dados.clientes || []).forEach(c=>{
-      const login=(c.usuario||c.name||'').toLowerCase().trim();
-      if(login) online[login]=c;
-    });
-
-    document.querySelectorAll('#listaClientesReceita tr').forEach(tr=>{
-      const loginCell = tr.querySelector('td:nth-child(2)');
-      if(!loginCell) return;
-      const login = loginCell.textContent.toLowerCase().trim();
-
-      tr.style.cursor='pointer';
-      tr.onclick=()=>{
-        localStorage.setItem('clienteSelecionadoLogin', login);
-        location.href='cadastro.html';
-      };
-
-      const statusCell = tr.querySelector('td:first-child');
-      if(statusCell){
-        statusCell.textContent = online[login] ? '🟢' : '🔴';
-      }
-    });
-  }catch(e){ console.log(e); }
-}
-window.addEventListener('load', ()=>setTimeout(integrarOnlineMikrotik,1500));
-</script>
