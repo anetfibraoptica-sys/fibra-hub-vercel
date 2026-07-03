@@ -1,0 +1,3945 @@
+*{box-sizing:border-box;font-family:Arial,Helvetica,sans-serif}
+:root{--bg:#070d19;--panel:#111b2d;--panel2:#0a1322;--line:rgba(255,255,255,.09);--muted:#a9b7ce;--blue:#2f83ff;--green:#22c55e;--red:#ef4444;--orange:#f59e0b;--purple:#8b5cf6}
+body{margin:0;background:radial-gradient(circle at 10% 0%,rgba(47,131,255,.16),transparent 34%),var(--bg);color:#fff}
+a{text-decoration:none;color:inherit}.login-body{min-height:100vh;display:grid;place-items:center;padding:18px}
+.login-card{width:100%;max-width:430px;padding:38px;border-radius:28px;background:linear-gradient(180deg,#111b2d,#0b1424);border:1px solid var(--line);box-shadow:0 30px 90px rgba(0,0,0,.55);text-align:center}
+.brand{display:flex;align-items:center;gap:8px;font-weight:900;letter-spacing:-2px;font-size:54px;font-style:italic;justify-content:center;line-height:1}.brand .fibra{color:#fff}.brand .plus{color:#ffca22}.brand-dot{display:inline-block;width:12px;height:12px;background:var(--blue);border-radius:50%;margin-left:-5px;margin-right:-5px;transform:translateY(-10px)}.slogan{font-size:13px;font-weight:800;font-style:italic;margin-top:8px}
+input,select,textarea,button{width:100%;padding:13px 14px;margin:8px 0;border-radius:12px;border:1px solid var(--line);background:var(--panel2);color:#fff;outline:none;font-size:15px}button{border:0;background:linear-gradient(135deg,#174cff,#2f83ff);font-weight:800;cursor:pointer}
+.layout{display:flex;min-height:100vh}.sidebar{position:fixed;width:290px;inset:0 auto 0 0;background:rgba(7,13,25,.98);border-right:1px solid var(--line);padding:28px 22px;overflow-y:auto;z-index:50}.logo-wrap{margin-bottom:28px}.logo-wrap .brand{justify-content:flex-start;font-size:52px}.nav a{display:flex;align-items:center;gap:13px;padding:13px 15px;border-radius:12px;margin:7px 0;font-size:16px}.nav a.active,.nav a:hover{background:linear-gradient(90deg,#1142c9,#15346f)}.nav .icon{width:24px;text-align:center}
+.mobile-top{display:none}.main{flex:1;margin-left:290px;min-width:0}.topbar{min-height:84px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 28px;background:rgba(7,13,25,.65);position:sticky;top:0;z-index:20;backdrop-filter:blur(10px)}.topbar h1{font-size:24px;margin:0}.topbar-right{display:flex;align-items:center;gap:12px}.badge{background:#0b1424;border:1px solid var(--line);border-radius:10px;padding:10px 13px;color:#dce7ff}.badge-live{background:linear-gradient(135deg,#15803d,#22c55e);color:white;border:0}.badge-off{background:linear-gradient(135deg,#991b1b,#ef4444);color:white;border:0}
+.content{padding:26px;max-width:1700px;margin:0 auto}.cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-bottom:18px}.card,.panel,.server-card{background:linear-gradient(180deg,rgba(17,27,45,.96),rgba(13,24,41,.98));border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:0 18px 45px rgba(0,0,0,.22);margin-bottom:16px}.card small{color:var(--muted)}.card h2{font-size:28px;margin:7px 0 0}.card-icon{width:46px;height:46px;border-radius:13px;display:grid;place-items:center;font-size:22px;margin-bottom:10px}.bg-blue{background:linear-gradient(135deg,#1d4ed8,#38bdf8)}.bg-green{background:linear-gradient(135deg,#15803d,#4ade80)}.bg-red{background:linear-gradient(135deg,#dc2626,#fb7185)}.bg-purple{background:linear-gradient(135deg,#6d28d9,#a78bfa)}
+.grid-2{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:16px}.server-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}textarea{min-height:120px}.table-wrap{width:100%;overflow-x:auto;border-radius:12px}table{width:100%;min-width:760px;border-collapse:collapse}td,th{padding:13px;border-bottom:1px solid var(--line);text-align:left;font-size:14px;white-space:nowrap}th{color:var(--muted)}.online{color:#fff;background:#16a34a;padding:5px 10px;border-radius:6px;font-size:11px;font-weight:900}.offline{color:#fff;background:#ef4444;padding:5px 10px;border-radius:6px;font-size:11px;font-weight:900}
+.real-chart{width:100%;height:340px;background:#07111f;border:1px solid var(--line);border-radius:14px;padding:10px}.chart-legend{display:flex;gap:18px;flex-wrap:wrap;color:var(--muted);margin-bottom:12px}.dot{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px}.dot-blue{background:#2f83ff}.dot-green{background:#22c55e}.small-btn{width:auto;padding:8px 11px;margin:2px}.footer{margin-top:16px;color:var(--muted);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}.menu-btn{display:none;width:auto;margin:0;padding:10px 13px}.overlay{display:none}.pulse{animation:pulse 1s infinite}@keyframes pulse{0%{filter:brightness(1)}50%{filter:brightness(1.35)}100%{filter:brightness(1)}}
+.server-title{display:flex;justify-content:space-between;gap:10px;align-items:center;color:#38bdf8;font-weight:900}.server-row{display:flex;justify-content:space-between;padding:7px 0;color:#dbeafe}.server-name{font-size:18px}.status-pill{font-size:11px;padding:5px 10px;border-radius:8px;background:#16a34a}.status-off{background:#ef4444}
+@media(max-width:1350px){.cards{grid-template-columns:repeat(2,minmax(0,1fr))}.grid-2,.server-grid{grid-template-columns:1fr}}@media(max-width:820px){.layout{display:block}.mobile-top{display:flex;align-items:center;justify-content:space-between;gap:10px;position:sticky;top:0;z-index:60;background:rgba(7,13,25,.96);border-bottom:1px solid var(--line);padding:12px 14px}.mobile-top .brand{font-size:34px;justify-content:flex-start}.mobile-top .slogan{font-size:10px}.menu-btn{display:inline-block}.sidebar{transform:translateX(-105%);width:84%;max-width:330px;padding:22px 18px;transition:.25s}.sidebar.open{transform:translateX(0)}.overlay.show{display:block;position:fixed;inset:0;background:rgba(0,0,0,.58);z-index:40}.main{margin-left:0}.topbar{min-height:auto;padding:16px 14px;position:relative}.topbar h1{font-size:21px}.topbar-right{display:none}.content{padding:14px}.cards{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}.real-chart{height:270px}}
+
+
+/* Barra de pesquisa PPPoE */
+.search-box{
+  margin:15px 0;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.search-box input{
+  flex:1;
+  min-width:260px;
+  width:100%;
+  padding:12px 15px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.16);
+  background:rgba(255,255,255,.06);
+  color:inherit;
+  font-size:14px;
+  outline:none;
+}
+
+.search-box input:focus{
+  border-color:#00c2ff;
+  box-shadow:0 0 0 2px rgba(0,194,255,.15);
+}
+
+.search-box span{
+  font-size:13px;
+  opacity:.78;
+  white-space:nowrap;
+}
+
+
+
+
+/* ===== CORREÇÃO RESPONSIVA PC + CELULAR ===== */
+html, body{
+  max-width:100%;
+  overflow-x:hidden;
+}
+
+.table-wrap{
+  width:100%;
+  overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
+}
+
+.table-wrap table{
+  min-width:760px;
+}
+
+button, .nav a, input, select, textarea{
+  touch-action:manipulation;
+}
+
+@media (max-width: 900px){
+  .layout{
+    width:100%;
+  }
+
+  .main{
+    width:100%;
+    min-width:0;
+  }
+
+  .content{
+    padding:14px;
+  }
+
+  .cards{
+    grid-template-columns:1fr !important;
+    gap:12px;
+  }
+
+  .grid-2{
+    grid-template-columns:1fr !important;
+  }
+
+  .panel, .card{
+    width:100%;
+    box-sizing:border-box;
+  }
+
+  .mobile-top{
+    display:flex;
+    position:sticky;
+    top:0;
+    z-index:1100;
+  }
+
+  .sidebar{
+    position:fixed;
+    top:0;
+    left:0;
+    height:100vh;
+    width:82vw;
+    max-width:320px;
+    z-index:1200;
+    transform:translateX(-105%);
+    transition:transform .25s ease;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+
+  body.menu-open .sidebar,
+  .sidebar.open,
+  .sidebar.active,
+  .sidebar.show{
+    transform:translateX(0);
+  }
+
+  .overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.55);
+    z-index:1150;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .2s ease;
+  }
+
+  body.menu-open .overlay,
+  .overlay.active,
+  .overlay.open{
+    opacity:1;
+    pointer-events:auto;
+  }
+
+  .topbar{
+    flex-wrap:wrap;
+    gap:10px;
+  }
+
+  .topbar h1{
+    font-size:22px;
+  }
+
+  .topbar-right{
+    width:100%;
+    justify-content:flex-start;
+    flex-wrap:wrap;
+  }
+
+  .nav a{
+    min-height:46px;
+    display:flex;
+    align-items:center;
+  }
+
+  input, select, textarea, button{
+    font-size:16px;
+  }
+
+  .search-box{
+    flex-direction:column;
+    align-items:stretch;
+  }
+
+  .search-box input{
+    min-width:0;
+  }
+}
+
+@media (min-width: 901px){
+  .overlay{
+    display:none !important;
+  }
+
+  .sidebar{
+    transform:none !important;
+  }
+}
+
+
+
+/* ===== Financeiro Efí ===== */
+.efi-config-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:12px 0}
+.efi-config-grid label{display:block;font-weight:800;margin-bottom:6px}
+.efi-config-grid input,.efi-config-grid select,.efi-toolbar input,#efiTabela input,#efiTabela select{width:100%;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:inherit;outline:none}
+.efi-actions,.efi-toolbar,.efi-buttons,.efi-pay-buttons{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:12px 0}
+.efi-toolbar input{flex:1;min-width:260px}
+.efi-actions button,.efi-toolbar button,.efi-buttons button,.efi-pay-buttons button{padding:10px 12px;border:0;border-radius:10px;cursor:pointer}
+.efi-note{opacity:.78;font-size:13px}
+.efi-payment-preview{display:grid;grid-template-columns:1fr auto;gap:15px;align-items:center}
+.efi-result{margin-top:12px;padding:14px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12)}
+@media(max-width:900px){.efi-config-grid,.efi-payment-preview{grid-template-columns:1fr}.efi-toolbar{flex-direction:column;align-items:stretch}.efi-toolbar input{min-width:0}.efi-buttons{min-width:520px}}
+
+
+
+/* ===== Cadastro ReceitaNet ===== */
+.cadastro-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:14px;
+}
+.cadastro-grid label{
+  display:block;
+  font-weight:800;
+  margin-bottom:6px;
+}
+.cadastro-grid input,
+.cadastro-grid select,
+.cadastro-actions input{
+  width:100%;
+  padding:12px 14px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.16);
+  background:rgba(255,255,255,.06);
+  color:inherit;
+  outline:none;
+}
+.cadastro-full{
+  grid-column:1/-1;
+}
+.cadastro-actions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+  margin:12px 0;
+}
+.cadastro-actions button,
+.cadastro-row-actions button{
+  padding:10px 12px;
+  border:0;
+  border-radius:10px;
+  cursor:pointer;
+}
+.cadastro-actions input{
+  flex:1;
+  min-width:260px;
+}
+.cadastro-note{
+  opacity:.78;
+  font-size:13px;
+}
+.cadastro-row-actions{
+  display:flex;
+  gap:6px;
+  flex-wrap:wrap;
+}
+@media(max-width:900px){
+  .cadastro-grid{
+    grid-template-columns:1fr;
+  }
+  .cadastro-actions{
+    flex-direction:column;
+    align-items:stretch;
+  }
+  .cadastro-actions input{
+    min-width:0;
+  }
+  .cadastro-row-actions{
+    min-width:170px;
+  }
+}
+
+
+
+/* ===== Importação ReceitaNet CSV ===== */
+.csv-import-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:10px 12px;
+  border-radius:10px;
+  cursor:pointer;
+  background:rgba(255,255,255,.12);
+  border:1px solid rgba(255,255,255,.14);
+  font-weight:700;
+}
+.import-result{
+  margin-top:12px;
+  padding:14px;
+  border-radius:12px;
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.12);
+  line-height:1.6;
+}
+
+
+
+/* ===== Clientes Painel ===== */
+.clientes-actions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+  margin:12px 0;
+}
+.clientes-actions input{
+  flex:1;
+  min-width:260px;
+  padding:12px 14px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.16);
+  background:rgba(255,255,255,.06);
+  color:inherit;
+  outline:none;
+}
+.clientes-actions button,
+.clientes-row-actions button,
+.button-link{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:10px 12px;
+  border:0;
+  border-radius:10px;
+  cursor:pointer;
+  text-decoration:none;
+  background:rgba(255,255,255,.12);
+  color:inherit;
+}
+.clientes-row-actions{
+  display:flex;
+  gap:6px;
+  flex-wrap:wrap;
+}
+@media(max-width:900px){
+  .clientes-actions{
+    flex-direction:column;
+    align-items:stretch;
+  }
+  .clientes-actions input{
+    min-width:0;
+  }
+  .clientes-row-actions{
+    min-width:150px;
+  }
+}
+
+
+
+/* ===== Botões Importador ReceitaNet ===== */
+.cadastro-actions button,
+.csv-import-btn{
+  min-height:42px;
+}
+
+
+
+/* ===== Aba Importação ReceitaNet ===== */
+.csv-import-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:10px 12px;
+  border-radius:10px;
+  cursor:pointer;
+  background:rgba(255,255,255,.12);
+  border:1px solid rgba(255,255,255,.14);
+  font-weight:700;
+}
+.import-result{
+  margin-top:12px;
+  padding:14px;
+  border-radius:12px;
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.12);
+  line-height:1.6;
+}
+.button-link{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:10px 12px;
+  border-radius:10px;
+  text-decoration:none;
+  background:rgba(255,255,255,.12);
+  color:inherit;
+}
+
+
+
+/* ===== Clientes dados completos ===== */
+.cliente-detalhes-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+}
+.cliente-detalhes-grid div{
+  padding:12px;
+  border-radius:12px;
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.12);
+}
+.cliente-detalhes-grid b{
+  display:block;
+  margin-bottom:5px;
+}
+.cliente-detalhes-grid span{
+  opacity:.9;
+  word-break:break-word;
+}
+@media(max-width:900px){
+  .cliente-detalhes-grid{
+    grid-template-columns:1fr;
+  }
+}
+
+
+
+/* ===== Correção forçada aba Clientes ===== */
+#tabelaClientesCompleta{
+  min-width:2200px !important;
+}
+#tabelaClientesCompleta th,
+#tabelaClientesCompleta td{
+  white-space:nowrap;
+  vertical-align:top;
+}
+.cliente-detalhes-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+}
+.cliente-detalhes-grid div{
+  padding:12px;
+  border-radius:12px;
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.12);
+}
+.cliente-detalhes-grid b{
+  display:block;
+  margin-bottom:5px;
+}
+.cliente-detalhes-grid span{
+  word-break:break-word;
+}
+@media(max-width:900px){
+  .cliente-detalhes-grid{
+    grid-template-columns:1fr;
+  }
+}
+
+
+
+/* ===== Base limpa antes ReceitaNet ===== */
+.cadastro-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.cadastro-grid label{display:block;font-weight:800;margin-bottom:6px}
+.cadastro-grid input,.clientes-actions input{width:100%;padding:12px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);color:inherit;outline:none}
+.cadastro-full{grid-column:1/-1}
+.cadastro-actions,.clientes-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:12px 0}
+.cadastro-actions button,.button-link{display:inline-flex;align-items:center;justify-content:center;padding:10px 12px;border:0;border-radius:10px;cursor:pointer;text-decoration:none;background:rgba(255,255,255,.12);color:inherit}
+.clientes-actions input{flex:1;min-width:260px}
+@media(max-width:900px){.cadastro-grid{grid-template-columns:1fr}.cadastro-actions,.clientes-actions{flex-direction:column;align-items:stretch}.clientes-actions input{min-width:0}}
+
+
+
+/* ===== Importação e Clientes ReceitaNet - base única ===== */
+.csv-import-btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 12px;border-radius:10px;cursor:pointer;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.14);font-weight:700}
+.import-result{margin-top:12px;padding:14px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);line-height:1.6}
+.clientes-actions,.cadastro-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:12px 0}
+.clientes-actions input{flex:1;min-width:260px;padding:12px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);color:inherit;outline:none}
+.button-link,.clientes-actions button,.cadastro-actions button{display:inline-flex;align-items:center;justify-content:center;padding:10px 12px;border:0;border-radius:10px;cursor:pointer;text-decoration:none;background:rgba(255,255,255,.12);color:inherit}
+#clientesTabelaCompleta{min-width:2600px!important}
+#clientesTabelaCompleta th,#clientesTabelaCompleta td{white-space:nowrap;vertical-align:top}
+.cliente-detalhes-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.cliente-detalhes-grid div{padding:12px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12)}
+.cliente-detalhes-grid b{display:block;margin-bottom:5px}.cliente-detalhes-grid span{word-break:break-word}
+@media(max-width:900px){.clientes-actions,.cadastro-actions{flex-direction:column;align-items:stretch}.clientes-actions input{min-width:0}.cliente-detalhes-grid{grid-template-columns:1fr}}
+
+
+
+/* ===== Correção Clientes ReceitaNet ID exclusivo ===== */
+#clientesReceitaTabelaCompleta{
+  min-width:2600px !important;
+}
+#clientesReceitaTabelaCompleta th,
+#clientesReceitaTabelaCompleta td{
+  white-space:nowrap;
+  vertical-align:top;
+}
+.cliente-detalhes-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+}
+.cliente-detalhes-grid div{
+  padding:12px;
+  border-radius:12px;
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.12);
+}
+.cliente-detalhes-grid b{
+  display:block;
+  margin-bottom:5px;
+}
+.cliente-detalhes-grid span{
+  word-break:break-word;
+}
+@media(max-width:900px){
+  .cliente-detalhes-grid{
+    grid-template-columns:1fr;
+  }
+}
+
+
+
+/* ===== Correção final Clientes completos ===== */
+#clientesReceitaTabelaCompleta{
+  min-width:2600px !important;
+}
+#clientesReceitaTabelaCompleta th,
+#clientesReceitaTabelaCompleta td{
+  white-space:nowrap;
+  vertical-align:top;
+}
+.cliente-detalhes-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+}
+.cliente-detalhes-grid div{
+  padding:12px;
+  border-radius:12px;
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.12);
+}
+.cliente-detalhes-grid b{
+  display:block;
+  margin-bottom:5px;
+}
+.cliente-detalhes-grid span{
+  word-break:break-word;
+}
+@media(max-width:900px){
+  .cliente-detalhes-grid{
+    grid-template-columns:1fr;
+  }
+}
+
+
+
+/* ===== Auditoria Clientes/Importação ReceitaNet ===== */
+.csv-import-btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 12px;border-radius:10px;cursor:pointer;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.14);font-weight:700}
+.import-result{margin-top:12px;padding:14px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);line-height:1.6}
+.clientes-actions,.cadastro-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:12px 0}
+.clientes-actions input{flex:1;min-width:260px;padding:12px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);color:inherit;outline:none}
+.button-link,.clientes-actions button,.cadastro-actions button{display:inline-flex;align-items:center;justify-content:center;padding:10px 12px;border:0;border-radius:10px;cursor:pointer;text-decoration:none;background:rgba(255,255,255,.12);color:inherit}
+#clientesHubTabelaCompleta{min-width:2600px!important}
+#clientesHubTabelaCompleta th,#clientesHubTabelaCompleta td{white-space:nowrap;vertical-align:top}
+.cliente-detalhes-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.cliente-detalhes-grid div{padding:12px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12)}
+.cliente-detalhes-grid b{display:block;margin-bottom:5px}.cliente-detalhes-grid span{word-break:break-word}
+@media(max-width:900px){.clientes-actions,.cadastro-actions{flex-direction:column;align-items:stretch}.clientes-actions input{min-width:0}.cliente-detalhes-grid{grid-template-columns:1fr}}
+
+
+
+/* ===== Clientes standalone final ReceitaNet ===== */
+.csv-import-btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 12px;border-radius:10px;cursor:pointer;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.14);font-weight:700}
+.import-result{margin-top:12px;padding:14px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);line-height:1.6}
+.clientes-consulta-page .consulta-grid{display:grid;grid-template-columns:280px minmax(0,1fr);gap:18px;align-items:start}
+.filtro-bloco label{display:block;font-weight:800;margin-bottom:6px}
+.filtro-bloco select,.consulta-search input{width:100%;padding:12px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);color:inherit;outline:none}
+.filtro-radio{display:flex;gap:12px;margin-top:14px;flex-wrap:wrap}
+.resumo-clientes-box{display:grid;grid-template-columns:1fr 1fr;gap:0;overflow:hidden;border-radius:12px;box-shadow:0 0 0 1px rgba(255,255,255,.08)}
+.status-card{min-height:78px;padding:12px;color:#fff;display:flex;flex-direction:column;justify-content:center;text-align:center;font-weight:800}.status-card span{font-size:13px;opacity:.95}.status-card b{font-size:26px;margin-top:4px}.status-card.grande{grid-column:1/-1;min-height:90px}
+.status-card.azul{background:#075bbb}.status-card.azul2{background:#043f87}.status-card.vermelho{background:#ad1e2a}.status-card.preto{background:#111827}.status-card.amarelo{background:#d99b1f}.status-card.laranja{background:#d87812}.status-card.rosa{background:#c02b7a}.status-card.laranja2{background:#d86814}.status-card.verde{background:#059669}.status-card.escuro{background:#111827}
+.consulta-header{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}.novo-cliente-btn{background:#123f91;color:#fff;padding:10px 14px;border-radius:8px;text-decoration:none;font-weight:800}
+.consulta-search,.cadastro-actions{display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap}.consulta-search input{flex:1;min-width:260px}
+.button-link,.consulta-search button,.cadastro-actions button{display:inline-flex;align-items:center;justify-content:center;padding:10px 12px;border:0;border-radius:10px;cursor:pointer;text-decoration:none;background:rgba(255,255,255,.12);color:inherit}
+.clientes-receita-wrap table{min-width:1200px}#clientesHubTabelaReceita th{background:#083b8f;color:#fff;font-weight:900;white-space:nowrap}#clientesHubTabelaReceita td{vertical-align:top;white-space:normal;line-height:1.45}#clientesHubTabelaReceita tbody tr:nth-child(even){background:rgba(255,255,255,.035)}
+.expand-col{width:40px;text-align:center}.expand-btn{border:0;border-radius:50%;width:26px;height:26px;cursor:pointer;background:rgba(0,120,255,.18);color:inherit}
+.cliente-detalhes-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.cliente-detalhes-grid div{padding:12px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12)}.cliente-detalhes-grid b{display:block;margin-bottom:5px}.cliente-detalhes-grid span{word-break:break-word}
+@media(max-width:1000px){.clientes-consulta-page .consulta-grid{grid-template-columns:1fr}.consulta-left{order:2}.consulta-main{order:1}}@media(max-width:900px){.consulta-search,.cadastro-actions{flex-direction:column;align-items:stretch}.consulta-search input{min-width:0}.cliente-detalhes-grid{grid-template-columns:1fr}}
+
+
+
+/* ===== Cadastro modelo ReceitaNet ===== */
+.cadastro-receita-page{padding-top:10px}
+.cadastro-shortcuts{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.sc{width:86px;height:64px;border:0;border-radius:2px;color:#fff;font-weight:800;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;cursor:pointer;font-size:18px}
+.sc span{font-size:11px;line-height:1.1}.sc.azul{background:#154a9b}.sc.azul-claro{background:#0577df}.sc.vermelho{background:#c8333b}.sc.verde{background:#197a45}.sc.cinza{background:#e8edf4;color:#1f2937;border:1px solid #cfd8e3}.sc.ciano{background:#088cad}
+.cadastro-layout-receita{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:18px;align-items:start}
+.cadastro-form-card,.cadastro-resumo-card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:14px}
+.cadastro-tabs{display:flex;align-items:center;gap:0;flex-wrap:wrap;border-bottom:1px solid rgba(255,255,255,.12);margin:-14px -14px 14px;padding:0 0 0 0}
+.cadastro-tabs .tab{padding:13px 16px;border:0;background:rgba(255,255,255,.04);color:inherit;cursor:pointer;border-right:1px solid rgba(255,255,255,.08);font-weight:700}
+.cadastro-tabs .tab.active{background:rgba(255,255,255,.14);border-top:3px solid #2563eb}.beta{background:#c0263b;color:#fff;font-size:10px;padding:2px 5px;border-radius:4px}
+.tab-search{margin-left:auto;min-width:220px;padding:10px 12px;border:0;background:#8ecae6;color:#0f172a;outline:none}
+.tab-content{display:none}.tab-content.active{display:block}
+.form-row{margin-bottom:14px}.form-row label{display:block;font-weight:800;margin-bottom:6px}.form-row input,.form-row select,.form-row textarea{width:100%;padding:11px 12px;border-radius:4px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:inherit;outline:none}.form-row textarea{min-height:120px}
+.form-row.two{display:grid;grid-template-columns:1fr 1fr;gap:22px}.form-row.three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px}
+.input-action{display:flex}.input-action input{border-radius:4px 0 0 4px}.input-action button{border:1px solid rgba(255,255,255,.2);border-left:0;border-radius:0 4px 4px 0;background:rgba(255,255,255,.12);color:inherit;padding:0 12px;cursor:pointer}.email-btn{background:#d6324a!important;color:#fff!important}
+.cadastro-save-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:18px 0}.save-blue,.save-red,.cancel-btn{border:0;border-radius:4px;padding:12px 16px;color:#fff;font-weight:800;cursor:pointer}.save-blue{background:#0b7ed0}.save-red{background:#c63245}.cancel-btn{background:#6b7280}#cadIdentificador{margin-left:auto;opacity:.7;font-size:12px}
+.observacao-box label{display:block;font-weight:800;margin-bottom:6px}.observacao-box textarea{width:100%;min-height:120px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:inherit;border-radius:6px}
+.resumo-title{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,.16);padding-bottom:10px}.resumo-title h3{margin:0}.resumo-title button{width:26px;height:26px}
+.resumo-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}.resumo-grid b{display:block;font-size:12px;text-transform:uppercase;opacity:.85}.resumo-grid span{font-size:13px;word-break:break-word}
+.resumo-section{border-top:1px solid rgba(255,255,255,.16);margin-top:16px;padding-top:14px}.resumo-section h4{margin:0 0 8px}.nao-identificado{background:#c0263b;color:#fff;font-size:11px;padding:3px 8px;border-radius:4px}.status-login-line{display:flex;justify-content:space-between;gap:10px;border-top:1px solid rgba(255,255,255,.16);border-bottom:1px solid rgba(255,255,255,.16);padding:14px 0;margin-top:14px}.offline-dot{color:#ef4444}
+.mini-table{width:100%;border-collapse:collapse;font-size:12px}.mini-table th,.mini-table td{padding:8px;border-bottom:1px solid rgba(255,255,255,.12);text-align:left}.mini-total{text-align:right;margin-top:8px}
+.empty-tab{padding:30px;text-align:center;opacity:.7}
+@media(max-width:1100px){.cadastro-layout-receita{grid-template-columns:1fr}.cadastro-resumo-card{order:-1}.sc{width:78px}}
+@media(max-width:800px){.form-row.two,.form-row.three{grid-template-columns:1fr}.tab-search{width:100%;margin-left:0}.cadastro-tabs .tab{flex:1;min-width:120px}.resumo-grid{grid-template-columns:1fr}}
+
+
+
+/* ===== Cadastro: abas lado a lado estilo ReceitaNet ===== */
+.cadastro-tabs{
+  display:flex !important;
+  flex-direction:row !important;
+  align-items:stretch !important;
+  flex-wrap:nowrap !important;
+  gap:0 !important;
+  overflow-x:auto !important;
+  overflow-y:hidden !important;
+  white-space:nowrap !important;
+  border-bottom:1px solid rgba(255,255,255,.14) !important;
+  margin:-14px -14px 16px !important;
+  padding:0 !important;
+  scrollbar-width:thin;
+}
+.cadastro-tabs .tab{
+  flex:0 0 auto !important;
+  min-width:auto !important;
+  width:auto !important;
+  height:44px !important;
+  padding:0 18px !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  border-radius:0 !important;
+  border:0 !important;
+  border-right:1px solid rgba(255,255,255,.10) !important;
+  background:rgba(255,255,255,.05) !important;
+  color:inherit !important;
+  font-weight:800 !important;
+  font-size:14px !important;
+}
+.cadastro-tabs .tab.active{
+  background:rgba(255,255,255,.13) !important;
+  border-top:3px solid #2563eb !important;
+  color:#fff !important;
+}
+.cadastro-tabs .tab:hover{
+  background:rgba(255,255,255,.10) !important;
+}
+.cadastro-tabs .tab-search{
+  flex:0 0 240px !important;
+  min-width:240px !important;
+  height:44px !important;
+  margin-left:auto !important;
+  border-radius:0 !important;
+  padding:0 14px !important;
+}
+@media(max-width:900px){
+  .cadastro-tabs{
+    flex-wrap:nowrap !important;
+    overflow-x:auto !important;
+  }
+  .cadastro-tabs .tab{
+    min-width:130px !important;
+  }
+  .cadastro-tabs .tab-search{
+    flex:0 0 220px !important;
+    min-width:220px !important;
+    margin-left:0 !important;
+  }
+}
+
+
+
+/* =====================================================
+   LAYOUT COMPACTO GLOBAL - ESTILO RECEITANET
+   Aplicado em todas as abas do Controle
+   ===================================================== */
+
+/* Menu lateral menor no PC */
+@media (min-width: 901px){
+  .sidebar{
+    width:230px !important;
+    min-width:230px !important;
+    max-width:230px !important;
+  }
+
+  .main,
+  main.main{
+    margin-left:0 !important;
+    width:calc(100vw - 230px) !important;
+    max-width:calc(100vw - 230px) !important;
+  }
+
+  .layout{
+    display:grid !important;
+    grid-template-columns:230px minmax(0,1fr) !important;
+    width:100vw !important;
+    max-width:100vw !important;
+    overflow-x:hidden !important;
+  }
+}
+
+/* Logo e topo do menu mais compactos */
+.logo-wrap{
+  padding:16px 14px !important;
+}
+
+.brand{
+  font-size:38px !important;
+  line-height:1 !important;
+}
+
+.slogan{
+  font-size:11px !important;
+  letter-spacing:.08em !important;
+}
+
+/* Itens do menu mais próximos do ReceitaNet */
+.nav{
+  padding:6px 8px !important;
+}
+
+.nav a{
+  min-height:40px !important;
+  height:40px !important;
+  padding:0 12px !important;
+  margin:3px 0 !important;
+  font-size:14px !important;
+  border-radius:10px !important;
+  gap:9px !important;
+}
+
+.nav a .icon,
+.nav .icon{
+  width:18px !important;
+  min-width:18px !important;
+  font-size:15px !important;
+  margin-right:2px !important;
+}
+
+/* Área principal mais compacta */
+.topbar{
+  min-height:58px !important;
+  padding:12px 18px !important;
+}
+
+.topbar h1{
+  font-size:24px !important;
+  margin:0 !important;
+}
+
+.content{
+  padding:14px 16px !important;
+  max-width:100% !important;
+  width:100% !important;
+}
+
+/* Cards globais menores */
+.cards{
+  display:grid !important;
+  grid-template-columns:repeat(4,minmax(0,1fr)) !important;
+  gap:12px !important;
+  margin-bottom:14px !important;
+}
+
+.card{
+  min-height:105px !important;
+  padding:14px !important;
+  border-radius:14px !important;
+}
+
+.card h2{
+  font-size:25px !important;
+  margin:6px 0 0 !important;
+}
+
+.card small{
+  font-size:12px !important;
+}
+
+.card-icon{
+  width:38px !important;
+  height:38px !important;
+  min-width:38px !important;
+  font-size:18px !important;
+  border-radius:10px !important;
+}
+
+/* Painéis e tabelas mais compactos */
+.panel{
+  padding:14px !important;
+  border-radius:14px !important;
+  margin-bottom:14px !important;
+}
+
+.panel h3{
+  font-size:18px !important;
+  margin:0 0 12px !important;
+}
+
+.table-wrap{
+  width:100% !important;
+  overflow:auto !important;
+}
+
+table{
+  font-size:13px !important;
+}
+
+th,td{
+  padding:9px 10px !important;
+}
+
+/* Dashboard/POPs mais compactos */
+.pop-grid,
+.pops-grid,
+.servers-grid,
+.graficos-grid,
+.charts-grid{
+  gap:12px !important;
+}
+
+.pop-card,
+.server-card{
+  min-height:190px !important;
+  padding:14px !important;
+  border-radius:14px !important;
+}
+
+/* Inputs e botões */
+input,select,textarea,button,.button-link{
+  font-size:13px !important;
+}
+
+button,.button-link{
+  min-height:38px !important;
+}
+
+/* Cadastro estilo ReceitaNet mais compacto */
+.cadastro-shortcuts{
+  gap:7px !important;
+  margin-bottom:12px !important;
+}
+
+.sc{
+  width:76px !important;
+  height:58px !important;
+  font-size:16px !important;
+}
+
+.sc span{
+  font-size:10px !important;
+}
+
+.cadastro-layout-receita{
+  grid-template-columns:minmax(0,1fr) 330px !important;
+  gap:14px !important;
+}
+
+.cadastro-form-card,
+.cadastro-resumo-card{
+  padding:12px !important;
+}
+
+.cadastro-tabs{
+  margin:-12px -12px 14px !important;
+}
+
+.cadastro-tabs .tab{
+  height:40px !important;
+  padding:0 13px !important;
+  font-size:13px !important;
+}
+
+.cadastro-tabs .tab-search{
+  height:40px !important;
+  flex-basis:210px !important;
+  min-width:210px !important;
+}
+
+.form-row{
+  margin-bottom:11px !important;
+}
+
+.form-row input,
+.form-row select,
+.form-row textarea{
+  padding:9px 10px !important;
+}
+
+.resumo-grid{
+  gap:8px !important;
+}
+
+/* Clientes estilo consulta mais compacto */
+.clientes-consulta-page .consulta-grid{
+  grid-template-columns:250px minmax(0,1fr) !important;
+  gap:14px !important;
+}
+
+.status-card{
+  min-height:68px !important;
+  padding:9px !important;
+}
+
+.status-card b{
+  font-size:23px !important;
+}
+
+.status-card span{
+  font-size:12px !important;
+}
+
+.consulta-search{
+  margin-bottom:10px !important;
+}
+
+.clientes-receita-wrap table{
+  min-width:1050px !important;
+}
+
+/* Celular mantém menu recolhido e área cheia */
+@media (max-width: 900px){
+  .layout{
+    display:block !important;
+    width:100% !important;
+  }
+
+  .sidebar{
+    width:285px !important;
+    max-width:85vw !important;
+  }
+
+  .main,
+  main.main{
+    width:100% !important;
+    max-width:100% !important;
+    margin-left:0 !important;
+  }
+
+  .content{
+    padding:12px !important;
+  }
+
+  .cards{
+    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+    gap:10px !important;
+  }
+
+  .card{
+    min-height:95px !important;
+    padding:12px !important;
+  }
+
+  .card h2{
+    font-size:21px !important;
+  }
+
+  .topbar{
+    padding:10px 12px !important;
+  }
+
+  .topbar h1{
+    font-size:20px !important;
+  }
+
+  .cadastro-layout-receita,
+  .clientes-consulta-page .consulta-grid{
+    grid-template-columns:1fr !important;
+  }
+
+  .cadastro-resumo-card{
+    order:-1;
+  }
+
+  .sc{
+    width:70px !important;
+    height:54px !important;
+  }
+}
+
+@media (max-width: 520px){
+  .cards{
+    grid-template-columns:1fr !important;
+  }
+
+  .card{
+    min-height:85px !important;
+  }
+
+  .brand{
+    font-size:32px !important;
+  }
+}
+
+
+
+/* =====================================================
+   CORREÇÃO DE CENTRALIZAÇÃO GLOBAL
+   Remove deslocamento antigo e deixa o grid controlar tudo
+   ===================================================== */
+
+@media (min-width: 901px){
+  html, body{
+    width:100% !important;
+    max-width:100% !important;
+    overflow-x:hidden !important;
+  }
+
+  .layout{
+    display:grid !important;
+    grid-template-columns:230px minmax(0, 1fr) !important;
+    width:100% !important;
+    max-width:100% !important;
+    min-height:100vh !important;
+    overflow-x:hidden !important;
+  }
+
+  .sidebar{
+    position:relative !important;
+    left:auto !important;
+    top:auto !important;
+    width:230px !important;
+    min-width:230px !important;
+    max-width:230px !important;
+    height:100vh !important;
+    overflow-y:auto !important;
+    overflow-x:hidden !important;
+    grid-column:1 !important;
+  }
+
+  .main,
+  main.main{
+    grid-column:2 !important;
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+    margin:0 !important;
+    margin-left:0 !important;
+    padding:0 !important;
+    position:relative !important;
+    left:auto !important;
+    right:auto !important;
+    transform:none !important;
+    overflow-x:hidden !important;
+  }
+
+  .topbar,
+  .content,
+  .footer{
+    width:100% !important;
+    max-width:100% !important;
+    margin-left:0 !important;
+    margin-right:0 !important;
+    box-sizing:border-box !important;
+  }
+
+  .content{
+    padding:14px 16px !important;
+  }
+
+  /* Evita cards/tabelas empurrarem a página para fora */
+  .cards,
+  .panel,
+  .table-wrap,
+  .consulta-grid,
+  .cadastro-layout-receita{
+    max-width:100% !important;
+    box-sizing:border-box !important;
+  }
+
+  .table-wrap{
+    overflow:auto !important;
+  }
+}
+
+/* Mantém o mobile sem deslocamento */
+@media (max-width: 900px){
+  .layout{
+    display:block !important;
+    width:100% !important;
+    max-width:100% !important;
+  }
+
+  .main,
+  main.main{
+    width:100% !important;
+    max-width:100% !important;
+    margin:0 !important;
+    margin-left:0 !important;
+    left:auto !important;
+    transform:none !important;
+  }
+
+  .sidebar{
+    position:fixed !important;
+    left:0 !important;
+    top:0 !important;
+    width:285px !important;
+    max-width:85vw !important;
+    height:100vh !important;
+    z-index:999 !important;
+  }
+}
+
+
+
+/* =====================================================
+   CADASTRO SEM BARRA DE ROLAGEM NAS ABAS
+   Estilo mais próximo do ReceitaNet
+   ===================================================== */
+
+.cadastro-tabs{
+  overflow-x:hidden !important;
+  overflow-y:hidden !important;
+  scrollbar-width:none !important;
+  -ms-overflow-style:none !important;
+  display:flex !important;
+  flex-wrap:nowrap !important;
+  align-items:stretch !important;
+  width:100% !important;
+}
+
+.cadastro-tabs::-webkit-scrollbar{
+  display:none !important;
+  width:0 !important;
+  height:0 !important;
+}
+
+.cadastro-tabs .tab{
+  flex:1 1 auto !important;
+  min-width:0 !important;
+  max-width:none !important;
+  height:38px !important;
+  padding:0 8px !important;
+  font-size:12px !important;
+  white-space:nowrap !important;
+  overflow:hidden !important;
+  text-overflow:ellipsis !important;
+}
+
+.cadastro-tabs .tab-search{
+  flex:0 0 185px !important;
+  min-width:185px !important;
+  max-width:185px !important;
+  height:38px !important;
+  padding:0 10px !important;
+  overflow:hidden !important;
+}
+
+.cadastro-form-card{
+  overflow:hidden !important;
+}
+
+/* Evita barra horizontal no corpo do cadastro */
+.cadastro-receita-page,
+.cadastro-layout-receita,
+.cadastro-form-card,
+.tab-content{
+  max-width:100% !important;
+  overflow-x:hidden !important;
+}
+
+/* Botões superiores mais compactos para não estourar a tela */
+.cadastro-shortcuts{
+  overflow:hidden !important;
+  display:flex !important;
+  flex-wrap:wrap !important;
+  gap:7px !important;
+}
+
+.sc{
+  width:72px !important;
+  height:54px !important;
+  font-size:15px !important;
+}
+
+.sc span{
+  font-size:9.5px !important;
+}
+
+/* Em telas menores, reduz mais ainda em vez de criar rolagem */
+@media(max-width:1200px){
+  .cadastro-tabs .tab{
+    padding:0 6px !important;
+    font-size:11px !important;
+  }
+
+  .cadastro-tabs .tab-search{
+    flex-basis:160px !important;
+    min-width:160px !important;
+    max-width:160px !important;
+  }
+}
+
+@media(max-width:900px){
+  .cadastro-tabs{
+    flex-wrap:wrap !important;
+    overflow:hidden !important;
+  }
+
+  .cadastro-tabs .tab{
+    flex:1 1 33.33% !important;
+    min-width:110px !important;
+  }
+
+  .cadastro-tabs .tab-search{
+    flex:1 1 100% !important;
+    min-width:100% !important;
+    max-width:100% !important;
+  }
+}
+
+
+
+/* =====================================================
+   CORREÇÃO FINAL ABAS CADASTRO - ESTILO RECEITANET
+   Abas separadas, sem juntar texto, com scroll escondido
+   ===================================================== */
+
+.cadastro-tabs{
+  display:flex !important;
+  flex-direction:row !important;
+  align-items:stretch !important;
+  flex-wrap:nowrap !important;
+  gap:0 !important;
+  width:100% !important;
+  max-width:100% !important;
+  overflow-x:auto !important;
+  overflow-y:hidden !important;
+  scrollbar-width:none !important;
+  -ms-overflow-style:none !important;
+  white-space:nowrap !important;
+  border-bottom:1px solid rgba(255,255,255,.14) !important;
+  margin:-12px -12px 14px !important;
+  padding:0 !important;
+}
+
+.cadastro-tabs::-webkit-scrollbar{
+  display:none !important;
+  width:0 !important;
+  height:0 !important;
+}
+
+.cadastro-tabs .tab{
+  flex:0 0 auto !important;
+  width:auto !important;
+  min-width:auto !important;
+  max-width:none !important;
+  height:40px !important;
+  padding:0 16px !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  white-space:nowrap !important;
+  overflow:visible !important;
+  text-overflow:clip !important;
+  border-radius:0 !important;
+  border:0 !important;
+  border-right:1px solid rgba(255,255,255,.12) !important;
+  background:rgba(255,255,255,.05) !important;
+  color:inherit !important;
+  font-size:13px !important;
+  font-weight:800 !important;
+}
+
+.cadastro-tabs .tab.active{
+  background:rgba(255,255,255,.13) !important;
+  border-top:3px solid #2563eb !important;
+  color:#fff !important;
+}
+
+.cadastro-tabs .tab:hover{
+  background:rgba(255,255,255,.10) !important;
+}
+
+.cadastro-tabs .tab-search{
+  flex:0 0 220px !important;
+  min-width:220px !important;
+  max-width:220px !important;
+  height:40px !important;
+  padding:0 12px !important;
+  margin-left:8px !important;
+  border-radius:0 !important;
+  border:0 !important;
+  background:#8ecae6 !important;
+  color:#0f172a !important;
+}
+
+/* Botões superiores iguais ao ReceitaNet: compactos, sem empurrar as abas */
+.cadastro-shortcuts{
+  display:flex !important;
+  flex-wrap:wrap !important;
+  gap:8px !important;
+  overflow:visible !important;
+  margin-bottom:14px !important;
+}
+
+.sc{
+  width:78px !important;
+  height:58px !important;
+  font-size:16px !important;
+}
+
+.sc span{
+  font-size:10px !important;
+  line-height:1.08 !important;
+}
+
+/* Evita a barra branca grande no meio da tela */
+.cadastro-form-card{
+  overflow:hidden !important;
+}
+
+.cadastro-receita-page,
+.cadastro-layout-receita{
+  overflow-x:hidden !important;
+  max-width:100% !important;
+}
+
+/* Em telas pequenas, mantém separação e esconde a barra */
+@media(max-width:900px){
+  .cadastro-tabs{
+    flex-wrap:nowrap !important;
+    overflow-x:auto !important;
+    scrollbar-width:none !important;
+  }
+
+  .cadastro-tabs .tab{
+    flex:0 0 auto !important;
+    min-width:auto !important;
+    padding:0 14px !important;
+    font-size:12px !important;
+  }
+
+  .cadastro-tabs .tab-search{
+    flex:0 0 200px !important;
+    min-width:200px !important;
+    max-width:200px !important;
+    margin-left:6px !important;
+  }
+}
+
+
+
+/* =====================================================
+   CADASTRO - TODAS AS ABAS VISÍVEIS
+   Ajuste final para mostrar Dados Pessoais, Contato,
+   Cobrança, Servidor, OLT, OLTNET, Administrativo e
+   Dados Notas Fiscais sem cortar no final.
+   ===================================================== */
+
+@media (min-width: 901px){
+  .cadastro-layout-receita{
+    grid-template-columns:minmax(0,1fr) 300px !important;
+    gap:12px !important;
+  }
+
+  .cadastro-resumo-card{
+    width:300px !important;
+    max-width:300px !important;
+  }
+
+  .cadastro-tabs{
+    display:grid !important;
+    grid-template-columns:
+      minmax(82px,1fr)
+      minmax(58px,.72fr)
+      minmax(72px,.82fr)
+      minmax(64px,.76fr)
+      minmax(48px,.52fr)
+      minmax(64px,.72fr)
+      minmax(92px,.98fr)
+      minmax(120px,1.22fr)
+      minmax(135px,135px) !important;
+    width:100% !important;
+    max-width:100% !important;
+    overflow:hidden !important;
+    gap:0 !important;
+    align-items:stretch !important;
+  }
+
+  .cadastro-tabs .tab{
+    width:100% !important;
+    min-width:0 !important;
+    max-width:100% !important;
+    height:38px !important;
+    padding:0 5px !important;
+    font-size:11px !important;
+    justify-content:center !important;
+    white-space:nowrap !important;
+    overflow:hidden !important;
+    text-overflow:clip !important;
+    border-right:1px solid rgba(255,255,255,.12) !important;
+  }
+
+  .cadastro-tabs .tab-search{
+    width:100% !important;
+    min-width:0 !important;
+    max-width:100% !important;
+    height:38px !important;
+    padding:0 8px !important;
+    margin-left:0 !important;
+    font-size:11px !important;
+  }
+
+  .cadastro-tabs .beta{
+    font-size:8px !important;
+    padding:1px 4px !important;
+    margin-left:3px !important;
+  }
+}
+
+/* Em telas médias, reduz mais para não esconder as últimas abas */
+@media (min-width: 901px) and (max-width: 1250px){
+  .cadastro-layout-receita{
+    grid-template-columns:minmax(0,1fr) 285px !important;
+  }
+
+  .cadastro-resumo-card{
+    width:285px !important;
+    max-width:285px !important;
+  }
+
+  .cadastro-tabs{
+    grid-template-columns:
+      minmax(74px,1fr)
+      minmax(52px,.65fr)
+      minmax(66px,.72fr)
+      minmax(58px,.66fr)
+      minmax(44px,.45fr)
+      minmax(58px,.62fr)
+      minmax(82px,.82fr)
+      minmax(105px,1fr)
+      minmax(115px,115px) !important;
+  }
+
+  .cadastro-tabs .tab{
+    font-size:10px !important;
+    padding:0 3px !important;
+  }
+
+  .cadastro-tabs .tab-search{
+    font-size:10px !important;
+    padding:0 6px !important;
+  }
+}
+
+/* Remove completamente qualquer rolagem horizontal das abas */
+.cadastro-tabs{
+  scrollbar-width:none !important;
+  -ms-overflow-style:none !important;
+}
+.cadastro-tabs::-webkit-scrollbar{
+  display:none !important;
+}
+
+/* Mantém no celular rolando sem barra, pois a tela é menor */
+@media(max-width:900px){
+  .cadastro-tabs{
+    display:flex !important;
+    flex-wrap:nowrap !important;
+    overflow-x:auto !important;
+    scrollbar-width:none !important;
+  }
+
+  .cadastro-tabs .tab{
+    flex:0 0 auto !important;
+    min-width:115px !important;
+    font-size:12px !important;
+  }
+
+  .cadastro-tabs .tab-search{
+    flex:0 0 190px !important;
+    min-width:190px !important;
+  }
+}
+
+
+
+/* =====================================================
+   LOGIN ISOLADO - PC E CELULAR
+   ===================================================== */
+
+body.login-page{
+  min-height:100vh !important;
+  width:100% !important;
+  max-width:100% !important;
+  margin:0 !important;
+  padding:20px !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  overflow:hidden !important;
+  box-sizing:border-box !important;
+}
+
+body.login-page .login-card,
+body.login-page .login-box,
+body.login-page .login-container,
+body.login-page .auth-card{
+  width:420px !important;
+  max-width:92vw !important;
+  min-width:0 !important;
+  padding:34px !important;
+  border-radius:20px !important;
+  box-sizing:border-box !important;
+}
+
+body.login-page .layout,
+body.login-page .main,
+body.login-page main,
+body.login-page .content{
+  width:auto !important;
+  max-width:92vw !important;
+  margin:0 !important;
+  padding:0 !important;
+  display:block !important;
+  grid-template-columns:none !important;
+}
+
+body.login-page .sidebar,
+body.login-page .mobile-top,
+body.login-page .overlay{
+  display:none !important;
+}
+
+body.login-page .brand{
+  font-size:42px !important;
+  line-height:1 !important;
+  text-align:center !important;
+}
+
+body.login-page .logo-wrap{
+  padding:0 0 22px !important;
+  text-align:center !important;
+}
+
+body.login-page .slogan{
+  font-size:12px !important;
+  text-align:center !important;
+}
+
+body.login-page input{
+  width:100% !important;
+  height:46px !important;
+  padding:0 14px !important;
+  border-radius:12px !important;
+  box-sizing:border-box !important;
+  margin-bottom:12px !important;
+}
+
+body.login-page button{
+  width:100% !important;
+  height:46px !important;
+  border-radius:12px !important;
+  font-weight:800 !important;
+}
+
+@media(min-width:901px){
+  body.login-page .login-card,
+  body.login-page .login-box,
+  body.login-page .login-container,
+  body.login-page .auth-card{
+    width:420px !important;
+    max-width:420px !important;
+  }
+}
+
+@media(max-width:900px){
+  body.login-page{
+    padding:16px !important;
+    overflow:auto !important;
+  }
+
+  body.login-page .login-card,
+  body.login-page .login-box,
+  body.login-page .login-container,
+  body.login-page .auth-card{
+    width:100% !important;
+    max-width:420px !important;
+    padding:26px 22px !important;
+  }
+
+  body.login-page .brand{
+    font-size:36px !important;
+  }
+}
+
+
+
+/* =====================================================
+   LOGIN FIXO DEFINITIVO
+   Tela totalmente isolada do layout do painel
+   ===================================================== */
+
+html:has(body.login-fixo-page),
+body.login-fixo-page{
+  width:100% !important;
+  max-width:100% !important;
+  min-height:100vh !important;
+  margin:0 !important;
+  padding:0 !important;
+  overflow:hidden !important;
+}
+
+body.login-fixo-page{
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  background:
+    radial-gradient(circle at top left, rgba(0,132,255,.30), transparent 35%),
+    linear-gradient(135deg, #071326, #10284a 55%, #071326) !important;
+  font-family: Arial, sans-serif !important;
+  box-sizing:border-box !important;
+}
+
+body.login-fixo-page *{
+  box-sizing:border-box !important;
+}
+
+.login-fixo-card{
+  width:380px !important;
+  max-width:calc(100vw - 32px) !important;
+  min-height:auto !important;
+  padding:28px !important;
+  border-radius:22px !important;
+  background:rgba(10,25,50,.88) !important;
+  border:1px solid rgba(255,255,255,.12) !important;
+  box-shadow:0 20px 60px rgba(0,0,0,.35) !important;
+  display:block !important;
+  text-align:center !important;
+}
+
+.login-fixo-logo{
+  padding:0 0 18px !important;
+  margin:0 !important;
+}
+
+.login-fixo-brand{
+  font-size:46px !important;
+  line-height:1 !important;
+  font-weight:900 !important;
+  color:#fff !important;
+  letter-spacing:-2px !important;
+}
+
+.login-fixo-brand span::after{
+  content:"";
+  display:inline-block;
+  width:8px;
+  height:8px;
+  background:#0ea5ff;
+  border-radius:50%;
+  margin-left:4px;
+  vertical-align:top;
+}
+
+.login-fixo-brand b{
+  color:#ff9f1c !important;
+  margin-left:6px !important;
+}
+
+.login-fixo-slogan{
+  margin-top:6px !important;
+  color:rgba(255,255,255,.78) !important;
+  font-size:11px !important;
+  font-weight:800 !important;
+  letter-spacing:.14em !important;
+}
+
+.login-fixo-card h1{
+  margin:8px 0 20px !important;
+  font-size:22px !important;
+  color:#fff !important;
+  font-weight:900 !important;
+}
+
+.login-fixo-card input{
+  width:100% !important;
+  height:44px !important;
+  min-height:44px !important;
+  margin:0 0 10px !important;
+  padding:0 14px !important;
+  display:block !important;
+  border-radius:12px !important;
+  border:1px solid rgba(255,255,255,.14) !important;
+  background:rgba(255,255,255,.08) !important;
+  color:#fff !important;
+  outline:none !important;
+  font-size:14px !important;
+}
+
+.login-fixo-card input::placeholder{
+  color:rgba(255,255,255,.55) !important;
+}
+
+.login-fixo-card button{
+  width:100% !important;
+  height:44px !important;
+  min-height:44px !important;
+  margin:6px 0 14px !important;
+  display:block !important;
+  border:0 !important;
+  border-radius:12px !important;
+  background:linear-gradient(135deg,#08a5ff,#0072ff) !important;
+  color:#fff !important;
+  font-weight:900 !important;
+  font-size:14px !important;
+  cursor:pointer !important;
+}
+
+.login-fixo-card p{
+  margin:0 !important;
+  color:rgba(255,255,255,.78) !important;
+  font-size:12px !important;
+}
+
+/* Garante que nada do painel apareça no login */
+body.login-fixo-page .layout,
+body.login-fixo-page .sidebar,
+body.login-fixo-page .main,
+body.login-fixo-page .content,
+body.login-fixo-page .mobile-top,
+body.login-fixo-page .overlay{
+  display:none !important;
+}
+
+@media(max-width:480px){
+  .login-fixo-card{
+    width:100% !important;
+    max-width:calc(100vw - 24px) !important;
+    padding:24px 20px !important;
+  }
+
+  .login-fixo-brand{
+    font-size:40px !important;
+  }
+
+  .login-fixo-card h1{
+    font-size:20px !important;
+  }
+}
+
+
+
+/* =====================================================
+   ABA CONTATO - MODELO RECEITANET
+   ===================================================== */
+
+#tab-contato.active{
+  display:block !important;
+}
+
+.contato-receita-form{
+  padding:6px 0 0 !important;
+}
+
+.contato-receita-form .form-row{
+  margin-bottom:14px !important;
+}
+
+.contato-receita-form label{
+  display:block !important;
+  font-weight:800 !important;
+  margin-bottom:7px !important;
+  color:inherit !important;
+}
+
+.contato-receita-form input{
+  width:100% !important;
+  height:42px !important;
+  padding:0 12px !important;
+  border-radius:4px !important;
+  border:1px solid rgba(255,255,255,.20) !important;
+  background:rgba(255,255,255,.08) !important;
+  color:inherit !important;
+  outline:none !important;
+}
+
+.contato-receita-form input::placeholder{
+  color:rgba(255,255,255,.46) !important;
+}
+
+.form-row.four{
+  display:grid !important;
+  grid-template-columns:1.2fr 90px 150px 1fr !important;
+  gap:18px !important;
+}
+
+.contato-telefones{
+  grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+  gap:18px !important;
+}
+
+.contato-endereco-extra{
+  grid-template-columns:1fr 1fr !important;
+  gap:18px !important;
+}
+
+.contato-localizacao{
+  align-items:end !important;
+}
+
+.contato-info-note{
+  margin:12px 0 16px !important;
+  padding:10px 12px !important;
+  border-radius:8px !important;
+  background:rgba(255,255,255,.04) !important;
+  color:rgba(255,255,255,.72) !important;
+  font-size:12px !important;
+}
+
+.contato-info-note label{
+  display:flex !important;
+  align-items:center !important;
+  gap:8px !important;
+  margin:0 !important;
+  font-weight:500 !important;
+}
+
+.contato-info-note input{
+  width:16px !important;
+  height:16px !important;
+  margin:0 !important;
+}
+
+.contato-botoes-receita{
+  display:flex !important;
+  gap:10px !important;
+  align-items:center !important;
+  flex-wrap:wrap !important;
+  margin-top:14px !important;
+  padding-top:12px !important;
+  border-top:1px solid rgba(255,255,255,.10) !important;
+}
+
+.contato-botoes-receita button{
+  min-height:40px !important;
+  padding:0 16px !important;
+  border-radius:4px !important;
+}
+
+/* Evita duplicar visualmente botões gerais quando estiver na aba contato */
+#tab-contato .cadastro-save-row{
+  display:none !important;
+}
+
+@media(max-width:1100px){
+  .form-row.four{
+    grid-template-columns:1fr 80px 130px 1fr !important;
+    gap:12px !important;
+  }
+  .contato-telefones{
+    gap:12px !important;
+  }
+}
+
+@media(max-width:800px){
+  .contato-telefones,
+  .contato-endereco-extra,
+  .form-row.four{
+    grid-template-columns:1fr !important;
+  }
+
+  .contato-botoes-receita{
+    flex-direction:column !important;
+    align-items:stretch !important;
+  }
+
+  .contato-botoes-receita button{
+    width:100% !important;
+  }
+}
+
+
+
+/* =====================================================
+   ABA CONTATO EXATAMENTE MODELO RECEITANET
+   ===================================================== */
+
+#tab-contato.active{
+  display:block !important;
+}
+
+.contato-receitanet-exato{
+  width:100% !important;
+  max-width:100% !important;
+  padding:0 !important;
+  margin:0 !important;
+}
+
+.contato-search-line{
+  width:100% !important;
+  border-bottom:1px solid rgba(255,255,255,.12) !important;
+  margin:-2px 0 12px !important;
+  padding-bottom:8px !important;
+}
+
+.contato-search-line input{
+  width:210px !important;
+  height:35px !important;
+  border-radius:0 !important;
+  border:1px solid rgba(255,255,255,.18) !important;
+  background:#8ecae6 !important;
+  color:#0f172a !important;
+  padding:0 10px !important;
+  font-size:12px !important;
+}
+
+.contato-form-grid{
+  display:grid !important;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;
+  column-gap:28px !important;
+  row-gap:11px !important;
+  width:100% !important;
+}
+
+.contato-form-grid .campo{
+  min-width:0 !important;
+}
+
+.contato-form-grid .campo.full{
+  grid-column:1 / -1 !important;
+}
+
+.contato-form-grid label{
+  display:block !important;
+  margin:0 0 5px !important;
+  font-weight:800 !important;
+  font-size:13px !important;
+  color:inherit !important;
+}
+
+.contato-form-grid input,
+.contato-form-grid select{
+  width:100% !important;
+  height:38px !important;
+  min-height:38px !important;
+  padding:0 10px !important;
+  border-radius:0 !important;
+  border:1px solid rgba(255,255,255,.22) !important;
+  background:rgba(255,255,255,.07) !important;
+  color:inherit !important;
+  outline:none !important;
+  font-size:13px !important;
+}
+
+.contato-form-grid select{
+  appearance:auto !important;
+}
+
+.cep-row,
+.endereco-row,
+.referencia-row,
+.telefone-row{
+  display:flex !important;
+  width:100% !important;
+}
+
+.cep-row input{
+  width:180px !important;
+  flex:0 0 180px !important;
+}
+
+.cep-row button{
+  height:38px !important;
+  min-height:38px !important;
+  padding:0 12px !important;
+  border:1px solid rgba(255,255,255,.22) !important;
+  border-left:0 !important;
+  border-radius:0 !important;
+  background:rgba(255,255,255,.09) !important;
+  color:inherit !important;
+  white-space:nowrap !important;
+}
+
+.endereco-row input,
+.referencia-row input,
+.telefone-row input{
+  flex:1 !important;
+  border-right:0 !important;
+}
+
+.map-btn,
+.pin-btn,
+.whats-btn{
+  width:38px !important;
+  height:38px !important;
+  min-height:38px !important;
+  padding:0 !important;
+  border:1px solid rgba(255,255,255,.22) !important;
+  border-radius:0 !important;
+  background:rgba(255,255,255,.12) !important;
+  color:inherit !important;
+}
+
+.map-btn{
+  background:#3f8f73 !important;
+  color:#fff !important;
+}
+
+.telefone-note{
+  margin:6px 0 0 !important;
+  font-size:11px !important;
+  color:rgba(255,255,255,.62) !important;
+  line-height:1.25 !important;
+}
+
+.empty-left{
+  min-height:1px !important;
+}
+
+.contato-actions-exato{
+  display:flex !important;
+  align-items:center !important;
+  gap:8px !important;
+  margin-top:28px !important;
+  padding-top:8px !important;
+}
+
+.contato-actions-exato .save-blue,
+.contato-actions-exato .save-red,
+.contato-actions-exato .cancel-link{
+  height:38px !important;
+  min-height:38px !important;
+  padding:0 14px !important;
+  border-radius:3px !important;
+  font-size:12px !important;
+  font-weight:800 !important;
+}
+
+.contato-actions-exato .cancel-link{
+  background:transparent !important;
+  color:inherit !important;
+  border:0 !important;
+}
+
+#contatoIdentificador{
+  margin-left:auto !important;
+  font-size:11px !important;
+  opacity:.65 !important;
+}
+
+/* Oculta os botões gerais externos quando estiver na aba contato */
+#tab-contato .cadastro-save-row{
+  display:none !important;
+}
+
+/* Ajuste para parecer mais ReceitaNet em tema claro também */
+body:not(.dark) .contato-search-line input,
+.light .contato-search-line input{
+  color:#1f2937 !important;
+}
+
+@media(max-width:900px){
+  .contato-form-grid{
+    grid-template-columns:1fr !important;
+    gap:11px !important;
+  }
+
+  .contato-search-line input{
+    width:100% !important;
+  }
+
+  .cep-row input{
+    flex:1 !important;
+    width:auto !important;
+  }
+
+  .empty-left{
+    display:none !important;
+  }
+
+  .contato-actions-exato{
+    flex-direction:column !important;
+    align-items:stretch !important;
+  }
+
+  .contato-actions-exato button{
+    width:100% !important;
+  }
+
+  #contatoIdentificador{
+    margin-left:0 !important;
+    text-align:right !important;
+  }
+}
+
+
+
+/* ===== Busca automática de CEP ===== */
+.cep-status{
+  display:block;
+  margin-top:5px;
+  font-size:11px;
+  min-height:14px;
+  color:rgba(255,255,255,.65);
+}
+.cep-status.buscando{
+  color:#38bdf8;
+}
+.cep-status.ok{
+  color:#22c55e;
+}
+.cep-status.erro{
+  color:#ef4444;
+}
+body:not(.dark) .cep-status{
+  color:#64748b;
+}
+body:not(.dark) .cep-status.buscando{
+  color:#0284c7;
+}
+body:not(.dark) .cep-status.ok{
+  color:#16a34a;
+}
+body:not(.dark) .cep-status.erro{
+  color:#dc2626;
+}
+
+
+
+/* =====================================================
+   CONTATO SEM DUPLICIDADE - MODELO RECEITANET
+   ===================================================== */
+
+/* Remove visualmente qualquer resíduo de busca/botões duplicados dentro da aba contato */
+#tab-contato .contato-search-line,
+#tab-contato .contato-actions-exato{
+  display:none !important;
+}
+
+/* Garante que o rodapé principal de botões apareça apenas uma vez */
+.cadastro-save-row{
+  display:flex !important;
+  gap:8px !important;
+  align-items:center !important;
+  flex-wrap:wrap !important;
+  margin:18px 0 !important;
+}
+
+/* Layout limpo da aba contato */
+#tab-contato .contato-receitanet-exato{
+  padding-top:4px !important;
+}
+
+/* Formulário exatamente em duas colunas como ReceitaNet no PC */
+@media(min-width:901px){
+  #tab-contato .contato-form-grid{
+    display:grid !important;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;
+    column-gap:28px !important;
+    row-gap:11px !important;
+  }
+
+  #tab-contato .campo.full{
+    grid-column:1 / -1 !important;
+  }
+
+  #tab-contato .empty-left{
+    display:block !important;
+  }
+}
+
+/* Celular sem duplicidade e com uma coluna */
+@media(max-width:900px){
+  #tab-contato .contato-form-grid{
+    grid-template-columns:1fr !important;
+  }
+
+  #tab-contato .empty-left{
+    display:none !important;
+  }
+}
+
+/* Mantém botão Consultar CEP sem criar segundo botão de salvar */
+#tab-contato .cep-row button,
+#tab-contato .map-btn,
+#tab-contato .pin-btn,
+#tab-contato .whats-btn{
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+}
+
+
+
+/* =====================================================
+   ABA COBRANÇA EXATAMENTE MODELO RECEITANET
+   ===================================================== */
+
+#tab-cobranca.active{
+  display:block !important;
+}
+
+.cobranca-receitanet-exato{
+  width:100% !important;
+  max-width:100% !important;
+  padding:0 !important;
+  margin:0 !important;
+}
+
+.cobranca-search-line{
+  width:100% !important;
+  border-bottom:1px solid rgba(255,255,255,.12) !important;
+  margin:-2px 0 12px !important;
+  padding-bottom:8px !important;
+}
+
+.cobranca-search-line input{
+  width:210px !important;
+  height:35px !important;
+  border-radius:0 !important;
+  border:1px solid rgba(255,255,255,.18) !important;
+  background:#8ecae6 !important;
+  color:#0f172a !important;
+  padding:0 10px !important;
+  font-size:12px !important;
+}
+
+.cobranca-form-grid{
+  display:grid !important;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;
+  column-gap:28px !important;
+  row-gap:14px !important;
+  width:100% !important;
+}
+
+.cobranca-form-grid .campo{
+  min-width:0 !important;
+}
+
+.cobranca-form-grid label{
+  display:block !important;
+  margin:0 0 5px !important;
+  font-weight:800 !important;
+  font-size:13px !important;
+  color:inherit !important;
+}
+
+.cobranca-form-grid input,
+.cobranca-form-grid select{
+  width:100% !important;
+  height:38px !important;
+  min-height:38px !important;
+  padding:0 10px !important;
+  border-radius:0 !important;
+  border:1px solid rgba(255,255,255,.22) !important;
+  background:rgba(255,255,255,.07) !important;
+  color:inherit !important;
+  outline:none !important;
+  font-size:13px !important;
+}
+
+.cobranca-form-grid select{
+  appearance:auto !important;
+}
+
+.input-com-botao{
+  display:flex !important;
+  width:100% !important;
+}
+
+.input-com-botao input{
+  flex:1 !important;
+  border-right:0 !important;
+}
+
+.input-com-botao button{
+  height:38px !important;
+  min-height:38px !important;
+  padding:0 12px !important;
+  border:1px solid rgba(255,255,255,.22) !important;
+  border-radius:0 !important;
+  background:rgba(255,255,255,.12) !important;
+  color:inherit !important;
+  white-space:nowrap !important;
+  font-size:12px !important;
+}
+
+.input-com-botao .info-btn{
+  width:38px !important;
+  padding:0 !important;
+  font-weight:900 !important;
+}
+
+.cobranca-alerta{
+  color:#ef4444 !important;
+  font-weight:700 !important;
+  font-size:12px !important;
+  margin:6px 0 0 !important;
+}
+
+.cobranca-help{
+  color:rgba(255,255,255,.65) !important;
+  font-size:12px !important;
+  margin:6px 0 0 !important;
+}
+
+.desconto-row{
+  display:grid !important;
+  grid-template-columns:150px minmax(0,1fr) !important;
+  align-items:center !important;
+  gap:8px !important;
+}
+
+.checkline{
+  display:flex !important;
+  align-items:center !important;
+  gap:7px !important;
+  margin:0 !important;
+  font-weight:500 !important;
+  white-space:nowrap !important;
+}
+
+.checkline input{
+  width:16px !important;
+  height:16px !important;
+  min-height:16px !important;
+  margin:0 !important;
+}
+
+/* mantém resumo lateral normal */
+.cadastro-resumo-card{
+  display:block !important;
+}
+
+/* Botões gerais continuam apenas no rodapé principal */
+#tab-cobranca .contato-actions-exato{
+  display:none !important;
+}
+
+@media(max-width:900px){
+  .cobranca-form-grid{
+    grid-template-columns:1fr !important;
+    gap:12px !important;
+  }
+
+  .cobranca-search-line input{
+    width:100% !important;
+  }
+
+  .desconto-row{
+    grid-template-columns:1fr !important;
+  }
+
+  .input-com-botao{
+    flex-direction:row !important;
+  }
+}
+
+
+
+/* ===== Correção Dia do Vencimento 1 a 30 ===== */
+#cadVencimento{
+  appearance:auto !important;
+  -webkit-appearance:auto !important;
+  height:38px !important;
+  min-height:38px !important;
+  padding:0 10px !important;
+}
+#cadVencimento option{
+  color:#111827 !important;
+  background:#fff !important;
+}
+
+
+
+/* ===== Correção selects Cobrança ReceitaNet ===== */
+#cadStatusCobranca option,
+#cadBaseReferencia option{
+  background:#fff !important;
+  color:#111827 !important;
+}
+
+#cadStatusCobranca,
+#cadBaseReferencia{
+  appearance:auto !important;
+  -webkit-appearance:auto !important;
+}
+
+
+
+/* =====================================================
+   COBRANÇA FINAL SEM DUPLICIDADE
+   ===================================================== */
+
+#tab-cobranca .cobranca-search-line{
+  display:none !important;
+}
+
+#cadContrato option,
+#cadSituacao option,
+#cadStatusCobranca option,
+#cadBaseReferencia option,
+#cadVencimento option{
+  background:#fff !important;
+  color:#111827 !important;
+}
+
+#cadContrato,
+#cadSituacao,
+#cadStatusCobranca,
+#cadBaseReferencia,
+#cadVencimento{
+  appearance:auto !important;
+  -webkit-appearance:auto !important;
+}
+
+/* Mantém os selects da cobrança com aparência ReceitaNet */
+#tab-cobranca select{
+  height:38px !important;
+  min-height:38px !important;
+  padding:0 10px !important;
+}
+
+/* Garante que só exista o campo principal Digite o Nome/Login das abas */
+#tab-cobranca > .cobranca-search-line,
+#tab-contato > .contato-search-line{
+  display:none !important;
+}
+
+
+
+/* =====================================================
+   RESUMO COMPLETO CADASTRO - MODELO RECEITANET
+   ===================================================== */
+
+.resumo-receitanet-completo{
+  border-top:3px solid #b91c1c !important;
+  max-height:calc(100vh - 105px) !important;
+  overflow-y:auto !important;
+  padding:14px !important;
+}
+
+.resumo-receitanet-completo .resumo-title{
+  display:flex !important;
+  justify-content:space-between !important;
+  align-items:center !important;
+  border-bottom:0 !important;
+  padding-bottom:10px !important;
+}
+
+.resumo-receitanet-completo .resumo-title h3{
+  margin:0 !important;
+  font-size:24px !important;
+}
+
+.resumo-receitanet-completo .resumo-title button{
+  width:30px !important;
+  height:30px !important;
+  border-radius:4px !important;
+}
+
+.resumo-top-grid,
+.resumo-servidor-grid,
+.contato-resumo-grid{
+  display:grid !important;
+  grid-template-columns:1fr 1fr !important;
+  column-gap:18px !important;
+  row-gap:8px !important;
+}
+
+.resumo-top-grid div,
+.resumo-servidor-grid div,
+.contato-resumo-grid div{
+  min-width:0 !important;
+}
+
+.resumo-receitanet-completo b{
+  display:block !important;
+  font-weight:900 !important;
+  font-size:13px !important;
+  text-transform:none !important;
+  color:inherit !important;
+}
+
+.resumo-receitanet-completo span{
+  display:inline-block !important;
+  font-size:13px !important;
+  word-break:break-word !important;
+  color:inherit !important;
+}
+
+.check-login{
+  color:#2563eb !important;
+  font-weight:900 !important;
+  margin-right:6px !important;
+}
+
+.resumo-receitanet-completo .resumo-section{
+  border-top:1px solid rgba(0,0,0,.55) !important;
+  margin-top:16px !important;
+  padding-top:14px !important;
+}
+
+.resumo-receitanet-completo .resumo-section h4{
+  margin:0 0 12px !important;
+  font-size:20px !important;
+  font-weight:500 !important;
+}
+
+.resumo-receitanet-completo .nao-identificado{
+  background:#b92335 !important;
+  color:#fff !important;
+  padding:3px 8px !important;
+  border-radius:3px !important;
+  font-size:11px !important;
+}
+
+.resumo-receitanet-completo .status-login-line{
+  display:flex !important;
+  justify-content:space-between !important;
+  align-items:center !important;
+  border-top:1px solid rgba(0,0,0,.55) !important;
+  border-bottom:1px solid rgba(0,0,0,.55) !important;
+  padding:14px 0 !important;
+  margin-top:16px !important;
+}
+
+.resumo-receitanet-completo .offline-dot{
+  color:#991b1b !important;
+  font-weight:900 !important;
+  margin-left:2px !important;
+}
+
+.resumo-receitanet-completo .mini-table{
+  width:100% !important;
+  border-collapse:collapse !important;
+  font-size:13px !important;
+}
+
+.resumo-receitanet-completo .mini-table th,
+.resumo-receitanet-completo .mini-table td{
+  padding:8px 6px !important;
+  border-bottom:1px solid rgba(0,0,0,.08) !important;
+  text-align:left !important;
+}
+
+.resumo-receitanet-completo .mini-table th{
+  font-weight:900 !important;
+}
+
+.resumo-receitanet-completo .mini-total{
+  text-align:right !important;
+  font-weight:900 !important;
+  margin-top:8px !important;
+}
+
+.pai-desativado{
+  background:#0f9f90 !important;
+  color:#fff !important;
+  padding:4px 9px !important;
+  border-radius:4px !important;
+  font-size:12px !important;
+}
+
+/* No tema escuro, mantém divisórias visíveis */
+body:not(.light) .resumo-receitanet-completo .resumo-section,
+body:not(.light) .resumo-receitanet-completo .status-login-line{
+  border-color:rgba(255,255,255,.25) !important;
+}
+
+@media(max-width:1100px){
+  .resumo-receitanet-completo{
+    max-height:none !important;
+  }
+}
+
+@media(max-width:700px){
+  .resumo-top-grid,
+  .resumo-servidor-grid,
+  .contato-resumo-grid{
+    grid-template-columns:1fr !important;
+  }
+}
+
+
+
+/* =====================================================
+   ABAS DO CADASTRO - LISTRA AZUL ATIVA EM TODAS
+   ===================================================== */
+
+.cadastro-tabs .tab{
+  position:relative !important;
+  border-top:3px solid transparent !important;
+}
+
+.cadastro-tabs .tab.active,
+.cadastro-tabs .tab.tab-active{
+  border-top:3px solid #1598ff !important;
+  background:rgba(255,255,255,.13) !important;
+  color:#fff !important;
+}
+
+.cadastro-tabs .tab.active::before,
+.cadastro-tabs .tab.tab-active::before{
+  content:"" !important;
+  position:absolute !important;
+  left:0 !important;
+  top:0 !important;
+  width:100% !important;
+  height:3px !important;
+  background:#1598ff !important;
+  display:block !important;
+  z-index:2 !important;
+}
+
+.cadastro-tabs .tab:hover{
+  background:rgba(255,255,255,.10) !important;
+}
+
+/* Garante que somente a aba de conteúdo ativa apareça */
+.tab-content{
+  display:none;
+}
+
+.tab-content.active{
+  display:block !important;
+}
+
+
+
+/* =====================================================
+   ABA SERVIDOR - MODELO RECEITANET
+   Alteração isolada da aba Servidor
+   ===================================================== */
+
+#tab-servidor.active{
+  display:block !important;
+}
+
+.servidor-receitanet-exato{
+  width:100% !important;
+  max-width:100% !important;
+  padding:4px 0 0 !important;
+  margin:0 !important;
+}
+
+.servidor-form-grid{
+  display:grid !important;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;
+  column-gap:28px !important;
+  row-gap:13px !important;
+  width:100% !important;
+}
+
+.servidor-form-grid .campo{
+  min-width:0 !important;
+}
+
+.servidor-form-grid label{
+  display:block !important;
+  margin:0 0 5px !important;
+  font-weight:800 !important;
+  font-size:13px !important;
+  color:inherit !important;
+}
+
+.servidor-form-grid input,
+.servidor-form-grid select{
+  width:100% !important;
+  height:38px !important;
+  min-height:38px !important;
+  padding:0 10px !important;
+  border-radius:0 !important;
+  border:1px solid rgba(255,255,255,.22) !important;
+  background:rgba(255,255,255,.07) !important;
+  color:inherit !important;
+  outline:none !important;
+  font-size:13px !important;
+}
+
+.servidor-form-grid select{
+  appearance:auto !important;
+  -webkit-appearance:auto !important;
+}
+
+.servidor-form-grid option{
+  background:#fff !important;
+  color:#111827 !important;
+}
+
+.elemento-row{
+  display:flex !important;
+  width:100% !important;
+}
+
+.elemento-row input{
+  flex:1 !important;
+  border-right:0 !important;
+}
+
+.elemento-row button{
+  height:38px !important;
+  min-height:38px !important;
+  padding:0 16px !important;
+  border:1px solid rgba(255,255,255,.22) !important;
+  border-radius:0 !important;
+  background:#c46f24 !important;
+  color:#fff !important;
+  font-weight:800 !important;
+  white-space:nowrap !important;
+  font-size:12px !important;
+}
+
+.check-servidor{
+  display:flex !important;
+  align-items:center !important;
+  gap:8px !important;
+  margin-top:8px !important;
+  font-weight:500 !important;
+  font-size:12px !important;
+}
+
+.check-servidor input{
+  width:15px !important;
+  height:15px !important;
+  min-height:15px !important;
+  padding:0 !important;
+  margin:0 !important;
+}
+
+@media(max-width:900px){
+  .servidor-form-grid{
+    grid-template-columns:1fr !important;
+    gap:12px !important;
+  }
+
+  .elemento-row{
+    flex-direction:column !important;
+  }
+
+  .elemento-row input{
+    border-right:1px solid rgba(255,255,255,.22) !important;
+  }
+
+  .elemento-row button{
+    width:100% !important;
+    margin-top:6px !important;
+  }
+}
+
+
+
+/* =====================================================
+   SERVIDOR PPPOE FINAL
+   ===================================================== */
+
+#cadInterface:disabled{
+  opacity:.65 !important;
+  cursor:not-allowed !important;
+}
+
+.elemento-row .btn-provisionar,
+.btn-provisionar{
+  width:95px !important;
+  max-width:95px !important;
+  min-width:95px !important;
+  height:34px !important;
+  min-height:34px !important;
+  padding:0 8px !important;
+  font-size:12px !important;
+  font-weight:700 !important;
+  background:#d9902f !important;
+  color:#fff !important;
+  border:0 !important;
+  border-radius:3px !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+}
+
+.elemento-row{
+  align-items:center !important;
+}
+
+.elemento-row input{
+  height:38px !important;
+}
+
+@media(max-width:900px){
+  .elemento-row .btn-provisionar,
+  .btn-provisionar{
+    width:100% !important;
+    max-width:100% !important;
+    min-width:100% !important;
+  }
+}
+
+
+
+/* ===== Servidor e conexão PPPOE somente ===== */
+#cadConexao:disabled{
+  opacity:.65 !important;
+  cursor:not-allowed !important;
+}
+
+
+
+/* =====================================================
+   ABA CLIENTES - MODELO RECEITANET
+   ===================================================== */
+
+.clientes-receitanet-page{
+  background:#eef3f8 !important;
+  color:#1f2937 !important;
+  min-height:calc(100vh - 58px) !important;
+}
+
+.clientes-topbar-receita{
+  background:#263d8f !important;
+  color:#fff !important;
+}
+
+.clientes-receita-header{
+  display:flex !important;
+  justify-content:space-between !important;
+  align-items:flex-start !important;
+  gap:16px !important;
+  margin-bottom:12px !important;
+}
+
+.clientes-receita-header h1{
+  margin:0 !important;
+  font-size:22px !important;
+  font-weight:600 !important;
+  color:#1f2937 !important;
+}
+
+.clientes-receita-header .breadcrumb{
+  margin-top:4px !important;
+  font-size:12px !important;
+  color:#475569 !important;
+}
+
+.clientes-actions{
+  display:flex !important;
+  gap:8px !important;
+  align-items:center !important;
+}
+
+.novo-cliente-btn,
+.importar-btn{
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  min-height:36px !important;
+  padding:0 16px !important;
+  border-radius:6px !important;
+  color:#fff !important;
+  text-decoration:none !important;
+  font-weight:800 !important;
+  font-size:13px !important;
+}
+
+.novo-cliente-btn{
+  background:#1238ff !important;
+}
+
+.importar-btn{
+  background:#1d4ed8 !important;
+}
+
+.clientes-search-receita{
+  display:flex !important;
+  gap:10px !important;
+  margin-bottom:12px !important;
+}
+
+.clientes-search-receita input{
+  flex:1 !important;
+  height:38px !important;
+  border-radius:4px !important;
+  border:1px solid #cbd5e1 !important;
+  background:#fff !important;
+  color:#111827 !important;
+  padding:0 12px !important;
+  font-size:13px !important;
+}
+
+.clientes-search-receita button{
+  height:38px !important;
+  min-width:160px !important;
+  border:0 !important;
+  border-radius:4px !important;
+  background:#1d4ed8 !important;
+  color:#fff !important;
+  font-weight:800 !important;
+}
+
+.clientes-table-card{
+  border:1px solid #94a3b8 !important;
+  background:#fff !important;
+  box-shadow:0 2px 4px rgba(0,0,0,.08) !important;
+}
+
+.clientes-table-title{
+  background:#0a44a4 !important;
+  color:#fff !important;
+  padding:10px 12px !important;
+  font-size:18px !important;
+  font-weight:600 !important;
+}
+
+.clientes-table-scroll{
+  width:100% !important;
+  overflow:auto !important;
+}
+
+.clientes-receita-table{
+  width:100% !important;
+  border-collapse:collapse !important;
+  color:#1f2937 !important;
+  background:#fff !important;
+  font-size:14px !important;
+}
+
+.clientes-receita-table thead th{
+  background:#f8fafc !important;
+  color:#1f2937 !important;
+  font-weight:900 !important;
+  padding:12px 10px !important;
+  border-bottom:1px solid #cbd5e1 !important;
+  text-align:left !important;
+}
+
+.clientes-receita-table tbody td{
+  padding:12px 10px !important;
+  border-bottom:1px solid #dbe3ef !important;
+  vertical-align:top !important;
+}
+
+.clientes-receita-table tbody tr{
+  cursor:pointer !important;
+}
+
+.clientes-receita-table tbody tr:nth-child(even){
+  background:#f3f7fb !important;
+}
+
+.clientes-receita-table tbody tr:hover{
+  background:#e6f0ff !important;
+}
+
+.status-col{
+  width:34px !important;
+  text-align:center !important;
+}
+
+.cliente-status{
+  font-weight:900 !important;
+  font-size:16px !important;
+}
+
+.cliente-status.ativo{
+  color:#1d74d8 !important;
+}
+
+.cliente-status.bloqueado{
+  color:#b91c1c !important;
+}
+
+.login-col{
+  width:18% !important;
+  color:#1d4ed8 !important;
+  font-weight:700 !important;
+}
+
+.nome-col{
+  width:28% !important;
+  color:#1d4ed8 !important;
+  font-weight:600 !important;
+}
+
+.endereco-col{
+  width:38% !important;
+  line-height:1.35 !important;
+  color:#1d4ed8 !important;
+}
+
+.contato-col{
+  width:18% !important;
+  line-height:1.35 !important;
+  color:#1d4ed8 !important;
+  white-space:nowrap !important;
+}
+
+.sem-clientes{
+  text-align:center !important;
+  padding:30px !important;
+  color:#64748b !important;
+}
+
+/* Mantém a tela no celular organizada */
+@media(max-width:900px){
+  .clientes-receita-header{
+    flex-direction:column !important;
+  }
+
+  .clientes-actions{
+    width:100% !important;
+  }
+
+  .novo-cliente-btn,
+  .importar-btn{
+    flex:1 !important;
+  }
+
+  .clientes-search-receita{
+    flex-direction:column !important;
+  }
+
+  .clientes-search-receita button{
+    width:100% !important;
+  }
+
+  .clientes-receita-table{
+    min-width:850px !important;
+    font-size:13px !important;
+  }
+}
+
+
+
+/* =====================================================
+   CLIENTES IDÊNTICO RECEITANET - CENTRALIZADO SEM SCROLL
+   ===================================================== */
+
+html,body{
+  overflow-x:hidden !important;
+}
+
+.clientes-topbar-receita{
+  background:#243b8d !important;
+  color:#fff !important;
+  min-height:46px !important;
+  height:46px !important;
+  padding:6px 14px !important;
+  display:flex !important;
+  justify-content:flex-end !important;
+  gap:18px !important;
+}
+
+.top-search-receita{
+  display:flex !important;
+  align-items:center !important;
+  width:260px !important;
+  height:30px !important;
+  background:#111827 !important;
+}
+
+.top-search-receita input{
+  flex:1 !important;
+  height:30px !important;
+  background:#111827 !important;
+  color:#fff !important;
+  border:0 !important;
+  padding:0 10px !important;
+}
+
+.top-search-receita button{
+  width:34px !important;
+  height:30px !important;
+  border:0 !important;
+  background:#111827 !important;
+  color:#fff !important;
+}
+
+.topbar-right{
+  display:flex !important;
+  align-items:center !important;
+  gap:14px !important;
+  font-size:13px !important;
+}
+
+.topbar-right a{
+  color:#fff !important;
+  text-decoration:none !important;
+}
+
+.user-dot{
+  width:14px !important;
+  height:14px !important;
+  border-radius:50% !important;
+  background:#b91c1c !important;
+  display:inline-block !important;
+}
+
+.clientes-receita-wrapper{
+  background:#eef3f8 !important;
+  color:#1f2937 !important;
+  min-height:calc(100vh - 46px) !important;
+  padding:10px 12px !important;
+  overflow-x:hidden !important;
+}
+
+.clientes-page-title{
+  font-size:20px !important;
+  margin:0 0 8px !important;
+  color:#334155 !important;
+}
+
+.clientes-receita-grid{
+  display:grid !important;
+  grid-template-columns:320px minmax(0,1fr) !important;
+  gap:14px !important;
+  width:100% !important;
+  max-width:100% !important;
+  margin:0 auto !important;
+  align-items:start !important;
+}
+
+.clientes-filtros-receita{
+  background:#f8fafc !important;
+  border:1px solid #cbd5e1 !important;
+  max-width:320px !important;
+  overflow:hidden !important;
+}
+
+.filtros-head{
+  display:flex !important;
+  align-items:center !important;
+  justify-content:space-between !important;
+  padding:8px !important;
+  font-size:14px !important;
+  color:#334155 !important;
+}
+
+.filtros-head a{
+  background:#0a44a4 !important;
+  color:#fff !important;
+  padding:6px 10px !important;
+  border-radius:3px !important;
+  text-decoration:none !important;
+  font-size:11px !important;
+  font-weight:800 !important;
+}
+
+.filtros-status-grid{
+  display:grid !important;
+  grid-template-columns:1fr 1fr !important;
+  gap:0 !important;
+}
+
+.filtros-status-grid .status-card{
+  min-height:58px !important;
+  border-radius:0 !important;
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:center !important;
+  justify-content:center !important;
+  color:#fff !important;
+  font-size:11px !important;
+  font-weight:800 !important;
+  padding:6px !important;
+}
+
+.filtros-status-grid .status-card b{
+  font-size:16px !important;
+  margin-top:4px !important;
+}
+
+.filtros-status-grid .total{
+  grid-column:1 / -1 !important;
+}
+
+.status-card.blue{background:#0476db !important;}
+.status-card.navy{background:#1839d0 !important;}
+.status-card.red{background:#c72a35 !important;}
+.status-card.dark{background:#1f2937 !important;}
+.status-card.orange{background:#f59e0b !important;}
+.status-card.amber{background:#f97316 !important;}
+.status-card.pink{background:#d946ef !important;}
+.status-card.coral{background:#ef4444 !important;}
+.status-card.green{background:#22c55e !important;}
+.status-card.black{background:#111827 !important;}
+
+.filtro-form{
+  padding:10px !important;
+}
+
+.filtro-form label{
+  display:block !important;
+  margin:8px 0 4px !important;
+  font-size:12px !important;
+  color:#334155 !important;
+}
+
+.filtro-form input,
+.filtro-form select{
+  width:100% !important;
+  height:30px !important;
+  border:1px solid #cbd5e1 !important;
+  background:#fff !important;
+  color:#111827 !important;
+  padding:0 8px !important;
+  font-size:12px !important;
+}
+
+.radio-row{
+  display:flex !important;
+  gap:18px !important;
+  padding:8px 0 !important;
+}
+
+.radio-row label{
+  display:flex !important;
+  align-items:center !important;
+  gap:5px !important;
+}
+
+.clientes-lista-receita{
+  min-width:0 !important;
+  width:100% !important;
+  overflow:hidden !important;
+}
+
+.clientes-breadcrumb{
+  display:flex !important;
+  justify-content:flex-end !important;
+  color:#475569 !important;
+  font-size:12px !important;
+  margin-bottom:8px !important;
+}
+
+.clientes-table-card.receita-exato{
+  border:1px solid #94a3b8 !important;
+  background:#fff !important;
+  width:100% !important;
+  overflow:hidden !important;
+  box-shadow:none !important;
+}
+
+.clientes-table-title{
+  background:#0a44a4 !important;
+  color:#fff !important;
+  padding:8px 10px !important;
+  font-size:18px !important;
+  font-weight:500 !important;
+}
+
+.clientes-receita-table{
+  width:100% !important;
+  table-layout:fixed !important;
+  border-collapse:collapse !important;
+  color:#1f2937 !important;
+  background:#fff !important;
+  font-size:12px !important;
+}
+
+.clientes-receita-table thead th{
+  background:#f8fafc !important;
+  color:#1f2937 !important;
+  font-weight:900 !important;
+  padding:10px 8px !important;
+  border-bottom:1px solid #cbd5e1 !important;
+  text-align:left !important;
+}
+
+.clientes-receita-table tbody td{
+  padding:9px 8px !important;
+  border-bottom:1px solid #dbe3ef !important;
+  vertical-align:top !important;
+  word-break:break-word !important;
+}
+
+.clientes-receita-table tbody tr:nth-child(even){
+  background:#eef6ff !important;
+}
+
+.clientes-receita-table tbody tr:hover{
+  background:#dcecff !important;
+}
+
+.clientes-receita-table .status-col{
+  width:28px !important;
+  text-align:center !important;
+}
+
+.login-col{
+  width:18% !important;
+  color:#1d4ed8 !important;
+  font-weight:700 !important;
+}
+
+.nome-col{
+  width:28% !important;
+  color:#1d4ed8 !important;
+  font-weight:600 !important;
+}
+
+.endereco-col{
+  width:38% !important;
+  line-height:1.28 !important;
+  color:#1d4ed8 !important;
+}
+
+.contato-col{
+  width:18% !important;
+  line-height:1.28 !important;
+  color:#1d4ed8 !important;
+}
+
+.cliente-status{
+  font-weight:900 !important;
+  font-size:14px !important;
+}
+
+.cliente-status.ativo{color:#1d74d8 !important;}
+.cliente-status.bloqueado{color:#b91c1c !important;}
+
+.sem-clientes{
+  text-align:center !important;
+  padding:28px !important;
+  color:#64748b !important;
+}
+
+/* No PC, evita qualquer barra horizontal e centraliza */
+@media(min-width:901px){
+  .clientes-receita-wrapper{
+    overflow:hidden !important;
+  }
+
+  .clientes-receita-grid{
+    max-width:calc(100vw - 260px) !important;
+  }
+}
+
+/* Celular: mantém usável sem quebrar */
+@media(max-width:900px){
+  .clientes-receita-grid{
+    grid-template-columns:1fr !important;
+  }
+
+  .clientes-filtros-receita{
+    max-width:100% !important;
+  }
+
+  .clientes-receita-table{
+    font-size:11px !important;
+  }
+
+  .login-col{width:22% !important;}
+  .nome-col{width:25% !important;}
+  .endereco-col{width:33% !important;}
+  .contato-col{width:20% !important;}
+}
+
+@media(max-width:600px){
+  .clientes-receita-table{
+    font-size:10px !important;
+  }
+
+  .clientes-receita-table tbody td,
+  .clientes-receita-table thead th{
+    padding:7px 5px !important;
+  }
+}
+
+
+
+/* =====================================================
+   CORREÇÃO FINAL COLUNAS CLIENTES
+   Endereço não invade Contato
+   ===================================================== */
+
+.clientes-table-card,
+.clientes-table-card.receita-exato,
+.clientes-lista-receita{
+  width:100% !important;
+  max-width:100% !important;
+  overflow:hidden !important;
+}
+
+.clientes-receita-table{
+  width:100% !important;
+  max-width:100% !important;
+  table-layout:fixed !important;
+  border-collapse:collapse !important;
+}
+
+.clientes-receita-table th,
+.clientes-receita-table td{
+  box-sizing:border-box !important;
+  overflow:hidden !important;
+  vertical-align:top !important;
+}
+
+.clientes-receita-table .status-col,
+.clientes-receita-table th.status-col{
+  width:32px !important;
+  min-width:32px !important;
+  max-width:32px !important;
+  text-align:center !important;
+}
+
+.clientes-receita-table .login-col,
+.clientes-receita-table th:nth-child(2){
+  width:15% !important;
+  max-width:15% !important;
+}
+
+.clientes-receita-table .nome-col,
+.clientes-receita-table th:nth-child(3){
+  width:23% !important;
+  max-width:23% !important;
+}
+
+.clientes-receita-table .endereco-col,
+.clientes-receita-table th:nth-child(4){
+  width:42% !important;
+  max-width:42% !important;
+  white-space:normal !important;
+  overflow-wrap:anywhere !important;
+  word-break:break-word !important;
+  padding-right:18px !important;
+  border-right:1px solid #dbe3ef !important;
+  line-height:1.3 !important;
+}
+
+.clientes-receita-table .contato-col,
+.clientes-receita-table th:nth-child(5){
+  width:20% !important;
+  max-width:20% !important;
+  white-space:normal !important;
+  overflow-wrap:anywhere !important;
+  word-break:break-word !important;
+  padding-left:14px !important;
+  line-height:1.3 !important;
+}
+
+/* Remove qualquer regra antiga que empurre a tabela para fora */
+.clientes-table-scroll{
+  overflow:hidden !important;
+  width:100% !important;
+  max-width:100% !important;
+}
+
+/* PC: centralizado e sem barra horizontal */
+@media(min-width:901px){
+  .clientes-receita-grid{
+    overflow:hidden !important;
+  }
+
+  .clientes-lista-receita{
+    overflow:hidden !important;
+  }
+
+  .clientes-receita-table{
+    min-width:0 !important;
+  }
+}
+
+/* Celular: mantém sem invadir coluna */
+@media(max-width:900px){
+  .clientes-receita-table{
+    table-layout:fixed !important;
+    min-width:0 !important;
+    font-size:10.5px !important;
+  }
+
+  .clientes-receita-table .status-col,
+  .clientes-receita-table th.status-col{
+    width:24px !important;
+    min-width:24px !important;
+    max-width:24px !important;
+  }
+
+  .clientes-receita-table .login-col,
+  .clientes-receita-table th:nth-child(2){
+    width:17% !important;
+    max-width:17% !important;
+  }
+
+  .clientes-receita-table .nome-col,
+  .clientes-receita-table th:nth-child(3){
+    width:23% !important;
+    max-width:23% !important;
+  }
+
+  .clientes-receita-table .endereco-col,
+  .clientes-receita-table th:nth-child(4){
+    width:38% !important;
+    max-width:38% !important;
+    padding-right:8px !important;
+  }
+
+  .clientes-receita-table .contato-col,
+  .clientes-receita-table th:nth-child(5){
+    width:22% !important;
+    max-width:22% !important;
+    padding-left:8px !important;
+  }
+}
+
+
+/* Ocultar barra superior do ReceitaNet */
+.header-help,
+.top-help,
+.user-menu,
+.admin-user,
+.logout-btn,
+.settings-btn,
+.topbar-right,
+.nav-user-area{
+    display:none !important;
+}
+
+
+
+/* Mantém padrão preto/cinza do painel */
+body,
+.main-header,
+.wrapper-header{
+    background:#111827 !important;
+}
+
+/* remove gradientes azuis do topo */
+*[style*="linear-gradient"]{
+    background-image:none !important;
+}
+
+
+/* Remove ícone da lupa */
+.fa-search,
+.bi-search,
+.search-icon,
+.header-search,
+.top-search,
+.nav-search,
+input[type="search"] + i,
+i[class*="search"]{
+    display:none !important;
+}
+
+/* Força topo totalmente escuro */
+header,
+.topbar,
+.navbar,
+.header,
+.header-top,
+.header-bar,
+.main-header,
+.wrapper-header,
+.bg-primary,
+.bg-white,
+.bg-light,
+.top-nav,
+.top-navbar{
+    background:#18181b !important;
+    background-color:#18181b !important;
+    color:#fff !important;
+    border:none !important;
+    box-shadow:none !important;
+}
+
+/* Remove qualquer faixa branca */
+header *,
+.topbar *,
+.navbar *{
+    background:transparent !important;
+    color:#fff !important;
+}
+
+/* Corpo do painel em cinza escuro */
+body,
+.content,
+.main-content,
+.container,
+.container-fluid,
+.page-wrapper{
+    background:#111827 !important;
+    color:#e5e7eb !important;
+}
+
+/* Remove gradientes azuis/brancos */
+*[style*="background:#fff"],
+*[style*="background: white"],
+*[style*="background-color:white"],
+*[style*="background-color:#fff"]{
+    background:#18181b !important;
+}
+
+
+
+/* ===== CLIENTES ESCURO FINAL SEM DUPLICIDADE ===== */
+
+/* Remove lupa/campo de busca do topo direito */
+.top-search-receita,
+.header-search,
+.top-search,
+.nav-search,
+.search-icon,
+.fa-search,
+.bi-search,
+i[class*="search"],
+svg[class*="search"]{
+  display:none !important;
+}
+
+/* Topo no padrão preto/cinza escuro do painel */
+.clientes-topbar-receita,
+.topbar,
+header.topbar,
+.header-top,
+.header-bar,
+.main-header{
+  background:#111827 !important;
+  background-color:#111827 !important;
+  background-image:none !important;
+  color:#e5e7eb !important;
+  border-bottom:1px solid #1f2937 !important;
+  box-shadow:none !important;
+}
+
+/* Página clientes totalmente escura */
+.clientes-receita-wrapper,
+.clientes-receitanet-page,
+.content.clientes-receitanet-page,
+.main,
+.main-content,
+.content-wrapper,
+.page-content{
+  background:#111827 !important;
+  background-color:#111827 !important;
+  color:#e5e7eb !important;
+}
+
+/* Título e breadcrumb */
+.clientes-page-title,
+.clientes-receita-header h1,
+.clientes-breadcrumb,
+.breadcrumb{
+  color:#e5e7eb !important;
+}
+
+/* Painel de filtros escuro */
+.clientes-filtros-receita,
+.filtros-card,
+.consulta-clientes,
+.card,
+.panel,
+.box{
+  background:#1f2937 !important;
+  background-color:#1f2937 !important;
+  color:#e5e7eb !important;
+  border-color:#374151 !important;
+}
+
+.filtros-head,
+.filtro-form{
+  background:#1f2937 !important;
+  color:#e5e7eb !important;
+}
+
+.filtro-form label,
+.radio-row label{
+  color:#e5e7eb !important;
+}
+
+/* Inputs e selects */
+.clientes-receita-wrapper input,
+.clientes-receita-wrapper select,
+.clientes-receita-wrapper textarea,
+.clientes-receitanet-page input,
+.clientes-receitanet-page select,
+.clientes-receitanet-page textarea{
+  background:#111827 !important;
+  background-color:#111827 !important;
+  color:#ffffff !important;
+  border:1px solid #374151 !important;
+}
+
+/* Card e tabela de clientes escuros */
+.clientes-table-card,
+.clientes-table-card.receita-exato,
+.clientes-table-scroll,
+.table-responsive,
+.table-container{
+  background:#1f2937 !important;
+  background-color:#1f2937 !important;
+  color:#e5e7eb !important;
+  border-color:#374151 !important;
+  overflow:hidden !important;
+}
+
+/* Cabeçalhos azuis preservados */
+.clientes-table-title,
+.card-header,
+.panel-heading,
+.clientes-header{
+  background:#0a44a4 !important;
+  background-color:#0a44a4 !important;
+  color:#ffffff !important;
+}
+
+/* Tabela escura sem fundo branco */
+.clientes-receita-table,
+.clientes-receita-table thead,
+.clientes-receita-table tbody,
+.clientes-receita-table tr,
+.clientes-receita-table th,
+.clientes-receita-table td{
+  background:#1f2937 !important;
+  background-color:#1f2937 !important;
+  color:#e5e7eb !important;
+  border-color:#374151 !important;
+}
+
+/* Cabeçalho da tabela */
+.clientes-receita-table thead th{
+  background:#111827 !important;
+  background-color:#111827 !important;
+  color:#ffffff !important;
+}
+
+/* Linhas alternadas escuras */
+.clientes-receita-table tbody tr:nth-child(even),
+.clientes-receita-table tbody tr:nth-child(even) td{
+  background:#172033 !important;
+  background-color:#172033 !important;
+}
+
+.clientes-receita-table tbody tr:hover,
+.clientes-receita-table tbody tr:hover td{
+  background:#24324d !important;
+  background-color:#24324d !important;
+}
+
+/* Textos azuis do ReceitaNet mantidos legíveis */
+.clientes-receita-table .login-col,
+.clientes-receita-table .nome-col,
+.clientes-receita-table .endereco-col,
+.clientes-receita-table .contato-col{
+  color:#60a5fa !important;
+}
+
+/* Correção de largura para Endereço não invadir Contato */
+.clientes-receita-table{
+  width:100% !important;
+  max-width:100% !important;
+  table-layout:fixed !important;
+  border-collapse:collapse !important;
+}
+
+.clientes-receita-table th,
+.clientes-receita-table td{
+  box-sizing:border-box !important;
+  overflow:hidden !important;
+  vertical-align:top !important;
+}
+
+.clientes-receita-table .status-col,
+.clientes-receita-table th.status-col{
+  width:32px !important;
+  min-width:32px !important;
+  max-width:32px !important;
+  text-align:center !important;
+}
+
+.clientes-receita-table .login-col,
+.clientes-receita-table th:nth-child(2){
+  width:15% !important;
+  max-width:15% !important;
+}
+
+.clientes-receita-table .nome-col,
+.clientes-receita-table th:nth-child(3){
+  width:23% !important;
+  max-width:23% !important;
+}
+
+.clientes-receita-table .endereco-col,
+.clientes-receita-table th:nth-child(4){
+  width:42% !important;
+  max-width:42% !important;
+  white-space:normal !important;
+  overflow-wrap:anywhere !important;
+  word-break:break-word !important;
+  padding-right:18px !important;
+  border-right:1px solid #374151 !important;
+  line-height:1.3 !important;
+}
+
+.clientes-receita-table .contato-col,
+.clientes-receita-table th:nth-child(5){
+  width:20% !important;
+  max-width:20% !important;
+  white-space:normal !important;
+  overflow-wrap:anywhere !important;
+  word-break:break-word !important;
+  padding-left:14px !important;
+  line-height:1.3 !important;
+}
+
+/* Sem barra horizontal */
+html,
+body,
+.layout,
+.main,
+.clientes-receita-wrapper,
+.clientes-receita-grid,
+.clientes-lista-receita,
+.clientes-table-card,
+.clientes-table-scroll{
+  overflow-x:hidden !important;
+}
+
+/* Centralizado no PC */
+@media(min-width:901px){
+  .clientes-receita-grid{
+    max-width:calc(100vw - 250px) !important;
+    margin:0 auto !important;
+    overflow:hidden !important;
+  }
+
+  .clientes-lista-receita{
+    overflow:hidden !important;
+  }
+
+  .clientes-receita-table{
+    min-width:0 !important;
+  }
+}
+
+/* Responsivo sem invadir colunas */
+@media(max-width:900px){
+  .clientes-receita-table{
+    table-layout:fixed !important;
+    min-width:0 !important;
+    font-size:10.5px !important;
+  }
+
+  .clientes-receita-table .status-col,
+  .clientes-receita-table th.status-col{
+    width:24px !important;
+    min-width:24px !important;
+    max-width:24px !important;
+  }
+
+  .clientes-receita-table .login-col,
+  .clientes-receita-table th:nth-child(2){
+    width:17% !important;
+    max-width:17% !important;
+  }
+
+  .clientes-receita-table .nome-col,
+  .clientes-receita-table th:nth-child(3){
+    width:23% !important;
+    max-width:23% !important;
+  }
+
+  .clientes-receita-table .endereco-col,
+  .clientes-receita-table th:nth-child(4){
+    width:38% !important;
+    max-width:38% !important;
+    padding-right:8px !important;
+  }
+
+  .clientes-receita-table .contato-col,
+  .clientes-receita-table th:nth-child(5){
+    width:22% !important;
+    max-width:22% !important;
+    padding-left:8px !important;
+  }
+}
+
+
+/* Clique em cliente */
+.linha-clicavel, .clientes-receita-table tbody tr { cursor: pointer; }
+.linha-clicavel:hover, .clientes-receita-table tbody tr:hover { filter: brightness(1.18); }
+
+
+/* Status dos servidores MikroTik */
+.servers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin-top: 14px;
+}
+.server-card {
+  background: rgba(15, 23, 42, .85);
+  border: 1px solid rgba(148, 163, 184, .18);
+  border-radius: 14px;
+  padding: 18px;
+}
+.server-card.online { border-color: rgba(34, 197, 94, .35); }
+.server-card.offline { border-color: rgba(239, 68, 68, .35); }
+.server-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.server-head h3 { margin: 0; }
+.server-head small { opacity: .75; }
+.badge-online, .badge-offline {
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 12px;
+}
+.badge-online { background: rgba(34,197,94,.15); color: #4ade80; }
+.badge-offline { background: rgba(239,68,68,.15); color: #f87171; }
+.server-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.server-metrics div {
+  background: rgba(255,255,255,.04);
+  border-radius: 10px;
+  padding: 10px;
+}
+.server-metrics b {
+  display: block;
+  font-size: 18px;
+}
+.server-metrics span {
+  font-size: 12px;
+  opacity: .75;
+}
+.server-error {
+  margin-top: 12px;
+  color: #fca5a5;
+  font-size: 13px;
+}
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.data-table th, .data-table td {
+  padding: 10px;
+  border-bottom: 1px solid rgba(148, 163, 184, .16);
+  text-align: left;
+}
