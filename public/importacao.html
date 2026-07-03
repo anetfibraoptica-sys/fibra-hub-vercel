@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Importação - Fibra+ Hub</title><link rel="stylesheet" href="style.css">
+</head>
+<body onload="protegerPagina(); iniciarSocket(); iniciarImportacaoHub();">
+<div class="mobile-top"><button class="menu-btn" onclick="abrirMenu()">☰</button><div><div class="logo-wrap"><div class="brand"><span class="fibra">Fibra</span><span class="brand-dot"></span><span class="plus">+</span></div><div class="slogan">HUB DE CONTROLE</div></div></div></div>
+<div class="layout"><div class="overlay" onclick="fecharMenu()"></div>
+<aside class="sidebar"><div class="logo-wrap"><div class="brand"><span class="fibra">Fibra</span><span class="brand-dot"></span><span class="plus">+</span></div><div class="slogan">HUB DE CONTROLE</div></div>
+<nav class="nav">
+<a href="dashboard.html"><span class="icon">🏠</span>Dashboard</a>
+<a href="clientes.html"><span class="icon">👤</span>Clientes</a>
+<a href="cadastro.html"><span class="icon">👥</span>Cadastrar Cliente</a>
+<a href="importacao.html" class="active"><span class="icon">⬆️</span>Importação</a>
+<a href="pppoe.html"><span class="icon">☰</span>PPPoE Online</a>
+<a href="monitoramento.html"><span class="icon">▣</span>Monitoramento</a>
+<a href="financeiro.html"><span class="icon">▤</span>Financeiro Efí</a>
+<a href="chamados.html"><span class="icon">🔧</span>Chamados</a>
+<a href="relatorios.html"><span class="icon">▥</span>Relatórios</a>
+<a href="planos.html"><span class="icon">▦</span>Planos</a>
+<a href="usuarios.html"><span class="icon">👥</span>Usuários</a>
+<a href="configuracoes.html"><span class="icon"></span>Configurações</a>
+<a href="backup.html"><span class="icon">☁</span>Backup</a>
+<a href="#" onclick="sair()"><span class="icon">↪</span></a>
+</nav>
+</aside>
+<main class="main">
+<header class="topbar"><h1>Importação ReceitaNet</h1><div class="topbar-right"><span id="liveStatus" class="badge badge-off">CONECTANDO</span><span class="badge">CSV ReceitaNet</span><span class="badge">ISO-8859-1</span></div></header>
+<section class="content">
+<section class="cards"><div class="card"><div class="card-icon bg-blue">👥</div><small>Encontrados</small><h2 id="impEncontrados">0</h2></div><div class="card"><div class="card-icon bg-green">✅</div><small>Novos</small><h2 id="impNovos">0</h2></div><div class="card"><div class="card-icon bg-orange">🔄</div><small>Atualizados</small><h2 id="impAtualizados">0</h2></div><div class="card"><div class="card-icon bg-blue">📋</div><small>Total em Clientes</small><h2 id="impTotalClientes">0</h2></div></section>
+<section class="panel"><h3>Importar clientes do ReceitaNet</h3><p class="cadastro-note">Use o CSV exportado do ReceitaNet. Esta versão lê o arquivo como <b>ISO-8859-1</b>, salvando todos os campos do cliente.</p><div class="cadastro-actions"><label class="csv-import-btn">Selecionar CSV ReceitaNet<input id="csvReceitaNet" type="file" accept=".csv,text/csv" onchange="importarReceitaNetHub(event)" hidden></label><button onclick="limparBaseClientesHub()">Limpar base local</button></div><div id="resultadoImportacao" class="import-result">Aguardando arquivo CSV.</div></section>
+<section class="panel"><h3>Prévia da última importação</h3><div class="table-wrap"><table><thead><tr><th>Login</th><th>Nome</th><th>CPF/CNPJ</th><th>Telefone</th><th>Endereço</th><th>Plano</th><th>Venc.</th><th>POP</th></tr></thead><tbody id="previewImportacao"><tr><td colspan="8">Nenhum arquivo importado ainda.</td></tr></tbody></table></div></section>
+<div class="footer"><span>© 2026 Fibra+</span><span>Importação ReceitaNet</span></div>
+</section></main></div>
+
+<script>
+function protegerPagina(){ if(!localStorage.getItem("fibraLogado")){} }
+function sair(){ localStorage.removeItem("fibraLogado"); location.href="login.html"; }
+function abrirMenu(){ document.body.classList.add("menu-open"); const s=document.querySelector(".sidebar"); if(s)s.classList.add("open"); const o=document.querySelector(".overlay"); if(o)o.classList.add("active"); }
+function fecharMenu(){ document.body.classList.remove("menu-open"); const s=document.querySelector(".sidebar"); if(s){s.classList.remove("open");s.classList.remove("active");} const o=document.querySelector(".overlay"); if(o){o.classList.remove("active");o.classList.remove("open");} }
+function iniciarSocket(){ const el=document.getElementById("liveStatus"); if(el){el.textContent="ONLINE";el.className="badge badge-live";} }
+document.addEventListener("DOMContentLoaded",()=>{document.querySelectorAll(".nav a").forEach(a=>a.addEventListener("click",()=>{if(innerWidth<=900)fecharMenu()}));});
+</script>
+
+<script>
+let previewHub=[];
+function iNorm(v){return String(v||"").replace(/\uFFFD/g,"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^\w\s/.-]/g,"").replace(/\s+/g," ").trim().toLowerCase();}
+function iNum(v){return String(v||"").replace(/\D/g,"");}
+function iMoney(v){let s=String(v||"").replace(/[^\d,.-]/g,"");if(s.includes(",")&&s.includes("."))s=s.replace(/\./g,"").replace(",",".");else s=s.replace(",",".");return Number(s)||0;}
+function split(line,sep){let out=[],cur="",q=false;for(let i=0;i<line.length;i++){let ch=line[i],nx=line[i+1];if(ch=='"'&&nx=='"'){cur+='"';i++;continue}if(ch=='"'){q=!q;continue}if(ch==sep&&!q){out.push(cur.trim());cur="";continue}cur+=ch}out.push(cur.trim());return out;}
+function sep(text){let f=text.split(/\r?\n/).find(l=>l.trim())||"";let s=(f.match(/;/g)||[]).length,c=(f.match(/,/g)||[]).length,t=(f.match(/\t/g)||[]).length;if(t>s&&t>c)return"\t";return s>=c?";":",";}
+function header(h){return iNorm(h);}
+function get(row,idxs,names){for(let n of names||[]){let k=header(n);if(row.obj[k]!==undefined&&String(row.obj[k]).trim())return row.obj[k];}for(let n of names||[]){let k=header(n);let found=Object.keys(row.obj).find(x=>x===k||x.includes(k)||k.includes(x));if(found&&String(row.obj[found]).trim())return row.obj[found];}for(let i of idxs||[]){if(row.cols[i]!==undefined&&String(row.cols[i]).trim())return row.cols[i];}return"";}
+function pop(v){let s=iNorm(v);if(s.includes("colonia")||s.includes("antonio"))return"colonia";if(s.includes("armando")||s.includes("zumbi")||s.includes("mendes"))return"armando";return"armando";}
+function popNome(v){if(v==="colonia")return"COLÔNIA";if(v==="armando")return"ARMANDO";return v||"--";}
+function map(row){
+ let cnpj=get(row,[2],["CNPJ"]);let cpf=get(row,[3],["CPF"]);let servidor=get(row,[32],["Servidor"]);let profile=get(row,[34],["Banda de Tráfego/Profile","Profile"]);let plano=get(row,[41],["Planos de Cobranças","Planos de Cobrancas","Plano"]);
+ return {loginPppoe:get(row,[0],["Login"]),senhaPppoe:get(row,[1],["Senha"]),cnpj:cnpj,cpf:cpf,cpfCnpj:cpf||cnpj,rgIe:get(row,[4],["RG/IE"]),nome:get(row,[5],["Nome"]),endereco:get(row,[6],["Endereço","Endereco"]),referencia:get(row,[7],["Referência","Referencia"]),cidade:get(row,[8],["Cidade"]),uf:get(row,[9],["UF"]),bairro:get(row,[10],["Bairro"]),cep:get(row,[11],["CEP"]),complemento:get(row,[12],["Complemento"]),setor:get(row,[13],["Setor"]),diaVencimento:iNum(get(row,[14],["Dia de Vencimento"])),telefone1:get(row,[15],["Telefone 1"]),telefone2:get(row,[16],["Telefone 2"]),telefone3:get(row,[17],["Telefone 3"]),desconto:get(row,[18],["Desconto"]),dataNascimento:get(row,[19],["Data de Nascimento"]),dataCadastro:get(row,[20],["Data de Cadastros"]),dataInicioCobranca:get(row,[21],["Data de Início de Cobrança"]),dataAtivacao:get(row,[22],["Data da Ativação"]),dataBloqueio:get(row,[23],["Data de Bloqueio"]),dataCancelamento:get(row,[24],["Data do Cancelamento"]),observacao:get(row,[25],["Observação"]),email:get(row,[26],["Email"]),mac:get(row,[27],["MAC"]),numeroContrato:get(row,[28],["Número do Contrato"]),cfop:get(row,[29],["CFOP"]),coordenadaX:get(row,[30],["X"]),coordenadaY:get(row,[31],["Y"]),servidorReceita:servidor,servidorIp:get(row,[33],["Servidor IP"]),profile:profile,ip:get(row,[35],["IP"]),interface:get(row,[36],["Interface"]),tecnologia:get(row,[37],["Tecnologia"]),elementoRede:get(row,[38],["Elemento de Rede"]),macOnu:get(row,[39],["MAC/ONU"]),serialOnu:get(row,[40],["Serial ONU"]),plano:plano||profile,contaBancaria:get(row,[42],["Conta Bancaria"]),valorMensal:iMoney(get(row,[],["Valor Mensal","Valor","Mensalidade"])),popServidor:pop(servidor),origem:"ReceitaNet CSV",atualizadoEm:new Date().toISOString()};
+}
+function parse(text){let sp=sep(text);let lines=text.split(/\r?\n/).filter(l=>l.trim());if(lines.length<2)return[];let heads=split(lines[0],sp).map(header);let arr=[];for(let i=1;i<lines.length;i++){let cols=split(lines[i],sp),obj={};heads.forEach((h,j)=>obj[h]=cols[j]||"");let c=map({obj,cols});if(c.loginPppoe||c.nome||c.cpfCnpj)arr.push(c);}return arr;}
+function key(c){return iNorm(c.loginPppoe||c.login)||iNum(c.cpfCnpj||c.cpf)||iNorm(c.email)||iNum(c.telefone1||c.telefone)||iNum(c.telefone2)||iNorm(c.nome);}
+function merge(a,b){let r={...a};Object.keys(b).forEach(k=>{let v=b[k];if(v===undefined||v===null||String(v).trim()==="")return;r[k]=v;});return r;}
+function readFileLatin1(file){return new Promise((resolve,reject)=>{let fr=new FileReader();fr.onload=()=>resolve(fr.result);fr.onerror=reject;fr.readAsText(file,"ISO-8859-1");});}
+async function importarReceitaNetHub(ev){let file=ev.target.files&&ev.target.files[0];if(!file)return;let text=await readFileLatin1(file);let imp=parse(text);let clientes=[];try{clientes=JSON.parse(localStorage.getItem("clientes")||"[]")}catch(e){clientes=[]}if(!Array.isArray(clientes))clientes=[];let mapa=new Map();clientes.forEach(c=>{let k=key(c);if(k)mapa.set(k,c)});let novos=0,atualizados=0;imp.forEach(c=>{let k=key(c);if(!k)return;if(mapa.has(k)){mapa.set(k,merge(mapa.get(k),c));atualizados++;}else{mapa.set(k,c);novos++;}});let final=Array.from(mapa.values());localStorage.setItem("clientes",JSON.stringify(final));impEncontrados.textContent=imp.length;impNovos.textContent=novos;impAtualizados.textContent=atualizados;impTotalClientes.textContent=final.length;resultadoImportacao.innerHTML=`<b>Importação concluída.</b><br>👥 Encontrados: ${imp.length}<br>✅ Novos: ${novos}<br>🔄 Atualizados: ${atualizados}<br>📋 Total em Clientes: ${final.length}<br>Redirecionando para Clientes...`;previewHub=imp.slice(0,20);renderPreview();setTimeout(()=>location.href="clientes.html",1200);}
+function renderPreview(){let tb=previewImportacao;if(!previewHub.length){tb.innerHTML='<tr><td colspan="8">Nenhum arquivo importado ainda.</td></tr>';return}tb.innerHTML=previewHub.map(c=>`<tr><td>${c.loginPppoe||"--"}</td><td>${c.nome||"--"}</td><td>${c.cpfCnpj||"--"}</td><td>${c.telefone1||"--"}</td><td>${c.endereco||"--"}</td><td>${c.plano||"--"}</td><td>${c.diaVencimento||"--"}</td><td>${popNome(c.popServidor)}</td></tr>`).join("");}
+function iniciarImportacaoHub(){try{impTotalClientes.textContent=(JSON.parse(localStorage.getItem("clientes")||"[]")||[]).length}catch(e){}}
+function limparBaseClientesHub(){if(confirm("Limpar todos os clientes salvos localmente?")){localStorage.removeItem("clientes");alert("Base local limpa.");location.reload();}}
+</script>
+</body></html>

@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cadastro de Cliente - Fibra+ Hub</title><link rel="stylesheet" href="style.css">
+</head>
+<body onload="protegerPagina(); iniciarSocket(); carregarCadastroClienteHub();">
+<div class="mobile-top"><button class="menu-btn" onclick="abrirMenu()">☰</button><div><div class="logo-wrap"><div class="brand"><span class="fibra">Fibra</span><span class="brand-dot"></span><span class="plus">+</span></div><div class="slogan">HUB DE CONTROLE</div></div></div></div>
+
+<div class="layout"><div class="overlay" onclick="fecharMenu()"></div>
+<aside class="sidebar"><div class="logo-wrap"><div class="brand"><span class="fibra">Fibra</span><span class="brand-dot"></span><span class="plus">+</span></div><div class="slogan">HUB DE CONTROLE</div></div>
+<nav class="nav">
+<a href="dashboard.html"><span class="icon">🏠</span>Dashboard</a>
+<a href="clientes.html"><span class="icon">👤</span>Clientes</a>
+<a href="cadastro.html" class="active"><span class="icon">👥</span>Cadastrar Cliente</a>
+<a href="importacao.html"><span class="icon">⬆️</span>Importação</a>
+<a href="pppoe.html"><span class="icon">☰</span>PPPoE Online</a>
+<a href="monitoramento.html"><span class="icon">▣</span>Monitoramento</a>
+<a href="financeiro.html"><span class="icon">▤</span>Financeiro Efí</a>
+<a href="chamados.html"><span class="icon">🔧</span>Chamados</a>
+<a href="relatorios.html"><span class="icon">▥</span>Relatórios</a>
+<a href="planos.html"><span class="icon">▦</span>Planos</a>
+<a href="usuarios.html"><span class="icon">👥</span>Usuários</a>
+<a href="configuracoes.html"><span class="icon"></span>Configurações</a>
+<a href="backup.html"><span class="icon">☁</span>Backup</a>
+<a href="#" onclick="sair()"><span class="icon">↪</span></a>
+</nav></aside>
+
+<main class="main">
+<header class="topbar">
+  <h1>Cadastro de Cliente</h1>
+  <div class="topbar-right"><span id="liveStatus" class="badge badge-off">CONECTANDO</span><span class="badge">Novo Cliente</span></div>
+</header>
+
+<section class="content cadastro-receita-page">
+
+  <section class="cadastro-shortcuts">
+    <button class="sc azul">▥<span>Planos</span></button>
+    <button class="sc vermelho">◎<span>Acesso Vinc.</span></button>
+    <button class="sc azul">▣<span>O.S.</span></button>
+    <button class="sc vermelho">⌂<span>End. Cobrança</span></button>
+    <button class="sc azul">▣<span>Lanç. Futuros</span></button>
+    <button class="sc azul-claro">↻<span>Rescisão</span></button>
+    <button class="sc verde">📄<span>Contrato</span></button>
+    <button class="sc cinza">▤<span>Drive</span></button>
+    <button class="sc ciano">▥<span>Boleto Avulso</span></button>
+    <button class="sc vermelho">▥<span>Boletos</span></button>
+    <button class="sc verde">▥<span>Gerar Carnê</span></button>
+    <button class="sc azul">▥<span>Recibos/Carnês</span></button>
+    <button class="sc azul">▥<span>Carta de Débito</span></button>
+    <button class="sc cinza">ℹ<span>Logs</span></button>
+    <button class="sc vermelho">✈<span>Enviar Mensagens</span></button>
+    <button class="sc verde">☁<span>Autenticação</span></button>
+    <button class="sc vermelho">💲<span>Notificação de Pagamento</span></button>
+    <button class="sc vermelho">⦿<span>Pai Controle</span></button>
+    <button class="sc azul">☎<span>Telefonia Fixa</span></button>
+    <button class="sc azul">✦<span>Chip IH 5G</span></button>
+    <button class="sc vermelho">▧<span>Estoque</span></button>
+    <button class="sc azul">⚕<span>TeleSaúde</span></button>
+  </section>
+
+  <section class="cadastro-layout-receita">
+    <section class="cadastro-form-card">
+      <div class="cadastro-tabs">
+        <button data-tab="dados" class="tab active" onclick="abrirTabCadastro('dados')">Dados Pessoais</button>
+        <button data-tab="contato" class="tab" onclick="abrirTabCadastro('contato')">Contato</button>
+        <button data-tab="cobranca" class="tab" onclick="abrirTabCadastro('cobranca')">Cobrança</button>
+        <button data-tab="servidor" class="tab" onclick="abrirTabCadastro('servidor')">Servidor</button>
+        <button data-tab="olt" class="tab" onclick="abrirTabCadastro('olt')">OLT <span class="beta">Beta</span></button>
+        <button data-tab="oltnet" class="tab" onclick="abrirTabCadastro('oltnet')">OLTNET</button>
+        <button data-tab="admin" class="tab" onclick="abrirTabCadastro('admin')">Administrativo</button>
+        <button data-tab="nfe" class="tab" onclick="abrirTabCadastro('nfe')">Dados Notas Fiscais</button>
+        <input id="cadBuscaCliente" class="tab-search" placeholder="Digite o Nome/Login..." oninput="buscarClienteCadastro()">
+      </div>
+
+      <div id="tab-dados" class="tab-content active">
+        <div class="form-row two">
+          <div><label>Login</label><input id="cadLogin" oninput="atualizarResumoCadastro()" placeholder="login@pop"></div>
+          <div><label>Senha</label><div class="input-action"><input id="cadSenha" oninput="atualizarResumoCadastro()" placeholder="senha"><button onclick="gerarSenha()">!</button></div></div>
+        </div>
+        <div class="form-row"><label>Nome</label><input id="cadNome" oninput="atualizarResumoCadastro()" placeholder="Nome completo"></div>
+        <div class="form-row two">
+          <div><label>CPF/CNPJ</label><div class="input-action"><input id="cadCpf" oninput="atualizarResumoCadastro()" placeholder="000.000.000-00"><button onclick="consultarDocumento()">Consultar</button></div></div>
+          <div><label>Data Nascimento</label><input id="cadNascimento" type="date"></div>
+        </div>
+        <div class="form-row two">
+          <div><label>RG/Inscrição Estadual</label><input id="cadRg" oninput="atualizarResumoCadastro()"></div>
+          <div><label>Indicador da Inscrição Estadual</label><select id="cadIndicadorIe"><option>Não Contribuinte</option><option>Contribuinte ICMS</option><option>Isento</option></select></div>
+        </div>
+        <div class="form-row email-row"><label>Email</label><div class="input-action"><input id="cadEmail" oninput="atualizarResumoCadastro()"><button class="email-btn">✉</button></div></div>
+      </div>
+
+      <div id="tab-contato" class="tab-content">
+        <div class="contato-receitanet-exato">
+<div class="contato-form-grid">
+            <div class="campo cep-box">
+              <label>CEP</label>
+              <div class="cep-row">
+                <input id="cadCep" placeholder="00000-000" maxlength="9" oninput="mascaraCepAutomatico()" onblur="buscarCepAutomatico()">
+                <button type="button" onclick="buscarCepAutomatico()">Consultar CEP</button>
+              </div>
+              <small id="resultadoCepAutomatico" class="cep-status"></small>
+            </div>
+
+            <div class="campo full endereco-box">
+              <label>Endereço</label>
+              <div class="endereco-row">
+                <input id="cadEndereco" oninput="atualizarResumoCadastro()" placeholder="Endereço">
+                <button type="button" class="map-btn">▮</button>
+              </div>
+            </div>
+
+            <div class="campo">
+              <label>Ponto de Referência</label>
+              <div class="referencia-row">
+                <input id="cadReferencia" placeholder="Ponto de referência">
+                <button type="button" class="pin-btn">♦</button>
+              </div>
+            </div>
+
+            <div class="campo">
+              <label>Complemento</label>
+              <input id="cadComplemento" placeholder="Complemento">
+            </div>
+
+            <div class="campo">
+              <label>Bairro</label>
+              <input id="cadBairro" oninput="atualizarResumoCadastro()" placeholder="Bairro">
+            </div>
+
+            <div class="campo">
+              <label>Cidade</label>
+              <input id="cadCidade" value="Manaus">
+            </div>
+
+            <div class="campo">
+              <label>UF</label>
+              <select id="cadUf">
+                <option value="AM">AM</option>
+                <option value="AC">AC</option><option value="AL">AL</option><option value="AP">AP</option>
+                <option value="BA">BA</option><option value="CE">CE</option><option value="DF">DF</option>
+                <option value="ES">ES</option><option value="GO">GO</option><option value="MA">MA</option>
+                <option value="MT">MT</option><option value="MS">MS</option><option value="MG">MG</option>
+                <option value="PA">PA</option><option value="PB">PB</option><option value="PR">PR</option>
+                <option value="PE">PE</option><option value="PI">PI</option><option value="RJ">RJ</option>
+                <option value="RN">RN</option><option value="RS">RS</option><option value="RO">RO</option>
+                <option value="RR">RR</option><option value="SC">SC</option><option value="SP">SP</option>
+                <option value="SE">SE</option><option value="TO">TO</option>
+              </select>
+            </div>
+
+            <div class="campo">
+              <label>Classe</label>
+              <select id="cadClasse">
+                <option>RESIDENCIAL</option>
+                <option>COMERCIAL</option>
+                <option>RURAL</option>
+                <option>INDUSTRIAL</option>
+              </select>
+            </div>
+
+            <div class="campo">
+              <label>Setor</label>
+              <select id="cadSetor">
+                <option></option>
+                <option>Armando Mendes</option>
+                <option>Colônia Antônio Aleixo</option>
+                <option>Zumbi dos Palmares</option>
+              </select>
+            </div>
+
+            <div class="campo">
+              <label>Setor Responsável</label>
+              <input id="cadSetorResponsavel" placeholder="">
+            </div>
+
+            <div class="campo telefone1-box">
+              <label>Telefone 1</label>
+              <div class="telefone-row">
+                <input id="cadTelefone1" oninput="atualizarResumoCadastro()" placeholder="(92) 99999-9999">
+                <button type="button" class="whats-btn">☘</button>
+              </div>
+              <p class="telefone-note">O número de telefone do cliente é necessário para a emissão da nota fiscal.</p>
+            </div>
+
+            <div class="campo">
+              <label>Telefone 2</label>
+              <input id="cadTelefone2" oninput="atualizarResumoCadastro()" placeholder="">
+            </div>
+
+            <div class="campo empty-left"></div>
+
+            <div class="campo">
+              <label>Telefone 3</label>
+              <input id="cadTelefone3" oninput="atualizarResumoCadastro()" placeholder="">
+            </div>
+          </div>
+</div>
+      </div>
+
+      <div id="tab-cobranca" class="tab-content">
+        <div class="cobranca-receitanet-exato">
+<div class="cobranca-form-grid">
+            <div class="campo">
+              <label>Dia do Vencimento</label>
+              <select id="cadVencimento" oninput="atualizarResumoCadastro()">
+                <option value="">Selecione</option>
+                <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option><option value="23">23</option><option value="24">24</option><option value="25">25</option><option value="26">26</option><option value="27">27</option><option value="28">28</option><option value="29">29</option><option value="30">30</option>
+              </select>
+            </div>
+
+            <div class="campo">
+              <label>Data de Início da Cobrança</label>
+              <input id="cadInicioCobranca" type="date">
+              <p class="cobranca-alerta">O sistema somente gerará cobranças a partir deste dia.</p>
+            </div>
+
+            <div class="campo">
+              <label>Liberação em Confiança</label>
+              <div class="input-com-botao">
+                <input id="cadLiberacaoConfianca" type="date">
+                <button type="button">Confiança</button>
+              </div>
+            </div>
+
+            <div class="campo">
+              <label>Bloqueio</label>
+              <div class="input-com-botao">
+                <input id="cadBloqueio" type="date">
+                <button type="button">Bloquear</button>
+              </div>
+              <p class="cobranca-help">Data que o cliente foi bloqueado para acesso</p>
+            </div>
+
+            <div class="campo">
+              <label>Data de Cancelamento</label>
+              <div class="input-com-botao">
+                <input id="cadCancelamento" type="date">
+                <button type="button" class="info-btn">i</button>
+              </div>
+            </div>
+
+            <div class="campo">
+              <label>Status de Cobrança</label>
+              <select id="cadStatusCobranca">
+                <option value="ATIVADO">ATIVADO</option>
+                <option value="NÃO ATIVADO">NÃO ATIVADO</option>
+                <option value="ISENTO">ISENTO</option>
+              </select>
+            </div>
+
+            <div class="campo">
+              <label>Contrato</label>
+              <select id="cadContrato">
+                <option value="Não">Não</option>
+                <option value="Sim">Sim</option>
+              </select>
+            </div>
+
+            <div class="campo">
+              <label>Nº Contrato</label>
+              <input id="cadNumeroContrato" placeholder="">
+            </div>
+
+            <div class="campo">
+              <label>Situação</label>
+              <select id="cadSituacao">
+                <option value="PADRÃO">PADRÃO</option>
+                <option value="OUTROS">OUTROS</option>
+                <option value="MANUTENÇÃO">MANUTENÇÃO</option>
+                <option value="EM APROVAÇÃO">EM APROVAÇÃO</option>
+                <option value="INVIABILIDADE">INVIABILIDADE</option>
+                <option value="FINANCEIRO">FINANCEIRO</option>
+                <option value="FORA DO PERFIL">FORA DO PERFIL</option>
+                <option value="ATIVOS">ATIVOS</option>
+              </select>
+            </div>
+
+            <div class="campo">
+              <label>Desconto</label>
+              <div class="desconto-row">
+                <label class="checkline"><input id="cadDescontoAteVenc" type="checkbox"> Até Vencimento?</label>
+                <input id="cadDesconto" type="number" step="0.01" value="0,00">
+              </div>
+            </div>
+
+            <div class="campo">
+              <label>Conta</label>
+              <select id="cadContaBancaria">
+                <option>API - Efí</option>
+                <option>Carteira</option>
+                <option>Banco</option>
+              </select>
+            </div>
+
+            <div class="campo">
+              <label>Base de Referência</label>
+              <select id="cadBaseReferencia">
+                <option value="">Selecione</option>
+                <option value="Pré-pago">Pré-pago</option>
+                <option value="Pós-pago">Pós-pago</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="tab-servidor" class="tab-content">
+        <div class="servidor-receitanet-exato">
+
+          <div class="servidor-form-grid">
+            <div class="campo">
+              <label>SERVIDOR</label>
+              <select id="cadPop" oninput="atualizarResumoCadastro(); atualizarInterfaceServidor(); atualizarConexaoServidor();">
+                <option value="">SEM SERVIDOR</option>
+                <option value="Armando Mendes - Zumbi">Armando Mendes - Zumbi</option>
+                <option value="Colônia Antônio Aleixo">Colônia Antônio Aleixo</option>
+              </select>
+            </div>
+
+            <div class="campo">
+              <label>INTERFACE</label>
+              <select id="cadInterface" oninput="atualizarResumoCadastro();" disabled>
+                <option value=""></option>
+              </select>
+            </div>
+
+            <div class="campo">
+              <label>CONEXÃO</label>
+              <select id="cadConexao" oninput="atualizarResumoCadastro();" disabled>
+                <option value=""></option>
+              </select>
+            </div>
+
+            <div class="campo">
+              <label>PROFILE</label>
+              <select id="cadProfile" oninput="atualizarResumoCadastro()">
+                <option value=""></option>
+                <option>Plano 100 MB</option>
+                <option>Plano 300 MB</option>
+                <option>Plano 600 MB</option>
+                <option>Plano 800 MB</option>
+                <option>1 Giga</option>
+              </select>
+            </div>
+
+            <div class="campo">
+              <label>SINAL</label>
+              <input id="cadSinal" placeholder="">
+            </div>
+
+            <div class="campo">
+              <label>ELEMENTO DE REDE</label>
+              <div class="elemento-row">
+                <input id="cadElementoRede" oninput="atualizarResumoCadastro()">
+                <button type="button" class="btn-provisionar">Provisionar</button>
+              </div>
+            </div>
+
+            <div class="campo">
+              <label>IP</label>
+              <select id="cadIpTipo">
+                <option>SEM IP</option>
+                <option>IP FIXO</option>
+                <option>IP DINÂMICO</option>
+              </select>
+            </div>
+
+            <div class="campo">
+              <label>MAC</label>
+              <input id="cadMac" oninput="atualizarResumoCadastro()">
+            </div>
+
+            <div class="campo">
+              <label>IP ATUAL</label>
+              <input id="cadIp" oninput="atualizarResumoCadastro()">
+            </div>
+
+            <div class="campo">
+              <label>ID/SERIAL</label>
+              <input id="cadSerialOnu">
+            </div>
+
+            <div class="campo">
+              <label>Tecnologia</label>
+              <select id="cadTecnologia" oninput="atualizarResumoCadastro()">
+                <option>Fibra Óptica</option>
+                <option>Rádio</option>
+                <option>Cabo</option>
+              </select>
+            </div>
+
+            <div class="campo">
+              <label>Porta de Acesso ao Equipamento do Cliente</label>
+              <input id="cadPortaAcesso" placeholder="Padrão">
+              <label class="check-servidor"><input id="cadDhcp" type="checkbox"> DHCP</label>
+              <label class="check-servidor"><input id="cadNaoAmarrarMac" type="checkbox"> Não Amarrar MAC</label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+<div id="tab-olt" class="tab-content"><p class="empty-tab">Dados OLT serão configurados depois.</p></div>
+      <div id="tab-oltnet" class="tab-content"><p class="empty-tab">OLTNET não identificado.</p></div>
+      <div id="tab-admin" class="tab-content"><div class="form-row"><label>Observação Administrativa</label><textarea id="cadObsAdmin"></textarea></div></div>
+      <div id="tab-nfe" class="tab-content"><div class="form-row"><label>CFOP</label><input id="cadCfop"></div></div>
+
+      <div class="cadastro-save-row">
+        <button class="save-blue" onclick="salvarCadastroCliente(false)">Gravar no Fibra+ Hub</button>
+        <button class="save-red" onclick="salvarCadastroCliente(true)">Gravar no Fibra+ Hub + Servidor</button>
+        <button class="cancel-btn" onclick="limparCadastroCliente()">Cancelar</button>
+        <span id="cadIdentificador">Identificador: --</span>
+      </div>
+
+      <div class="observacao-box">
+        <label>Observação ▤</label>
+        <textarea id="cadObservacao"></textarea>
+      </div>
+    </section>
+
+    
+    <aside class="cadastro-resumo-card resumo-receitanet-completo">
+      <div class="resumo-title">
+        <h3>Resumo</h3>
+        <button type="button">?</button>
+      </div>
+
+      <div class="resumo-top-grid">
+        <div>
+          <b>Login</b>
+          <span class="check-login">✓</span>
+          <span id="resLogin">--</span>
+        </div>
+        <div>
+          <b>Senha</b>
+          <span id="resSenha">--</span>
+        </div>
+        <div>
+          <b>Nome</b>
+          <span id="resNome">--</span>
+        </div>
+        <div>
+          <b>CPF/CNPJ</b>
+          <span id="resCpf">--</span>
+        </div>
+        <div>
+          <b>Dia do Vencimento</b>
+          <span id="resVenc">--</span>
+        </div>
+        <div>
+          <b>Próxima Fatura Aberta</b>
+          <span>Nenhuma fatura disponível</span>
+        </div>
+      </div>
+
+      <div class="resumo-section">
+        <h4>Servidor</h4>
+        <div class="resumo-servidor-grid">
+          <div>
+            <b>SERVIDOR</b>
+            <span id="resServidor">--</span>
+          </div>
+          <div>
+            <b>INTERFACE</b>
+            <span id="resInterface">--</span>
+          </div>
+          <div>
+            <b>ELEMENTO DE REDE</b>
+            <span id="resElemento">--</span>
+          </div>
+          <div>
+            <b>IP ATUAL</b>
+            <span id="resIp">--</span>
+          </div>
+          <div>
+            <b>Conexão</b>
+            <span id="resConexao">--</span>
+          </div>
+          <div>
+            <b>Profile</b>
+            <span id="resProfile">--</span>
+          </div>
+        </div>
+
+        <h4>OLTNET</h4>
+        <span class="nao-identificado">Não Identificado</span>
+      </div>
+
+      <div class="status-login-line">
+        <span>Status<span class="offline-dot">● Offline</span></span>
+        <span>Login: <b id="resLogin2">--</b></span>
+      </div>
+
+      <div class="resumo-section">
+        <h4>Plano de Cobrança</h4>
+        <table class="mini-table plano-table">
+          <thead>
+            <tr>
+              <th>PLANO</th>
+              <th>VALOR UN</th>
+              <th>QTDADE</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td id="resPlano">Nenhum Plano Ativo</td>
+              <td id="resValor">R$ 0,00</td>
+              <td>1</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="mini-total">Total: <span id="resTotal">R$ 0,00</span></div>
+      </div>
+
+      <div class="resumo-section">
+        <h4>Estoque</h4>
+        <table class="mini-table estoque-table">
+          <thead>
+            <tr>
+              <th>PRODUTO</th>
+              <th>QT.</th>
+              <th>UN</th>
+              <th>VALOR</th>
+              <th>DATA</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td colspan="5">Nenhum Produto</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="resumo-section dados-contato-resumo">
+        <h4>Dados de Contato</h4>
+
+        <div class="contato-resumo-grid">
+          <div>
+            <b>Endereço</b>
+            <span id="resEndereco">--</span>
+          </div>
+          <div>
+            <b>Compl.</b>
+            <span id="resComplemento">--</span>
+          </div>
+
+          <div>
+            <b>Ponto de Ref.</b>
+            <span id="resReferencia">--</span>
+          </div>
+          <div>
+            <b>Cidade</b>
+            <span id="resCidade">--</span>
+          </div>
+
+          <div>
+            <b>Bairro</b>
+            <span id="resBairro">--</span>
+          </div>
+          <div>
+            <b>IBGE</b>
+            <span id="resIbge">--</span>
+          </div>
+
+          <div>
+            <b>Estado</b>
+            <span id="resUf">--</span>
+          </div>
+          <div>
+            <b>Tel2</b>
+            <span id="resTelefone2">--</span>
+          </div>
+
+          <div>
+            <b>Tel1</b>
+            <span id="resTelefone1">--</span>
+          </div>
+          <div>
+            <b>Tel3</b>
+            <span id="resTelefone3">--</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="resumo-section pai-controle-resumo">
+        <h4>Sistema Pai Controle</h4>
+        <span class="pai-desativado">Desativado</span>
+      </div>
+    </aside>
+
+  </section>
+</section>
+</main></div>
+
+<script src="/socket.io/socket.io.js">
+function consultarCepContato(){ buscarCepAutomatico(); }
+</script><script src="app.js"></script>
+<script>
+function abrirTabCadastro(nome){
+  document.querySelectorAll(".cadastro-tabs .tab").forEach(btn=>{
+    btn.classList.remove("active");
+    btn.classList.remove("tab-active");
+  });
+
+  document.querySelectorAll(".tab-content").forEach(tab=>{
+    tab.classList.remove("active");
+    tab.style.display = "none";
+  });
+
+  const tab = document.getElementById("tab-" + nome);
+  if(tab){
+    tab.classList.add("active");
+    tab.style.display = "block";
+  }
+
+  const botao = document.querySelector('.cadastro-tabs .tab[data-tab="' + nome + '"]') ||
+                document.querySelector('.cadastro-tabs .tab[onclick*="' + nome + '"]');
+
+  if(botao){
+    botao.classList.add("active");
+    botao.classList.add("tab-active");
+  }
+}
+function dinheiro(v){return Number(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});}
+function valor(id){let el=document.getElementById(id);return el?el.value.trim():"";}
+function setTxt(id,v){let el=document.getElementById(id);if(el)el.textContent=v||"--";}
+function atualizarResumoCadastro(){
+  setTxt("resLogin",valor("cadLogin"));
+  setTxt("resLogin2",valor("cadLogin"));
+  setTxt("resSenha",valor("cadSenha"));
+  setTxt("resNome",valor("cadNome"));
+  setTxt("resCpf",valor("cadCpf"));
+  setTxt("resVenc",valor("cadVencimento"));
+
+  setTxt("resServidor",valor("cadServidorReceita")||valor("cadPop"));
+  setTxt("resInterface",valor("cadInterface"));
+  setTxt("resElemento",valor("cadElementoRede"));
+  setTxt("resIp",valor("cadIp"));
+  setTxt("resConexao",valor("cadTecnologia")||"--");
+  setTxt("resProfile",valor("cadProfile"));
+
+  setTxt("resPlano",valor("cadPlano")||"Nenhum Plano Ativo");
+  let val=Number(valor("cadValor")||0);
+  setTxt("resValor",dinheiro(val));
+  setTxt("resTotal",dinheiro(val));
+
+  setTxt("resEndereco",valor("cadEndereco"));
+  setTxt("resComplemento",valor("cadComplemento"));
+  setTxt("resReferencia",valor("cadReferencia"));
+  setTxt("resBairro",valor("cadBairro"));
+  setTxt("resCidade",valor("cadCidade"));
+  setTxt("resUf",valor("cadUf"));
+  setTxt("resTelefone1",valor("cadTelefone1"));
+  setTxt("resTelefone2",valor("cadTelefone2"));
+  setTxt("resTelefone3",valor("cadTelefone3"));
+  setTxt("resIbge",valor("cadIbge")||"--");
+
+  const ident = document.getElementById("cadIdentificador");
+  if(ident) ident.textContent="Identificador: "+(valor("cadLogin")||"--");
+}
+function gerarSenha(){document.getElementById("cadSenha").value=Math.random().toString(36).slice(2,8);atualizarResumoCadastro();}
+function consultarDocumento(){alert("Consulta de CPF/CNPJ será integrada depois.");}
+function clienteDoCadastro(){
+  return {
+    loginPppoe:valor("cadLogin"), login:valor("cadLogin"), senhaPppoe:valor("cadSenha"), senha:valor("cadSenha"),
+    nome:valor("cadNome"), cpfCnpj:valor("cadCpf"), cpf:valor("cadCpf"), rgIe:valor("cadRg"),
+    dataNascimento:valor("cadNascimento"), email:valor("cadEmail"), telefone1:valor("cadTelefone1"), telefone2:valor("cadTelefone2"), telefone3:valor("cadTelefone3"),
+    endereco:valor("cadEndereco"), referencia:valor("cadReferencia"), bairro:valor("cadBairro"), cidade:valor("cadCidade"), uf:valor("cadUf"), cep:valor("cadCep"), complemento:valor("cadComplemento"), classe:valor("cadClasse"), setor:valor("cadSetor"), setorResponsavel:valor("cadSetorResponsavel"), setor:valor("cadSetor"),
+    diaVencimento:valor("cadVencimento"), vencimento:valor("cadVencimento"), plano:valor("cadPlano"), valorMensal:Number(valor("cadValor")||0), valor:Number(valor("cadValor")||0),
+    contaBancaria:valor("cadContaBancaria"), inicioCobranca:valor("cadInicioCobranca"), liberacaoConfianca:valor("cadLiberacaoConfianca"), bloqueio:valor("cadBloqueio"), cancelamento:valor("cadCancelamento"), statusCobranca:valor("cadStatusCobranca"), contrato:valor("cadContrato"), numeroContrato:valor("cadNumeroContrato"), situacao:valor("cadSituacao"), desconto:valor("cadDesconto"), baseReferencia:valor("cadBaseReferencia"), popServidor:valor("cadPop"), servidor:valor("cadPop"), servidorReceita:valor("cadServidorReceita"), sinal:valor("cadSinal"), conexao:valor("cadConexao"), ipTipo:valor("cadIpTipo"), portaAcesso:valor("cadPortaAcesso"), dhcp:document.getElementById("cadDhcp")?.checked||false, naoAmarrarMac:document.getElementById("cadNaoAmarrarMac")?.checked||false,
+    interface:valor("cadInterface"), elementoRede:valor("cadElementoRede"), ip:valor("cadIp"), profile:valor("cadProfile"), mac:valor("cadMac"), macOnu:valor("cadMacOnu"), serialOnu:valor("cadSerialOnu"),
+    cfop:valor("cadCfop"), observacao:valor("cadObservacao"), observacaoAdmin:valor("cadObsAdmin"), status:"ativo", origem:"Cadastro manual", atualizadoEm:new Date().toISOString()
+  };
+}
+function chaveCliente(c){return String(c.loginPppoe||c.cpfCnpj||c.email||c.telefone1||c.nome||"").toLowerCase().replace(/\s+/g,"");}
+function salvarCadastroCliente(){
+  let c=clienteDoCadastro();
+  if(!c.loginPppoe&&!c.nome){alert("Informe pelo menos Login ou Nome.");return;}
+  let clientes=[];try{clientes=JSON.parse(localStorage.getItem("clientes")||"[]")}catch(e){clientes=[]}
+  if(!Array.isArray(clientes))clientes=[];
+  let k=chaveCliente(c); let idx=clientes.findIndex(x=>chaveCliente(x)===k);
+  if(idx>=0)clientes[idx]={...clientes[idx],...c}; else clientes.push(c);
+  localStorage.setItem("clientes",JSON.stringify(clientes));
+  alert("Cliente salvo com sucesso.");
+  location.href="clientes.html";
+}
+function limparCadastroCliente(){document.querySelectorAll("input, textarea").forEach(i=>{if(i.id!=="cadCidade"&&i.id!=="cadUf")i.value=""});atualizarResumoCadastro();}
+function buscarClienteCadastro(){}
+function carregarCadastroClienteHub(){atualizarResumoCadastro();}
+document.addEventListener("input",atualizarResumoCadastro);
+
+
+/* ===== Consulta automática de CEP ViaCEP ===== */
+function somenteNumerosCep(v){
+  return String(v || "").replace(/\D/g, "");
+}
+
+function mascaraCepAutomatico(){
+  const input = document.getElementById("cadCep");
+  if(!input) return;
+
+  let v = somenteNumerosCep(input.value).slice(0, 8);
+
+  if(v.length > 5){
+    v = v.slice(0,5) + "-" + v.slice(5);
+  }
+
+  input.value = v;
+
+  if(somenteNumerosCep(v).length === 8){
+    clearTimeout(window.__cepTimer);
+    window.__cepTimer = setTimeout(buscarCepAutomatico, 600);
+  }
+}
+
+async function buscarCepAutomatico(){
+  const cepInput = document.getElementById("cadCep");
+  if(!cepInput) return;
+
+  const cep = somenteNumerosCep(cepInput.value);
+
+  if(cep.length !== 8){
+    return;
+  }
+
+  const resultado = document.getElementById("resultadoCepAutomatico");
+  if(resultado){
+    resultado.textContent = "Consultando CEP...";
+    resultado.className = "cep-status buscando";
+  }
+
+  try{
+    const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+    const data = await response.json();
+
+    if(data.erro){
+      if(resultado){
+        resultado.textContent = "CEP não encontrado.";
+        resultado.className = "cep-status erro";
+      }else{
+        alert("CEP não encontrado.");
+      }
+      return;
+    }
+
+    const set = (id, valor) => {
+      const el = document.getElementById(id);
+      if(el && valor !== undefined && valor !== null){
+        el.value = valor || "";
+        el.dispatchEvent(new Event("input", {bubbles:true}));
+      }
+    };
+
+    set("cadEndereco", data.logradouro || "");
+    set("cadBairro", data.bairro || "");
+    set("cadCidade", data.localidade || "");
+    set("cadUf", data.uf || "");
+    set("cadComplemento", data.complemento || "");
+
+    if(resultado){
+      resultado.textContent = "Endereço preenchido automaticamente.";
+      resultado.className = "cep-status ok";
+    }
+
+    if(typeof atualizarResumoCadastro === "function"){
+      atualizarResumoCadastro();
+    }
+
+  }catch(e){
+    console.error("Erro ao consultar CEP:", e);
+    if(resultado){
+      resultado.textContent = "Erro ao consultar CEP. Verifique a internet.";
+      resultado.className = "cep-status erro";
+    }else{
+      alert("Erro ao consultar CEP. Verifique a internet.");
+    }
+  }
+}
+
+function consultarCepContato(){
+  buscarCepAutomatico();
+}
+
+
+
+document.addEventListener("DOMContentLoaded", function(){
+  const ativa = document.querySelector(".cadastro-tabs .tab.active");
+  const tabAtiva = document.querySelector(".tab-content.active");
+  if(ativa){
+    ativa.classList.add("tab-active");
+  }
+  if(!tabAtiva){
+    abrirTabCadastro("dados");
+  }else{
+    tabAtiva.style.display = "block";
+  }
+});
+
+
+
+/* ===== Servidor: Interface somente PPPOE ===== */
+function atualizarInterfaceServidor(){
+  const servidor = document.getElementById("cadPop");
+  const iface = document.getElementById("cadInterface");
+  if(!servidor || !iface) return;
+
+  if(!servidor.value){
+    iface.innerHTML = '<option value=""></option>';
+    iface.value = "";
+    iface.disabled = true;
+  }else{
+    iface.disabled = false;
+    iface.innerHTML = '<option value="PPPOE">PPPOE</option>';
+    iface.value = "PPPOE";
+  }
+
+  if(typeof atualizarResumoCadastro === "function"){
+    atualizarResumoCadastro();
+  }
+}
+
+document.addEventListener("DOMContentLoaded", function(){
+  atualizarInterfaceServidor();
+});
+
+
+
+/* ===== Servidor/Conexão somente PPPOE ===== */
+function atualizarConexaoServidor(){
+  const servidor = document.getElementById("cadPop");
+  const conexao = document.getElementById("cadConexao");
+  if(!servidor || !conexao) return;
+
+  if(!servidor.value){
+    conexao.innerHTML = '<option value=""></option>';
+    conexao.value = "";
+    conexao.disabled = true;
+  }else{
+    conexao.disabled = false;
+    conexao.innerHTML = '<option value="PPPOE">PPPOE</option>';
+    conexao.value = "PPPOE";
+  }
+
+  if(typeof atualizarResumoCadastro === "function"){
+    atualizarResumoCadastro();
+  }
+}
+
+document.addEventListener("DOMContentLoaded", function(){
+  if(typeof atualizarConexaoServidor === "function") atualizarConexaoServidor();
+});
+
+</script>
+</body></html>

@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clientes - Fibra+ Hub</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body onload="protegerPagina(); iniciarSocket(); carregarClientesReceitaNet();">
+<div class="mobile-top">
+  <button class="menu-btn" onclick="abrirMenu()">☰</button>
+  <div class="logo-wrap">
+    <div class="brand"><span class="fibra">Fibra</span><span class="brand-dot"></span><span class="plus">+</span></div>
+    <div class="slogan">HUB DE CONTROLE</div>
+  </div>
+</div>
+
+<div class="layout">
+  <div class="overlay" onclick="fecharMenu()"></div>
+  <aside class="sidebar">
+    <div class="logo-wrap">
+      <div class="brand"><span class="fibra">Fibra</span><span class="brand-dot"></span><span class="plus">+</span></div>
+      <div class="slogan">HUB DE CONTROLE</div>
+    </div>
+    <nav class="nav">
+      <a href="dashboard.html"><span class="icon">🏠</span>Dashboard</a>
+      <a href="clientes.html" class="active"><span class="icon">👤</span>Clientes</a>
+      <a href="cadastro.html"><span class="icon">👥</span>Cadastrar Cliente</a>
+      <a href="importacao.html"><span class="icon">⬆️</span>Importação</a>
+      <a href="pppoe.html"><span class="icon">☰</span>PPPoE Online</a>
+      <a href="monitoramento.html"><span class="icon">▣</span>Monitoramento</a>
+      <a href="financeiro.html"><span class="icon">▤</span>Financeiro Efí</a>
+      <a href="chamados.html"><span class="icon">🔧</span>Chamados</a>
+      <a href="relatorios.html"><span class="icon">▥</span>Relatórios</a>
+      <a href="planos.html"><span class="icon">▦</span>Planos</a>
+      <a href="usuarios.html"><span class="icon">👥</span>Usuários</a>
+      <a href="configuracoes.html"><span class="icon"></span>Configurações</a>
+      <a href="backup.html"><span class="icon">☁</span>Backup</a>
+      <a href="#" onclick="sair()"><span class="icon">↪</span></a>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <header class="topbar clientes-topbar-receita">
+<div class="topbar-right">
+        <span class="user-dot"></span>
+        <b></b>
+        <b></b>
+        <a href="#" onclick="sair()"></a>
+        <span></span>
+      </div>
+    </header>
+
+    <section class="clientes-receita-wrapper">
+      <div class="clientes-page-title">Consulta de Clientes</div>
+
+      <div class="clientes-receita-grid">
+        <aside class="clientes-filtros-receita">
+          <div class="filtros-head">
+            <span>Filtros</span>
+            <a href="cadastro.html">Novo Cliente</a>
+          </div>
+
+          <div class="filtros-status-grid">
+            <div class="status-card blue"><span>Ativos</span><b id="qtdAtivos">0</b></div>
+            <div class="status-card navy"><span>Não Ativados</span><b id="qtdNaoAtivos">0</b></div>
+            <div class="status-card red"><span>Bloqueados</span><b id="qtdBloqueados">0</b></div>
+            <div class="status-card dark"><span>Cancelados</span><b id="qtdCancelados">0</b></div>
+            <div class="status-card orange total"><span>TOTAL DE CLIENTES</span><b id="qtdTotal">0</b></div>
+            <div class="status-card amber"><span>Visada</span><b>0</b></div>
+            <div class="status-card pink"><span>Isentos</span><b id="qtdIsentos">0</b></div>
+            <div class="status-card coral"><span>Pai Controle</span><b>0</b></div>
+            <div class="status-card green"><span>Liberados Confiança</span><b>0</b></div>
+            <div class="status-card black"><span>Cancelados com Acordos</span><b>0</b></div>
+          </div>
+
+          <div class="filtro-form">
+            <label>Tipo de Filtros</label>
+            <select id="filtroTipo">
+              <option>Estático (padrão)</option>
+            </select>
+
+            <div class="radio-row">
+              <label><input type="radio" name="tipoPessoa"> Física</label>
+              <label><input type="radio" name="tipoPessoa"> Jurídica</label>
+            </div>
+
+            <label>Dia de Vencimento</label>
+            <select id="filtroVencimento" onchange="filtrarClientesReceitaNet()">
+              <option value="">TODOS</option>
+            </select>
+
+            <label>Login</label>
+            <input id="filtroLogin" oninput="filtrarClientesReceitaNet()">
+
+            <label>Nome</label>
+            <input id="filtroNome" oninput="filtrarClientesReceitaNet()">
+
+            <label>Endereço</label>
+            <input id="filtroEndereco" oninput="filtrarClientesReceitaNet()">
+          </div>
+        </aside>
+
+        <section class="clientes-lista-receita">
+          <div class="clientes-breadcrumb">🏠 Principal / 👥 Consulta de Clientes</div>
+          <div class="clientes-table-card receita-exato">
+            <div class="clientes-table-title">Clientes</div>
+            <table class="clientes-receita-table">
+              <thead>
+                <tr>
+                  <th class="status-col"></th>
+                  <th>Login</th>
+                  <th>Nome</th>
+                  <th>Endereço</th>
+                  <th>Contato</th>
+                </tr>
+              </thead>
+              <tbody id="listaClientesReceita">
+                <tr><td colspan="5">Carregando clientes...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="app.js"></script>
+<script>
+function normalizarTexto(v){
+  return String(v || "").toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g,"");
+}
+function primeiroValor(c, campos){
+  for(const campo of campos){
+    if(c && c[campo] !== undefined && c[campo] !== null && String(c[campo]).trim() !== ""){
+      return String(c[campo]).trim();
+    }
+  }
+  return "";
+}
+function getClientesBase(){
+  let clientes = [];
+  try{ clientes = JSON.parse(localStorage.getItem("clientes") || "[]"); }catch(e){ clientes = []; }
+  if(!Array.isArray(clientes)) clientes = [];
+  return clientes;
+}
+function statusIconeCliente(c){
+  const status = normalizarTexto(primeiroValor(c, ["status","situacao","statusCobranca"]));
+  if(status.includes("bloque") || status.includes("cancel")){
+    return '<span class="cliente-status bloqueado">♟</span>';
+  }
+  return '<span class="cliente-status ativo">✓</span>';
+}
+function montarEnderecoCliente(c){
+  const endereco = primeiroValor(c, ["endereco","logradouro","rua"]);
+  const numero = primeiroValor(c, ["numero"]);
+  const complemento = primeiroValor(c, ["complemento"]);
+  const bairro = primeiroValor(c, ["bairro"]);
+  const cidade = primeiroValor(c, ["cidade","localidade"]) || "Manaus";
+  const uf = primeiroValor(c, ["uf","estado"]) || "AM";
+  const cep = primeiroValor(c, ["cep"]);
+  const linha1 = [endereco, numero, complemento].filter(Boolean).join(", ");
+  const linha2 = [bairro].filter(Boolean).join("");
+  const linha3 = [cidade, uf].filter(Boolean).join("/");
+  const linha4 = cep ? "CEP: " + cep : "";
+  return [linha1, linha2, linha3, linha4].filter(Boolean).join("<br>");
+}
+function montarContatoCliente(c){
+  const telefones = [
+    primeiroValor(c, ["telefone1","telefone","celular","fone"]),
+    primeiroValor(c, ["telefone2","celular2","fone2"]),
+    primeiroValor(c, ["telefone3","celular3","fone3"])
+  ].filter(Boolean);
+  const email = primeiroValor(c, ["email","e_mail"]);
+  return [...telefones, email].filter(Boolean).join("<br>") || "--";
+}
+function preencherVencimentos(){
+  const sel = document.getElementById("filtroVencimento");
+  if(!sel || sel.dataset.ok) return;
+  for(let i=1;i<=30;i++){
+    const op = document.createElement("option");
+    op.value = String(i);
+    op.textContent = String(i);
+    sel.appendChild(op);
+  }
+  sel.dataset.ok = "1";
+}
+function atualizarContadores(clientes){
+  const total = clientes.length;
+  const bloq = clientes.filter(c=>normalizarTexto(JSON.stringify(c)).includes("bloque")).length;
+  const cancel = clientes.filter(c=>normalizarTexto(JSON.stringify(c)).includes("cancel")).length;
+  const isentos = clientes.filter(c=>normalizarTexto(JSON.stringify(c)).includes("isento")).length;
+  const ativos = Math.max(total - bloq - cancel, 0);
+  const set = (id,v)=>{ const el=document.getElementById(id); if(el) el.textContent=v; };
+  set("qtdTotal", total);
+  set("qtdAtivos", ativos);
+  set("qtdBloqueados", bloq);
+  set("qtdCancelados", cancel);
+  set("qtdIsentos", isentos);
+  set("qtdNaoAtivos", 0);
+}
+function carregarClientesReceitaNet(){
+  preencherVencimentos();
+  const clientes = getClientesBase();
+  window.__clientesReceitaNet = clientes;
+  atualizarContadores(clientes);
+  renderizarClientesReceitaNet(clientes);
+}
+function renderizarClientesReceitaNet(clientes){
+  const tbody = document.getElementById("listaClientesReceita");
+  if(!tbody) return;
+  if(!clientes.length){
+    tbody.innerHTML = '<tr><td colspan="5" class="sem-clientes">Nenhum cliente encontrado.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = clientes.map(c=>{
+    const login = primeiroValor(c, ["loginPppoe","login","usuario","user"]);
+    const nome = primeiroValor(c, ["nome","cliente","razaoSocial"]) || login || "--";
+    const endereco = montarEnderecoCliente(c);
+    const contato = montarContatoCliente(c);
+    return `
+      <tr onclick="abrirClienteCadastro('${encodeURIComponent(login)}')">
+        <td class="status-col">${statusIconeCliente(c)}</td>
+        <td class="login-col">${login || "--"}</td>
+        <td class="nome-col">${nome}</td>
+        <td class="endereco-col">${endereco || "--"}</td>
+        <td class="contato-col">${contato}</td>
+      </tr>
+    `;
+  }).join("");
+}
+function filtrarClientesReceitaNet(){
+  const clientes = window.__clientesReceitaNet || getClientesBase();
+  const login = normalizarTexto(document.getElementById("filtroLogin")?.value || "");
+  const nome = normalizarTexto(document.getElementById("filtroNome")?.value || "");
+  const endereco = normalizarTexto(document.getElementById("filtroEndereco")?.value || "");
+  const venc = String(document.getElementById("filtroVencimento")?.value || "");
+  const filtrados = clientes.filter(c=>{
+    const loginTxt = normalizarTexto(primeiroValor(c, ["loginPppoe","login","usuario","user"]));
+    const nomeTxt = normalizarTexto(primeiroValor(c, ["nome","cliente","razaoSocial"]));
+    const endTxt = normalizarTexto(montarEnderecoCliente(c).replace(/<br>/g," "));
+    const vencTxt = String(primeiroValor(c, ["vencimento","diaVencimento","dia_do_vencimento"]));
+    return (!login || loginTxt.includes(login)) &&
+           (!nome || nomeTxt.includes(nome)) &&
+           (!endereco || endTxt.includes(endereco)) &&
+           (!venc || vencTxt === venc);
+  });
+  renderizarClientesReceitaNet(filtrados);
+}
+function abrirClienteCadastro(login){
+  const l = decodeURIComponent(login || "");
+  if(l) localStorage.setItem("clienteEditarLogin", l);
+  window.location.href = "cadastro.html";
+}
+</script>
+</body>
+</html>

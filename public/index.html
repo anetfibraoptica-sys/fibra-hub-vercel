@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fibra+ Hub - Login</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="login-page" style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;">
+    <section class="panel" style="width:100%;max-width:420px;">
+      <div class="logo-wrap" style="text-align:center;margin-bottom:20px;">
+        <div class="brand"><span class="fibra">Fibra</span><span class="brand-dot"></span><span class="plus">+</span></div>
+        <div class="slogan">HUB DE CONTROLE</div>
+      </div>
+      <h2 style="text-align:center;margin-bottom:16px;">Acessar Painel</h2>
+      <form onsubmit="event.preventDefault(); login();">
+        <input id="usuario" placeholder="Usuário" autocomplete="username">
+        <input id="senha" placeholder="Senha" type="password" autocomplete="current-password">
+        <button type="submit" style="width:100%;margin-top:10px;">Entrar</button>
+      </form>
+      <p style="text-align:center;margin-top:15px;font-size:13px;opacity:.75;">Usuário padrão: admin / Senha: admin</p>
+    </section>
+  </main>
+<script src="app.js"></script>
+<script src="pppoe-stable.js"></script>
+<script src="pppoe-search.js"></script>
+</body>
+</html>

@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Financeiro Efí - Fibra+ Hub</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body onload="protegerPagina(); carregarFinanceiroEfi(); iniciarSocket();">
+<div class="mobile-top"><button class="menu-btn" onclick="abrirMenu()">☰</button><div><div class="logo-wrap"><div class="brand"><span class="fibra">Fibra</span><span class="brand-dot"></span><span class="plus">+</span></div><div class="slogan">HUB DE CONTROLE</div></div></div></div>
+<div class="layout"><div class="overlay" onclick="fecharMenu()"></div><aside class="sidebar"><div class="logo-wrap"><div class="brand"><span class="fibra">Fibra</span><span class="brand-dot"></span><span class="plus">+</span></div><div class="slogan">HUB DE CONTROLE</div></div>
+<nav class="nav">
+<a href="dashboard.html"><span class="icon">🏠</span>Dashboard</a>
+<a href="clientes.html"><span class="icon">👤</span>Clientes</a>
+<a href="cadastro.html"><span class="icon">👥</span>Cadastrar Cliente</a>
+<a href="importacao.html"><span class="icon">⬆️</span>Importação</a>
+<a href="pppoe.html"><span class="icon">☰</span>PPPoE Online</a>
+<a href="monitoramento.html"><span class="icon">▣</span>Monitoramento</a>
+<a href="financeiro.html" class="active"><span class="icon">▤</span>Financeiro Efí</a>
+<a href="chamados.html"><span class="icon">🔧</span>Chamados</a>
+<a href="relatorios.html"><span class="icon">▥</span>Relatórios</a>
+<a href="planos.html"><span class="icon">▦</span>Planos</a>
+<a href="usuarios.html"><span class="icon">👥</span>Usuários</a>
+<a href="configuracoes.html"><span class="icon"></span>Configurações</a>
+<a href="backup.html"><span class="icon">☁</span>Backup</a>
+<a href="#" onclick="sair()"><span class="icon">↪</span></a>
+</nav></aside>
+<main class="main">
+<header class="topbar"><h1>Financeiro Efí</h1><div class="topbar-right"><span id="liveStatus" class="badge badge-off">CONECTANDO</span><span class="badge">PIX + Boleto</span><span class="badge">Administrador</span></div></header>
+<section class="content">
+
+<section class="cards">
+<div class="card"><div class="card-icon bg-green">💰</div><small>Recebido no mês</small><h2 id="efiRecebidoMes">R$ 0,00</h2></div>
+<div class="card"><div class="card-icon bg-blue">💠</div><small>PIX recebidos</small><h2 id="efiPixRecebidos">0</h2></div>
+<div class="card"><div class="card-icon bg-blue">🧾</div><small>Boletos pagos</small><h2 id="efiBoletosPagos">0</h2></div>
+<div class="card"><div class="card-icon bg-orange">⚠️</div><small>Em aberto</small><h2 id="efiEmAberto">R$ 0,00</h2></div>
+</section>
+
+<section class="cards">
+<div class="card"><div class="card-icon bg-red">🔴</div><small>Clientes vencidos</small><h2 id="efiVencidos">0</h2></div>
+<div class="card"><div class="card-icon bg-green">📈</div><small>Receita prevista</small><h2 id="efiReceitaPrevista">R$ 0,00</h2></div>
+<div class="card"><div class="card-icon bg-blue">🔗</div><small>Status Efí</small><h2 id="efiStatus">Pronto</h2></div>
+<div class="card"><div class="card-icon bg-orange">🔔</div><small>Webhook</small><h2 id="efiWebhook">Pendente</h2></div>
+</section>
+
+<section class="panel">
+<h3>Configuração da Integração Efí</h3>
+<div class="efi-config-grid">
+  <div><label>Ambiente</label><select id="efiAmbiente"><option value="homologacao">Homologação</option><option value="producao">Produção</option></select></div>
+  <div><label>Client ID</label><input id="efiClientId" placeholder="Será configurado depois"></div>
+  <div><label>Client Secret</label><input id="efiClientSecret" placeholder="Será configurado depois" type="password"></div>
+  <div><label>Chave PIX</label><input id="efiPixKey" placeholder="Sua chave PIX Efí"></div>
+  <div><label>Certificado .p12</label><input id="efiCertificado" placeholder="certificado.p12"></div>
+  <div><label>Webhook</label><input id="efiWebhookUrl" placeholder="https://seupainel.com/api/efi/webhook"></div>
+</div>
+<div class="efi-actions">
+  <button onclick="salvarConfigEfi()">Salvar configuração</button>
+  <button onclick="testarConexaoEfi()">Testar conexão</button>
+</div>
+<p class="efi-note">Esta tela está pronta para integração. As credenciais serão ligadas na próxima etapa.</p>
+</section>
+
+<section class="panel">
+<h3>Cobranças dos Clientes</h3>
+<div class="efi-toolbar">
+  <input id="buscaFinanceiroEfi" placeholder="🔍 Pesquisar cliente, status, plano ou vencimento..." onkeyup="filtrarFinanceiroEfi()">
+  <button onclick="novaCobrancaEfi()">+ Nova cobrança</button>
+  <button onclick="carregarClientesOnlineEfi()">Importar PPPoE online</button>
+  <button onclick="salvarFinanceiroEfi()">Salvar</button>
+</div>
+<div class="table-wrap">
+<table>
+<thead><tr><th>Cliente</th><th>Plano</th><th>Valor</th><th>Vencimento</th><th>Forma</th><th>Status</th><th>Ações</th></tr></thead>
+<tbody id="efiTabela"><tr><td colspan="7">Carregando financeiro Efí...</td></tr></tbody>
+</table>
+</div>
+</section>
+
+<section class="panel">
+<h3>Prévia de pagamento do cliente</h3>
+<div class="efi-payment-preview">
+  <div>
+    <h4 id="prevCliente">Cliente selecionado</h4>
+    <p><b>Plano:</b> <span id="prevPlano">--</span></p>
+    <p><b>Valor:</b> <span id="prevValor">R$ 0,00</span></p>
+    <p><b>Vencimento:</b> <span id="prevVencimento">--</span></p>
+    <p><b>Status:</b> <span id="prevStatus">--</span></p>
+  </div>
+  <div class="efi-pay-buttons">
+    <button onclick="gerarPixEfiDemo()">💠 Gerar PIX</button>
+    <button onclick="gerarBoletoEfiDemo()">🧾 Gerar Boleto</button>
+    <button onclick="gerarPixBoletoEfiDemo()">💠 + 🧾 PIX + Boleto</button>
+  </div>
+</div>
+<div id="efiResultadoPagamento" class="efi-result">
+  Selecione uma cobrança para visualizar a prévia de pagamento.
+</div>
+</section>
+
+<div class="footer"><span>© 2026 Fibra+</span><span>Financeiro preparado para Efí</span></div>
+</section></main></div>
+<script src="/socket.io/socket.io.js"></script><script src="app.js"></script><script src="financeiro-efi.js"></script>
+</body></html>
