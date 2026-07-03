@@ -261,7 +261,7 @@ function renderizarClientesReceitaNet(clientes){
     const endereco = montarEnderecoCliente(c);
     const contato = montarContatoCliente(c);
     return `
-      <tr onclick="abrirClienteCadastro('${encodeURIComponent(login)}')">
+    <tr class="linha-clicavel" onclick="abrirClienteCadastro(encodeURIComponent(primeiroValor(c, ['loginPppoe','login','usuario','user','name','pppoe','nome','cliente','razaoSocial'])))">
         <td class="status-col">${statusIconeCliente(c)}</td>
         <td class="login-col">${login || "--"}</td>
         <td class="nome-col">${nome}</td>
@@ -300,9 +300,11 @@ function abrirClienteCadastro(login){
   });
 
   if(l) localStorage.setItem("clienteEditarLogin", l);
+
   if(cliente){
     localStorage.setItem("clienteSelecionadoCompleto", JSON.stringify(cliente));
     localStorage.setItem("clienteCadastroSelecionado", JSON.stringify(cliente));
+    localStorage.setItem("clienteEditar", JSON.stringify(cliente));
   }
 
   window.location.href = "cadastro.html?cliente=" + encodeURIComponent(l) + "&t=" + Date.now();
