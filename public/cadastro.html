@@ -933,4 +933,144 @@ document.addEventListener("DOMContentLoaded", function(){
 })();
 </script>
 
+
+<script>
+/* Atualiza o status do cliente selecionado usando /api/online do MikroTik */
+(function(){
+  function campo(c, campos){
+    for(const k of campos){
+      if(c && c[k] !== undefined && c[k] !== null && String(c[k]).trim() !== "") {
+        return String(c[k]).trim();
+      }
+    }
+    return "";
+  }
+
+  function norm(v){
+    return String(v || "").toLowerCase().trim();
+  }
+
+  function setTextoPorRotulo(rotulos, valor){
+    const textoValor = valor || "—";
+    const elementos = Array.from(document.querySelectorAll("p, div, span, small, b, strong"));
+    for(const el of elementos){
+      const texto = norm(el.textContent);
+      for(const r of rotulos){
+        if(texto.startsWith(norm(r))){
+          el.innerHTML = el.innerHTML.replace(/(:\s*)[^<]*/i, "$1" + textoValor);
+        }
+      }
+    }
+  }
+
+  function clienteSelecionado(){
+    let c = null;
+    ["clienteSelecionadoCompleto","clienteCadastroSelecionado","clienteEditar"].forEach(chave => {
+      if(c) return;
+      try{
+        const raw = localStorage.getItem(chave);
+        if(raw) c = JSON.parse(raw);
+      }catch(e){}
+    });
+    return c || {};
+  }
+
+  function aplicarStatusNaTela(info){
+    const statusOnline = !!info;
+
+    // Atualiza campos se existirem
+    const mapa = {
+      cadIp: info ? (info.ip || info.address || "") : "",
+      cadMac: info ? (info.callerId || info.mac || info["caller-id"] || "") : "",
+      cadPop: info ? (info.servidor || "") : "",
+      cadProfile: info ? (info.profile || info.service || "pppoe") : ""
+    };
+
+    Object.keys(mapa).forEach(id => {
+      const el = document.getElementById(id);
+      if(el && mapa[id]) el.value = mapa[id];
+    });
+
+    // Remove cards antigos de status criados por esta correção
+    document.querySelectorAll(".fibra-status-mikrotik-card").forEach(e => e.remove());
+
+    const main = document.querySelector("main") || document.body;
+    const card = document.createElement("section");
+    card.className = "panel fibra-status-mikrotik-card";
+    card.innerHTML = `
+      <h2>Status MikroTik</h2>
+      <div class="fibra-status-grid">
+        <div>
+          <span>Status</span>
+          <b class="${statusOnline ? "online-text" : "offline-text"}">
+            ${statusOnline ? "● Online" : "● Offline"}
+          </b>
+        </div>
+        <div>
+          <span>Servidor</span>
+          <b>${info ? (info.servidor || "—") : "—"}</b>
+        </div>
+        <div>
+          <span>IP Atual</span>
+          <b>${info ? (info.ip || info.address || "—") : "—"}</b>
+        </div>
+        <div>
+          <span>MAC / Caller ID</span>
+          <b>${info ? (info.callerId || info.mac || info["caller-id"] || "—") : "—"}</b>
+        </div>
+        <div>
+          <span>Uptime</span>
+          <b>${info ? (info.uptime || "—") : "—"}</b>
+        </div>
+        <div>
+          <span>Serviço</span>
+          <b>${info ? (info.service || "pppoe") : "—"}</b>
+        </div>
+      </div>
+    `;
+
+    // Coloca o card no topo do conteúdo, logo após aviso, sem apagar nada.
+    main.insertBefore(card, main.children[1] || main.firstChild);
+
+    // Tenta atualizar textos já existentes na lateral/resumo
+    setTextoPorRotulo(["Status"], statusOnline ? "● Online" : "● Offline");
+    setTextoPorRotulo(["IP Atual"], info ? (info.ip || info.address || "—") : "—");
+    setTextoPorRotulo(["Servidor"], info ? (info.servidor || "—") : "—");
+    setTextoPorRotulo(["Interface"], info ? (info.service || "pppoe") : "—");
+    setTextoPorRotulo(["Profile"], info ? (info.profile || info.service || "pppoe") : "—");
+  }
+
+  async function atualizarStatusClienteMikrotik(){
+    const cliente = clienteSelecionado();
+    const login = norm(campo(cliente, ["loginPppoe","login","usuario","user","name","pppoe"]));
+
+    if(!login) {
+      aplicarStatusNaTela(null);
+      return;
+    }
+
+    try{
+      const resp = await fetch("/api/online", { cache: "no-store" });
+      const dados = await resp.json();
+      const lista = dados.clientes || [];
+
+      const encontrado = lista.find(c => {
+        const l = norm(c.usuario || c.name || c.login || c.user);
+        return l === login;
+      });
+
+      aplicarStatusNaTela(encontrado || null);
+    }catch(e){
+      console.error("Erro ao consultar /api/online:", e);
+      aplicarStatusNaTela(null);
+    }
+  }
+
+  window.addEventListener("DOMContentLoaded", function(){
+    setTimeout(atualizarStatusClienteMikrotik, 800);
+    setTimeout(atualizarStatusClienteMikrotik, 2000);
+  });
+})();
+</script>
+
 </body></html>
