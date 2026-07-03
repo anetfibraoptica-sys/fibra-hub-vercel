@@ -107,7 +107,16 @@
             <div class="clientes-table-title">Clientes</div>
             <table class="clientes-receita-table">
               <thead>
-                <tr><td colspan="5">Carregando clientes...</td></tr>
+                <tr class="linha-clicavel" onclick="abrirClienteCadastro(encodeURIComponent(primeiroValor(c, ['loginPppoe','login','usuario','user','name','pppoe','nome','cliente','razaoSocial'])))">
+                  <th class="status-col"></th>
+                  <th>Login</th>
+                  <th>Nome</th>
+                  <th>Endereço</th>
+                  <th>Contato</th>
+                </tr>
+              </thead>
+              <tbody id="listaClientesReceita">
+                <tr class="linha-clicavel" onclick="abrirClienteCadastro(encodeURIComponent(primeiroValor(c, ['loginPppoe','login','usuario','user','name','pppoe','nome','cliente','razaoSocial'])))"><td colspan="5">Carregando clientes...</td></tr>
               </tbody>
             </table>
           </div>
@@ -117,9 +126,12 @@
   </main>
 </div>
 
-<script src="/socket.io/socket.io.js"></script>
-<script src="app.js"></script>
-<script>
+<script src="/socket.io/socket.io.js">
+window.addEventListener("pageshow", function(){
+  carregarClientesReceitaNet();
+});
+</script>
+<script src="app.js">
 window.addEventListener("pageshow", function(){
   carregarClientesReceitaNet();
 });
@@ -240,7 +252,7 @@ function renderizarClientesReceitaNet(clientes){
   const tbody = document.getElementById("listaClientesReceita");
   if(!tbody) return;
   if(!clientes.length){
-    tbody.innerHTML = '<tr class="linha-clicavel" onclick="abrirClienteCadastro(encodeURIComponent(primeiroValor(c, ['loginPppoe','login','usuario','user','name','pppoe','nome','cliente','razaoSocial'])))"><td colspan="5" class="sem-clientes">Nenhum cliente importado encontrado. Importe o CSV na aba Importação.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" class="sem-clientes">Nenhum cliente importado encontrado. Importe o CSV na aba Importação.</td></tr>';
     return;
   }
   tbody.innerHTML = clientes.map(c=>{
@@ -300,5 +312,72 @@ window.addEventListener("pageshow", function(){
   carregarClientesReceitaNet();
 });
 </script>
+
+<script>
+(function(){
+  function norm(v){ return String(v || "").toLowerCase().trim(); }
+
+  function primeiro(c, campos){
+    for(const k of campos){
+      if(c && c[k] !== undefined && c[k] !== null && String(c[k]).trim() !== "") return String(c[k]).trim();
+    }
+    return "";
+  }
+
+  function baseClientes(){
+    const chaves = ["clientes", "clientesReceitaNet", "fibra_clientes", "clientes_importados"];
+    for(const chave of chaves){
+      try{
+        const raw = localStorage.getItem(chave);
+        if(!raw) continue;
+        const lista = JSON.parse(raw);
+        if(Array.isArray(lista) && lista.length) return lista;
+      }catch(e){}
+    }
+    return [];
+  }
+
+  function textoLinha(tr){
+    return Array.from(tr.querySelectorAll("td")).map(td => td.textContent.trim()).filter(Boolean).join(" ").toLowerCase();
+  }
+
+  function encontrarClientePelaLinha(tr){
+    const lista = window.__clientesReceitaNet || baseClientes();
+    const texto = textoLinha(tr);
+
+    return lista.find(c => {
+      const login = norm(primeiro(c, ["loginPppoe","login","usuario","user","name","pppoe"]));
+      const nome = norm(primeiro(c, ["nome","cliente","razaoSocial"]));
+      const cpf = norm(primeiro(c, ["cpfCnpj","cpf","cnpj","documento"]));
+      return (login && texto.includes(login)) || (nome && texto.includes(nome)) || (cpf && texto.includes(cpf));
+    });
+  }
+
+  document.addEventListener("click", function(e){
+    const tr = e.target.closest("tbody tr");
+    if(!tr) return;
+
+    // Ignora linhas vazias, carregando ou mensagens.
+    const t = tr.textContent.toLowerCase();
+    if(t.includes("carregando") || t.includes("nenhum cliente")) return;
+
+    const cliente = encontrarClientePelaLinha(tr);
+    if(!cliente) {
+      alert("Não consegui identificar este cliente. Reimporte o arquivo ou me envie um print da linha.");
+      return;
+    }
+
+    const login = primeiro(cliente, ["loginPppoe","login","usuario","user","name","pppoe"]) || primeiro(cliente, ["nome","cliente","razaoSocial"]);
+
+    localStorage.setItem("clienteSelecionadoCompleto", JSON.stringify(cliente));
+    localStorage.setItem("clienteCadastroSelecionado", JSON.stringify(cliente));
+    localStorage.setItem("clienteEditar", JSON.stringify(cliente));
+    localStorage.setItem("clienteEditarLogin", login);
+
+    window.location.href = "cadastro.html?cliente=" + encodeURIComponent(login) + "&t=" + Date.now();
+  });
+})();
+</script>
+
 </body>
 </html>

@@ -3916,3 +3916,12 @@ body,
 .linha-clicavel:hover {
   filter: brightness(1.18);
 }
+
+
+/* Linhas clicáveis da lista de clientes */
+tbody tr {
+  cursor: pointer;
+}
+tbody tr:hover {
+  filter: brightness(1.12);
+}

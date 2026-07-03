@@ -862,4 +862,75 @@ document.addEventListener("DOMContentLoaded", function(){
   }, 500);
 });
 </script>
+
+<script>
+(function(){
+  function campo(c, campos){
+    for(const k of campos){
+      if(c && c[k] !== undefined && c[k] !== null && String(c[k]).trim() !== "") return String(c[k]).trim();
+    }
+    return "";
+  }
+
+  function setar(ids, valor){
+    ids.forEach(id => {
+      const el = document.getElementById(id);
+      if(el) el.value = valor || "";
+    });
+  }
+
+  function carregarCliente(){
+    let c = null;
+    ["clienteSelecionadoCompleto","clienteCadastroSelecionado","clienteEditar"].forEach(chave => {
+      if(c) return;
+      try{
+        const raw = localStorage.getItem(chave);
+        if(raw) c = JSON.parse(raw);
+      }catch(e){}
+    });
+
+    if(!c) return;
+
+    setar(["cadNome","nome","clienteNome"], campo(c, ["nome","cliente","razaoSocial","name"]));
+    setar(["cadCpf","cpf","documento"], campo(c, ["cpfCnpj","cpf","cnpj","documento"]));
+    setar(["cadRg","rg"], campo(c, ["rgIe","rg","ie"]));
+    setar(["cadNascimento","nascimento"], campo(c, ["dataNascimento","nascimento"]));
+    setar(["cadEmail","email"], campo(c, ["email","e_mail"]));
+    setar(["cadTelefone1","telefone","telefone1"], campo(c, ["telefone1","telefone","celular","fone"]));
+    setar(["cadTelefone2","telefone2"], campo(c, ["telefone2","celular2","fone2"]));
+    setar(["cadTelefone3","telefone3"], campo(c, ["telefone3","celular3","fone3"]));
+
+    setar(["cadCep","cep"], campo(c, ["cep"]));
+    setar(["cadEndereco","endereco","logradouro"], campo(c, ["endereco","logradouro","rua"]));
+    setar(["cadNumero","numero"], campo(c, ["numero","num"]));
+    setar(["cadReferencia","referencia"], campo(c, ["referencia","pontoReferencia"]));
+    setar(["cadComplemento","complemento"], campo(c, ["complemento"]));
+    setar(["cadBairro","bairro"], campo(c, ["bairro"]));
+    setar(["cadCidade","cidade"], campo(c, ["cidade","localidade"]) || "Manaus");
+    setar(["cadUf","uf"], campo(c, ["uf","estado"]) || "AM");
+
+    setar(["cadLogin","login","loginPppoe"], campo(c, ["loginPppoe","login","usuario","user","name","pppoe"]));
+    setar(["cadSenha","senha","senhaPppoe"], campo(c, ["senhaPppoe","senha","password"]));
+    setar(["cadPlano","plano"], campo(c, ["plano","profile"]));
+    setar(["cadValor","valor"], campo(c, ["valorMensal","valor","mensalidade"]));
+    setar(["cadVencimento","vencimento"], campo(c, ["diaVencimento","vencimento"]));
+    setar(["cadPop","servidor"], campo(c, ["popServidor","servidor","servidorReceita"]));
+    setar(["cadIp","ip"], campo(c, ["ip","address"]));
+    setar(["cadMac","mac"], campo(c, ["mac","callerId","caller-id"]));
+    setar(["cadProfile","profile"], campo(c, ["profile","plano"]));
+    setar(["cadObservacao","observacao"], campo(c, ["observacao","observacoes"]));
+
+    const h = document.querySelector(".topbar h1, h1");
+    if(h) h.textContent = "Cadastro de Cliente - Editando";
+
+    if(typeof atualizarResumoCadastro === "function") atualizarResumoCadastro();
+  }
+
+  window.addEventListener("DOMContentLoaded", function(){
+    setTimeout(carregarCliente, 300);
+    setTimeout(carregarCliente, 1000);
+  });
+})();
+</script>
+
 </body></html>
