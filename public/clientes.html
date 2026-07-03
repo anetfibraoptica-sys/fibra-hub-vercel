@@ -126,8 +126,16 @@
   </main>
 </div>
 
-<script src="/socket.io/socket.io.js"></script>
-<script src="app.js"></script>
+<script src="/socket.io/socket.io.js">
+window.addEventListener("pageshow", function(){
+  carregarClientesReceitaNet();
+});
+</script>
+<script src="app.js">
+window.addEventListener("pageshow", function(){
+  carregarClientesReceitaNet();
+});
+</script>
 <script>
 function normalizarTexto(v){
   return String(v || "").toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g,"");
@@ -141,10 +149,18 @@ function primeiroValor(c, campos){
   return "";
 }
 function getClientesBase(){
-  let clientes = [];
-  try{ clientes = JSON.parse(localStorage.getItem("clientes") || "[]"); }catch(e){ clientes = []; }
-  if(!Array.isArray(clientes)) clientes = [];
-  return clientes;
+  const chaves = ["clientes", "clientesReceitaNet", "fibra_clientes", "clientes_importados"];
+  for(const chave of chaves){
+    try{
+      const raw = localStorage.getItem(chave);
+      if(!raw) continue;
+      const lista = JSON.parse(raw);
+      if(Array.isArray(lista) && lista.length){
+        return lista;
+      }
+    }catch(e){}
+  }
+  return [];
 }
 function statusIconeCliente(c){
   const status = normalizarTexto(primeiroValor(c, ["status","situacao","statusCobranca"]));
@@ -207,12 +223,36 @@ function carregarClientesReceitaNet(){
   window.__clientesReceitaNet = clientes;
   atualizarContadores(clientes);
   renderizarClientesReceitaNet(clientes);
+  mostrarStatusImportacao(clientes);
 }
+function mostrarStatusImportacao(clientes){
+  let info = document.getElementById("statusImportacaoClientes");
+  if(!info){
+    const card = document.querySelector(".clientes-table-card");
+    if(card){
+      info = document.createElement("div");
+      info.id = "statusImportacaoClientes";
+      info.className = "import-status-clientes";
+      card.insertBefore(info, card.querySelector("table"));
+    }
+  }
+  if(!info) return;
+
+  let ultima = null;
+  try{ ultima = JSON.parse(localStorage.getItem("ultimaImportacaoReceitaNet") || "null"); }catch(e){}
+
+  if(clientes.length){
+    info.innerHTML = `Clientes carregados: <b>${clientes.length}</b>` + (ultima ? ` | Última importação: ${ultima.arquivo || "--"}` : "");
+  }else{
+    info.innerHTML = `Nenhum cliente importado encontrado. Vá em <b>Importação</b>, selecione o CSV do ReceitaNet e aguarde a mensagem "Importação concluída".`;
+  }
+}
+
 function renderizarClientesReceitaNet(clientes){
   const tbody = document.getElementById("listaClientesReceita");
   if(!tbody) return;
   if(!clientes.length){
-    tbody.innerHTML = '<tr><td colspan="5" class="sem-clientes">Nenhum cliente encontrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" class="sem-clientes">Nenhum cliente importado encontrado. Importe o CSV na aba Importação.</td></tr>';
     return;
   }
   tbody.innerHTML = clientes.map(c=>{
@@ -260,6 +300,10 @@ function abrirClienteCadastro(login){
   if(cliente) localStorage.setItem("clienteSelecionadoCompleto", JSON.stringify(cliente));
   window.location.href = "cliente.html";
 }
+
+window.addEventListener("pageshow", function(){
+  carregarClientesReceitaNet();
+});
 </script>
 </body>
 </html>

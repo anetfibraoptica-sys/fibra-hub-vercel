@@ -3895,3 +3895,15 @@ body,
 .server-error { margin-top:12px; color:#fca5a5; font-size:13px; }
 .data-table { width:100%; border-collapse:collapse; }
 .data-table th,.data-table td { padding:10px; border-bottom:1px solid rgba(148,163,184,.16); text-align:left; }
+
+
+/* Status da importação de clientes */
+.import-status-clientes {
+  margin: 10px 0 14px 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(59, 130, 246, .12);
+  border: 1px solid rgba(59, 130, 246, .25);
+  color: #dbeafe;
+  font-size: 13px;
+}

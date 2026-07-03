@@ -2362,3 +2362,18 @@ async function fibraCarregarOnlineSeparado(){
 }
 
 document.addEventListener('DOMContentLoaded',()=>{ setTimeout(()=>{ fibraCarregarOnlineSeparado(); carregarClienteSelecionadoNoCadastro(); },500); });
+
+
+/* Compatibilidade base de clientes importados ReceitaNet */
+function fibraGetBaseClientesImportados(){
+  const chaves = ["clientes", "clientesReceitaNet", "fibra_clientes", "clientes_importados"];
+  for(const chave of chaves){
+    try{
+      const raw = localStorage.getItem(chave);
+      if(!raw) continue;
+      const lista = JSON.parse(raw);
+      if(Array.isArray(lista) && lista.length) return lista;
+    }catch(e){}
+  }
+  return [];
+}

@@ -62,9 +62,88 @@ function parse(text){let sp=sep(text);let lines=text.split(/\r?\n/).filter(l=>l.
 function key(c){return iNorm(c.loginPppoe||c.login)||iNum(c.cpfCnpj||c.cpf)||iNorm(c.email)||iNum(c.telefone1||c.telefone)||iNum(c.telefone2)||iNorm(c.nome);}
 function merge(a,b){let r={...a};Object.keys(b).forEach(k=>{let v=b[k];if(v===undefined||v===null||String(v).trim()==="")return;r[k]=v;});return r;}
 function readFileLatin1(file){return new Promise((resolve,reject)=>{let fr=new FileReader();fr.onload=()=>resolve(fr.result);fr.onerror=reject;fr.readAsText(file,"ISO-8859-1");});}
-async function importarReceitaNetHub(ev){let file=ev.target.files&&ev.target.files[0];if(!file)return;let text=await readFileLatin1(file);let imp=parse(text);let clientes=[];try{clientes=JSON.parse(localStorage.getItem("clientes")||"[]")}catch(e){clientes=[]}if(!Array.isArray(clientes))clientes=[];let mapa=new Map();clientes.forEach(c=>{let k=key(c);if(k)mapa.set(k,c)});let novos=0,atualizados=0;imp.forEach(c=>{let k=key(c);if(!k)return;if(mapa.has(k)){mapa.set(k,merge(mapa.get(k),c));atualizados++;}else{mapa.set(k,c);novos++;}});let final=Array.from(mapa.values());localStorage.setItem("clientes",JSON.stringify(final));impEncontrados.textContent=imp.length;impNovos.textContent=novos;impAtualizados.textContent=atualizados;impTotalClientes.textContent=final.length;resultadoImportacao.innerHTML=`<b>Importação concluída.</b><br>👥 Encontrados: ${imp.length}<br>✅ Novos: ${novos}<br>🔄 Atualizados: ${atualizados}<br>📋 Total em Clientes: ${final.length}<br>Redirecionando para Clientes...`;previewHub=imp.slice(0,20);renderPreview();setTimeout(()=>location.href="clientes.html",1200);}
+async function importarReceitaNetHub(ev){
+  let file = ev.target.files && ev.target.files[0];
+  if(!file) return;
+
+  resultadoImportacao.innerHTML = "Lendo arquivo...";
+  let text = await readFileLatin1(file);
+  let imp = parse(text);
+
+  let clientes = [];
+  try{
+    clientes = JSON.parse(localStorage.getItem("clientes") || localStorage.getItem("clientesReceitaNet") || localStorage.getItem("fibra_clientes") || "[]");
+  }catch(e){
+    clientes = [];
+  }
+  if(!Array.isArray(clientes)) clientes = [];
+
+  let mapa = new Map();
+  clientes.forEach(c => {
+    let k = key(c);
+    if(k) mapa.set(k, c);
+  });
+
+  let novos = 0, atualizados = 0;
+  imp.forEach(c => {
+    let k = key(c);
+    if(!k) return;
+    if(mapa.has(k)){
+      mapa.set(k, merge(mapa.get(k), c));
+      atualizados++;
+    }else{
+      mapa.set(k, c);
+      novos++;
+    }
+  });
+
+  let final = Array.from(mapa.values());
+
+  // Salva em todos os nomes usados pelo painel para evitar falha por chave diferente.
+  localStorage.setItem("clientes", JSON.stringify(final));
+  localStorage.setItem("clientesReceitaNet", JSON.stringify(final));
+  localStorage.setItem("fibra_clientes", JSON.stringify(final));
+  localStorage.setItem("clientes_importados", JSON.stringify(final));
+  localStorage.setItem("ultimaImportacaoReceitaNet", JSON.stringify({
+    arquivo: file.name,
+    encontrados: imp.length,
+    novos,
+    atualizados,
+    total: final.length,
+    data: new Date().toISOString()
+  }));
+
+  if(typeof impEncontrados !== "undefined") impEncontrados.textContent = imp.length;
+  if(typeof impNovos !== "undefined") impNovos.textContent = novos;
+  if(typeof impAtualizados !== "undefined") impAtualizados.textContent = atualizados;
+  if(typeof impTotalClientes !== "undefined") impTotalClientes.textContent = final.length;
+
+  resultadoImportacao.innerHTML = `<b>Importação concluída.</b><br>
+  👥 Encontrados no arquivo: ${imp.length}<br>
+  ✅ Novos: ${novos}<br>
+  🔄 Atualizados: ${atualizados}<br>
+  📋 Total salvo em Clientes: ${final.length}<br>
+  Redirecionando para Clientes...`;
+
+  previewHub = imp.slice(0,20);
+  renderPreview();
+
+  setTimeout(() => location.href = "clientes.html?importado=" + Date.now(), 900);
+}
+
 function renderPreview(){let tb=previewImportacao;if(!previewHub.length){tb.innerHTML='<tr><td colspan="8">Nenhum arquivo importado ainda.</td></tr>';return}tb.innerHTML=previewHub.map(c=>`<tr><td>${c.loginPppoe||"--"}</td><td>${c.nome||"--"}</td><td>${c.cpfCnpj||"--"}</td><td>${c.telefone1||"--"}</td><td>${c.endereco||"--"}</td><td>${c.plano||"--"}</td><td>${c.diaVencimento||"--"}</td><td>${popNome(c.popServidor)}</td></tr>`).join("");}
-function iniciarImportacaoHub(){try{impTotalClientes.textContent=(JSON.parse(localStorage.getItem("clientes")||"[]")||[]).length}catch(e){}}
-function limparBaseClientesHub(){if(confirm("Limpar todos os clientes salvos localmente?")){localStorage.removeItem("clientes");alert("Base local limpa.");location.reload();}}
+function iniciarImportacaoHub(){
+  try{
+    const base = localStorage.getItem("clientes") || localStorage.getItem("clientesReceitaNet") || localStorage.getItem("fibra_clientes") || "[]";
+    impTotalClientes.textContent = (JSON.parse(base) || []).length;
+  }catch(e){}
+}
+function limparBaseClientesHub(){
+  if(confirm("Limpar todos os clientes salvos localmente?")){
+    ["clientes","clientesReceitaNet","fibra_clientes","clientes_importados","ultimaImportacaoReceitaNet"].forEach(k=>localStorage.removeItem(k));
+    alert("Base local limpa.");
+    location.reload();
+  }
+}
 </script>
 </body></html>
