@@ -116,7 +116,7 @@
                 </tr>
               </thead>
               <tbody id="listaClientesReceita">
-                <tr class="linha-clicavel" onclick="abrirClienteCadastro(encodeURIComponent(primeiroValor(c, ['loginPppoe','login','usuario','user','name','pppoe','nome','cliente','razaoSocial'])))"><td colspan="5">Carregando clientes...</td></tr>
+                <tr><td colspan="5">Carregando clientes...</td></tr>
               </tbody>
             </table>
           </div>
@@ -126,17 +126,17 @@
   </main>
 </div>
 
-<script src="/socket.io/socket.io.js">
-window.addEventListener("pageshow", function(){
-  carregarClientesReceitaNet();
-});
-</script>
-<script src="app.js">
-window.addEventListener("pageshow", function(){
-  carregarClientesReceitaNet();
-});
-</script>
+<script src="/socket.io/socket.io.js"></script>
 <script>
+window.addEventListener("pageshow", function(){
+  carregarClientesReceitaNet();
+});
+</script>
+<script src="app.js"></script>
+<script>
+window.addEventListener("pageshow", function(){
+  carregarClientesReceitaNet();
+});
 function normalizarTexto(v){
   return String(v || "").toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g,"");
 }
@@ -381,3 +381,35 @@ window.addEventListener("pageshow", function(){
 
 </body>
 </html>
+
+<script>
+async function integrarOnlineMikrotik(){
+  try{
+    const resp = await fetch('/api/online');
+    const dados = await resp.json();
+    const online = {};
+    (dados.clientes || []).forEach(c=>{
+      const login=(c.usuario||c.name||'').toLowerCase().trim();
+      if(login) online[login]=c;
+    });
+
+    document.querySelectorAll('#listaClientesReceita tr').forEach(tr=>{
+      const loginCell = tr.querySelector('td:nth-child(2)');
+      if(!loginCell) return;
+      const login = loginCell.textContent.toLowerCase().trim();
+
+      tr.style.cursor='pointer';
+      tr.onclick=()=>{
+        localStorage.setItem('clienteSelecionadoLogin', login);
+        location.href='cadastro.html';
+      };
+
+      const statusCell = tr.querySelector('td:first-child');
+      if(statusCell){
+        statusCell.textContent = online[login] ? '🟢' : '🔴';
+      }
+    });
+  }catch(e){ console.log(e); }
+}
+window.addEventListener('load', ()=>setTimeout(integrarOnlineMikrotik,1500));
+</script>
