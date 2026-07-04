@@ -4526,88 +4526,211 @@ button,
 
 
 
+
+
+
 /* ============================================================
-   AJUSTE SOMENTE DA LATERAL ESQUERDA
-   Reduz o menu lateral e ajusta o conteúdo ao lado.
-   Não altera formulário, resumo, botões, abas, cores ou estrutura.
+   SIDEBAR REAL CORRIGIDA
+   Reduz somente o menu lateral e recentraliza o conteúdo.
+   Não altera cadastro, botões, resumo, abas, cores ou fonte.
 ============================================================ */
 
-:root{
-  --sidebar-width: 220px;
+:root {
+  --sidebar-width: 210px !important;
+  --menu-width: 210px !important;
+  --sidenav-width: 210px !important;
 }
 
-/* menu lateral */
+/* Lateral real do Fibra Hub */
 .sidebar,
-.sidebar.open,
+.sidebar-menu,
+.sidebar-wrapper,
+.sidebar-container,
 .side-menu,
+.menu-lateral,
 .main-sidebar,
-#sidebar,
 .app-sidebar,
-.layout-sidebar{
-  width: var(--sidebar-width) !important;
-  min-width: var(--sidebar-width) !important;
-  max-width: var(--sidebar-width) !important;
+.layout-sidebar,
+#sidebar,
+#menu,
+#side-menu,
+nav.sidebar,
+aside.sidebar,
+aside.main-sidebar {
+  width: 210px !important;
+  min-width: 210px !important;
+  max-width: 210px !important;
+  flex: 0 0 210px !important;
 }
 
-/* área do conteúdo depois da lateral */
+/* Evita que textos alarguem a lateral */
+.sidebar *,
+.side-menu *,
+.menu-lateral *,
+.main-sidebar *,
+.app-sidebar *,
+.layout-sidebar *,
+#sidebar *,
+#menu *,
+#side-menu * {
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.sidebar a,
+.side-menu a,
+.menu-lateral a,
+.main-sidebar a,
+.app-sidebar a,
+.layout-sidebar a,
+#sidebar a,
+#menu a,
+#side-menu a {
+  white-space: normal !important;
+  overflow-wrap: break-word !important;
+}
+
+/* Conteúdo principal acompanha a largura nova */
 .main,
 .main-content,
+.content,
 .content-wrapper,
 .page-content,
 .app-main,
 .layout-main,
-.dashboard-main{
-  margin-left: var(--sidebar-width) !important;
+.dashboard-main,
+#main,
+#content,
+main {
+  margin-left: 210px !important;
+  width: calc(100% - 210px) !important;
+  max-width: calc(100% - 210px) !important;
 }
 
-/* quando o projeto usa grid/flex com sidebar + conteúdo */
+/* Estruturas grid/flex */
+.app,
+.wrapper,
+.layout,
 .app-layout,
 .dashboard-layout,
+.page-layout,
+.shell,
+.app-shell,
+.admin-layout {
+  grid-template-columns: 210px minmax(0, 1fr) !important;
+}
+
+/* Quando usa flex */
+.app,
+.wrapper,
 .layout,
-.wrapper{
-  grid-template-columns: var(--sidebar-width) minmax(0, 1fr) !important;
+.app-layout,
+.dashboard-layout,
+.page-layout,
+.shell,
+.app-shell,
+.admin-layout {
+  --sidebar-width: 210px !important;
 }
 
-/* evita que o cadastro seja empurrado/espremido por rolagem lateral */
-body{
-  overflow-x: hidden;
+/* Centralização interna do conteúdo */
+.main > *,
+.main-content > *,
+.content-wrapper > *,
+.page-content > *,
+.app-main > *,
+.layout-main > *,
+.dashboard-main > *,
+#main > *,
+#content > *,
+main > * {
+  max-width: 1280px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
-/* notebooks menores */
-@media (max-width: 1180px) and (min-width: 901px){
-  :root{
-    --sidebar-width: 210px;
-  }
+/* Corrige header/topbar caso use margem da sidebar */
+.header,
+.topbar,
+.navbar,
+.main-header,
+.app-header {
+  margin-left: 210px !important;
+  width: calc(100% - 210px) !important;
+  max-width: calc(100% - 210px) !important;
 }
 
-/* celular/tablet: mantém comportamento mobile */
-@media (max-width: 900px){
+/* Botão/estado recolhido não deve quebrar */
+body.sidebar-collapsed .main,
+body.sidebar-collapsed .main-content,
+body.sidebar-collapsed .content,
+body.sidebar-collapsed .content-wrapper,
+body.sidebar-collapsed .page-content,
+body.sidebar-collapsed main,
+body.menu-collapsed .main,
+body.menu-collapsed .main-content,
+body.menu-collapsed .content,
+body.menu-collapsed .content-wrapper,
+body.menu-collapsed .page-content,
+body.menu-collapsed main {
+  margin-left: 70px !important;
+  width: calc(100% - 70px) !important;
+  max-width: calc(100% - 70px) !important;
+}
+
+/* Mobile mantém comportamento de gaveta */
+@media (max-width: 900px) {
   .sidebar,
-  .sidebar.open,
+  .sidebar-menu,
+  .sidebar-wrapper,
+  .sidebar-container,
   .side-menu,
+  .menu-lateral,
   .main-sidebar,
-  #sidebar,
   .app-sidebar,
-  .layout-sidebar{
+  .layout-sidebar,
+  #sidebar,
+  #menu,
+  #side-menu,
+  nav.sidebar,
+  aside.sidebar,
+  aside.main-sidebar {
     width: 260px !important;
     min-width: 260px !important;
     max-width: 260px !important;
+    flex-basis: 260px !important;
   }
 
   .main,
   .main-content,
+  .content,
   .content-wrapper,
   .page-content,
   .app-main,
   .layout-main,
-  .dashboard-main{
+  .dashboard-main,
+  #main,
+  #content,
+  main,
+  .header,
+  .topbar,
+  .navbar,
+  .main-header,
+  .app-header {
     margin-left: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
   }
 
+  .app,
+  .wrapper,
+  .layout,
   .app-layout,
   .dashboard-layout,
-  .layout,
-  .wrapper{
+  .page-layout,
+  .shell,
+  .app-shell,
+  .admin-layout {
     grid-template-columns: 1fr !important;
   }
 }
