@@ -4987,269 +4987,97 @@ main,
 
 
 
-/* RESUMO IDENTICO RECEITANET - HTML REAL SUBSTITUIDO */
-.resumo-receitanet-identico {
-  background: #111827 !important;
-  color: #e5e7eb !important;
-  border: 1px solid rgba(148,163,184,.35) !important;
-  border-top: 4px solid #b91c1c !important;
-  border-radius: 5px !important;
-  max-width: 720px !important;
-  width: 100% !important;
-  height: 820px !important;
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
-  padding: 18px 22px 24px 22px !important;
-  margin: 0 auto 22px auto !important;
-  box-shadow: 0 16px 35px rgba(0,0,0,.22) !important;
+/* RESUMO RECEITANET ESCURO - CLIENTE E CADASTRO */
+.rn-cliente-card {
+  background:#111827 !important;
+  color:#e5e7eb !important;
+  border:1px solid rgba(148,163,184,.35) !important;
+  border-top:4px solid #b91c1c !important;
+  border-radius:5px !important;
+  max-width:720px !important;
+  width:100% !important;
+  height:820px !important;
+  overflow-y:auto !important;
+  overflow-x:hidden !important;
+  padding:18px 22px 24px !important;
+  margin:0 auto 22px !important;
+  font-family:Arial, Helvetica, sans-serif !important;
+  box-shadow:0 16px 35px rgba(0,0,0,.22) !important;
+}
+.rn-cliente-card::-webkit-scrollbar{width:14px}
+.rn-cliente-card::-webkit-scrollbar-track{background:#cbd5e1}
+.rn-cliente-card::-webkit-scrollbar-thumb{background:#475569;border-radius:9px}
+.rn-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:22px}
+.rn-head h2{margin:0!important;font-size:28px!important;line-height:1!important;font-weight:500!important;color:#f9fafb!important}
+.rn-head button{width:44px;height:44px;border-radius:4px;background:#1f2937;border:2px solid #475569;color:#93c5fd;font-size:22px;font-weight:900}
+.rn-grid{display:grid!important;grid-template-columns:1fr 1fr!important;column-gap:44px!important}
+.rn-field{margin:0 0 10px!important}
+.rn-field b{display:block;color:#f3f4f6;font-size:18px;line-height:1.08;font-weight:800}
+.rn-field span{display:block;color:#e5e7eb;font-size:18px;line-height:1.2;margin-top:2px;word-break:break-word}
+.rn-login{display:flex!important;align-items:center;gap:9px}
+.rn-login i{color:#3b82f6;font-style:normal;font-size:20px;font-weight:900}
+.rn-title{margin:14px 0 18px;font-size:30px;font-weight:400;color:#e5e7eb}
+.rn-oltnet{color:#e5e7eb;font-size:30px;margin:13px 0 8px}
+.rn-ident{display:inline-block;background:#a83a49;color:#fff;padding:6px 10px;border-radius:3px;font-size:13px;font-weight:800}
+.rn-ident.ok{background:#16a34a}
+.rn-cliente-card hr{border:0;border-top:2px solid rgba(148,163,184,.45);margin:22px 0 20px}
+.rn-status{display:grid;grid-template-columns:1fr 1fr;column-gap:44px;font-size:18px;line-height:1.35}
+.rn-status p{margin:0 0 4px}
+.rn-status b{font-weight:800;color:#f3f4f6}
+.rn-status em{font-style:normal;font-weight:900}
+.rn-status .on{color:#22c55e}.rn-status .off{color:#ef4444}
+.rn-actions{display:grid;gap:12px;margin:18px 0 20px}
+.rn-actions button{height:48px;width:100%;border:0;border-radius:2px;color:white;font-size:17px;font-weight:600}
+.rn-b1{background:#17286d}.rn-b2{background:#1e3a8a;display:flex;align-items:center;justify-content:center;gap:110px}.rn-b3{background:#166534}.rn-b4{background:#b94f38}
+.rn-cliente-card h3{margin:0 0 16px;font-size:28px;font-weight:400;color:#e5e7eb}
+.rn-table{width:100%;border-collapse:collapse;color:#e5e7eb;font-size:17px}
+.rn-table th{padding:8px 10px 14px;text-align:left;color:#f3f4f6;font-weight:800}
+.rn-table td{padding:12px 10px}
+.rn-table tbody tr{background:rgba(148,163,184,.10)}
+.rn-total{text-align:right;margin:12px 8px 12px 0;font-size:18px;font-weight:700;color:#e5e7eb}
+.rn-contato{display:grid;grid-template-columns:1fr 1fr;column-gap:46px;font-size:18px}
+.rn-contato b{display:block;color:#f3f4f6;font-size:18px;font-weight:800;margin-top:8px}
+.rn-contato span{display:block;color:#e5e7eb;line-height:1.14}
+.rn-pai{display:inline-block;background:#22c1c3;color:white;padding:8px 16px;border-radius:5px;font-size:17px;font-weight:700}
+@media(max-width:768px){
+  .rn-cliente-card{max-width:100%!important;height:72vh!important;padding:14px!important}
+  .rn-grid,.rn-status,.rn-contato{grid-template-columns:1fr 1fr!important;column-gap:20px!important}
+  .rn-field b,.rn-field span,.rn-status,.rn-table,.rn-contato,.rn-contato b{font-size:15px!important}
+  .rn-head h2,.rn-title,.rn-cliente-card h3,.rn-oltnet{font-size:24px!important}
+  .rn-actions button{font-size:14px!important}
+  .rn-b2{gap:25px!important}
 }
 
-.resumo-receitanet-identico::-webkit-scrollbar { width: 14px; }
-.resumo-receitanet-identico::-webkit-scrollbar-track { background: #cbd5e1; }
-.resumo-receitanet-identico::-webkit-scrollbar-thumb { background: #475569; border-radius: 9px; }
 
-.rn-head-real {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 22px;
+/* AJUSTE DE FONTES - MESMO TAMANHO DO RECEITANET */
+.rn-head h2{font-size:22px !important;}
+.rn-title{font-size:24px !important;}
+.rn-cliente-card h3{font-size:22px !important;}
+.rn-oltnet{font-size:22px !important;}
+
+.rn-field b,
+.rn-status b,
+.rn-contato b,
+.rn-table th{
+    font-size:14px !important;
+    font-weight:700 !important;
 }
 
-.rn-head-real h3 {
-  margin: 0 !important;
-  font-size: 28px !important;
-  line-height: 1 !important;
-  font-weight: 500 !important;
-  color: #f9fafb !important;
+.rn-field span,
+.rn-status p,
+.rn-table td,
+.rn-contato span,
+.rn-total,
+.rn-ident,
+.rn-pai{
+    font-size:13px !important;
 }
 
-.rn-help-real {
-  width: 44px !important;
-  height: 44px !important;
-  border-radius: 4px !important;
-  background: #1f2937 !important;
-  border: 2px solid #475569 !important;
-  color: #93c5fd !important;
-  font-size: 22px !important;
-  font-weight: 900 !important;
+.rn-actions button{
+    font-size:13px !important;
+    height:42px !important;
 }
 
-.rn-duas-colunas {
-  display: grid !important;
-  grid-template-columns: 1fr 1fr !important;
-  column-gap: 44px !important;
-}
-
-.rn-campo {
-  margin: 0 0 10px 0 !important;
-}
-
-.rn-campo strong {
-  display: block !important;
-  color: #f3f4f6 !important;
-  font-size: 18px !important;
-  line-height: 1.08 !important;
-  font-weight: 800 !important;
-}
-
-.rn-campo span {
-  display: block !important;
-  color: #e5e7eb !important;
-  font-size: 18px !important;
-  line-height: 1.2 !important;
-  margin-top: 2px !important;
-  word-break: break-word !important;
-}
-
-.rn-campo i {
-  color: #3b82f6 !important;
-  font-style: normal !important;
-  font-size: 20px !important;
-  font-weight: 900 !important;
-  margin-right: 8px !important;
-}
-
-.rn-espaco {
-  height: 82px !important;
-}
-
-.rn-titulo-secao {
-  margin: 14px 0 18px 0 !important;
-  font-size: 30px !important;
-  font-weight: 400 !important;
-  color: #e5e7eb !important;
-}
-
-.rn-oltnet {
-  color: #e5e7eb !important;
-  font-size: 30px !important;
-  margin: 13px 0 8px 0 !important;
-}
-
-.rn-identificado {
-  display: inline-block !important;
-  background: #a83a49 !important;
-  color: white !important;
-  padding: 6px 10px !important;
-  border-radius: 3px !important;
-  font-size: 13px !important;
-  font-weight: 800 !important;
-}
-
-.rn-identificado.ok {
-  background: #16a34a !important;
-}
-
-.rn-linha {
-  border: 0 !important;
-  border-top: 2px solid rgba(148,163,184,.45) !important;
-  margin: 22px 0 20px 0 !important;
-}
-
-.rn-status-grid {
-  display: grid !important;
-  grid-template-columns: 1fr 1fr !important;
-  column-gap: 44px !important;
-  font-size: 18px !important;
-  line-height: 1.35 !important;
-}
-
-.rn-status-grid p {
-  margin: 0 0 4px 0 !important;
-}
-
-.rn-status-grid strong {
-  font-weight: 800 !important;
-  color: #f3f4f6 !important;
-}
-
-#resStatusBolinha {
-  font-weight: 900 !important;
-}
-
-.rn-botoes {
-  display: grid !important;
-  gap: 12px !important;
-  margin: 18px 0 20px 0 !important;
-}
-
-.rn-botoes button {
-  height: 48px !important;
-  width: 100% !important;
-  border: 0 !important;
-  border-radius: 2px !important;
-  color: white !important;
-  font-size: 17px !important;
-  font-weight: 600 !important;
-}
-
-.rn-btn-remoto { background: #17286d !important; }
-.rn-btn-interno { background: #1e3a8a !important; display: flex !important; align-items: center !important; justify-content: center !important; gap: 110px !important; }
-.rn-btn-diagnostico { background: #166534 !important; }
-.rn-btn-monitoramento { background: #b94f38 !important; }
-
-.rn-subtitulo {
-  margin: 0 0 16px 0 !important;
-  font-size: 28px !important;
-  font-weight: 400 !important;
-  color: #e5e7eb !important;
-}
-
-.rn-tabela {
-  width: 100% !important;
-  border-collapse: collapse !important;
-  color: #e5e7eb !important;
-  font-size: 17px !important;
-}
-
-.rn-tabela th {
-  padding: 8px 10px 14px 10px !important;
-  text-align: left !important;
-  color: #f3f4f6 !important;
-  font-weight: 800 !important;
-}
-
-.rn-tabela td {
-  padding: 12px 10px !important;
-}
-
-.rn-tabela tbody tr {
-  background: rgba(148,163,184,.10) !important;
-}
-
-.rn-total {
-  text-align: right !important;
-  margin: 12px 8px 12px 0 !important;
-  font-size: 18px !important;
-  font-weight: 700 !important;
-  color: #e5e7eb !important;
-}
-
-.rn-contato-grid {
-  display: grid !important;
-  grid-template-columns: 1fr 1fr !important;
-  column-gap: 46px !important;
-  font-size: 18px !important;
-}
-
-.rn-contato-grid strong {
-  display: block !important;
-  color: #f3f4f6 !important;
-  font-size: 18px !important;
-  font-weight: 800 !important;
-  margin-top: 8px !important;
-}
-
-.rn-contato-grid span {
-  display: block !important;
-  color: #e5e7eb !important;
-  line-height: 1.14 !important;
-}
-
-.rn-pai-controle {
-  display: inline-block !important;
-  background: #22c1c3 !important;
-  color: white !important;
-  padding: 8px 16px !important;
-  border-radius: 5px !important;
-  font-size: 17px !important;
-  font-weight: 700 !important;
-}
-
-@media(max-width: 768px) {
-  .resumo-receitanet-identico {
-    height: 72vh !important;
-    padding: 14px !important;
-  }
-
-  .rn-duas-colunas,
-  .rn-status-grid,
-  .rn-contato-grid {
-    grid-template-columns: 1fr 1fr !important;
-    column-gap: 20px !important;
-  }
-
-  .rn-campo strong,
-  .rn-campo span,
-  .rn-status-grid,
-  .rn-tabela,
-  .rn-contato-grid,
-  .rn-contato-grid strong {
-    font-size: 15px !important;
-  }
-
-  .rn-head-real h3,
-  .rn-titulo-secao,
-  .rn-subtitulo,
-  .rn-oltnet {
-    font-size: 24px !important;
-  }
-
-  .rn-botoes button {
-    font-size: 14px !important;
-  }
-
-  .rn-btn-interno {
-    gap: 25px !important;
-  }
+.rn-cliente-card{
+    line-height:1.15 !important;
 }

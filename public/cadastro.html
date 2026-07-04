@@ -421,146 +421,388 @@
     </section>
 
     
-    
-<aside class="cadastro-resumo-card resumo-receitanet-identico">
-  <div class="rn-head-real">
-    <h3>Resumo</h3>
-    <button type="button" class="rn-help-real">?</button>
-  </div>
+    <aside class="cadastro-resumo-card resumo-receitanet-completo">
+      <div class="resumo-title">
+        <h3>Resumo</h3>
+        <button type="button">?</button>
+      </div>
 
-  <div class="rn-duas-colunas">
-    <div>
-      <div class="rn-campo"><strong>Login</strong><span><i>✓</i> <b id="resLogin">--</b></span></div>
-      <div class="rn-campo"><strong>Nome</strong><span id="resNome">--</span></div>
-      <div class="rn-campo"><strong>CPF/CNPJ</strong><span id="resCpf">--</span></div>
-      <div class="rn-campo"><strong>Dia do Vencimento</strong><span id="resVencimento">--</span></div>
-    </div>
-    <div>
-      <div class="rn-campo"><strong>Senha</strong><span id="resSenha">0000</span></div>
-      <div class="rn-espaco"></div>
-      <div class="rn-campo"><strong>Próxima Fatura Aberta</strong><span id="resProximaFatura">20/07/2026</span></div>
-    </div>
-  </div>
+      <div class="resumo-top-grid">
+        <div>
+          <b>Login</b>
+          <span class="check-login">✓</span>
+          <span id="resLogin">--</span>
+        </div>
+        <div>
+          <b>Senha</b>
+          <span id="resSenha">--</span>
+        </div>
+        <div>
+          <b>Nome</b>
+          <span id="resNome">--</span>
+        </div>
+        <div>
+          <b>CPF/CNPJ</b>
+          <span id="resCpf">--</span>
+        </div>
+        <div>
+          <b>Dia do Vencimento</b>
+          <span id="resVenc">--</span>
+        </div>
+        <div>
+          <b>Próxima Fatura Aberta</b>
+          <span>Nenhuma fatura disponível</span>
+        </div>
+      </div>
 
-  <div class="rn-titulo-secao">Servidor</div>
+      <div class="resumo-section">
+        <h4>Servidor</h4>
+        <div class="resumo-servidor-grid">
+          <div>
+            <b>SERVIDOR</b>
+            <span id="resServidor">--</span>
+          </div>
+          <div>
+            <b>INTERFACE</b>
+            <span id="resInterface">--</span>
+          </div>
+          <div>
+            <b>ELEMENTO DE REDE</b>
+            <span id="resElemento">--</span>
+          </div>
+          <div>
+            <b>IP ATUAL</b>
+            <span id="resIp">--</span>
+          </div>
+          <div>
+            <b>Conexão</b>
+            <span id="resConexao">--</span>
+          </div>
+          <div>
+            <b>Profile</b>
+            <span id="resProfile">--</span>
+          </div>
+        </div>
 
-  <div class="rn-duas-colunas">
-    <div>
-      <div class="rn-campo"><strong>SERVIDOR</strong><span id="resServidor">--</span></div>
-      <div class="rn-campo"><strong>ELEMENTO DE REDE</strong><span>Conexão</span></div>
-      <div class="rn-campo rn-pppoe"><span>PPPOE</span></div>
-      <div class="rn-oltnet">OLTNET</div>
-      <span id="resIdentificado" class="rn-identificado">Não Identificado</span>
-    </div>
-    <div>
-      <div class="rn-campo"><strong>INTERFACE</strong><span id="resInterface">PPPOE</span></div>
-      <div class="rn-campo"><strong>IP ATUAL</strong><span id="resIp">--</span></div>
-      <div class="rn-campo"><strong>Profile</strong><span id="resProfile">--</span></div>
-    </div>
-  </div>
+        <h4>OLTNET</h4>
+        <span class="nao-identificado">Não Identificado</span>
+      </div>
 
-  <hr class="rn-linha">
+      <div class="status-login-line">
+        <span>Status<span class="offline-dot">● Offline</span></span>
+        <span>Login: <b id="resLogin2">--</b></span>
+      </div>
 
-  <div class="rn-status-grid">
-    <div>
-      <p><strong>Status</strong> <span id="resStatusBolinha" class="rn-off">●</span> <span id="resStatusTexto">Offline</span></p>
-      <p><strong>Serviço:</strong> <span id="resServico">PPP2</span></p>
-      <p><strong>IP:</strong> <span id="resIp2">--</span></p>
-      <p><strong>Profile Servidor:</strong> <span id="resProfileServidor">--</span></p>
-      <p><strong>MTU:</strong> 1480</p>
-    </div>
-    <div>
-      <p><strong>Login:</strong> <span id="resLogin2">--</span></p>
-      <p><strong>Tempo:</strong> <span id="resTempo">--</span></p>
-      <p><strong>MAC:</strong> <span id="resMac">--</span></p>
-      <p><strong>Interface:</strong> <span id="resVlan">--</span></p>
-      <p><strong>MRU:</strong> 1480</p>
-    </div>
-  </div>
+      <div class="resumo-section">
+        <h4>Plano de Cobrança</h4>
+        <table class="mini-table plano-table">
+          <thead>
+            <tr>
+              <th>PLANO</th>
+              <th>VALOR UN</th>
+              <th>QTDADE</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td id="resPlano">Nenhum Plano Ativo</td>
+              <td id="resValor">R$ 0,00</td>
+              <td>1</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="mini-total">Total: <span id="resTotal">R$ 0,00</span></div>
+      </div>
 
-  <div class="rn-botoes">
-    <button type="button" class="rn-btn-remoto">Configurar Equipamento - Remoto</button>
-    <button type="button" class="rn-btn-interno"><span>Configurar Equipamento - Interno</span><b>HTTPS</b></button>
-    <button type="button" class="rn-btn-diagnostico">Diagnosticar Cliente</button>
-    <button type="button" class="rn-btn-monitoramento">Monitoramento em Tempo Real</button>
-  </div>
+      <div class="resumo-section">
+        <h4>Estoque</h4>
+        <table class="mini-table estoque-table">
+          <thead>
+            <tr>
+              <th>PRODUTO</th>
+              <th>QT.</th>
+              <th>UN</th>
+              <th>VALOR</th>
+              <th>DATA</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td colspan="5">Nenhum Produto</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
-  <hr class="rn-linha">
+      <div class="resumo-section dados-contato-resumo">
+        <h4>Dados de Contato</h4>
 
-  <h3 class="rn-subtitulo">Plano de Cobrança</h3>
-  <table class="rn-tabela">
-    <thead>
-      <tr>
-        <th>PLANO</th>
-        <th>VALOR UN</th>
-        <th>QTDADE</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td id="resPlanoCobranca">Plano 600 MB - Fibra+</td>
-        <td id="resValorPlano">R$ 100,00</td>
-        <td>1</td>
-      </tr>
-    </tbody>
-  </table>
-  <div class="rn-total">Total: <span id="resTotalPlano">R$ 100,00</span></div>
+        <div class="contato-resumo-grid">
+          <div>
+            <b>Endereço</b>
+            <span id="resEndereco">--</span>
+          </div>
+          <div>
+            <b>Compl.</b>
+            <span id="resComplemento">--</span>
+          </div>
 
-  <hr class="rn-linha">
+          <div>
+            <b>Ponto de Ref.</b>
+            <span id="resReferencia">--</span>
+          </div>
+          <div>
+            <b>Cidade</b>
+            <span id="resCidade">--</span>
+          </div>
 
-  <h3 class="rn-subtitulo">Estoque</h3>
-  <table class="rn-tabela">
-    <thead>
-      <tr>
-        <th>PRODUTO</th>
-        <th>QT.</th>
-        <th>UN</th>
-        <th>VALOR</th>
-        <th>DATA</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td>Nenhum Produto</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
-      </tr>
-    </tbody>
-  </table>
+          <div>
+            <b>Bairro</b>
+            <span id="resBairro">--</span>
+          </div>
+          <div>
+            <b>IBGE</b>
+            <span id="resIbge">--</span>
+          </div>
 
-  <hr class="rn-linha">
+          <div>
+            <b>Estado</b>
+            <span id="resUf">--</span>
+          </div>
+          <div>
+            <b>Tel2</b>
+            <span id="resTelefone2">--</span>
+          </div>
 
-  <h3 class="rn-subtitulo">Dados de Contato</h3>
-  <div class="rn-contato-grid">
-    <div>
-      <strong>Endereço</strong><span id="resEndereco">--</span>
-      <strong>Ponto de Ref.</strong><span id="resReferencia">--</span>
-      <strong>Bairro</strong><span id="resBairro">--</span>
-      <strong>Estado</strong><span id="resEstado">AM</span>
-      <strong>Tel1</strong><span id="resTel1">--</span>
-      <strong>Tel3</strong><span id="resTel3">--</span>
-    </div>
-    <div>
-      <strong>Compl.</strong><span id="resComplemento">--</span>
-      <strong>Cidade</strong><span id="resCidade">MANAUS</span>
-      <strong>IBGE</strong><span id="resIbge">1302603</span>
-      <strong>Tel2</strong><span id="resTel2">--</span>
-    </div>
-  </div>
+          <div>
+            <b>Tel1</b>
+            <span id="resTelefone1">--</span>
+          </div>
+          <div>
+            <b>Tel3</b>
+            <span id="resTelefone3">--</span>
+          </div>
+        </div>
+      </div>
 
-  <hr class="rn-linha">
-
-  <h3 class="rn-subtitulo">Sistema Pai Controle</h3>
-  <span class="rn-pai-controle">Desativado</span>
-</aside>
-
+      <div class="resumo-section pai-controle-resumo">
+        <h4>Sistema Pai Controle</h4>
+        <span class="pai-desativado">Desativado</span>
+      </div>
+    </aside>
 
   </section>
 </section>
 
+<section id="resumoCadastroReceitaNetForcado" class="rn-forcado-card">
+  <div class="rn-forcado-head">
+    <h2>Resumo</h2>
+    <button type="button">?</button>
+  </div>
 
+  <div class="rn-forcado-grid">
+    <div>
+      <div class="rn-forcado-field"><b>Login</b><span><i>✓</i> <em id="rnLogin">--</em></span></div>
+      <div class="rn-forcado-field"><b>Nome</b><span id="rnNome">--</span></div>
+      <div class="rn-forcado-field"><b>CPF/CNPJ</b><span id="rnCpf">--</span></div>
+      <div class="rn-forcado-field"><b>Dia do Vencimento</b><span id="rnVencimento">--</span></div>
+    </div>
+    <div>
+      <div class="rn-forcado-field"><b>Senha</b><span id="rnSenha">0000</span></div>
+      <div style="height:82px"></div>
+      <div class="rn-forcado-field"><b>Próxima Fatura Aberta</b><span id="rnProximaFatura">20/07/2026</span></div>
+    </div>
+  </div>
+
+  <div class="rn-forcado-title">Servidor</div>
+
+  <div class="rn-forcado-grid">
+    <div>
+      <div class="rn-forcado-field"><b>SERVIDOR</b><span id="rnServidor">--</span></div>
+      <div class="rn-forcado-field"><b>ELEMENTO DE REDE</b><span>Conexão</span></div>
+      <div class="rn-forcado-field"><span>PPPOE</span></div>
+      <div class="rn-forcado-oltnet">OLTNET</div>
+      <span id="rnIdentificado" class="rn-forcado-ident">Não Identificado</span>
+    </div>
+    <div>
+      <div class="rn-forcado-field"><b>INTERFACE</b><span id="rnInterfaceTopo">PPPOE</span></div>
+      <div class="rn-forcado-field"><b>IP ATUAL</b><span id="rnIpTopo">--</span></div>
+      <div class="rn-forcado-field"><b>Profile</b><span id="rnProfileTopo">--</span></div>
+    </div>
+  </div>
+
+  <hr>
+
+  <div class="rn-forcado-status">
+    <div>
+      <p><b>Status</b><span id="rnStatusDot">●</span> <em id="rnStatusTexto">Offline</em></p>
+      <p><b>Serviço:</b> <span id="rnServico">PPP2</span></p>
+      <p><b>IP:</b> <span id="rnIp">--</span></p>
+      <p><b>Profile Servidor:</b> <span id="rnProfileServidor">--</span></p>
+      <p><b>MTU:</b> 1480</p>
+    </div>
+    <div>
+      <p><b>Login:</b> <span id="rnLoginStatus">--</span></p>
+      <p><b>Tempo:</b> <span id="rnTempo">--</span></p>
+      <p><b>MAC:</b> <span id="rnMac">--</span></p>
+      <p><b>Interface:</b> <span id="rnInterface">--</span></p>
+      <p><b>MRU:</b> 1480</p>
+    </div>
+  </div>
+
+  <div class="rn-forcado-actions">
+    <button type="button" class="b1">Configurar Equipamento - Remoto</button>
+    <button type="button" class="b2"><span>Configurar Equipamento - Interno</span><strong>HTTPS</strong></button>
+    <button type="button" class="b3">Diagnosticar Cliente</button>
+    <button type="button" class="b4">Monitoramento em Tempo Real</button>
+  </div>
+
+  <hr>
+
+  <h3>Plano de Cobrança</h3>
+  <table>
+    <thead><tr><th>PLANO</th><th>VALOR UN</th><th>QTDADE</th></tr></thead>
+    <tbody><tr><td id="rnPlano">Plano 600 MB - Fibra+</td><td id="rnValor">R$ 100,00</td><td>1</td></tr></tbody>
+  </table>
+  <div class="rn-forcado-total">Total: <span id="rnTotal">R$ 100,00</span></div>
+
+  <hr>
+
+  <h3>Estoque</h3>
+  <table>
+    <thead><tr><th>PRODUTO</th><th>QT.</th><th>UN</th><th>VALOR</th><th>DATA</th></tr></thead>
+    <tbody><tr><td>Nenhum Produto</td><td>-</td><td>-</td><td>-</td><td>-</td></tr></tbody>
+  </table>
+
+  <hr>
+
+  <h3>Dados de Contato</h3>
+  <div class="rn-forcado-contato">
+    <div>
+      <b>Endereço</b><span id="rnEndereco">--</span>
+      <b>Ponto de Ref.</b><span id="rnReferencia">--</span>
+      <b>Bairro</b><span id="rnBairro">--</span>
+      <b>Estado</b><span id="rnEstado">AM</span>
+      <b>Tel1</b><span id="rnTel1">--</span>
+      <b>Tel3</b><span id="rnTel3">--</span>
+    </div>
+    <div>
+      <b>Compl.</b><span id="rnComplemento">--</span>
+      <b>Cidade</b><span id="rnCidade">MANAUS</span>
+      <b>IBGE</b><span id="rnIbge">1302603</span>
+      <b>Tel2</b><span id="rnTel2">--</span>
+    </div>
+  </div>
+
+  <hr>
+
+  <h3>Sistema Pai Controle</h3>
+  <span class="rn-forcado-pai">Desativado</span>
+</section>
+
+<script>
+(function(){
+  function val(c, keys, d){
+    for(var i=0;i<keys.length;i++){
+      var k=keys[i];
+      if(c && c[k]!==undefined && c[k]!==null && String(c[k]).trim()!=="") return String(c[k]).trim();
+    }
+    return d || "--";
+  }
+  function set(id, v){
+    var el=document.getElementById(id);
+    if(el) el.textContent = v || "--";
+  }
+  function moeda(v){
+    var n=Number(String(v||"").replace(/[^\d,.-]/g,"").replace(",","."));
+    if(!isFinite(n)||n<=0)n=100;
+    return n.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+  }
+  function cliente(){
+    var ks=["clienteSelecionadoCompleto","clienteCadastroSelecionado","clienteEditar"];
+    for(var i=0;i<ks.length;i++){
+      try{
+        var raw=localStorage.getItem(ks[i]);
+        if(raw){var c=JSON.parse(raw); if(c&&Object.keys(c).length)return c;}
+      }catch(e){}
+    }
+    return {};
+  }
+  async function online(login){
+    try{
+      var r=await fetch("/api/online",{cache:"no-store"});
+      var d=await r.json();
+      var lista=d.clientes||[];
+      return lista.find(function(x){
+        return String(x.usuario||x.name||x.login||x.user||"").toLowerCase().trim()===String(login||"").toLowerCase().trim();
+      })||null;
+    }catch(e){return null;}
+  }
+  async function preencher(){
+    var c=cliente();
+    var login=val(c,["loginPppoe","login","usuario","user","name","pppoe"],"");
+    var on=await online(login);
+
+    set("rnLogin", login);
+    set("rnLoginStatus", login);
+    set("rnSenha", val(c,["senhaPppoe","senha","password"],"0000"));
+    set("rnNome", val(c,["nome","cliente","razaoSocial","name"],"--"));
+    set("rnCpf", val(c,["cpfCnpj","cpf","cnpj","documento"],"--"));
+    set("rnVencimento", val(c,["diaVencimento","vencimento"],"--"));
+    set("rnProximaFatura", val(c,["proximaFatura","proximaFaturaAberta","dataProximaFatura"],"20/07/2026"));
+
+    var servidor=on?(on.servidor||"Armando Mendes - Zumbi"):val(c,["popServidor","servidor","servidorReceita"],"--");
+    var service=on?(on.service||"PPP2"):val(c,["service","interface"],"PPP2");
+    var ip=on?(on.ip||on.address||"--"):val(c,["ip","address"],"--");
+    var profile=on?(on.profile||val(c,["profile","plano"],"600-MEGA")):val(c,["profile","plano"],"600-MEGA");
+    var mac=on?(on.callerId||on.mac||on["caller-id"]||"--"):val(c,["mac","callerId","caller-id"],"--");
+
+    set("rnServidor", servidor);
+    set("rnInterfaceTopo", String(service).toUpperCase());
+    set("rnIpTopo", ip);
+    set("rnProfileTopo", profile);
+    set("rnServico", service);
+    set("rnIp", ip);
+    set("rnProfileServidor", profile);
+    set("rnMac", mac);
+    set("rnTempo", on?(on.uptime||"--"):"--");
+    set("rnInterface", on?(on.interface||on["interface"]||"VLAN 102"):val(c,["interface","vlan"],"--"));
+
+    var statusDot=document.getElementById("rnStatusDot");
+    var statusTexto=document.getElementById("rnStatusTexto");
+    var ident=document.getElementById("rnIdentificado");
+    if(on){
+      if(statusDot){statusDot.style.color="#22c55e";}
+      if(statusTexto){statusTexto.textContent="Online";}
+      if(ident){ident.textContent="Identificado";ident.classList.add("ok");}
+    }else{
+      if(statusDot){statusDot.style.color="#ef4444";}
+      if(statusTexto){statusTexto.textContent="Offline";}
+      if(ident){ident.textContent="Não Identificado";ident.classList.remove("ok");}
+    }
+
+    var valor=val(c,["valorMensal","valor","mensalidade"],"100");
+    set("rnPlano", val(c,["plano","profile"],"Plano 600 MB - Fibra+"));
+    set("rnValor", moeda(valor));
+    set("rnTotal", moeda(valor));
+
+    set("rnEndereco", val(c,["endereco","logradouro","rua"],"--"));
+    set("rnReferencia", val(c,["referencia","pontoReferencia"],"--"));
+    set("rnBairro", val(c,["bairro"],"--"));
+    set("rnEstado", val(c,["uf","estado"],"AM"));
+    set("rnComplemento", val(c,["complemento"],"--"));
+    set("rnCidade", val(c,["cidade","localidade"],"MANAUS"));
+    set("rnIbge", val(c,["ibge"],"1302603"));
+    set("rnTel1", val(c,["telefone1","telefone","celular","fone"],"--"));
+    set("rnTel2", val(c,["telefone2","celular2","fone2"],"--"));
+    set("rnTel3", val(c,["telefone3","celular3","fone3"],"--"));
+  }
+  document.addEventListener("DOMContentLoaded", function(){
+    setTimeout(preencher,300);
+    setTimeout(preencher,1500);
+  });
+})();
+</script>
 
 </main></div>
 

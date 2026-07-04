@@ -2311,28 +2311,196 @@ function carregarClienteSelecionadoNoCadastro(){
   return true;
 }
 
-function carregarClienteDetalhes(){
+
+/* ============================================================
+   RESUMO RECEITANET ESCURO - usado em cliente.html e cadastro.html
+============================================================ */
+function rnCampo(c, campos, padrao="--"){
+  for(const k of campos){
+    if(c && c[k] !== undefined && c[k] !== null && String(c[k]).trim() !== ""){
+      return String(c[k]).trim();
+    }
+  }
+  return padrao;
+}
+function rnEsc(v){
+  return String(v ?? "").replace(/[&<>"']/g, s => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[s]));
+}
+function rnMoeda(v){
+  let n=Number(String(v||"").replace(/[^\d,.-]/g,"").replace(",","."));
+  if(!isFinite(n)||n<=0) n=100;
+  return n.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+}
+function rnResumoHtml(c, on){
+  const login=rnCampo(c,["login","usuario","name","loginPppoe","pppoe"],"");
+  const senha=rnCampo(c,["senha","senhaPppoe","password"],"0000");
+  const nome=rnCampo(c,["nome","cliente","razaoSocial","name"],"--");
+  const cpf=rnCampo(c,["cpfCnpj","cpf","cnpj","documento"],"--");
+  const venc=rnCampo(c,["diaVencimento","vencimento"],"--");
+  const proxima=rnCampo(c,["proximaFatura","proximaFaturaAberta","dataProximaFatura"],"20/07/2026");
+
+  const online=!!on;
+  const servidor=online?(on.servidor||"Armando Mendes - Zumbi"):rnCampo(c,["servidor","pop","popServidor","servidorReceita"],"--");
+  const servico=online?(on.service||"PPP2"):rnCampo(c,["service","interface"],"PPP2");
+  const ip=online?(on.ip||on.address||"--"):rnCampo(c,["ip","address"],"--");
+  const profile=online?(on.profile||rnCampo(c,["profile","plano"],"600-MEGA")):rnCampo(c,["profile","plano"],"600-MEGA");
+  const mac=online?(on.callerId||on.mac||on["caller-id"]||"--"):rnCampo(c,["mac","callerId","caller-id"],"--");
+  const tempo=online?(on.uptime||"--"):"--";
+  const iface=online?(on.interface||on["interface"]||"VLAN 102"):rnCampo(c,["interface","vlan"],"--");
+
+  const plano=rnCampo(c,["plano","profile"],"Plano 600 MB - Fibra+");
+  const valor=rnCampo(c,["valorMensal","valor","mensalidade"],"100");
+
+  const endereco=rnCampo(c,["endereco","logradouro","rua"],"--");
+  const ref=rnCampo(c,["referencia","pontoReferencia"],"--");
+  const bairro=rnCampo(c,["bairro"],"--");
+  const estado=rnCampo(c,["uf","estado"],"AM");
+  const compl=rnCampo(c,["complemento"],"--");
+  const cidade=rnCampo(c,["cidade","localidade"],"MANAUS");
+  const ibge=rnCampo(c,["ibge"],"1302603");
+  const tel1=rnCampo(c,["telefone1","telefone","celular","fone"],"--");
+  const tel2=rnCampo(c,["telefone2","celular2","fone2"],"--");
+  const tel3=rnCampo(c,["telefone3","celular3","fone3"],"--");
+
+  return `
+  <section class="rn-cliente-card">
+    <div class="rn-head"><h2>Resumo</h2><button type="button">?</button></div>
+
+    <div class="rn-grid">
+      <div>
+        <div class="rn-field"><b>Login</b><span class="rn-login"><i>✓</i>${rnEsc(login||"--")}</span></div>
+        <div class="rn-field"><b>Nome</b><span>${rnEsc(nome)}</span></div>
+        <div class="rn-field"><b>CPF/CNPJ</b><span>${rnEsc(cpf)}</span></div>
+        <div class="rn-field"><b>Dia do Vencimento</b><span>${rnEsc(venc)}</span></div>
+      </div>
+      <div>
+        <div class="rn-field"><b>Senha</b><span>${rnEsc(senha)}</span></div>
+        <div style="height:82px"></div>
+        <div class="rn-field"><b>Próxima Fatura Aberta</b><span>${rnEsc(proxima)}</span></div>
+      </div>
+    </div>
+
+    <div class="rn-title">Servidor</div>
+    <div class="rn-grid">
+      <div>
+        <div class="rn-field"><b>SERVIDOR</b><span>${rnEsc(servidor)}</span></div>
+        <div class="rn-field"><b>ELEMENTO DE REDE</b><span>Conexão</span></div>
+        <div class="rn-field"><span>PPPOE</span></div>
+        <div class="rn-oltnet">OLTNET</div>
+        <span class="rn-ident ${online?"ok":""}">${online?"Identificado":"Não Identificado"}</span>
+      </div>
+      <div>
+        <div class="rn-field"><b>INTERFACE</b><span>${rnEsc(String(servico).toUpperCase())}</span></div>
+        <div class="rn-field"><b>IP ATUAL</b><span>${rnEsc(ip)}</span></div>
+        <div class="rn-field"><b>Profile</b><span>${rnEsc(profile)}</span></div>
+      </div>
+    </div>
+
+    <hr>
+
+    <div class="rn-status">
+      <div>
+        <p><b>Status</b> <em class="${online?"on":"off"}">●</em> ${online?"Online":"Offline"}</p>
+        <p><b>Serviço:</b> ${rnEsc(servico)}</p>
+        <p><b>IP:</b> ${rnEsc(ip)}</p>
+        <p><b>Profile Servidor:</b> ${rnEsc(profile)}</p>
+        <p><b>MTU:</b> 1480</p>
+      </div>
+      <div>
+        <p><b>Login:</b> ${rnEsc(login||"--")}</p>
+        <p><b>Tempo:</b> ${rnEsc(tempo)}</p>
+        <p><b>MAC:</b> ${rnEsc(mac)}</p>
+        <p><b>Interface:</b> ${rnEsc(iface)}</p>
+        <p><b>MRU:</b> 1480</p>
+      </div>
+    </div>
+
+    <div class="rn-actions">
+      <button class="rn-b1" type="button">Configurar Equipamento - Remoto</button>
+      <button class="rn-b2" type="button"><span>Configurar Equipamento - Interno</span><strong>HTTPS</strong></button>
+      <button class="rn-b3" type="button">Diagnosticar Cliente</button>
+      <button class="rn-b4" type="button">Monitoramento em Tempo Real</button>
+    </div>
+
+    <hr>
+
+    <h3>Plano de Cobrança</h3>
+    <table class="rn-table">
+      <thead><tr><th>PLANO</th><th>VALOR UN</th><th>QTDADE</th></tr></thead>
+      <tbody><tr><td>${rnEsc(plano)}</td><td>${rnMoeda(valor)}</td><td>1</td></tr></tbody>
+    </table>
+    <div class="rn-total">Total: ${rnMoeda(valor)}</div>
+
+    <hr>
+
+    <h3>Estoque</h3>
+    <table class="rn-table">
+      <thead><tr><th>PRODUTO</th><th>QT.</th><th>UN</th><th>VALOR</th><th>DATA</th></tr></thead>
+      <tbody><tr><td>Nenhum Produto</td><td>-</td><td>-</td><td>-</td><td>-</td></tr></tbody>
+    </table>
+
+    <hr>
+
+    <h3>Dados de Contato</h3>
+    <div class="rn-contato">
+      <div>
+        <b>Endereço</b><span>${rnEsc(endereco)}</span>
+        <b>Ponto de Ref.</b><span>${rnEsc(ref)}</span>
+        <b>Bairro</b><span>${rnEsc(bairro)}</span>
+        <b>Estado</b><span>${rnEsc(estado)}</span>
+        <b>Tel1</b><span>${rnEsc(tel1)}</span>
+        <b>Tel3</b><span>${rnEsc(tel3)}</span>
+      </div>
+      <div>
+        <b>Compl.</b><span>${rnEsc(compl)}</span>
+        <b>Cidade</b><span>${rnEsc(cidade)}</span>
+        <b>IBGE</b><span>${rnEsc(ibge)}</span>
+        <b>Tel2</b><span>${rnEsc(tel2)}</span>
+      </div>
+    </div>
+
+    <hr>
+
+    <h3>Sistema Pai Controle</h3>
+    <span class="rn-pai">Desativado</span>
+  </section>`;
+}
+async function rnOnlineInfo(login){
+  if(!login) return null;
+  try{
+    const resp=await fetch("/api/online",{cache:"no-store"});
+    const dados=await resp.json();
+    const lista=dados.clientes||[];
+    return lista.find(x=>String(x.usuario||x.name||x.login||x.user||"").toLowerCase().trim()===String(login).toLowerCase().trim())||null;
+  }catch(e){return null;}
+}
+
+
+async function carregarClienteDetalhes(){
   const box=document.getElementById("clienteDetalhes");
   if(!box) return;
+
   let c=null;
   try{ const a=localStorage.getItem("clienteOnlineSelecionado"); if(a) c=JSON.parse(a); }catch(e){}
   if(!c){ try{ const a=localStorage.getItem("clienteSelecionadoCompleto"); if(a) c=JSON.parse(a); }catch(e){} }
-  if(!c){ const login=String(localStorage.getItem("clienteEditarLogin")||"").toLowerCase().trim(); if(login) c=fibraGetClientesImportados().find(x=>fibraChaveCliente(x)===login); }
-  if(!c){ box.innerHTML='<section class="panel"><h3>Cliente não selecionado</h3><p>Volte para a lista de clientes e clique em um cliente.</p></section>'; return; }
-  const login=fibraPrimeiroValor(c,["login","usuario","name","loginPppoe","pppoe"]);
-  const nome=fibraPrimeiroValor(c,["nome","cliente","razaoSocial"]) || login;
-  const servidor=fibraPrimeiroValor(c,["servidor","pop","popServidor"]);
-  const ip=fibraPrimeiroValor(c,["ip","address"]);
-  const mac=fibraPrimeiroValor(c,["mac","callerId","caller-id"]);
-  const uptime=fibraPrimeiroValor(c,["uptime"]);
-  const plano=fibraPrimeiroValor(c,["plano","profile"]) || "PPPoE";
-  const telefone=fibraPrimeiroValor(c,["telefone1","telefone","celular","fone"]);
-  const endereco=fibraPrimeiroValor(c,["endereco","logradouro","rua"]);
-  box.innerHTML=`
-    <div class="grid-2">
-      <section class="panel"><h3>Dados do Cliente</h3><p><b>Login:</b> ${fibraEscapeHtml(login||"--")}</p><p><b>Nome:</b> ${fibraEscapeHtml(nome||"--")}</p><p><b>Telefone:</b> ${fibraEscapeHtml(telefone||"--")}</p><p><b>Endereço:</b> ${fibraEscapeHtml(endereco||"--")}</p><p><b>Status:</b> 🟢 Online/Importado</p></section>
-      <section class="panel"><h3>Conexão PPPoE</h3><p><b>Servidor:</b> ${fibraEscapeHtml(fibraNomeServidor(servidor)||"--")}</p><p><b>Plano/Profile:</b> ${fibraEscapeHtml(plano||"--")}</p><p><b>IP:</b> ${fibraEscapeHtml(ip||"--")}</p><p><b>MAC/Caller ID:</b> ${fibraEscapeHtml(mac||"--")}</p><p><b>Tempo conectado:</b> ${fibraEscapeHtml(uptime||"--")}</p></section>
-    </div><section class="panel"><h3>Ações</h3><button onclick="localStorage.setItem('clienteSelecionadoCompleto', JSON.stringify(JSON.parse(localStorage.getItem('clienteOnlineSelecionado')||localStorage.getItem('clienteSelecionadoCompleto')||'{}'))); location.href='cadastro.html'">Abrir no Cadastro</button> <button onclick="history.back()">Voltar</button></section>`;
+  if(!c){ try{ const a=localStorage.getItem("clienteCadastroSelecionado"); if(a) c=JSON.parse(a); }catch(e){} }
+
+  if(!c){
+    const login=String(localStorage.getItem("clienteEditarLogin")||"").toLowerCase().trim();
+    if(login && typeof fibraGetClientesImportados==="function"){
+      c=fibraGetClientesImportados().find(x=>fibraChaveCliente(x)===login);
+    }
+  }
+
+  if(!c){
+    box.innerHTML='<section class="panel"><h3>Cliente não selecionado</h3><p>Volte para a lista de clientes e clique em um cliente.</p></section>';
+    return;
+  }
+
+  const login=rnCampo(c,["login","usuario","name","loginPppoe","pppoe"],"");
+  const on=await rnOnlineInfo(login);
+
+  box.innerHTML = rnResumoHtml(c,on) + `<section class="panel" style="max-width:720px;margin:16px auto"><button onclick="history.back()">Voltar</button> <button onclick="localStorage.setItem('clienteSelecionadoCompleto', JSON.stringify(JSON.parse(localStorage.getItem('clienteOnlineSelecionado')||localStorage.getItem('clienteSelecionadoCompleto')||localStorage.getItem('clienteCadastroSelecionado')||'{}'))); location.href='cadastro.html'">Abrir no Cadastro</button></section>`;
 }
 
 function fibraGarantirSecaoOnline(){
@@ -2999,3 +3167,22 @@ document.addEventListener("DOMContentLoaded", function(){
   });
 })();
 
+
+async function renderizarResumoReceitaNetCadastroFinal(){
+  if(!location.pathname.toLowerCase().includes("cadastro")) return;
+  let c=null;
+  try{ const a=localStorage.getItem("clienteSelecionadoCompleto"); if(a) c=JSON.parse(a); }catch(e){}
+  if(!c){ try{ const a=localStorage.getItem("clienteCadastroSelecionado"); if(a) c=JSON.parse(a); }catch(e){} }
+  if(!c){ try{ const a=localStorage.getItem("clienteEditar"); if(a) c=JSON.parse(a); }catch(e){} }
+  if(!c) c={};
+  const login=rnCampo(c,["login","usuario","name","loginPppoe","pppoe"],"");
+  const on=await rnOnlineInfo(login);
+  const alvo=document.querySelector(".cadastro-resumo-card, .cadastro-resumo, #resumoCadastro, #abaResumo, #resumo, .resumo");
+  if(alvo){
+    alvo.outerHTML = `<aside class="cadastro-resumo-card">${rnResumoHtml(c,on)}</aside>`;
+  }
+}
+document.addEventListener("DOMContentLoaded",function(){
+  setTimeout(renderizarResumoReceitaNetCadastroFinal,600);
+  setTimeout(renderizarResumoReceitaNetCadastroFinal,1600);
+});
