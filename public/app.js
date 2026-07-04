@@ -2807,3 +2807,38 @@ document.addEventListener("DOMContentLoaded", function(){
   });
 });
 
+
+
+/* MENU LATERAL AJUSTE REAL - reforço sem alterar layout interno */
+(function(){
+  function ajustarMenuLateralReal(){
+    if (window.innerWidth <= 900) return;
+
+    var sidebar = document.querySelector('.sidebar');
+    var main = document.querySelector('.main');
+    var layout = document.querySelector('.layout') || document.querySelector('.app') || document.querySelector('.wrapper');
+
+    if (sidebar){
+      sidebar.style.width = '235px';
+      sidebar.style.minWidth = '235px';
+      sidebar.style.maxWidth = '235px';
+      sidebar.style.flexBasis = '235px';
+      sidebar.style.boxSizing = 'border-box';
+    }
+
+    if (main){
+      main.style.marginLeft = '235px';
+      main.style.width = 'calc(100vw - 235px)';
+      main.style.maxWidth = 'calc(100vw - 235px)';
+    }
+
+    if (layout){
+      layout.style.gridTemplateColumns = '235px minmax(0, 1fr)';
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', ajustarMenuLateralReal);
+  window.addEventListener('resize', ajustarMenuLateralReal);
+  setTimeout(ajustarMenuLateralReal, 300);
+})();
+

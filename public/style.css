@@ -4526,119 +4526,78 @@ button,
 
 
 
+
+
+
 /* ============================================================
-   CADASTRO ALINHADO CORRETAMENTE
-   Mantém fonte, cores, botões, abas e resumo.
-   Corrige somente o espaço vazio entre menu e cadastro.
+   MENU LATERAL AJUSTE REAL
+   Corrige somente o tamanho visual do menu lateral.
+   Mantém cadastro, resumo, fonte, botões, abas e cores.
 ============================================================ */
+:root{
+  --fibra-sidebar-real: 235px !important;
+}
 
-/* Lateral no tamanho correto */
-@media (min-width: 901px) {
-  .layout{
-    display:flex !important;
-  }
-
+/* Estrutura real observada: .sidebar + .main */
+@media (min-width: 901px){
   .sidebar{
-    position:fixed !important;
-    left:0 !important;
-    top:0 !important;
-    width:245px !important;
-    min-width:245px !important;
-    max-width:245px !important;
-    height:100vh !important;
-    padding-left:18px !important;
-    padding-right:18px !important;
-    transform:none !important;
+    width: var(--fibra-sidebar-real) !important;
+    min-width: var(--fibra-sidebar-real) !important;
+    max-width: var(--fibra-sidebar-real) !important;
+    flex: 0 0 var(--fibra-sidebar-real) !important;
+    padding-left: 18px !important;
+    padding-right: 18px !important;
+    box-sizing: border-box !important;
   }
 
-  /* Conteúdo começa logo depois do menu, sem vão grande */
-  .main,
-  main.main{
-    margin-left:245px !important;
-    width:calc(100vw - 245px) !important;
-    max-width:calc(100vw - 245px) !important;
-    min-width:0 !important;
-    padding:0 !important;
-    overflow-x:hidden !important;
+  .sidebar .brand,
+  .sidebar .logo,
+  .sidebar .menu,
+  .sidebar nav,
+  .sidebar ul{
+    width: 100% !important;
+    max-width: 100% !important;
   }
 
-  /* Remove centralização que empurrava o cadastro para a direita */
+  .sidebar a,
+  .sidebar .nav-link,
+  .sidebar .menu-item{
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .layout,
+  .app,
+  .wrapper,
+  body > .layout{
+    grid-template-columns: var(--fibra-sidebar-real) minmax(0, 1fr) !important;
+  }
+
+  .main{
+    margin-left: var(--fibra-sidebar-real) !important;
+    width: calc(100vw - var(--fibra-sidebar-real)) !important;
+    max-width: calc(100vw - var(--fibra-sidebar-real)) !important;
+  }
+
   .content{
-    width:100% !important;
-    max-width:none !important;
-    margin:0 !important;
-    padding:18px 18px 22px 18px !important;
-    box-sizing:border-box !important;
-  }
-
-  .topbar{
-    width:100% !important;
-    max-width:none !important;
-    margin:0 !important;
-    padding-left:18px !important;
-    padding-right:18px !important;
-    box-sizing:border-box !important;
-  }
-
-  /* Botões começam à esquerda da área útil */
-  .cadastro-shortcuts{
-    justify-content:flex-start !important;
-    margin-left:0 !important;
-    margin-right:0 !important;
-    max-width:100% !important;
-  }
-
-  /* Formulário + resumo ocupam a área útil inteira */
-  .cadastro-layout-receita{
-    width:100% !important;
-    max-width:100% !important;
-    margin:0 !important;
-    display:grid !important;
-    grid-template-columns:minmax(0, 1fr) 360px !important;
-    gap:18px !important;
-    align-items:start !important;
-  }
-
-  .cadastro-form-card{
-    min-width:0 !important;
-    width:100% !important;
-  }
-
-  .cadastro-resumo-card{
-    width:360px !important;
-    min-width:360px !important;
-    max-width:360px !important;
-    margin:0 !important;
+    margin-left: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
   }
 }
 
-/* Mobile permanece como estava */
-@media (max-width: 900px) {
+/* Celular mantém gaveta maior para toque */
+@media (max-width: 900px){
   .sidebar{
-    width:280px !important;
-    min-width:280px !important;
-    max-width:280px !important;
+    width: 280px !important;
+    min-width: 280px !important;
+    max-width: 280px !important;
   }
-
-  .main,
-  main.main{
-    margin-left:0 !important;
-    width:100% !important;
-    max-width:100% !important;
-  }
-
-  .content{
-    padding:12px !important;
-  }
-
-  .cadastro-layout-receita{
-    grid-template-columns:1fr !important;
-  }
-
-  .cadastro-resumo-card{
-    width:100% !important;
-    min-width:0 !important;
-    max-width:100% !important;
+  .main{
+    margin-left: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
   }
 }
 
