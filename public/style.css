@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@300;400;600;700&display=swap');
 *{box-sizing:border-box;font-family:Arial,Helvetica,sans-serif}
 :root{--bg:#070d19;--panel:#111b2d;--panel2:#0a1322;--line:rgba(255,255,255,.09);--muted:#a9b7ce;--blue:#2f83ff;--green:#22c55e;--red:#ef4444;--orange:#f59e0b;--purple:#8b5cf6}
 body{margin:0;background:radial-gradient(circle at 10% 0%,rgba(47,131,255,.16),transparent 34%),var(--bg);color:#fff}
@@ -2052,6 +2053,48 @@ body.login-fixo-page .overlay{
 #tab-contato .cadastro-save-row{
   display:none !important;
 }
+
+/* Ajuste para parecer mais ReceitaNet em tema claro também */
+body:not(.dark) .contato-search-line input,
+.light .contato-search-line input{
+  color:#1f2937 !important;
+}
+
+@media(max-width:900px){
+  .contato-form-grid{
+    grid-template-columns:1fr !important;
+    gap:11px !important;
+  }
+
+  .contato-search-line input{
+    width:100% !important;
+  }
+
+  .cep-row input{
+    flex:1 !important;
+    width:auto !important;
+  }
+
+  .empty-left{
+    display:none !important;
+  }
+
+  .contato-actions-exato{
+    flex-direction:column !important;
+    align-items:stretch !important;
+  }
+
+  .contato-actions-exato button{
+    width:100% !important;
+  }
+
+  #contatoIdentificador{
+    margin-left:0 !important;
+    text-align:right !important;
+  }
+}
+
+
 
 /* ===== Busca automática de CEP ===== */
 .cep-status{
@@ -4398,175 +4441,177 @@ button[onclick*="fiscais"],
 
 
 /* ============================================================
-   SOMENTE FONTE - PADRÃO RECEITANET
-   Não altera layout, posição, cores, botões ou colunas.
+   FONTE RECEITANET EXATA
+   Base do ReceitaNet/AdminLTE:
+   Source Sans Pro / Source Sans 3, 14px, peso 400.
+   NÃO altera layout, cor, posição, botões ou colunas.
 ============================================================ */
 
-/* Fonte geral do cadastro */
-body,
-.cadastro-receita-page,
-.cadastro-receita-page input,
-.cadastro-receita-page select,
-.cadastro-receita-page textarea,
-.cadastro-receita-page button,
-.cadastro-receita-page label,
-.cadastro-receita-page span,
-.cadastro-receita-page div {
-  font-family: Arial, Helvetica, sans-serif !important;
+/* Página do cadastro inteira */
+html body,
+body .cadastro-receita-page,
+body .cadastro-receita-page * {
+  font-family: "Source Sans 3", "Source Sans Pro", "Helvetica Neue", Helvetica, Arial, sans-serif !important;
+  letter-spacing: 0 !important;
+}
+
+/* Texto padrão igual ReceitaNet/AdminLTE */
+body .cadastro-receita-page {
+  font-size: 14px !important;
+  font-weight: 400 !important;
+  line-height: 1.42857143 !important;
+}
+
+/* Campos e textos digitados */
+body .cadastro-receita-page input,
+body .cadastro-receita-page select,
+body .cadastro-receita-page textarea,
+body .cadastro-receita-page .form-control {
+  font-family: "Source Sans 3", "Source Sans Pro", "Helvetica Neue", Helvetica, Arial, sans-serif !important;
+  font-size: 14px !important;
+  font-weight: 400 !important;
+  line-height: 1.42857143 !important;
+}
+
+/* Labels do ReceitaNet */
+body .cadastro-receita-page label,
+body .cadastro-receita-page .form-row label,
+body .cadastro-receita-page .form-group label,
+body .cadastro-receita-page .campo label {
+  font-family: "Source Sans 3", "Source Sans Pro", "Helvetica Neue", Helvetica, Arial, sans-serif !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  line-height: 1.42857143 !important;
 }
 
 /* Abas do cadastro */
-.cadastro-receita-page .cadastro-tabs button,
-.cadastro-receita-page .tab-btn,
-.cadastro-receita-page .tab,
-.cadastro-receita-page button {
-  font-size: 13px !important;
-  font-weight: 700 !important;
-}
-
-/* Labels dos campos iguais ao ReceitaNet: menores e bold */
-.cadastro-receita-page label,
-.cadastro-receita-page .form-label,
-.cadastro-receita-page .campo label,
-.cadastro-receita-page .field label {
+body .cadastro-receita-page .cadastro-tabs .tab,
+body .cadastro-receita-page .nav-tabs a,
+body .cadastro-receita-page .tab,
+body .cadastro-receita-page .tab-btn {
+  font-family: "Source Sans 3", "Source Sans Pro", "Helvetica Neue", Helvetica, Arial, sans-serif !important;
   font-size: 14px !important;
-  font-weight: 700 !important;
-  line-height: 1.15 !important;
+  font-weight: 400 !important;
+  line-height: 1.42857143 !important;
 }
 
-/* Valores/input iguais ao ReceitaNet */
-.cadastro-receita-page input,
-.cadastro-receita-page select,
-.cadastro-receita-page textarea {
-  font-size: 13px !important;
+/* Botões do ReceitaNet */
+body .cadastro-receita-page button,
+body .cadastro-receita-page .btn,
+body .cadastro-receita-page .save-blue,
+body .cadastro-receita-page .save-red,
+body .cadastro-receita-page .cancel-btn,
+body .cadastro-receita-page .input-action button {
+  font-family: "Source Sans 3", "Source Sans Pro", "Helvetica Neue", Helvetica, Arial, sans-serif !important;
+  font-size: 14px !important;
   font-weight: 400 !important;
+  line-height: 1.42857143 !important;
+}
+
+/* Botões quadrados superiores: ReceitaNet usa fonte menor */
+body .cadastro-receita-page .sc,
+body .cadastro-receita-page .btn-app {
+  font-family: "Source Sans 3", "Source Sans Pro", "Helvetica Neue", Helvetica, Arial, sans-serif !important;
+  font-weight: 400 !important;
+  letter-spacing: 0 !important;
+}
+body .cadastro-receita-page .sc span,
+body .cadastro-receita-page .btn-app {
+  font-size: 12px !important;
   line-height: 1.2 !important;
 }
 
-/* Botões de salvar/cancelar */
-.cadastro-receita-page .cadastro-save-row button,
-.cadastro-receita-page .btn,
-.cadastro-receita-page button[type="button"],
-.cadastro-receita-page button[type="submit"] {
-  font-size: 13px !important;
-  font-weight: 700 !important;
+/* Resumo da direita */
+body .cadastro-receita-page .cadastro-resumo-card,
+body .cadastro-receita-page .cadastro-resumo-card *,
+body .cadastro-receita-page .resumo-receitanet-completo,
+body .cadastro-receita-page .resumo-receitanet-completo *,
+body .cadastro-receita-page .rn-cliente-card,
+body .cadastro-receita-page .rn-cliente-card *,
+body .cadastro-receita-page .rn-receitanet-pixel,
+body .cadastro-receita-page .rn-receitanet-pixel * {
+  font-family: "Source Sans 3", "Source Sans Pro", "Helvetica Neue", Helvetica, Arial, sans-serif !important;
+  letter-spacing: 0 !important;
 }
 
-/* Resumo da direita: títulos e campos no padrão ReceitaNet */
-.cadastro-resumo-card,
-.cadastro-resumo-card *,
-.rn-cliente-card,
-.rn-cliente-card *,
-.rn-receitanet-pixel,
-.rn-receitanet-pixel * {
-  font-family: Arial, Helvetica, sans-serif !important;
+/* Título Resumo */
+body .cadastro-receita-page .cadastro-resumo-card .resumo-title h3,
+body .cadastro-receita-page .cadastro-resumo-card h3:first-child,
+body .cadastro-receita-page .rn-head h2,
+body .cadastro-receita-page .rn-px-head h2 {
+  font-size: 24px !important;
+  font-weight: 400 !important;
+  line-height: 1.1 !important;
 }
 
-/* Título "Resumo" */
-.cadastro-resumo-card h2,
-.cadastro-resumo-card h3:first-child,
-.rn-head h2,
-.rn-px-head h2 {
+/* Títulos internos: Servidor, Plano, Estoque, Dados */
+body .cadastro-receita-page .cadastro-resumo-card h4,
+body .cadastro-receita-page .cadastro-resumo-card .resumo-section h4,
+body .cadastro-receita-page .cadastro-resumo-card .rn-title,
+body .cadastro-receita-page .cadastro-resumo-card .rn-px-title,
+body .cadastro-receita-page .cadastro-resumo-card .rn-px-sub,
+body .cadastro-receita-page .cadastro-resumo-card .rn-oltnet,
+body .cadastro-receita-page .cadastro-resumo-card .rn-px-oltnet {
   font-size: 22px !important;
-  font-weight: 500 !important;
-  line-height: 1.05 !important;
-}
-
-/* Títulos "Servidor", "Plano de Cobrança", "Estoque", "Dados de Contato" */
-.cadastro-resumo-card .rn-title,
-.cadastro-resumo-card .rn-px-title,
-.cadastro-resumo-card .rn-px-sub,
-.cadastro-resumo-card .rn-oltnet,
-.cadastro-resumo-card h3,
-.rn-cliente-card .rn-title,
-.rn-cliente-card h3,
-.rn-cliente-card .rn-oltnet,
-.rn-receitanet-pixel .rn-px-title,
-.rn-receitanet-pixel .rn-px-sub,
-.rn-receitanet-pixel .rn-px-oltnet {
-  font-size: 20px !important;
   font-weight: 400 !important;
-  line-height: 1.08 !important;
+  line-height: 1.1 !important;
 }
 
-/* Labels do resumo */
-.cadastro-resumo-card b,
-.cadastro-resumo-card strong,
-.cadastro-resumo-card .rn-field b,
-.cadastro-resumo-card .rn-px-field b,
-.cadastro-resumo-card .rn-status b,
-.cadastro-resumo-card .rn-px-status b,
-.cadastro-resumo-card .rn-contato b,
-.cadastro-resumo-card .rn-px-contact b,
-.cadastro-resumo-card th,
-.rn-cliente-card .rn-field b,
-.rn-cliente-card .rn-status b,
-.rn-cliente-card .rn-contato b,
-.rn-cliente-card .rn-table th,
-.rn-receitanet-pixel .rn-px-field b,
-.rn-receitanet-pixel .rn-px-status b,
-.rn-receitanet-pixel .rn-px-contact b,
-.rn-receitanet-pixel .rn-px-table th {
-  font-size: 13px !important;
+/* Labels no resumo */
+body .cadastro-receita-page .cadastro-resumo-card b,
+body .cadastro-receita-page .cadastro-resumo-card strong,
+body .cadastro-receita-page .cadastro-resumo-card th,
+body .cadastro-receita-page .cadastro-resumo-card .resumo-grid b,
+body .cadastro-receita-page .cadastro-resumo-card .rn-field b,
+body .cadastro-receita-page .cadastro-resumo-card .rn-px-field b,
+body .cadastro-receita-page .cadastro-resumo-card .rn-status b,
+body .cadastro-receita-page .cadastro-resumo-card .rn-px-status b,
+body .cadastro-receita-page .cadastro-resumo-card .rn-contato b,
+body .cadastro-receita-page .cadastro-resumo-card .rn-px-contact b {
+  font-size: 14px !important;
   font-weight: 700 !important;
-  line-height: 1.08 !important;
+  line-height: 1.25 !important;
+  text-transform: none !important;
 }
 
-/* Valores do resumo */
-.cadastro-resumo-card span,
-.cadastro-resumo-card p,
-.cadastro-resumo-card td,
-.cadastro-resumo-card .rn-field span,
-.cadastro-resumo-card .rn-px-field span,
-.cadastro-resumo-card .rn-status,
-.cadastro-resumo-card .rn-px-status,
-.cadastro-resumo-card .rn-status p,
-.cadastro-resumo-card .rn-px-status p,
-.cadastro-resumo-card .rn-contato span,
-.cadastro-resumo-card .rn-px-contact span,
-.cadastro-resumo-card .rn-total,
-.cadastro-resumo-card .rn-px-total,
-.rn-cliente-card .rn-field span,
-.rn-cliente-card .rn-status,
-.rn-cliente-card .rn-status p,
-.rn-cliente-card .rn-table td,
-.rn-cliente-card .rn-contato span,
-.rn-cliente-card .rn-total,
-.rn-receitanet-pixel .rn-px-field span,
-.rn-receitanet-pixel .rn-px-status,
-.rn-receitanet-pixel .rn-px-status p,
-.rn-receitanet-pixel .rn-px-table td,
-.rn-receitanet-pixel .rn-px-contact span,
-.rn-receitanet-pixel .rn-px-total {
-  font-size: 13px !important;
+/* Valores no resumo */
+body .cadastro-receita-page .cadastro-resumo-card span,
+body .cadastro-receita-page .cadastro-resumo-card p,
+body .cadastro-receita-page .cadastro-resumo-card td,
+body .cadastro-receita-page .cadastro-resumo-card .resumo-grid span,
+body .cadastro-receita-page .cadastro-resumo-card .rn-field span,
+body .cadastro-receita-page .cadastro-resumo-card .rn-px-field span,
+body .cadastro-receita-page .cadastro-resumo-card .rn-status,
+body .cadastro-receita-page .cadastro-resumo-card .rn-px-status,
+body .cadastro-receita-page .cadastro-resumo-card .rn-status p,
+body .cadastro-receita-page .cadastro-resumo-card .rn-px-status p,
+body .cadastro-receita-page .cadastro-resumo-card .rn-contato span,
+body .cadastro-receita-page .cadastro-resumo-card .rn-px-contact span,
+body .cadastro-receita-page .cadastro-resumo-card .mini-table,
+body .cadastro-receita-page .cadastro-resumo-card .mini-table td,
+body .cadastro-receita-page .cadastro-resumo-card .mini-total {
+  font-size: 14px !important;
   font-weight: 400 !important;
-  line-height: 1.12 !important;
+  line-height: 1.25 !important;
 }
 
-/* Status/badges pequenos como ReceitaNet */
-.cadastro-resumo-card .rn-ident,
-.cadastro-resumo-card .rn-px-ident,
-.cadastro-resumo-card .rn-pai,
-.cadastro-resumo-card .rn-px-pai {
+/* Badges menores como no ReceitaNet */
+body .cadastro-receita-page .cadastro-resumo-card .nao-identificado,
+body .cadastro-receita-page .cadastro-resumo-card .rn-ident,
+body .cadastro-receita-page .cadastro-resumo-card .rn-px-ident,
+body .cadastro-receita-page .cadastro-resumo-card .rn-pai,
+body .cadastro-receita-page .cadastro-resumo-card .rn-px-pai,
+body .cadastro-receita-page .beta {
   font-size: 11px !important;
   font-weight: 700 !important;
   line-height: 1 !important;
 }
 
-/* Botões dentro do resumo */
-.cadastro-resumo-card button,
-.rn-cliente-card button,
-.rn-receitanet-pixel button {
-  font-size: 12px !important;
-  font-weight: 600 !important;
-}
-
-/* Ícone ? */
-.cadastro-resumo-card .rn-head button,
-.cadastro-resumo-card .rn-px-help,
-.rn-cliente-card .rn-head button,
-.rn-receitanet-pixel .rn-px-help {
-  font-size: 16px !important;
-  font-weight: 700 !important;
+/* Search da aba */
+body .cadastro-receita-page .tab-search,
+body .cadastro-receita-page #cliente-search {
+  font-family: "Source Sans 3", "Source Sans Pro", "Helvetica Neue", Helvetica, Arial, sans-serif !important;
+  font-size: 14px !important;
+  font-weight: 400 !important;
 }
 
