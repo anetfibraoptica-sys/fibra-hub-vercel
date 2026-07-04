@@ -68,10 +68,10 @@
         <button data-tab="contato" class="tab" onclick="abrirTabCadastro('contato')">Contato</button>
         <button data-tab="cobranca" class="tab" onclick="abrirTabCadastro('cobranca')">Cobrança</button>
         <button data-tab="servidor" class="tab" onclick="abrirTabCadastro('servidor')">Servidor</button>
-        <button data-tab="olt" class="tab" onclick="abrirTabCadastro('olt')">OLT <span class="beta">Beta</span></button>
-        <button data-tab="oltnet" class="tab" onclick="abrirTabCadastro('oltnet')">OLTNET</button>
-        <button data-tab="admin" class="tab" onclick="abrirTabCadastro('admin')">Administrativo</button>
-        <button data-tab="nfe" class="tab" onclick="abrirTabCadastro('nfe')">Dados Notas Fiscais</button>
+        
+        
+        
+        
         <input id="cadBuscaCliente" class="tab-search" placeholder="Digite o Nome/Login..." oninput="buscarClienteCadastro()">
       </div>
 
@@ -402,12 +402,7 @@
         </div>
       </div>
 
-<div id="tab-olt" class="tab-content"><p class="empty-tab">Dados OLT serão configurados depois.</p></div>
-      <div id="tab-oltnet" class="tab-content"><p class="empty-tab">OLTNET não identificado.</p></div>
-      <div id="tab-admin" class="tab-content"><div class="form-row"><label>Observação Administrativa</label><textarea id="cadObsAdmin"></textarea></div></div>
-      <div id="tab-nfe" class="tab-content"><div class="form-row"><label>CFOP</label><input id="cadCfop"></div></div>
-
-      <div class="cadastro-save-row">
+<div class="cadastro-save-row">
         <button class="save-blue" onclick="salvarCadastroCliente(false)">Gravar no Fibra+ Hub</button>
         <button class="save-red" onclick="salvarCadastroCliente(true)">Gravar no Fibra+ Hub + Servidor</button>
         <button class="cancel-btn" onclick="limparCadastroCliente()">Cancelar</button>
