@@ -1062,4 +1062,47 @@ document.addEventListener("DOMContentLoaded", function(){
 })();
 </script>
 
+
+<script>
+/* FIX preencher resumo cadastro seguro */
+(function(){
+  function getCliente(){
+    const chaves = ["clienteSelecionadoCompleto","clienteCadastroSelecionado","clienteEditar"];
+    for(const k of chaves){
+      try{
+        const raw = localStorage.getItem(k);
+        if(raw) return JSON.parse(raw);
+      }catch(e){}
+    }
+    return {};
+  }
+  function campo(c, arr){
+    for(const k of arr){
+      if(c && c[k] !== undefined && c[k] !== null && String(c[k]).trim() !== "") return String(c[k]).trim();
+    }
+    return "";
+  }
+  function set(id, valor){
+    const el = document.getElementById(id);
+    if(el) el.textContent = valor || "--";
+  }
+  function preencher(){
+    const c = getCliente();
+    const login = campo(c, ["loginPppoe","login","usuario","user","name","pppoe"]);
+    set("resLogin2", login);
+    set("resLogin", login);
+    set("resNome", campo(c, ["nome","cliente","razaoSocial","name"]));
+    set("resCpf", campo(c, ["cpfCnpj","cpf","cnpj","documento"]));
+    set("resServidor", campo(c, ["popServidor","servidor","servidorReceita"]));
+    set("resIp", campo(c, ["ip","address"]));
+    set("resProfile", campo(c, ["profile","plano"]));
+    set("resInterface", campo(c, ["service","interface"]) || "pppoe");
+  }
+  window.addEventListener("DOMContentLoaded", function(){
+    setTimeout(preencher, 300);
+    setTimeout(preencher, 1000);
+  });
+})();
+</script>
+
 </body></html>

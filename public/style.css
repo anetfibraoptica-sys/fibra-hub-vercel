@@ -4362,13 +4362,57 @@ tbody tr:hover {
   .main, main.main { margin-left:0 !important; width:100% !important; }
 }
 
-/* Correção do resumo do cadastro */
+
+/* FIX: Dashboard e Resumo visíveis */
+body {
+  min-height: 100vh;
+}
+
+main,
+.main-content,
+.content,
+.container,
+.dashboard,
+.dashboard-page,
+.page-content {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+.panel,
+.card,
+.widget,
+.dashboard-card,
+.menu-card {
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
 .resumo,
 .resumo-grid,
+.resumo-card,
 #resumo,
 #resumoCadastro,
-.cadastro-resumo{
-    display:block !important;
-    visibility:visible !important;
-    opacity:1 !important;
+#abaResumo,
+#cadastroResumo,
+.cadastro-resumo,
+.summary,
+.summary-card {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
 }
+
+@media (max-width: 768px) {
+  main,
+  .main-content,
+  .content,
+  .container {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    padding-top: 16px;
+  }
+}
+

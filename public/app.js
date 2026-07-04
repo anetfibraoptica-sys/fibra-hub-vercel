@@ -2719,3 +2719,73 @@ document.addEventListener("DOMContentLoaded", function(){
     if(ov){ window.fecharMenu(); }
   }, true);
 })();
+
+
+/* FIX seguro: botão azul abre menu lateral sem esconder páginas */
+function fibraSidebar(){
+  return document.querySelector(".sidebar") ||
+         document.querySelector("aside.sidebar") ||
+         document.querySelector("nav.sidebar") ||
+         document.querySelector(".menu-lateral");
+}
+
+function abrirMenuLateral(){
+  const sidebar = fibraSidebar();
+  if(sidebar){
+    sidebar.classList.add("open");
+    sidebar.classList.add("mobile-open");
+    sidebar.classList.add("sidebar-aberta");
+    sidebar.style.display = "block";
+    sidebar.style.visibility = "visible";
+    sidebar.style.opacity = "1";
+    if(window.innerWidth <= 768){
+      sidebar.style.left = "0";
+      sidebar.style.transform = "translateX(0)";
+    }
+  }
+  const overlay = document.querySelector(".sidebar-overlay");
+  if(overlay){
+    overlay.classList.add("show");
+    overlay.style.display = "block";
+  }
+}
+
+function fecharMenuLateral(){
+  const sidebar = fibraSidebar();
+  if(sidebar){
+    sidebar.classList.remove("open");
+    sidebar.classList.remove("mobile-open");
+    sidebar.classList.remove("sidebar-aberta");
+    if(window.innerWidth <= 768){
+      sidebar.style.left = "-290px";
+      sidebar.style.transform = "translateX(-100%)";
+    }
+  }
+  const overlay = document.querySelector(".sidebar-overlay");
+  if(overlay){
+    overlay.classList.remove("show");
+    overlay.style.display = "none";
+  }
+}
+
+function abrirMenu(){
+  abrirMenuLateral();
+}
+
+document.addEventListener("DOMContentLoaded", function(){
+  // Garante que nada fique oculto por erro de script anterior.
+  document.querySelectorAll("main,.main-content,.content,.container").forEach(function(el){
+    el.style.visibility = "visible";
+    el.style.opacity = "1";
+  });
+
+  document.querySelectorAll(".menu-btn,#menuBtn,.hamburger,.btn-menu").forEach(function(btn){
+    btn.onclick = function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      abrirMenuLateral();
+      return false;
+    };
+  });
+});
+
