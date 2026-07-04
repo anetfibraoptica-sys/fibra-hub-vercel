@@ -4987,25 +4987,269 @@ main,
 
 
 
-/* Ajuste final do resumo estilo ReceitaNet */
-.cadastro-resumo-card.resumo-receitanet-completo{
-    max-width:720px!important;
-    width:100%!important;
-    border-top:4px solid #b91c1c!important;
-    border-radius:4px!important;
-    overflow-y:auto!important;
-    height:820px!important;
-    background:#111827!important;
+/* RESUMO IDENTICO RECEITANET - HTML REAL SUBSTITUIDO */
+.resumo-receitanet-identico {
+  background: #111827 !important;
+  color: #e5e7eb !important;
+  border: 1px solid rgba(148,163,184,.35) !important;
+  border-top: 4px solid #b91c1c !important;
+  border-radius: 5px !important;
+  max-width: 720px !important;
+  width: 100% !important;
+  height: 820px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding: 18px 22px 24px 22px !important;
+  margin: 0 auto 22px auto !important;
+  box-shadow: 0 16px 35px rgba(0,0,0,.22) !important;
 }
-.resumo-title h3{font-size:28px!important;font-weight:500!important;}
-.resumo-top-grid b,
-.resumo-servidor-grid b,
-.resumo-status-grid b{
-    font-size:18px!important;
-    font-weight:800!important;
+
+.resumo-receitanet-identico::-webkit-scrollbar { width: 14px; }
+.resumo-receitanet-identico::-webkit-scrollbar-track { background: #cbd5e1; }
+.resumo-receitanet-identico::-webkit-scrollbar-thumb { background: #475569; border-radius: 9px; }
+
+.rn-head-real {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 22px;
 }
-.resumo-top-grid span,
-.resumo-servidor-grid span,
-.resumo-status-grid span{
-    font-size:18px!important;
+
+.rn-head-real h3 {
+  margin: 0 !important;
+  font-size: 28px !important;
+  line-height: 1 !important;
+  font-weight: 500 !important;
+  color: #f9fafb !important;
+}
+
+.rn-help-real {
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 4px !important;
+  background: #1f2937 !important;
+  border: 2px solid #475569 !important;
+  color: #93c5fd !important;
+  font-size: 22px !important;
+  font-weight: 900 !important;
+}
+
+.rn-duas-colunas {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  column-gap: 44px !important;
+}
+
+.rn-campo {
+  margin: 0 0 10px 0 !important;
+}
+
+.rn-campo strong {
+  display: block !important;
+  color: #f3f4f6 !important;
+  font-size: 18px !important;
+  line-height: 1.08 !important;
+  font-weight: 800 !important;
+}
+
+.rn-campo span {
+  display: block !important;
+  color: #e5e7eb !important;
+  font-size: 18px !important;
+  line-height: 1.2 !important;
+  margin-top: 2px !important;
+  word-break: break-word !important;
+}
+
+.rn-campo i {
+  color: #3b82f6 !important;
+  font-style: normal !important;
+  font-size: 20px !important;
+  font-weight: 900 !important;
+  margin-right: 8px !important;
+}
+
+.rn-espaco {
+  height: 82px !important;
+}
+
+.rn-titulo-secao {
+  margin: 14px 0 18px 0 !important;
+  font-size: 30px !important;
+  font-weight: 400 !important;
+  color: #e5e7eb !important;
+}
+
+.rn-oltnet {
+  color: #e5e7eb !important;
+  font-size: 30px !important;
+  margin: 13px 0 8px 0 !important;
+}
+
+.rn-identificado {
+  display: inline-block !important;
+  background: #a83a49 !important;
+  color: white !important;
+  padding: 6px 10px !important;
+  border-radius: 3px !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+}
+
+.rn-identificado.ok {
+  background: #16a34a !important;
+}
+
+.rn-linha {
+  border: 0 !important;
+  border-top: 2px solid rgba(148,163,184,.45) !important;
+  margin: 22px 0 20px 0 !important;
+}
+
+.rn-status-grid {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  column-gap: 44px !important;
+  font-size: 18px !important;
+  line-height: 1.35 !important;
+}
+
+.rn-status-grid p {
+  margin: 0 0 4px 0 !important;
+}
+
+.rn-status-grid strong {
+  font-weight: 800 !important;
+  color: #f3f4f6 !important;
+}
+
+#resStatusBolinha {
+  font-weight: 900 !important;
+}
+
+.rn-botoes {
+  display: grid !important;
+  gap: 12px !important;
+  margin: 18px 0 20px 0 !important;
+}
+
+.rn-botoes button {
+  height: 48px !important;
+  width: 100% !important;
+  border: 0 !important;
+  border-radius: 2px !important;
+  color: white !important;
+  font-size: 17px !important;
+  font-weight: 600 !important;
+}
+
+.rn-btn-remoto { background: #17286d !important; }
+.rn-btn-interno { background: #1e3a8a !important; display: flex !important; align-items: center !important; justify-content: center !important; gap: 110px !important; }
+.rn-btn-diagnostico { background: #166534 !important; }
+.rn-btn-monitoramento { background: #b94f38 !important; }
+
+.rn-subtitulo {
+  margin: 0 0 16px 0 !important;
+  font-size: 28px !important;
+  font-weight: 400 !important;
+  color: #e5e7eb !important;
+}
+
+.rn-tabela {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  color: #e5e7eb !important;
+  font-size: 17px !important;
+}
+
+.rn-tabela th {
+  padding: 8px 10px 14px 10px !important;
+  text-align: left !important;
+  color: #f3f4f6 !important;
+  font-weight: 800 !important;
+}
+
+.rn-tabela td {
+  padding: 12px 10px !important;
+}
+
+.rn-tabela tbody tr {
+  background: rgba(148,163,184,.10) !important;
+}
+
+.rn-total {
+  text-align: right !important;
+  margin: 12px 8px 12px 0 !important;
+  font-size: 18px !important;
+  font-weight: 700 !important;
+  color: #e5e7eb !important;
+}
+
+.rn-contato-grid {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  column-gap: 46px !important;
+  font-size: 18px !important;
+}
+
+.rn-contato-grid strong {
+  display: block !important;
+  color: #f3f4f6 !important;
+  font-size: 18px !important;
+  font-weight: 800 !important;
+  margin-top: 8px !important;
+}
+
+.rn-contato-grid span {
+  display: block !important;
+  color: #e5e7eb !important;
+  line-height: 1.14 !important;
+}
+
+.rn-pai-controle {
+  display: inline-block !important;
+  background: #22c1c3 !important;
+  color: white !important;
+  padding: 8px 16px !important;
+  border-radius: 5px !important;
+  font-size: 17px !important;
+  font-weight: 700 !important;
+}
+
+@media(max-width: 768px) {
+  .resumo-receitanet-identico {
+    height: 72vh !important;
+    padding: 14px !important;
+  }
+
+  .rn-duas-colunas,
+  .rn-status-grid,
+  .rn-contato-grid {
+    grid-template-columns: 1fr 1fr !important;
+    column-gap: 20px !important;
+  }
+
+  .rn-campo strong,
+  .rn-campo span,
+  .rn-status-grid,
+  .rn-tabela,
+  .rn-contato-grid,
+  .rn-contato-grid strong {
+    font-size: 15px !important;
+  }
+
+  .rn-head-real h3,
+  .rn-titulo-secao,
+  .rn-subtitulo,
+  .rn-oltnet {
+    font-size: 24px !important;
+  }
+
+  .rn-botoes button {
+    font-size: 14px !important;
+  }
+
+  .rn-btn-interno {
+    gap: 25px !important;
+  }
 }
