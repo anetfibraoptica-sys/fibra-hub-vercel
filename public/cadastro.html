@@ -5,9 +5,9 @@
   <title>Cadastro de Cliente - Fibra+ Hub</title><link rel="stylesheet" href="style.css">
 </head>
 <body onload="protegerPagina(); iniciarSocket(); carregarCadastroClienteHub();">
-<button id="mobileMenuBtn" class="mobile-menu-btn" type="button" onclick="toggleMobileMenu()">☰ Menu</button>
+<button id="mobileMenuBtn" class="mobile-menu-btn" type="button" onclick="toggleMobileMenu()" onclick="window.location.href=\'controle.html\'">☰ Menu</button>
 <div id="mobileMenuOverlay" class="mobile-menu-overlay" onclick="closeMobileMenu()"></div>
-<div class="mobile-top"><button class="menu-btn" onclick="abrirMenu()">☰</button><div><div class="logo-wrap"><div class="brand"><span class="fibra">Fibra</span><span class="brand-dot"></span><span class="plus">+</span></div><div class="slogan">HUB DE CONTROLE</div></div></div></div>
+<div class="mobile-top"><button class="menu-btn" onclick="window.location.href='controle.html'" onclick="window.location.href=\'controle.html\'">☰</button><div><div class="logo-wrap"><div class="brand"><span class="fibra">Fibra</span><span class="brand-dot"></span><span class="plus">+</span></div><div class="slogan">HUB DE CONTROLE</div></div></div></div>
 
 <div class="layout"><div class="overlay" onclick="fecharMenu()"></div>
 <aside class="sidebar"><div class="logo-wrap"><div class="brand"><span class="fibra">Fibra</span><span class="brand-dot"></span><span class="plus">+</span></div><div class="slogan">HUB DE CONTROLE</div></div>
