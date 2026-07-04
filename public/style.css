@@ -4361,3 +4361,14 @@ tbody tr:hover {
   body.menu-open .overlay, .overlay.show, .overlay.active, .sidebar-overlay.show { display:block !important; }
   .main, main.main { margin-left:0 !important; width:100% !important; }
 }
+
+/* Correção do resumo do cadastro */
+.resumo,
+.resumo-grid,
+#resumo,
+#resumoCadastro,
+.cadastro-resumo{
+    display:block !important;
+    visibility:visible !important;
+    opacity:1 !important;
+}
