@@ -2053,48 +2053,6 @@ body.login-fixo-page .overlay{
   display:none !important;
 }
 
-/* Ajuste para parecer mais ReceitaNet em tema claro também */
-body:not(.dark) .contato-search-line input,
-.light .contato-search-line input{
-  color:#1f2937 !important;
-}
-
-@media(max-width:900px){
-  .contato-form-grid{
-    grid-template-columns:1fr !important;
-    gap:11px !important;
-  }
-
-  .contato-search-line input{
-    width:100% !important;
-  }
-
-  .cep-row input{
-    flex:1 !important;
-    width:auto !important;
-  }
-
-  .empty-left{
-    display:none !important;
-  }
-
-  .contato-actions-exato{
-    flex-direction:column !important;
-    align-items:stretch !important;
-  }
-
-  .contato-actions-exato button{
-    width:100% !important;
-  }
-
-  #contatoIdentificador{
-    margin-left:0 !important;
-    text-align:right !important;
-  }
-}
-
-
-
 /* ===== Busca automática de CEP ===== */
 .cep-status{
   display:block;
@@ -4435,5 +4393,180 @@ button[onclick*="fiscais"],
 #tab-fiscais,
 #tab-nfe {
   display: none !important;
+}
+
+
+
+/* ============================================================
+   SOMENTE FONTE - PADRÃO RECEITANET
+   Não altera layout, posição, cores, botões ou colunas.
+============================================================ */
+
+/* Fonte geral do cadastro */
+body,
+.cadastro-receita-page,
+.cadastro-receita-page input,
+.cadastro-receita-page select,
+.cadastro-receita-page textarea,
+.cadastro-receita-page button,
+.cadastro-receita-page label,
+.cadastro-receita-page span,
+.cadastro-receita-page div {
+  font-family: Arial, Helvetica, sans-serif !important;
+}
+
+/* Abas do cadastro */
+.cadastro-receita-page .cadastro-tabs button,
+.cadastro-receita-page .tab-btn,
+.cadastro-receita-page .tab,
+.cadastro-receita-page button {
+  font-size: 13px !important;
+  font-weight: 700 !important;
+}
+
+/* Labels dos campos iguais ao ReceitaNet: menores e bold */
+.cadastro-receita-page label,
+.cadastro-receita-page .form-label,
+.cadastro-receita-page .campo label,
+.cadastro-receita-page .field label {
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  line-height: 1.15 !important;
+}
+
+/* Valores/input iguais ao ReceitaNet */
+.cadastro-receita-page input,
+.cadastro-receita-page select,
+.cadastro-receita-page textarea {
+  font-size: 13px !important;
+  font-weight: 400 !important;
+  line-height: 1.2 !important;
+}
+
+/* Botões de salvar/cancelar */
+.cadastro-receita-page .cadastro-save-row button,
+.cadastro-receita-page .btn,
+.cadastro-receita-page button[type="button"],
+.cadastro-receita-page button[type="submit"] {
+  font-size: 13px !important;
+  font-weight: 700 !important;
+}
+
+/* Resumo da direita: títulos e campos no padrão ReceitaNet */
+.cadastro-resumo-card,
+.cadastro-resumo-card *,
+.rn-cliente-card,
+.rn-cliente-card *,
+.rn-receitanet-pixel,
+.rn-receitanet-pixel * {
+  font-family: Arial, Helvetica, sans-serif !important;
+}
+
+/* Título "Resumo" */
+.cadastro-resumo-card h2,
+.cadastro-resumo-card h3:first-child,
+.rn-head h2,
+.rn-px-head h2 {
+  font-size: 22px !important;
+  font-weight: 500 !important;
+  line-height: 1.05 !important;
+}
+
+/* Títulos "Servidor", "Plano de Cobrança", "Estoque", "Dados de Contato" */
+.cadastro-resumo-card .rn-title,
+.cadastro-resumo-card .rn-px-title,
+.cadastro-resumo-card .rn-px-sub,
+.cadastro-resumo-card .rn-oltnet,
+.cadastro-resumo-card h3,
+.rn-cliente-card .rn-title,
+.rn-cliente-card h3,
+.rn-cliente-card .rn-oltnet,
+.rn-receitanet-pixel .rn-px-title,
+.rn-receitanet-pixel .rn-px-sub,
+.rn-receitanet-pixel .rn-px-oltnet {
+  font-size: 20px !important;
+  font-weight: 400 !important;
+  line-height: 1.08 !important;
+}
+
+/* Labels do resumo */
+.cadastro-resumo-card b,
+.cadastro-resumo-card strong,
+.cadastro-resumo-card .rn-field b,
+.cadastro-resumo-card .rn-px-field b,
+.cadastro-resumo-card .rn-status b,
+.cadastro-resumo-card .rn-px-status b,
+.cadastro-resumo-card .rn-contato b,
+.cadastro-resumo-card .rn-px-contact b,
+.cadastro-resumo-card th,
+.rn-cliente-card .rn-field b,
+.rn-cliente-card .rn-status b,
+.rn-cliente-card .rn-contato b,
+.rn-cliente-card .rn-table th,
+.rn-receitanet-pixel .rn-px-field b,
+.rn-receitanet-pixel .rn-px-status b,
+.rn-receitanet-pixel .rn-px-contact b,
+.rn-receitanet-pixel .rn-px-table th {
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  line-height: 1.08 !important;
+}
+
+/* Valores do resumo */
+.cadastro-resumo-card span,
+.cadastro-resumo-card p,
+.cadastro-resumo-card td,
+.cadastro-resumo-card .rn-field span,
+.cadastro-resumo-card .rn-px-field span,
+.cadastro-resumo-card .rn-status,
+.cadastro-resumo-card .rn-px-status,
+.cadastro-resumo-card .rn-status p,
+.cadastro-resumo-card .rn-px-status p,
+.cadastro-resumo-card .rn-contato span,
+.cadastro-resumo-card .rn-px-contact span,
+.cadastro-resumo-card .rn-total,
+.cadastro-resumo-card .rn-px-total,
+.rn-cliente-card .rn-field span,
+.rn-cliente-card .rn-status,
+.rn-cliente-card .rn-status p,
+.rn-cliente-card .rn-table td,
+.rn-cliente-card .rn-contato span,
+.rn-cliente-card .rn-total,
+.rn-receitanet-pixel .rn-px-field span,
+.rn-receitanet-pixel .rn-px-status,
+.rn-receitanet-pixel .rn-px-status p,
+.rn-receitanet-pixel .rn-px-table td,
+.rn-receitanet-pixel .rn-px-contact span,
+.rn-receitanet-pixel .rn-px-total {
+  font-size: 13px !important;
+  font-weight: 400 !important;
+  line-height: 1.12 !important;
+}
+
+/* Status/badges pequenos como ReceitaNet */
+.cadastro-resumo-card .rn-ident,
+.cadastro-resumo-card .rn-px-ident,
+.cadastro-resumo-card .rn-pai,
+.cadastro-resumo-card .rn-px-pai {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
+}
+
+/* Botões dentro do resumo */
+.cadastro-resumo-card button,
+.rn-cliente-card button,
+.rn-receitanet-pixel button {
+  font-size: 12px !important;
+  font-weight: 600 !important;
+}
+
+/* Ícone ? */
+.cadastro-resumo-card .rn-head button,
+.cadastro-resumo-card .rn-px-help,
+.rn-cliente-card .rn-head button,
+.rn-receitanet-pixel .rn-px-help {
+  font-size: 16px !important;
+  font-weight: 700 !important;
 }
 
