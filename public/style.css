@@ -5903,3 +5903,41 @@ main .content.cadastro-com-resumo-lateral #resumoCadastro,
   }
 }
 
+
+
+/* ===== CORREÇÃO REAL DO LAYOUT DO CADASTRO ===== */
+.cadastro-receita-page{
+    display:flex !important;
+    align-items:flex-start !important;
+    gap:20px !important;
+    flex-wrap:nowrap !important;
+}
+
+.cadastro-receita-page > .cadastro-form,
+.cadastro-receita-page > section:first-of-type{
+    flex:1 1 auto !important;
+    min-width:0 !important;
+}
+
+.cadastro-resumo-card{
+    position:sticky !important;
+    top:10px !important;
+    width:430px !important;
+    min-width:430px !important;
+    max-width:430px !important;
+    margin-top:0 !important;
+    align-self:flex-start !important;
+}
+
+@media(max-width:900px){
+  .cadastro-receita-page{
+      flex-direction:column !important;
+  }
+
+  .cadastro-resumo-card{
+      width:100% !important;
+      min-width:100% !important;
+      max-width:100% !important;
+      position:relative !important;
+  }
+}
