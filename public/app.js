@@ -2789,3 +2789,170 @@ document.addEventListener("DOMContentLoaded", function(){
   });
 });
 
+
+
+/* ============================================================
+   BOTÕES COBRANÇA: Liberação por Confiança + Bloqueio
+============================================================ */
+function fibraClienteAtualCobranca(){
+  const chaves = ["clienteSelecionadoCompleto","clienteCadastroSelecionado","clienteEditar","clienteOnlineSelecionado"];
+  for(const chave of chaves){
+    try{
+      const raw = localStorage.getItem(chave);
+      if(raw){
+        const obj = JSON.parse(raw);
+        if(obj && Object.keys(obj).length) return obj;
+      }
+    }catch(e){}
+  }
+
+  const login =
+    document.getElementById("cadLogin")?.value ||
+    document.getElementById("login")?.value ||
+    document.getElementById("resLogin")?.textContent ||
+    localStorage.getItem("clienteEditarLogin") ||
+    "";
+
+  return { login: String(login).trim() };
+}
+
+function fibraLoginClienteAtual(){
+  const c = fibraClienteAtualCobranca();
+  return (
+    c.loginPppoe ||
+    c.login ||
+    c.usuario ||
+    c.user ||
+    c.name ||
+    c.pppoe ||
+    document.getElementById("cadLogin")?.value ||
+    document.getElementById("login")?.value ||
+    localStorage.getItem("clienteEditarLogin") ||
+    ""
+  ).toString().trim();
+}
+
+function fibraToast(msg, tipo){
+  let box = document.getElementById("fibraToast");
+  if(!box){
+    box = document.createElement("div");
+    box.id = "fibraToast";
+    document.body.appendChild(box);
+  }
+  box.textContent = msg;
+  box.className = "fibra-toast " + (tipo || "info");
+  box.style.display = "block";
+  setTimeout(()=>{ box.style.display = "none"; }, 3500);
+}
+
+function fibraSalvarStatusCobranca(status){
+  const login = fibraLoginClienteAtual();
+  if(!login){
+    fibraToast("Cliente sem login selecionado.", "erro");
+    return null;
+  }
+
+  let clientes = [];
+  try{ clientes = JSON.parse(localStorage.getItem("clientesImportados") || "[]"); }catch(e){}
+  if(!Array.isArray(clientes)) clientes = [];
+
+  const idx = clientes.findIndex(c => String(c.login || c.usuario || c.name || c.loginPppoe || c.pppoe || "").toLowerCase().trim() === login.toLowerCase());
+
+  const agora = new Date().toLocaleString("pt-BR");
+  const dadosStatus = {
+    statusCobranca: status,
+    cobrancaStatus: status,
+    atualizadoEm: agora
+  };
+
+  if(idx >= 0){
+    clientes[idx] = { ...clientes[idx], ...dadosStatus };
+    localStorage.setItem("clientesImportados", JSON.stringify(clientes));
+    localStorage.setItem("clienteSelecionadoCompleto", JSON.stringify(clientes[idx]));
+  }else{
+    const c = { ...fibraClienteAtualCobranca(), login, ...dadosStatus };
+    clientes.push(c);
+    localStorage.setItem("clientesImportados", JSON.stringify(clientes));
+    localStorage.setItem("clienteSelecionadoCompleto", JSON.stringify(c));
+  }
+
+  return { login, atualizadoEm: agora };
+}
+
+async function fibraAplicarAddressList(login, lista){
+  // Tenta aplicar no backend se existir endpoint. Se não existir, salva localmente sem quebrar.
+  try{
+    const resp = await fetch("/api/mikrotik/address-list", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ login, lista })
+    });
+    if(resp.ok) return true;
+  }catch(e){}
+  return false;
+}
+
+async function liberacaoPorConfiancaCliente(){
+  const login = fibraLoginClienteAtual();
+  if(!login){
+    fibraToast("Selecione um cliente antes de liberar por confiança.", "erro");
+    return;
+  }
+
+  const ok = confirm("Liberar por confiança o cliente " + login + "?");
+  if(!ok) return;
+
+  const salvo = fibraSalvarStatusCobranca("liberado_confianca");
+  await fibraAplicarAddressList(login, "liberado_confianca");
+
+  fibraAtualizarVisualCobranca("liberado_confianca");
+  fibraToast("Cliente liberado por confiança: " + login, "ok");
+}
+
+async function bloquearClienteCobranca(){
+  const login = fibraLoginClienteAtual();
+  if(!login){
+    fibraToast("Selecione um cliente antes de bloquear.", "erro");
+    return;
+  }
+
+  const ok = confirm("Bloquear cliente " + login + "?");
+  if(!ok) return;
+
+  const salvo = fibraSalvarStatusCobranca("bloqueado");
+  await fibraAplicarAddressList(login, "bloqueado");
+
+  fibraAtualizarVisualCobranca("bloqueado");
+  fibraToast("Cliente bloqueado: " + login, "erro");
+}
+
+function fibraAtualizarVisualCobranca(status){
+  let badge = document.getElementById("badgeStatusCobranca");
+  if(!badge){
+    badge = document.createElement("span");
+    badge.id = "badgeStatusCobranca";
+    badge.className = "badge-status-cobranca";
+    const alvo = document.querySelector(".cobranca-acoes-extra") || document.querySelector("#tab-cobranca") || document.body;
+    alvo.prepend(badge);
+  }
+
+  if(status === "liberado_confianca"){
+    badge.textContent = "Liberação por Confiança";
+    badge.className = "badge-status-cobranca liberado";
+  }else if(status === "bloqueado"){
+    badge.textContent = "Bloqueado";
+    badge.className = "badge-status-cobranca bloqueado";
+  }else{
+    badge.textContent = "Normal";
+    badge.className = "badge-status-cobranca";
+  }
+}
+
+document.addEventListener("DOMContentLoaded", function(){
+  try{
+    const c = fibraClienteAtualCobranca();
+    const st = c.statusCobranca || c.cobrancaStatus;
+    if(st) fibraAtualizarVisualCobranca(st);
+  }catch(e){}
+});
+
