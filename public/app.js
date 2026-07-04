@@ -2547,3 +2547,60 @@ document.addEventListener("DOMContentLoaded", function(){
   }
 });
 
+
+
+/* Botão azul abre a aba Controle */
+(function(){
+  function irControle(){
+    window.location.href = "controle.html";
+  }
+
+  function prepararBotaoControle(){
+    const seletores = [
+      "#btnControle",
+      "#botaoControle",
+      "#abrirControle",
+      ".btn-controle",
+      ".botao-controle",
+      ".botao-azul-controle",
+      ".controle-btn",
+      "[data-page='controle']",
+      "[data-link='controle']"
+    ];
+
+    document.querySelectorAll(seletores.join(",")).forEach(function(el){
+      el.onclick = function(e){
+        e.preventDefault();
+        irControle();
+      };
+      el.style.cursor = "pointer";
+    });
+
+    // Corrige botões/links que já têm o texto Controle/Controles.
+    document.querySelectorAll("a, button, .menu-item, .nav-item, .sidebar a, .sidebar button").forEach(function(el){
+      const texto = (el.textContent || "").toLowerCase().trim();
+      if(texto === "controle" || texto === "controles" || texto.includes("controle")){
+        el.onclick = function(e){
+          e.preventDefault();
+          irControle();
+        };
+        el.style.cursor = "pointer";
+      }
+    });
+
+    // Caso o "botão azul" seja um botão sem texto criado no mobile,
+    // use a classe abaixo se ele existir no projeto.
+    const azul = document.querySelector(".botao-azul, .btn-azul, .blue-button, .mobile-blue-button");
+    if(azul && !azul.dataset.fibraControle){
+      azul.dataset.fibraControle = "1";
+      azul.onclick = function(e){
+        e.preventDefault();
+        irControle();
+      };
+      azul.style.cursor = "pointer";
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", prepararBotaoControle);
+})();
+

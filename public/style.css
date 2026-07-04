@@ -4222,3 +4222,15 @@ tbody tr:hover {
 .mobile-menu-overlay {
   display: none !important;
 }
+
+
+/* Botão azul de controle */
+.botao-azul,
+.btn-azul,
+.blue-button,
+.mobile-blue-button,
+.botao-azul-controle,
+.btn-controle {
+  cursor: pointer;
+}
+
