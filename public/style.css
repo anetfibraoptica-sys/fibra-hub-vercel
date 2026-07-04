@@ -4615,3 +4615,24 @@ body .cadastro-receita-page #cliente-search {
   font-weight: 400 !important;
 }
 
+
+
+/* ==========================================================
+   FONTE GLOBAL PADRÃO RECEITANET (AdminLTE)
+   Aplicada em TODO o sistema
+========================================================== */
+@import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@300;400;600;700&display=swap');
+
+html,
+body,
+body *{
+    font-family: "Source Sans 3","Source Sans Pro","Helvetica Neue",Helvetica,Arial,sans-serif !important;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+body{
+    font-size:14px;
+    line-height:1.42857143;
+}
+
