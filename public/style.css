@@ -5049,35 +5049,123 @@ main,
 }
 
 
-/* AJUSTE DE FONTES - MESMO TAMANHO DO RECEITANET */
-.rn-head h2{font-size:22px !important;}
-.rn-title{font-size:24px !important;}
-.rn-cliente-card h3{font-size:22px !important;}
-.rn-oltnet{font-size:22px !important;}
 
-.rn-field b,
-.rn-status b,
-.rn-contato b,
-.rn-table th{
-    font-size:14px !important;
-    font-weight:700 !important;
+
+/* ============================================================
+   FONTES RECEITANET - CORREÇÃO REAL E FORÇADA
+   Regra mais específica para vencer o CSS antigo.
+============================================================ */
+
+body .rn-cliente-card {
+  font-size: 12px !important;
+  line-height: 1.08 !important;
+  padding: 14px 18px 18px 18px !important;
 }
 
-.rn-field span,
-.rn-status p,
-.rn-table td,
-.rn-contato span,
-.rn-total,
-.rn-ident,
-.rn-pai{
-    font-size:13px !important;
+body .rn-cliente-card .rn-head h2 {
+  font-size: 20px !important;
+  line-height: 1 !important;
+  font-weight: 500 !important;
 }
 
-.rn-actions button{
-    font-size:13px !important;
-    height:42px !important;
+body .rn-cliente-card .rn-title,
+body .rn-cliente-card h3,
+body .rn-cliente-card .rn-oltnet {
+  font-size: 20px !important;
+  line-height: 1.05 !important;
+  font-weight: 400 !important;
 }
 
-.rn-cliente-card{
-    line-height:1.15 !important;
+body .rn-cliente-card .rn-field b,
+body .rn-cliente-card .rn-status b,
+body .rn-cliente-card .rn-contato b,
+body .rn-cliente-card .rn-table th {
+  font-size: 12px !important;
+  line-height: 1.05 !important;
+  font-weight: 700 !important;
 }
+
+body .rn-cliente-card .rn-field span,
+body .rn-cliente-card .rn-status,
+body .rn-cliente-card .rn-status p,
+body .rn-cliente-card .rn-table,
+body .rn-cliente-card .rn-table td,
+body .rn-cliente-card .rn-contato,
+body .rn-cliente-card .rn-contato span,
+body .rn-cliente-card .rn-total,
+body .rn-cliente-card .rn-ident,
+body .rn-cliente-card .rn-pai {
+  font-size: 11px !important;
+  line-height: 1.1 !important;
+}
+
+body .rn-cliente-card .rn-login i {
+  font-size: 13px !important;
+}
+
+body .rn-cliente-card .rn-head button {
+  width: 32px !important;
+  height: 32px !important;
+  min-height: 32px !important;
+  font-size: 16px !important;
+}
+
+body .rn-cliente-card .rn-actions button {
+  font-size: 11px !important;
+  height: 36px !important;
+  min-height: 36px !important;
+  line-height: 1 !important;
+}
+
+body .rn-cliente-card .rn-field {
+  margin-bottom: 6px !important;
+}
+
+body .rn-cliente-card hr {
+  margin: 13px 0 12px 0 !important;
+}
+
+body .rn-cliente-card .rn-actions {
+  gap: 7px !important;
+  margin: 12px 0 13px 0 !important;
+}
+
+body .rn-cliente-card .rn-grid,
+body .rn-cliente-card .rn-status,
+body .rn-cliente-card .rn-contato {
+  column-gap: 30px !important;
+}
+
+body .rn-cliente-card .rn-table th {
+  padding: 6px 8px 8px 8px !important;
+}
+
+body .rn-cliente-card .rn-table td {
+  padding: 8px 8px !important;
+}
+
+@media(max-width:768px){
+  body .rn-cliente-card .rn-head h2 {
+    font-size: 19px !important;
+  }
+
+  body .rn-cliente-card .rn-title,
+  body .rn-cliente-card h3,
+  body .rn-cliente-card .rn-oltnet {
+    font-size: 19px !important;
+  }
+
+  body .rn-cliente-card .rn-field b,
+  body .rn-cliente-card .rn-field span,
+  body .rn-cliente-card .rn-status,
+  body .rn-cliente-card .rn-status p,
+  body .rn-cliente-card .rn-table,
+  body .rn-cliente-card .rn-table th,
+  body .rn-cliente-card .rn-table td,
+  body .rn-cliente-card .rn-contato,
+  body .rn-cliente-card .rn-contato b,
+  body .rn-cliente-card .rn-contato span {
+    font-size: 11px !important;
+  }
+}
+
