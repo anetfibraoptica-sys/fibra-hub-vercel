@@ -2507,3 +2507,43 @@ document.addEventListener("DOMContentLoaded", () => {
     setTimeout(fibraPreencherCadastroClienteSelecionado, 300);
   }
 });
+
+
+/* Menu mobile - abrir/fechar abas no celular */
+function toggleMobileMenu(){
+  const sidebar = document.querySelector(".sidebar, aside, nav.sidebar, .menu-lateral");
+  const overlay = document.getElementById("mobileMenuOverlay");
+  if(sidebar){
+    sidebar.classList.toggle("open");
+    sidebar.classList.toggle("mobile-open");
+  }
+  if(overlay){
+    overlay.classList.toggle("show");
+  }
+}
+
+function closeMobileMenu(){
+  const sidebar = document.querySelector(".sidebar, aside, nav.sidebar, .menu-lateral");
+  const overlay = document.getElementById("mobileMenuOverlay");
+  if(sidebar){
+    sidebar.classList.remove("open");
+    sidebar.classList.remove("mobile-open");
+  }
+  if(overlay){
+    overlay.classList.remove("show");
+  }
+}
+
+document.addEventListener("DOMContentLoaded", function(){
+  const sidebar = document.querySelector(".sidebar, aside, nav.sidebar, .menu-lateral");
+  if(sidebar){
+    sidebar.querySelectorAll("a, button").forEach(function(el){
+      el.addEventListener("click", function(){
+        if(window.innerWidth <= 768){
+          setTimeout(closeMobileMenu, 150);
+        }
+      });
+    });
+  }
+});
+

@@ -7,6 +7,8 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body onload="protegerPagina(); iniciarSocket(); carregarClientesReceitaNet();">
+<button id="mobileMenuBtn" class="mobile-menu-btn" type="button" onclick="toggleMobileMenu()">☰ Menu</button>
+<div id="mobileMenuOverlay" class="mobile-menu-overlay" onclick="closeMobileMenu()"></div>
 <div class="mobile-top">
   <button class="menu-btn" onclick="abrirMenu()">☰</button>
   <div class="logo-wrap">

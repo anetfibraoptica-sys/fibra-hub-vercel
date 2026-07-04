@@ -4113,3 +4113,103 @@ tbody tr:hover {
   }
 }
 
+
+
+/* Correção definitiva do menu no celular */
+.mobile-menu-btn {
+  display: none;
+}
+
+.mobile-menu-overlay {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-menu-btn {
+    display: block;
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    z-index: 10001;
+    width: auto !important;
+    min-height: 42px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,.18);
+    background: #7c3aed;
+    color: #fff;
+    font-weight: 700;
+  }
+
+  .mobile-menu-overlay.show {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.55);
+    z-index: 9998;
+  }
+
+  .sidebar,
+  aside,
+  nav.sidebar,
+  .menu-lateral {
+    position: fixed !important;
+    left: -290px !important;
+    top: 0 !important;
+    width: 270px !important;
+    max-width: 85vw !important;
+    height: 100vh !important;
+    z-index: 9999 !important;
+    overflow-y: auto !important;
+    transition: left .25s ease !important;
+  }
+
+  .sidebar.open,
+  .sidebar.mobile-open,
+  aside.open,
+  aside.mobile-open,
+  nav.sidebar.open,
+  nav.sidebar.mobile-open,
+  .menu-lateral.open,
+  .menu-lateral.mobile-open {
+    left: 0 !important;
+  }
+
+  .main-content,
+  .content,
+  .container,
+  main {
+    margin-left: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 70px 10px 16px 10px !important;
+    box-sizing: border-box !important;
+  }
+
+  .topbar,
+  header {
+    padding-left: 60px !important;
+  }
+
+  table {
+    max-width: 100%;
+  }
+
+  .tabs,
+  .tab-buttons,
+  .controle-tabs {
+    display: flex !important;
+    overflow-x: auto !important;
+    gap: 8px !important;
+    padding-bottom: 8px !important;
+  }
+
+  .tabs button,
+  .tab-buttons button,
+  .controle-tabs button {
+    min-width: max-content !important;
+    width: auto !important;
+    flex: 0 0 auto !important;
+  }
+}
+
