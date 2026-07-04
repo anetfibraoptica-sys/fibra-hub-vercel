@@ -4213,3 +4213,12 @@ tbody tr:hover {
   }
 }
 
+
+
+/* Remover somente o botão roxo do menu mobile */
+#mobileMenuBtn,
+.mobile-menu-btn,
+#mobileMenuOverlay,
+.mobile-menu-overlay {
+  display: none !important;
+}
