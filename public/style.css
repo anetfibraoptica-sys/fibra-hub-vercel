@@ -5049,40 +5049,109 @@ main,
 }
 
 
-
-
 /* ============================================================
-   FONTES RECEITANET - CORREÇÃO REAL E FORÇADA
-   Regra mais específica para vencer o CSS antigo.
+   RESUMO RECEITANET FINAL
+   - Mesma proporção visual da referência
+   - Sem barra horizontal esquerda/direita
+   - Fonte e espaçamento ajustados
 ============================================================ */
 
 body .rn-cliente-card {
-  font-size: 12px !important;
-  line-height: 1.08 !important;
-  padding: 14px 18px 18px 18px !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  max-width: 720px !important;
+  min-width: 0 !important;
+  height: 820px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  background: #111827 !important;
+  color: #e5e7eb !important;
+  border: 1px solid rgba(148,163,184,.35) !important;
+  border-top: 4px solid #b91c1c !important;
+  border-radius: 4px !important;
+  padding: 18px 22px 24px 22px !important;
+  margin: 0 auto 22px auto !important;
+  font-family: Arial, Helvetica, sans-serif !important;
+  font-size: 16px !important;
+  line-height: 1.18 !important;
+}
+
+body .rn-cliente-card *,
+body .rn-cliente-card *::before,
+body .rn-cliente-card *::after {
+  box-sizing: border-box !important;
+  max-width: 100% !important;
+}
+
+body .rn-cliente-card::-webkit-scrollbar {
+  width: 14px !important;
+  height: 0 !important;
+}
+
+body .rn-cliente-card::-webkit-scrollbar-track {
+  background: #cbd5e1 !important;
+}
+
+body .rn-cliente-card::-webkit-scrollbar-thumb {
+  background: #475569 !important;
+  border-radius: 9px !important;
+}
+
+/* topo */
+body .rn-cliente-card .rn-head {
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+  margin-bottom: 22px !important;
 }
 
 body .rn-cliente-card .rn-head h2 {
-  font-size: 20px !important;
+  margin: 0 !important;
+  color: #f9fafb !important;
+  font-size: 28px !important;
   line-height: 1 !important;
   font-weight: 500 !important;
 }
 
-body .rn-cliente-card .rn-title,
-body .rn-cliente-card h3,
-body .rn-cliente-card .rn-oltnet {
-  font-size: 20px !important;
-  line-height: 1.05 !important;
-  font-weight: 400 !important;
+body .rn-cliente-card .rn-head button {
+  width: 44px !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  padding: 0 !important;
+  border-radius: 4px !important;
+  background: #1f2937 !important;
+  border: 2px solid #475569 !important;
+  color: #93c5fd !important;
+  font-size: 22px !important;
+  font-weight: 900 !important;
+  flex: 0 0 44px !important;
+}
+
+/* duas colunas iguais ao ReceitaNet */
+body .rn-cliente-card .rn-grid,
+body .rn-cliente-card .rn-status,
+body .rn-cliente-card .rn-contato {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+  column-gap: 42px !important;
+  width: 100% !important;
+  overflow: hidden !important;
+}
+
+body .rn-cliente-card .rn-field {
+  margin: 0 0 10px 0 !important;
+  min-width: 0 !important;
 }
 
 body .rn-cliente-card .rn-field b,
 body .rn-cliente-card .rn-status b,
 body .rn-cliente-card .rn-contato b,
 body .rn-cliente-card .rn-table th {
-  font-size: 12px !important;
-  line-height: 1.05 !important;
-  font-weight: 700 !important;
+  display: block !important;
+  color: #f3f4f6 !important;
+  font-size: 18px !important;
+  line-height: 1.08 !important;
+  font-weight: 800 !important;
 }
 
 body .rn-cliente-card .rn-field span,
@@ -5092,80 +5161,239 @@ body .rn-cliente-card .rn-table,
 body .rn-cliente-card .rn-table td,
 body .rn-cliente-card .rn-contato,
 body .rn-cliente-card .rn-contato span,
-body .rn-cliente-card .rn-total,
-body .rn-cliente-card .rn-ident,
-body .rn-cliente-card .rn-pai {
-  font-size: 11px !important;
-  line-height: 1.1 !important;
+body .rn-cliente-card .rn-total {
+  color: #e5e7eb !important;
+  font-size: 18px !important;
+  line-height: 1.2 !important;
+}
+
+body .rn-cliente-card .rn-field span,
+body .rn-cliente-card .rn-contato span {
+  display: block !important;
+  margin-top: 2px !important;
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
+}
+
+body .rn-cliente-card .rn-login {
+  display: flex !important;
+  align-items: center !important;
+  gap: 9px !important;
+  white-space: normal !important;
 }
 
 body .rn-cliente-card .rn-login i {
+  color: #3b82f6 !important;
+  font-style: normal !important;
+  font-size: 20px !important;
+  font-weight: 900 !important;
+  flex: 0 0 auto !important;
+}
+
+body .rn-cliente-card .rn-title {
+  margin: 14px 0 18px 0 !important;
+  color: #e5e7eb !important;
+  font-size: 30px !important;
+  line-height: 1.05 !important;
+  font-weight: 400 !important;
+}
+
+body .rn-cliente-card .rn-oltnet {
+  color: #e5e7eb !important;
+  font-size: 30px !important;
+  line-height: 1.05 !important;
+  font-weight: 400 !important;
+  margin: 13px 0 8px 0 !important;
+}
+
+body .rn-cliente-card .rn-ident,
+body .rn-cliente-card .rn-pai {
+  display: inline-block !important;
+  width: auto !important;
+  color: #fff !important;
   font-size: 13px !important;
+  line-height: 1.1 !important;
+  font-weight: 800 !important;
+  padding: 6px 10px !important;
+  border-radius: 3px !important;
+  background: #a83a49 !important;
 }
 
-body .rn-cliente-card .rn-head button {
-  width: 32px !important;
-  height: 32px !important;
-  min-height: 32px !important;
-  font-size: 16px !important;
-}
-
-body .rn-cliente-card .rn-actions button {
-  font-size: 11px !important;
-  height: 36px !important;
-  min-height: 36px !important;
-  line-height: 1 !important;
-}
-
-body .rn-cliente-card .rn-field {
-  margin-bottom: 6px !important;
+body .rn-cliente-card .rn-ident.ok {
+  background: #16a34a !important;
 }
 
 body .rn-cliente-card hr {
-  margin: 13px 0 12px 0 !important;
+  border: 0 !important;
+  border-top: 2px solid rgba(148,163,184,.45) !important;
+  margin: 22px 0 20px 0 !important;
 }
 
+body .rn-cliente-card .rn-status p {
+  margin: 0 0 4px 0 !important;
+}
+
+body .rn-cliente-card .rn-status em {
+  font-style: normal !important;
+  font-weight: 900 !important;
+}
+
+body .rn-cliente-card .rn-status .on {
+  color: #22c55e !important;
+}
+
+body .rn-cliente-card .rn-status .off {
+  color: #ef4444 !important;
+}
+
+/* Botões */
 body .rn-cliente-card .rn-actions {
-  gap: 7px !important;
-  margin: 12px 0 13px 0 !important;
+  display: grid !important;
+  gap: 12px !important;
+  width: 100% !important;
+  margin: 18px 0 20px 0 !important;
 }
 
-body .rn-cliente-card .rn-grid,
-body .rn-cliente-card .rn-status,
-body .rn-cliente-card .rn-contato {
-  column-gap: 30px !important;
+body .rn-cliente-card .rn-actions button {
+  width: 100% !important;
+  height: 48px !important;
+  min-height: 48px !important;
+  border: 0 !important;
+  border-radius: 2px !important;
+  color: #fff !important;
+  font-size: 17px !important;
+  line-height: 1 !important;
+  font-weight: 600 !important;
+  white-space: normal !important;
+  overflow: hidden !important;
+}
+
+body .rn-cliente-card .rn-b1 {
+  background: #17286d !important;
+}
+
+body .rn-cliente-card .rn-b2 {
+  background: #1e3a8a !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 80px !important;
+}
+
+body .rn-cliente-card .rn-b3 {
+  background: #166534 !important;
+}
+
+body .rn-cliente-card .rn-b4 {
+  background: #b94f38 !important;
+}
+
+/* Títulos e tabelas */
+body .rn-cliente-card h3 {
+  margin: 0 0 16px 0 !important;
+  color: #e5e7eb !important;
+  font-size: 28px !important;
+  line-height: 1.05 !important;
+  font-weight: 400 !important;
+}
+
+body .rn-cliente-card .rn-table {
+  width: 100% !important;
+  max-width: 100% !important;
+  table-layout: fixed !important;
+  border-collapse: collapse !important;
 }
 
 body .rn-cliente-card .rn-table th {
-  padding: 6px 8px 8px 8px !important;
+  padding: 8px 10px 14px 10px !important;
+  text-align: left !important;
+  white-space: normal !important;
 }
 
 body .rn-cliente-card .rn-table td {
-  padding: 8px 8px !important;
+  padding: 12px 10px !important;
+  white-space: normal !important;
+  overflow-wrap: break-word !important;
 }
 
-@media(max-width:768px){
+body .rn-cliente-card .rn-table tbody tr {
+  background: rgba(148,163,184,.10) !important;
+}
+
+body .rn-cliente-card .rn-total {
+  text-align: right !important;
+  font-weight: 700 !important;
+  margin: 12px 8px 12px 0 !important;
+}
+
+body .rn-cliente-card .rn-contato b {
+  margin-top: 8px !important;
+}
+
+/* Impede barra horizontal do painel externo também */
+body .cadastro-resumo-card,
+body #clienteDetalhes,
+body .panel,
+body main,
+body .content {
+  overflow-x: hidden !important;
+}
+
+/* Ajuste para notebook/tela estreita sem rolagem lateral */
+@media(max-width: 900px) {
+  body .rn-cliente-card {
+    max-width: 100% !important;
+    height: 78vh !important;
+    padding: 16px 18px 22px 18px !important;
+  }
+
+  body .rn-cliente-card .rn-grid,
+  body .rn-cliente-card .rn-status,
+  body .rn-cliente-card .rn-contato {
+    column-gap: 28px !important;
+  }
+
+  body .rn-cliente-card .rn-b2 {
+    gap: 34px !important;
+  }
+}
+
+@media(max-width: 768px) {
+  body .rn-cliente-card {
+    height: 72vh !important;
+    padding: 14px !important;
+  }
+
+  body .rn-cliente-card .rn-field b,
+  body .rn-cliente-card .rn-status b,
+  body .rn-cliente-card .rn-contato b,
+  body .rn-cliente-card .rn-table th {
+    font-size: 15px !important;
+  }
+
+  body .rn-cliente-card .rn-field span,
+  body .rn-cliente-card .rn-status,
+  body .rn-cliente-card .rn-status p,
+  body .rn-cliente-card .rn-table,
+  body .rn-cliente-card .rn-table td,
+  body .rn-cliente-card .rn-contato,
+  body .rn-cliente-card .rn-contato span,
+  body .rn-cliente-card .rn-total {
+    font-size: 15px !important;
+  }
+
   body .rn-cliente-card .rn-head h2 {
-    font-size: 19px !important;
+    font-size: 24px !important;
   }
 
   body .rn-cliente-card .rn-title,
   body .rn-cliente-card h3,
   body .rn-cliente-card .rn-oltnet {
-    font-size: 19px !important;
+    font-size: 24px !important;
   }
 
-  body .rn-cliente-card .rn-field b,
-  body .rn-cliente-card .rn-field span,
-  body .rn-cliente-card .rn-status,
-  body .rn-cliente-card .rn-status p,
-  body .rn-cliente-card .rn-table,
-  body .rn-cliente-card .rn-table th,
-  body .rn-cliente-card .rn-table td,
-  body .rn-cliente-card .rn-contato,
-  body .rn-cliente-card .rn-contato b,
-  body .rn-cliente-card .rn-contato span {
-    font-size: 11px !important;
+  body .rn-cliente-card .rn-actions button {
+    font-size: 14px !important;
   }
 }
 
