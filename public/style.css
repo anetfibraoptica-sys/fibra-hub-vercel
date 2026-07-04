@@ -4529,209 +4529,130 @@ button,
 
 
 
+
+
+
 /* ============================================================
-   SIDEBAR REAL CORRIGIDA
-   Reduz somente o menu lateral e recentraliza o conteúdo.
-   Não altera cadastro, botões, resumo, abas, cores ou fonte.
+   CADASTRO CENTRALIZADO CORRIGIDO
+   Mantém os mesmos tamanhos de fonte.
+   Corrige apenas o espaço vazio e centraliza o conteúdo.
 ============================================================ */
 
-:root {
-  --sidebar-width: 210px !important;
-  --menu-width: 210px !important;
-  --sidenav-width: 210px !important;
+/* Não mexe na fonte */
+body,
+body * {
+  font-size: inherit;
 }
 
-/* Lateral real do Fibra Hub */
-.sidebar,
-.sidebar-menu,
-.sidebar-wrapper,
-.sidebar-container,
-.side-menu,
-.menu-lateral,
-.main-sidebar,
-.app-sidebar,
-.layout-sidebar,
-#sidebar,
-#menu,
-#side-menu,
-nav.sidebar,
-aside.sidebar,
-aside.main-sidebar {
-  width: 210px !important;
-  min-width: 210px !important;
-  max-width: 210px !important;
-  flex: 0 0 210px !important;
-}
-
-/* Evita que textos alarguem a lateral */
-.sidebar *,
-.side-menu *,
-.menu-lateral *,
-.main-sidebar *,
-.app-sidebar *,
-.layout-sidebar *,
-#sidebar *,
-#menu *,
-#side-menu * {
-  max-width: 100% !important;
-  box-sizing: border-box !important;
-}
-
-.sidebar a,
-.side-menu a,
-.menu-lateral a,
-.main-sidebar a,
-.app-sidebar a,
-.layout-sidebar a,
-#sidebar a,
-#menu a,
-#side-menu a {
-  white-space: normal !important;
-  overflow-wrap: break-word !important;
-}
-
-/* Conteúdo principal acompanha a largura nova */
-.main,
-.main-content,
-.content,
+/* A página não deve criar espaço enorme entre menu e cadastro */
 .content-wrapper,
+.main-content,
 .page-content,
 .app-main,
 .layout-main,
 .dashboard-main,
+main,
 #main,
-#content,
-main {
-  margin-left: 210px !important;
-  width: calc(100% - 210px) !important;
-  max-width: calc(100% - 210px) !important;
+#content {
+  width: auto !important;
+  max-width: none !important;
 }
 
-/* Estruturas grid/flex */
-.app,
-.wrapper,
-.layout,
-.app-layout,
-.dashboard-layout,
-.page-layout,
-.shell,
-.app-shell,
-.admin-layout {
-  grid-template-columns: 210px minmax(0, 1fr) !important;
-}
-
-/* Quando usa flex */
-.app,
-.wrapper,
-.layout,
-.app-layout,
-.dashboard-layout,
-.page-layout,
-.shell,
-.app-shell,
-.admin-layout {
-  --sidebar-width: 210px !important;
-}
-
-/* Centralização interna do conteúdo */
-.main > *,
-.main-content > *,
+/* Centraliza o conteúdo útil sem empurrar para a direita */
 .content-wrapper > *,
+.main-content > *,
 .page-content > *,
 .app-main > *,
 .layout-main > *,
 .dashboard-main > *,
+main > *,
 #main > *,
-#content > *,
-main > * {
-  max-width: 1280px;
-  margin-left: auto;
-  margin-right: auto;
+#content > * {
+  max-width: 1280px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
 }
 
-/* Corrige header/topbar caso use margem da sidebar */
-.header,
-.topbar,
-.navbar,
-.main-header,
-.app-header {
-  margin-left: 210px !important;
-  width: calc(100% - 210px) !important;
-  max-width: calc(100% - 210px) !important;
+/* Container específico da tela cadastro */
+.cadastro-receita-page,
+.cadastro-page,
+.cadastro-container,
+#cadastroPage,
+#cadastro-cliente,
+.cadastro-cliente {
+  width: 100% !important;
+  max-width: 1280px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  padding-left: 16px !important;
+  padding-right: 16px !important;
+  box-sizing: border-box !important;
 }
 
-/* Botão/estado recolhido não deve quebrar */
-body.sidebar-collapsed .main,
-body.sidebar-collapsed .main-content,
-body.sidebar-collapsed .content,
-body.sidebar-collapsed .content-wrapper,
-body.sidebar-collapsed .page-content,
-body.sidebar-collapsed main,
-body.menu-collapsed .main,
-body.menu-collapsed .main-content,
-body.menu-collapsed .content,
-body.menu-collapsed .content-wrapper,
-body.menu-collapsed .page-content,
-body.menu-collapsed main {
-  margin-left: 70px !important;
-  width: calc(100% - 70px) !important;
-  max-width: calc(100% - 70px) !important;
+/* Quando houver formulário + resumo, deixa centralizado lado a lado */
+.cadastro-receita-page {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 380px !important;
+  gap: 18px !important;
+  align-items: start !important;
 }
 
-/* Mobile mantém comportamento de gaveta */
+/* Formulário ocupa a esquerda sem ficar longe do menu */
+.cadastro-receita-page > section:first-of-type,
+.cadastro-receita-page .cadastro-main,
+.cadastro-receita-page .cadastro-form,
+.cadastro-receita-page .form-area {
+  min-width: 0 !important;
+  width: 100% !important;
+}
+
+/* Resumo permanece na direita */
+.cadastro-receita-page > aside.cadastro-resumo-card,
+.cadastro-receita-page .cadastro-resumo-card,
+.cadastro-receita-page #resumoCadastro {
+  width: 380px !important;
+  max-width: 380px !important;
+  min-width: 380px !important;
+  margin: 0 !important;
+  align-self: start !important;
+}
+
+/* Remove margens/paddings excessivos que criavam o vão */
+.cadastro-receita-page,
+.cadastro-receita-page > *,
+.cadastro-page,
+.cadastro-page > *,
+.cadastro-container,
+.cadastro-container > * {
+  margin-top: 0;
+}
+
+/* Garante que botões e formulário não sejam redimensionados */
+.cadastro-receita-page .btn-app,
+.cadastro-receita-page .sc,
+.cadastro-receita-page input,
+.cadastro-receita-page select,
+.cadastro-receita-page textarea,
+.cadastro-receita-page button {
+  font-size: inherit;
+}
+
+/* Telas pequenas: empilha normalmente */
 @media (max-width: 900px) {
-  .sidebar,
-  .sidebar-menu,
-  .sidebar-wrapper,
-  .sidebar-container,
-  .side-menu,
-  .menu-lateral,
-  .main-sidebar,
-  .app-sidebar,
-  .layout-sidebar,
-  #sidebar,
-  #menu,
-  #side-menu,
-  nav.sidebar,
-  aside.sidebar,
-  aside.main-sidebar {
-    width: 260px !important;
-    min-width: 260px !important;
-    max-width: 260px !important;
-    flex-basis: 260px !important;
+  .cadastro-receita-page {
+    display: block !important;
+    max-width: 100% !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
   }
 
-  .main,
-  .main-content,
-  .content,
-  .content-wrapper,
-  .page-content,
-  .app-main,
-  .layout-main,
-  .dashboard-main,
-  #main,
-  #content,
-  main,
-  .header,
-  .topbar,
-  .navbar,
-  .main-header,
-  .app-header {
-    margin-left: 0 !important;
+  .cadastro-receita-page > aside.cadastro-resumo-card,
+  .cadastro-receita-page .cadastro-resumo-card,
+  .cadastro-receita-page #resumoCadastro {
     width: 100% !important;
     max-width: 100% !important;
-  }
-
-  .app,
-  .wrapper,
-  .layout,
-  .app-layout,
-  .dashboard-layout,
-  .page-layout,
-  .shell,
-  .app-shell,
-  .admin-layout {
-    grid-template-columns: 1fr !important;
+    min-width: 0 !important;
+    margin-top: 16px !important;
   }
 }
 
