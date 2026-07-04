@@ -4852,3 +4852,130 @@ button,
   }
 }
 
+
+
+/* ============================================================
+   CADASTRO RESUMO CENTRALIZADO
+   Centraliza o conjunto FORMULÁRIO + RESUMO na área útil.
+   Mantém fonte, cores, menu, botões e abas.
+============================================================ */
+
+@media (min-width: 901px){
+
+  /* Área principal continua começando após o menu já ajustado */
+  .main,
+  main.main{
+    overflow-x:hidden !important;
+  }
+
+  .content{
+    width:100% !important;
+    max-width:none !important;
+    margin:0 !important;
+    padding-left:18px !important;
+    padding-right:18px !important;
+    box-sizing:border-box !important;
+  }
+
+  /* O conjunto cadastro + resumo fica centralizado */
+  .cadastro-layout-receita{
+    width:100% !important;
+    max-width:1180px !important;
+    margin-left:auto !important;
+    margin-right:auto !important;
+    display:grid !important;
+    grid-template-columns:minmax(620px, 740px) 420px !important;
+    gap:20px !important;
+    align-items:start !important;
+    justify-content:center !important;
+    box-sizing:border-box !important;
+  }
+
+  /* Formulário com largura controlada para não empurrar o resumo */
+  .cadastro-form-card{
+    width:100% !important;
+    max-width:740px !important;
+    min-width:0 !important;
+    box-sizing:border-box !important;
+  }
+
+  /* Resumo fixo do lado direito do conjunto */
+  .cadastro-resumo-card{
+    width:420px !important;
+    min-width:420px !important;
+    max-width:420px !important;
+    margin:0 !important;
+    align-self:start !important;
+    box-sizing:border-box !important;
+  }
+
+  /* Botões superiores acompanham o mesmo alinhamento do conjunto */
+  .cadastro-shortcuts{
+    width:100% !important;
+    max-width:1180px !important;
+    margin-left:auto !important;
+    margin-right:auto !important;
+    justify-content:center !important;
+    box-sizing:border-box !important;
+  }
+
+  /* Título também acompanha o bloco */
+  .content h1,
+  .page-title,
+  .cadastro-title{
+    max-width:1180px !important;
+    margin-left:auto !important;
+    margin-right:auto !important;
+  }
+}
+
+/* Notebook menor: reduz o resumo sem mexer na fonte */
+@media (max-width: 1180px) and (min-width: 901px){
+  .cadastro-layout-receita{
+    max-width:1040px !important;
+    grid-template-columns:minmax(560px, 660px) 360px !important;
+    gap:16px !important;
+  }
+
+  .cadastro-form-card{
+    max-width:660px !important;
+  }
+
+  .cadastro-resumo-card{
+    width:360px !important;
+    min-width:360px !important;
+    max-width:360px !important;
+  }
+
+  .cadastro-shortcuts{
+    max-width:1040px !important;
+  }
+}
+
+/* Mobile: não força lado a lado */
+@media (max-width: 900px){
+  .cadastro-layout-receita{
+    display:block !important;
+    width:100% !important;
+    max-width:100% !important;
+    margin:0 !important;
+  }
+
+  .cadastro-form-card,
+  .cadastro-resumo-card{
+    width:100% !important;
+    min-width:0 !important;
+    max-width:100% !important;
+  }
+
+  .cadastro-resumo-card{
+    margin-top:16px !important;
+  }
+
+  .cadastro-shortcuts{
+    width:100% !important;
+    max-width:100% !important;
+    margin:0 !important;
+  }
+}
+
