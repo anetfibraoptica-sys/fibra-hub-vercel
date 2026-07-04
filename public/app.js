@@ -80,7 +80,7 @@ function sair(){
   window.location.href = "index.html";
 }
 
-function carregarDashboard(){
+async function carregarDashboard(){
   try{
     const r = await fetch("/api/servidores?_=" + Date.now());
     if(r.ok){
@@ -2697,3 +2697,25 @@ document.addEventListener("DOMContentLoaded", function(){
   }
 });
 
+
+/* FIX DEFINITIVO - botão azul 3 linhas abre menu lateral */
+(function(){
+  function sidebar(){ return document.querySelector('aside.sidebar') || document.querySelector('.sidebar') || document.querySelector('aside'); }
+  function overlay(){ return document.querySelector('.overlay') || document.querySelector('.sidebar-overlay'); }
+  window.abrirMenu = window.abrirMenuLateral = function(){
+    document.body.classList.add('menu-open');
+    const s = sidebar(); if(s){ s.classList.add('open','mobile-open','sidebar-aberta'); }
+    const o = overlay(); if(o){ o.classList.add('show','active'); }
+  };
+  window.fecharMenu = window.fecharMenuLateral = function(){
+    document.body.classList.remove('menu-open');
+    const s = sidebar(); if(s){ s.classList.remove('open','mobile-open','sidebar-aberta'); }
+    const o = overlay(); if(o){ o.classList.remove('show','active'); }
+  };
+  document.addEventListener('click', function(e){
+    const btn = e.target.closest('.menu-btn, #menuBtn, .hamburger, .btn-menu');
+    if(btn){ e.preventDefault(); e.stopPropagation(); window.abrirMenu(); }
+    const ov = e.target.closest('.overlay, .sidebar-overlay');
+    if(ov){ window.fecharMenu(); }
+  }, true);
+})();

@@ -4350,3 +4350,14 @@ tbody tr:hover {
   }
 }
 
+
+/* FIX DEFINITIVO - menu lateral celular */
+@media (max-width: 768px) {
+  .mobile-top { display:flex !important; }
+  .menu-btn { display:inline-block !important; pointer-events:auto !important; position:relative !important; z-index:10050 !important; }
+  .sidebar { position:fixed !important; top:0 !important; left:0 !important; width:285px !important; max-width:85vw !important; height:100vh !important; z-index:10000 !important; overflow-y:auto !important; transform:translateX(-105%) !important; transition:transform .25s ease !important; }
+  body.menu-open .sidebar, .sidebar.open, .sidebar.mobile-open, .sidebar.sidebar-aberta { transform:translateX(0) !important; left:0 !important; }
+  .overlay, .sidebar-overlay { position:fixed !important; inset:0 !important; background:rgba(0,0,0,.55) !important; z-index:9999 !important; display:none; }
+  body.menu-open .overlay, .overlay.show, .overlay.active, .sidebar-overlay.show { display:block !important; }
+  .main, main.main { margin-left:0 !important; width:100% !important; }
+}
