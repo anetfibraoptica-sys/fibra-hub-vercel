@@ -2625,3 +2625,75 @@ document.addEventListener("DOMContentLoaded", function(){
   }
 });
 
+
+
+/* FIX FINAL: botão azul de 3 linhas abre a lateral */
+function encontrarSidebarFibra(){
+  return document.querySelector(".sidebar") ||
+         document.querySelector("aside") ||
+         document.querySelector("nav") ||
+         document.querySelector(".menu-lateral");
+}
+
+function abrirMenuLateral(){
+  const sidebar = encontrarSidebarFibra();
+  const overlay = document.querySelector(".sidebar-overlay");
+
+  if(sidebar){
+    sidebar.classList.add("sidebar-aberta");
+    sidebar.classList.add("open");
+    sidebar.style.left = "0";
+    sidebar.style.transform = "translateX(0)";
+    sidebar.style.display = "block";
+    sidebar.style.visibility = "visible";
+  }
+
+  if(overlay){
+    overlay.classList.add("show");
+    overlay.style.display = "block";
+  }
+}
+
+function fecharMenuLateral(){
+  const sidebar = encontrarSidebarFibra();
+  const overlay = document.querySelector(".sidebar-overlay");
+
+  if(sidebar){
+    sidebar.classList.remove("sidebar-aberta");
+    sidebar.classList.remove("open");
+    if(window.innerWidth <= 768){
+      sidebar.style.left = "-290px";
+      sidebar.style.transform = "translateX(-100%)";
+    }
+  }
+
+  if(overlay){
+    overlay.classList.remove("show");
+    overlay.style.display = "none";
+  }
+}
+
+// Mantém compatibilidade com botão antigo onclick="abrirMenu()"
+function abrirMenu(){
+  abrirMenuLateral();
+}
+
+document.addEventListener("DOMContentLoaded", function(){
+  document.querySelectorAll(".menu-btn, #menuBtn, .hamburger, .btn-menu").forEach(function(btn){
+    btn.onclick = function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      abrirMenuLateral();
+    };
+  });
+
+  const sidebar = encontrarSidebarFibra();
+  if(sidebar){
+    sidebar.querySelectorAll("a").forEach(function(a){
+      a.addEventListener("click", function(){
+        if(window.innerWidth <= 768) setTimeout(fecharMenuLateral, 150);
+      });
+    });
+  }
+});
+

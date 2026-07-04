@@ -4282,3 +4282,71 @@ tbody tr:hover {
   }
 }
 
+
+
+/* FIX FINAL MENU MOBILE */
+.sidebar-overlay {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .sidebar-overlay.show {
+    display: block !important;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.55);
+    z-index: 9998;
+  }
+
+  .sidebar,
+  aside,
+  nav.sidebar,
+  .menu-lateral {
+    position: fixed !important;
+    top: 0 !important;
+    left: -290px !important;
+    transform: translateX(-100%) !important;
+    width: 270px !important;
+    max-width: 85vw !important;
+    height: 100vh !important;
+    z-index: 9999 !important;
+    overflow-y: auto !important;
+    transition: left .25s ease, transform .25s ease !important;
+    display: block !important;
+    visibility: visible !important;
+  }
+
+  .sidebar.sidebar-aberta,
+  .sidebar.open,
+  aside.sidebar-aberta,
+  aside.open,
+  nav.sidebar.sidebar-aberta,
+  nav.sidebar.open,
+  .menu-lateral.sidebar-aberta,
+  .menu-lateral.open {
+    left: 0 !important;
+    transform: translateX(0) !important;
+  }
+
+  .menu-btn {
+    cursor: pointer !important;
+    z-index: 10001 !important;
+  }
+
+  main,
+  .main-content,
+  .content,
+  .container {
+    margin-left: 0 !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .sidebar,
+  aside,
+  nav.sidebar,
+  .menu-lateral {
+    transform: none !important;
+  }
+}
+

@@ -6,11 +6,11 @@
   <title>Clientes - Fibra+ Hub</title>
   <link rel="stylesheet" href="style.css">
 </head>
-<body onload="protegerPagina(); iniciarSocket(); carregarClientesReceitaNet();">
-<button id="mobileMenuBtn" class="mobile-menu-btn" type="button" onclick="toggleMobileMenu()">☰ Menu</button>
+<body onload="protegerPagina(); iniciarSocket(); carregarClientesReceitaNet();"><div class="sidebar-overlay" onclick="fecharMenuLateral()"></div>
+<button id="mobileMenuBtn" class="mobile-menu-btn" type="button" onclick="abrirMenuLateral()">☰ Menu</button>
 <div id="mobileMenuOverlay" class="mobile-menu-overlay" onclick="closeMobileMenu()"></div>
 <div class="mobile-top">
-  <button class="menu-btn" onclick="abrirMenu()">☰</button>
+  <button class="menu-btn" onclick="abrirMenuLateral()">☰</button>
   <div class="logo-wrap">
     <div class="brand"><span class="fibra">Fibra</span><span class="brand-dot"></span><span class="plus">+</span></div>
     <div class="slogan">HUB DE CONTROLE</div>
