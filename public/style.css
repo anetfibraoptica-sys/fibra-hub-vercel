@@ -4979,3 +4979,97 @@ button,
   }
 }
 
+
+
+/* ============================================================
+   RESUMO TEXTOS CENTRALIZADOS
+   Centraliza somente os textos internos do card Resumo.
+   Não altera largura, cores, fonte, bordas, botões ou layout externo.
+============================================================ */
+
+.cadastro-resumo-card .resumo-receitanet{
+  text-align:center !important;
+}
+
+/* Título Resumo continua à esquerda como no ReceitaNet */
+.cadastro-resumo-card .resumo-header,
+.cadastro-resumo-card .resumo-titulo{
+  text-align:left !important;
+}
+
+/* Mantém o botão ? no lado direito */
+.cadastro-resumo-card .resumo-header{
+  align-items:flex-start !important;
+}
+
+/* Centraliza os campos dentro das duas colunas */
+.cadastro-resumo-card .resumo-grid{
+  grid-template-columns:1fr 1fr !important;
+  align-items:start !important;
+  justify-items:center !important;
+  text-align:center !important;
+}
+
+.cadastro-resumo-card .resumo-field{
+  width:100% !important;
+  text-align:center !important;
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:center !important;
+  justify-content:flex-start !important;
+}
+
+.cadastro-resumo-card .resumo-label,
+.cadastro-resumo-card .resumo-value{
+  width:100% !important;
+  text-align:center !important;
+}
+
+/* Centraliza títulos internos */
+.cadastro-resumo-card .resumo-section-title,
+.cadastro-resumo-card .resumo-oltnet{
+  text-align:center !important;
+}
+
+/* Centraliza badges */
+.cadastro-resumo-card .badge-identificado,
+.cadastro-resumo-card .badge-nao-identificado,
+.cadastro-resumo-card .pai-status{
+  display:inline-block !important;
+  margin-left:auto !important;
+  margin-right:auto !important;
+}
+
+/* Status/Login embaixo também centralizados */
+.cadastro-resumo-card .status-dot{
+  margin-left:0 !important;
+}
+
+/* Centraliza tabela sem mexer no tamanho */
+.cadastro-resumo-card .resumo-table th,
+.cadastro-resumo-card .resumo-table td{
+  text-align:center !important;
+}
+
+.cadastro-resumo-card .resumo-total{
+  text-align:center !important;
+}
+
+/* Botões continuam centralizados */
+.cadastro-resumo-card .resumo-btn{
+  text-align:center !important;
+}
+
+/* Dados de contato centralizados dentro das colunas */
+.cadastro-resumo-card .resumo-grid .resumo-field .resumo-label,
+.cadastro-resumo-card .resumo-grid .resumo-field .resumo-value{
+  text-align:center !important;
+}
+
+/* Em telas pequenas mantém centralizado também */
+@media (max-width: 900px){
+  .cadastro-resumo-card .resumo-grid{
+    grid-template-columns:1fr 1fr !important;
+  }
+}
+
