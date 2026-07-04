@@ -4985,3 +4985,27 @@ main,
   .rn-forcado-actions .b2{gap:25px!important;}
 }
 
+
+
+/* Ajuste final do resumo estilo ReceitaNet */
+.cadastro-resumo-card.resumo-receitanet-completo{
+    max-width:720px!important;
+    width:100%!important;
+    border-top:4px solid #b91c1c!important;
+    border-radius:4px!important;
+    overflow-y:auto!important;
+    height:820px!important;
+    background:#111827!important;
+}
+.resumo-title h3{font-size:28px!important;font-weight:500!important;}
+.resumo-top-grid b,
+.resumo-servidor-grid b,
+.resumo-status-grid b{
+    font-size:18px!important;
+    font-weight:800!important;
+}
+.resumo-top-grid span,
+.resumo-servidor-grid span,
+.resumo-status-grid span{
+    font-size:18px!important;
+}
