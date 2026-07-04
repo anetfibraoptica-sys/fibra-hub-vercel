@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@300;400;600;700&display=swap');
+400;600;700&display=swap');
 *{box-sizing:border-box;font-family:Arial,Helvetica,sans-serif}
 :root{--bg:#070d19;--panel:#111b2d;--panel2:#0a1322;--line:rgba(255,255,255,.09);--muted:#a9b7ce;--blue:#2f83ff;--green:#22c55e;--red:#ef4444;--orange:#f59e0b;--purple:#8b5cf6}
 body{margin:0;background:radial-gradient(circle at 10% 0%,rgba(47,131,255,.16),transparent 34%),var(--bg);color:#fff}
@@ -4440,199 +4440,87 @@ button[onclick*="fiscais"],
 
 
 
+
+
+
 /* ============================================================
-   FONTE RECEITANET EXATA
-   Base do ReceitaNet/AdminLTE:
-   Source Sans Pro / Source Sans 3, 14px, peso 400.
-   NÃO altera layout, cor, posição, botões ou colunas.
+   FONTE GLOBAL RECEITANET / ADMINLTE
+   Aplicada em todo o Fibra Hub sem alterar layout, cores ou posições.
 ============================================================ */
-
-/* Página do cadastro inteira */
-html body,
-body .cadastro-receita-page,
-body .cadastro-receita-page * {
-  font-family: "Source Sans 3", "Source Sans Pro", "Helvetica Neue", Helvetica, Arial, sans-serif !important;
-  letter-spacing: 0 !important;
-}
-
-/* Texto padrão igual ReceitaNet/AdminLTE */
-body .cadastro-receita-page {
-  font-size: 14px !important;
-  font-weight: 400 !important;
-  line-height: 1.42857143 !important;
-}
-
-/* Campos e textos digitados */
-body .cadastro-receita-page input,
-body .cadastro-receita-page select,
-body .cadastro-receita-page textarea,
-body .cadastro-receita-page .form-control {
-  font-family: "Source Sans 3", "Source Sans Pro", "Helvetica Neue", Helvetica, Arial, sans-serif !important;
-  font-size: 14px !important;
-  font-weight: 400 !important;
-  line-height: 1.42857143 !important;
-}
-
-/* Labels do ReceitaNet */
-body .cadastro-receita-page label,
-body .cadastro-receita-page .form-row label,
-body .cadastro-receita-page .form-group label,
-body .cadastro-receita-page .campo label {
-  font-family: "Source Sans 3", "Source Sans Pro", "Helvetica Neue", Helvetica, Arial, sans-serif !important;
-  font-size: 14px !important;
-  font-weight: 700 !important;
-  line-height: 1.42857143 !important;
-}
-
-/* Abas do cadastro */
-body .cadastro-receita-page .cadastro-tabs .tab,
-body .cadastro-receita-page .nav-tabs a,
-body .cadastro-receita-page .tab,
-body .cadastro-receita-page .tab-btn {
-  font-family: "Source Sans 3", "Source Sans Pro", "Helvetica Neue", Helvetica, Arial, sans-serif !important;
-  font-size: 14px !important;
-  font-weight: 400 !important;
-  line-height: 1.42857143 !important;
-}
-
-/* Botões do ReceitaNet */
-body .cadastro-receita-page button,
-body .cadastro-receita-page .btn,
-body .cadastro-receita-page .save-blue,
-body .cadastro-receita-page .save-red,
-body .cadastro-receita-page .cancel-btn,
-body .cadastro-receita-page .input-action button {
-  font-family: "Source Sans 3", "Source Sans Pro", "Helvetica Neue", Helvetica, Arial, sans-serif !important;
-  font-size: 14px !important;
-  font-weight: 400 !important;
-  line-height: 1.42857143 !important;
-}
-
-/* Botões quadrados superiores: ReceitaNet usa fonte menor */
-body .cadastro-receita-page .sc,
-body .cadastro-receita-page .btn-app {
-  font-family: "Source Sans 3", "Source Sans Pro", "Helvetica Neue", Helvetica, Arial, sans-serif !important;
-  font-weight: 400 !important;
-  letter-spacing: 0 !important;
-}
-body .cadastro-receita-page .sc span,
-body .cadastro-receita-page .btn-app {
-  font-size: 12px !important;
-  line-height: 1.2 !important;
-}
-
-/* Resumo da direita */
-body .cadastro-receita-page .cadastro-resumo-card,
-body .cadastro-receita-page .cadastro-resumo-card *,
-body .cadastro-receita-page .resumo-receitanet-completo,
-body .cadastro-receita-page .resumo-receitanet-completo *,
-body .cadastro-receita-page .rn-cliente-card,
-body .cadastro-receita-page .rn-cliente-card *,
-body .cadastro-receita-page .rn-receitanet-pixel,
-body .cadastro-receita-page .rn-receitanet-pixel * {
-  font-family: "Source Sans 3", "Source Sans Pro", "Helvetica Neue", Helvetica, Arial, sans-serif !important;
-  letter-spacing: 0 !important;
-}
-
-/* Título Resumo */
-body .cadastro-receita-page .cadastro-resumo-card .resumo-title h3,
-body .cadastro-receita-page .cadastro-resumo-card h3:first-child,
-body .cadastro-receita-page .rn-head h2,
-body .cadastro-receita-page .rn-px-head h2 {
-  font-size: 24px !important;
-  font-weight: 400 !important;
-  line-height: 1.1 !important;
-}
-
-/* Títulos internos: Servidor, Plano, Estoque, Dados */
-body .cadastro-receita-page .cadastro-resumo-card h4,
-body .cadastro-receita-page .cadastro-resumo-card .resumo-section h4,
-body .cadastro-receita-page .cadastro-resumo-card .rn-title,
-body .cadastro-receita-page .cadastro-resumo-card .rn-px-title,
-body .cadastro-receita-page .cadastro-resumo-card .rn-px-sub,
-body .cadastro-receita-page .cadastro-resumo-card .rn-oltnet,
-body .cadastro-receita-page .cadastro-resumo-card .rn-px-oltnet {
-  font-size: 22px !important;
-  font-weight: 400 !important;
-  line-height: 1.1 !important;
-}
-
-/* Labels no resumo */
-body .cadastro-receita-page .cadastro-resumo-card b,
-body .cadastro-receita-page .cadastro-resumo-card strong,
-body .cadastro-receita-page .cadastro-resumo-card th,
-body .cadastro-receita-page .cadastro-resumo-card .resumo-grid b,
-body .cadastro-receita-page .cadastro-resumo-card .rn-field b,
-body .cadastro-receita-page .cadastro-resumo-card .rn-px-field b,
-body .cadastro-receita-page .cadastro-resumo-card .rn-status b,
-body .cadastro-receita-page .cadastro-resumo-card .rn-px-status b,
-body .cadastro-receita-page .cadastro-resumo-card .rn-contato b,
-body .cadastro-receita-page .cadastro-resumo-card .rn-px-contact b {
-  font-size: 14px !important;
-  font-weight: 700 !important;
-  line-height: 1.25 !important;
-  text-transform: none !important;
-}
-
-/* Valores no resumo */
-body .cadastro-receita-page .cadastro-resumo-card span,
-body .cadastro-receita-page .cadastro-resumo-card p,
-body .cadastro-receita-page .cadastro-resumo-card td,
-body .cadastro-receita-page .cadastro-resumo-card .resumo-grid span,
-body .cadastro-receita-page .cadastro-resumo-card .rn-field span,
-body .cadastro-receita-page .cadastro-resumo-card .rn-px-field span,
-body .cadastro-receita-page .cadastro-resumo-card .rn-status,
-body .cadastro-receita-page .cadastro-resumo-card .rn-px-status,
-body .cadastro-receita-page .cadastro-resumo-card .rn-status p,
-body .cadastro-receita-page .cadastro-resumo-card .rn-px-status p,
-body .cadastro-receita-page .cadastro-resumo-card .rn-contato span,
-body .cadastro-receita-page .cadastro-resumo-card .rn-px-contact span,
-body .cadastro-receita-page .cadastro-resumo-card .mini-table,
-body .cadastro-receita-page .cadastro-resumo-card .mini-table td,
-body .cadastro-receita-page .cadastro-resumo-card .mini-total {
-  font-size: 14px !important;
-  font-weight: 400 !important;
-  line-height: 1.25 !important;
-}
-
-/* Badges menores como no ReceitaNet */
-body .cadastro-receita-page .cadastro-resumo-card .nao-identificado,
-body .cadastro-receita-page .cadastro-resumo-card .rn-ident,
-body .cadastro-receita-page .cadastro-resumo-card .rn-px-ident,
-body .cadastro-receita-page .cadastro-resumo-card .rn-pai,
-body .cadastro-receita-page .cadastro-resumo-card .rn-px-pai,
-body .cadastro-receita-page .beta {
-  font-size: 11px !important;
-  font-weight: 700 !important;
-  line-height: 1 !important;
-}
-
-/* Search da aba */
-body .cadastro-receita-page .tab-search,
-body .cadastro-receita-page #cliente-search {
-  font-family: "Source Sans 3", "Source Sans Pro", "Helvetica Neue", Helvetica, Arial, sans-serif !important;
-  font-size: 14px !important;
-  font-weight: 400 !important;
-}
-
-
-
-/* ==========================================================
-   FONTE GLOBAL PADRÃO RECEITANET (AdminLTE)
-   Aplicada em TODO o sistema
-========================================================== */
-@import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@300;400;600;700&display=swap');
-
 html,
 body,
-body *{
-    font-family: "Source Sans 3","Source Sans Pro","Helvetica Neue",Helvetica,Arial,sans-serif !important;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+body *,
+button,
+input,
+select,
+textarea,
+label,
+a,
+span,
+p,
+div,
+table,
+thead,
+tbody,
+tr,
+th,
+td,
+small,
+strong,
+b,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.sidebar,
+.nav,
+.nav *,
+.menu,
+.menu *,
+.topbar,
+.topbar *,
+.card,
+.card *,
+.panel,
+.panel *,
+.content,
+.content *,
+.form-control,
+.btn,
+.badge {
+    font-family: "Source Sans Pro", "Helvetica Neue", Helvetica, Arial, sans-serif !important;
+    -webkit-font-smoothing: antialiased !important;
+    -moz-osx-font-smoothing: grayscale !important;
 }
 
-body{
-    font-size:14px;
-    line-height:1.42857143;
+/* Base visual do AdminLTE/ReceitaNet */
+body {
+    font-size: 14px !important;
+    line-height: 1.42857143 !important;
+    font-weight: 400 !important;
+}
+
+input,
+select,
+textarea,
+.form-control {
+    font-size: 14px !important;
+    line-height: 1.42857143 !important;
+    font-weight: 400 !important;
+}
+
+label,
+th,
+strong,
+b {
+    font-weight: 600 !important;
+}
+
+button,
+.btn {
+    font-size: 14px !important;
+    font-weight: 400 !important;
 }
 
