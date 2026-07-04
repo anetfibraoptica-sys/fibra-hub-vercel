@@ -4648,3 +4648,258 @@ main,
   }
 }
 
+
+
+/* ============================================================
+   CADASTRO - RESUMO MODELO RECEITANET ESCURO
+============================================================ */
+#resumoCadastro.cadastro-resumo,
+.cadastro-resumo {
+  background: transparent !important;
+  border: 0 !important;
+  padding: 0 !important;
+}
+
+.rn-card {
+  background: #111827;
+  color: #e5e7eb;
+  border: 1px solid rgba(148,163,184,.35);
+  border-top: 4px solid #b91c1c;
+  border-radius: 5px;
+  width: 100%;
+  max-width: 720px;
+  height: 820px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 18px 22px 24px 22px;
+  margin: 0 auto 22px auto;
+  font-family: Arial, Helvetica, sans-serif;
+  box-shadow: 0 16px 35px rgba(0,0,0,.22);
+}
+
+.rn-card::-webkit-scrollbar { width: 14px; height: 12px; }
+.rn-card::-webkit-scrollbar-track { background: #cbd5e1; }
+.rn-card::-webkit-scrollbar-thumb { background: #475569; border-radius: 9px; }
+
+.rn-head {
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  margin-bottom:22px;
+}
+.rn-head h2 {
+  margin:0;
+  font-size:28px;
+  line-height:1;
+  font-weight:500;
+  color:#f9fafb;
+}
+.rn-help {
+  width:44px;
+  height:44px;
+  border-radius:4px;
+  background:#1f2937;
+  border:2px solid #475569;
+  color:#93c5fd;
+  font-size:22px;
+  font-weight:900;
+}
+
+.rn-two {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  column-gap:44px;
+}
+.rn-field {
+  margin:0 0 10px 0;
+}
+.rn-field b {
+  display:block;
+  color:#f3f4f6;
+  font-size:18px;
+  line-height:1.08;
+  font-weight:800;
+}
+.rn-field span {
+  display:block;
+  color:#e5e7eb;
+  font-size:18px;
+  line-height:1.2;
+  margin-top:2px;
+  word-break:break-word;
+}
+.rn-login {
+  display:flex !important;
+  align-items:center;
+  gap:9px;
+}
+.rn-login i {
+  color:#3b82f6;
+  font-style:normal;
+  font-size:20px;
+  font-weight:900;
+}
+.rn-spacer {
+  height:82px;
+}
+.rn-section-title {
+  margin:14px 0 18px 0;
+  font-size:30px;
+  font-weight:400;
+  color:#e5e7eb;
+}
+.rn-small-gap {
+  margin-top:-8px;
+}
+.rn-oltnet {
+  color:#e5e7eb;
+  font-size:30px;
+  margin:13px 0 8px 0;
+}
+.rn-ident {
+  display:inline-block;
+  background:#a83a49;
+  color:#fff;
+  padding:6px 10px;
+  border-radius:3px;
+  font-size:13px;
+  font-weight:800;
+}
+.rn-ident.ok {
+  background:#16a34a;
+}
+.rn-line {
+  border:0;
+  border-top:2px solid rgba(148,163,184,.45);
+  margin:22px 0 20px 0;
+}
+.rn-status {
+  font-size:18px;
+  line-height:1.35;
+}
+.rn-status p {
+  margin:0 0 4px 0;
+}
+.rn-status b {
+  font-weight:800;
+  color:#f3f4f6;
+}
+.rn-status em {
+  font-style:normal;
+  font-weight:900;
+}
+.rn-status .on { color:#22c55e; }
+.rn-status .off { color:#ef4444; }
+
+.rn-actions {
+  display:grid;
+  gap:12px;
+  margin:18px 0 20px 0;
+}
+.rn-btn {
+  height:48px;
+  width:100%;
+  border:0;
+  border-radius:2px;
+  color:white;
+  font-size:17px;
+  font-weight:600;
+}
+.rn-btn.b1 { background:#17286d; }
+.rn-btn.b2 { background:#1e3a8a; display:flex; align-items:center; justify-content:center; gap:110px; }
+.rn-btn.b3 { background:#166534; }
+.rn-btn.b4 { background:#b94f38; }
+
+.rn-card h3 {
+  margin:0 0 16px 0;
+  font-size:28px;
+  font-weight:400;
+  color:#e5e7eb;
+}
+.rn-table {
+  width:100%;
+  border-collapse:collapse;
+  color:#e5e7eb;
+  font-size:17px;
+}
+.rn-table th {
+  padding:8px 10px 14px 10px;
+  text-align:left;
+  color:#f3f4f6;
+  font-weight:800;
+}
+.rn-table td {
+  padding:12px 10px;
+}
+.rn-table tbody tr {
+  background:rgba(148,163,184,.10);
+}
+.rn-total {
+  text-align:right;
+  margin:12px 8px 12px 0;
+  font-size:18px;
+  font-weight:700;
+  color:#e5e7eb;
+}
+.rn-contact {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  column-gap:46px;
+  font-size:18px;
+}
+.rn-contact b {
+  display:block;
+  color:#f3f4f6;
+  font-size:18px;
+  font-weight:800;
+  margin-top:8px;
+}
+.rn-contact span {
+  display:block;
+  color:#e5e7eb;
+  line-height:1.14;
+}
+.rn-pai {
+  display:inline-block;
+  background:#22c1c3;
+  color:#fff;
+  padding:8px 16px;
+  border-radius:5px;
+  font-size:17px;
+  font-weight:700;
+}
+
+@media (max-width:768px){
+  .rn-card {
+    max-width:100%;
+    height:72vh;
+    padding:14px;
+  }
+  .rn-two,
+  .rn-status,
+  .rn-contact {
+    grid-template-columns:1fr 1fr;
+    column-gap:20px;
+  }
+  .rn-field b,
+  .rn-field span,
+  .rn-status,
+  .rn-table,
+  .rn-contact,
+  .rn-contact b {
+    font-size:15px;
+  }
+  .rn-head h2,
+  .rn-section-title,
+  .rn-card h3,
+  .rn-oltnet {
+    font-size:24px;
+  }
+  .rn-btn {
+    font-size:14px;
+  }
+  .rn-btn.b2 {
+    gap:25px;
+  }
+}
+
