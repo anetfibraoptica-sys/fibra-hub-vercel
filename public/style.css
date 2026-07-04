@@ -5726,218 +5726,124 @@ html, body, main, .content, #clienteDetalhes, .cadastro-resumo-card, .panel {
 
 
 /* ============================================================
-   CORREÇÃO: RESUMO NA LATERAL DIREITA DO CADASTRO
-   Mantém o resumo idêntico, mas coloca ao lado do formulário.
+   LATERAL SEGURA DO RESUMO - NÃO MEXE NO PAINEL TODO
 ============================================================ */
 
-/* Área principal do cadastro em duas colunas */
-body:has(.rn-receitanet-pixel) .cadastro-page,
-body:has(.rn-receitanet-pixel) .cadastro-layout,
-body:has(.rn-receitanet-pixel) .cadastro-container,
-body:has(.rn-receitanet-pixel) .content,
-body:has(.rn-receitanet-pixel) main .content {
+/* Só o bloco do cadastro vira duas colunas */
+.cadastro-receita-page {
   display: grid !important;
   grid-template-columns: minmax(0, 1fr) 430px !important;
+  gap: 18px !important;
   align-items: start !important;
-  gap: 20px !important;
   width: 100% !important;
   overflow-x: hidden !important;
 }
 
-/* Formulário à esquerda */
-body:has(.rn-receitanet-pixel) .cadastro-form,
-body:has(.rn-receitanet-pixel) .cadastro-form-card,
-body:has(.rn-receitanet-pixel) .cadastro-main,
-body:has(.rn-receitanet-pixel) form,
-body:has(.rn-receitanet-pixel) .form-card {
+/* Todo o formulário fica na coluna esquerda */
+.cadastro-receita-page > section:first-of-type {
   grid-column: 1 !important;
   min-width: 0 !important;
   width: 100% !important;
 }
 
-/* Resumo à direita */
-body:has(.rn-receitanet-pixel) .cadastro-resumo-card,
-body:has(.rn-receitanet-pixel) .cadastro-resumo,
-body:has(.rn-receitanet-pixel) aside:has(.rn-receitanet-pixel),
-body:has(.rn-receitanet-pixel) #resumoCadastro {
+/* O resumo fica fixo na coluna direita */
+.cadastro-receita-page > aside.cadastro-resumo-card {
   grid-column: 2 !important;
-  grid-row: 1 / span 20 !important;
-  align-self: start !important;
-  position: sticky !important;
-  top: 12px !important;
+  grid-row: 1 !important;
   width: 430px !important;
   max-width: 430px !important;
+  min-width: 430px !important;
   margin: 0 !important;
   padding: 0 !important;
+  align-self: start !important;
+  position: sticky !important;
+  top: 10px !important;
 }
 
-/* Tamanho do cartão quando fica na lateral */
-body:has(.rn-receitanet-pixel) .rn-receitanet-pixel {
+/* Card interno mantém o visual que já ficou idêntico */
+.cadastro-receita-page > aside.cadastro-resumo-card .rn-receitanet-pixel {
   width: 430px !important;
   max-width: 430px !important;
-  height: calc(100vh - 110px) !important;
+  height: calc(100vh - 100px) !important;
   margin: 0 !important;
-  padding: 16px 18px 22px 18px !important;
 }
 
-/* Evita que algum bloco force o resumo para baixo */
-body:has(.rn-receitanet-pixel) .observacao-box,
-body:has(.rn-receitanet-pixel) .cadastro-save-row,
-body:has(.rn-receitanet-pixel) .tab-content,
-body:has(.rn-receitanet-pixel) .form-row,
-body:has(.rn-receitanet-pixel) .campo {
-  min-width: 0 !important;
-}
-
-/* Reorganiza as colunas internas do resumo para caber na lateral igual ReceitaNet */
-body:has(.rn-receitanet-pixel) .rn-px-top,
-body:has(.rn-receitanet-pixel) .rn-px-server,
-body:has(.rn-receitanet-pixel) .rn-px-status,
-body:has(.rn-receitanet-pixel) .rn-px-contact {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+/* Reduz só um pouco para caber na lateral, sem deformar */
+.cadastro-receita-page .rn-px-top,
+.cadastro-receita-page .rn-px-server,
+.cadastro-receita-page .rn-px-status,
+.cadastro-receita-page .rn-px-contact {
   column-gap: 24px !important;
 }
 
-/* Fontes proporcionais ao resumo lateral */
-body:has(.rn-receitanet-pixel) .rn-px-head h2 {
+.cadastro-receita-page .rn-px-head h2 {
   font-size: 24px !important;
 }
 
-body:has(.rn-receitanet-pixel) .rn-px-title,
-body:has(.rn-receitanet-pixel) .rn-px-sub,
-body:has(.rn-receitanet-pixel) .rn-px-oltnet {
+.cadastro-receita-page .rn-px-title,
+.cadastro-receita-page .rn-px-sub,
+.cadastro-receita-page .rn-px-oltnet {
   font-size: 22px !important;
 }
 
-body:has(.rn-receitanet-pixel) .rn-px-field b,
-body:has(.rn-receitanet-pixel) .rn-px-status b,
-body:has(.rn-receitanet-pixel) .rn-px-contact b,
-body:has(.rn-receitanet-pixel) .rn-px-table th {
+.cadastro-receita-page .rn-px-field b,
+.cadastro-receita-page .rn-px-status b,
+.cadastro-receita-page .rn-px-contact b,
+.cadastro-receita-page .rn-px-table th {
   font-size: 13px !important;
 }
 
-body:has(.rn-receitanet-pixel) .rn-px-field span,
-body:has(.rn-receitanet-pixel) .rn-px-status,
-body:has(.rn-receitanet-pixel) .rn-px-status p,
-body:has(.rn-receitanet-pixel) .rn-px-contact,
-body:has(.rn-receitanet-pixel) .rn-px-contact span,
-body:has(.rn-receitanet-pixel) .rn-px-table,
-body:has(.rn-receitanet-pixel) .rn-px-table td,
-body:has(.rn-receitanet-pixel) .rn-px-total {
+.cadastro-receita-page .rn-px-field span,
+.cadastro-receita-page .rn-px-status,
+.cadastro-receita-page .rn-px-status p,
+.cadastro-receita-page .rn-px-contact,
+.cadastro-receita-page .rn-px-contact span,
+.cadastro-receita-page .rn-px-table,
+.cadastro-receita-page .rn-px-table td,
+.cadastro-receita-page .rn-px-total {
   font-size: 12px !important;
 }
 
-body:has(.rn-receitanet-pixel) .rn-px-btn {
+.cadastro-receita-page .rn-px-btn {
   height: 38px !important;
   min-height: 38px !important;
   font-size: 12px !important;
 }
 
-body:has(.rn-receitanet-pixel) .rn-px-btn strong {
+.cadastro-receita-page .rn-px-btn strong {
   font-size: 12px !important;
 }
 
-/* Fallback para navegadores sem :has(), usando classes diretas */
-.cadastro-resumo-card .rn-receitanet-pixel,
-.cadastro-resumo .rn-receitanet-pixel,
-#resumoCadastro .rn-receitanet-pixel {
-  width: 430px !important;
-  max-width: 430px !important;
+/* Sem barra horizontal */
+.cadastro-receita-page,
+.cadastro-receita-page *,
+.rn-receitanet-pixel,
+.rn-receitanet-pixel * {
+  box-sizing: border-box !important;
 }
 
-/* Mobile: volta para baixo naturalmente */
-@media(max-width: 900px) {
-  body:has(.rn-receitanet-pixel) .cadastro-page,
-  body:has(.rn-receitanet-pixel) .cadastro-layout,
-  body:has(.rn-receitanet-pixel) .cadastro-container,
-  body:has(.rn-receitanet-pixel) .content,
-  body:has(.rn-receitanet-pixel) main .content {
+.rn-receitanet-pixel {
+  overflow-x: hidden !important;
+}
+
+/* Em telas pequenas volta para baixo */
+@media (max-width: 900px) {
+  .cadastro-receita-page {
     display: block !important;
   }
 
-  body:has(.rn-receitanet-pixel) .cadastro-resumo-card,
-  body:has(.rn-receitanet-pixel) .cadastro-resumo,
-  body:has(.rn-receitanet-pixel) aside:has(.rn-receitanet-pixel),
-  body:has(.rn-receitanet-pixel) #resumoCadastro {
-    position: static !important;
+  .cadastro-receita-page > aside.cadastro-resumo-card {
+    position: relative !important;
     width: 100% !important;
+    min-width: 0 !important;
     max-width: 100% !important;
     margin-top: 16px !important;
   }
 
-  body:has(.rn-receitanet-pixel) .rn-receitanet-pixel {
+  .cadastro-receita-page > aside.cadastro-resumo-card .rn-receitanet-pixel {
     width: 100% !important;
     max-width: 100% !important;
     height: 72vh !important;
   }
 }
 
-
-
-/* Fallback via JS: content.cadastro-com-resumo-lateral */
-main .content.cadastro-com-resumo-lateral,
-.content.cadastro-com-resumo-lateral {
-  display: grid !important;
-  grid-template-columns: minmax(0, 1fr) 430px !important;
-  align-items: start !important;
-  gap: 20px !important;
-}
-
-main .content.cadastro-com-resumo-lateral .cadastro-resumo-card,
-.content.cadastro-com-resumo-lateral .cadastro-resumo-card,
-main .content.cadastro-com-resumo-lateral #resumoCadastro,
-.content.cadastro-com-resumo-lateral #resumoCadastro {
-  grid-column: 2 !important;
-  grid-row: 1 / span 20 !important;
-  position: sticky !important;
-  top: 12px !important;
-  width: 430px !important;
-  max-width: 430px !important;
-  margin: 0 !important;
-}
-
-@media(max-width:900px){
-  main .content.cadastro-com-resumo-lateral,
-  .content.cadastro-com-resumo-lateral {
-    display: block !important;
-  }
-}
-
-
-
-/* ===== CORREÇÃO REAL DO LAYOUT DO CADASTRO ===== */
-.cadastro-receita-page{
-    display:flex !important;
-    align-items:flex-start !important;
-    gap:20px !important;
-    flex-wrap:nowrap !important;
-}
-
-.cadastro-receita-page > .cadastro-form,
-.cadastro-receita-page > section:first-of-type{
-    flex:1 1 auto !important;
-    min-width:0 !important;
-}
-
-.cadastro-resumo-card{
-    position:sticky !important;
-    top:10px !important;
-    width:430px !important;
-    min-width:430px !important;
-    max-width:430px !important;
-    margin-top:0 !important;
-    align-self:flex-start !important;
-}
-
-@media(max-width:900px){
-  .cadastro-receita-page{
-      flex-direction:column !important;
-  }
-
-  .cadastro-resumo-card{
-      width:100% !important;
-      min-width:100% !important;
-      max-width:100% !important;
-      position:relative !important;
-  }
-}
