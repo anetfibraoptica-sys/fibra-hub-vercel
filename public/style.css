@@ -5725,50 +5725,85 @@ html, body, main, .content, #clienteDetalhes, .cadastro-resumo-card, .panel {
 
 
 
+
+
 /* ============================================================
-   LATERAL SEGURA DO RESUMO - NÃO MEXE NO PAINEL TODO
+   CADASTRO NORMALIZADO
+   Botões no topo, formulário esquerdo largo e resumo à direita.
 ============================================================ */
 
-/* Só o bloco do cadastro vira duas colunas */
+/* Não deixa o painel inteiro virar coluna errada */
 .cadastro-receita-page {
   display: grid !important;
-  grid-template-columns: minmax(0, 1fr) 430px !important;
+  grid-template-columns: minmax(650px, 1fr) 430px !important;
+  grid-template-areas:
+    "atalhos atalhos"
+    "form resumo" !important;
   gap: 18px !important;
   align-items: start !important;
   width: 100% !important;
-  overflow-x: hidden !important;
+  max-width: none !important;
+  overflow-x: auto !important;
 }
 
-/* Todo o formulário fica na coluna esquerda */
-.cadastro-receita-page > section:first-of-type {
-  grid-column: 1 !important;
-  min-width: 0 !important;
+/* O bloco dos botões coloridos fica em cima */
+.cadastro-receita-page > .atalhos-cliente,
+.cadastro-receita-page > .cliente-atalhos,
+.cadastro-receita-page > .cadastro-atalhos,
+.cadastro-receita-page > .acoes-cliente,
+.cadastro-receita-page > .cards-acoes,
+.cadastro-receita-page > .botoes-cliente,
+.cadastro-receita-page > div:first-child {
+  grid-area: atalhos !important;
   width: 100% !important;
+  max-width: 100% !important;
 }
 
-/* O resumo fica fixo na coluna direita */
+/* Formulário fica à esquerda com largura boa */
+.cadastro-receita-page > section:first-of-type {
+  grid-area: form !important;
+  width: 100% !important;
+  min-width: 650px !important;
+  max-width: none !important;
+}
+
+/* Resumo fica à direita */
 .cadastro-receita-page > aside.cadastro-resumo-card {
-  grid-column: 2 !important;
-  grid-row: 1 !important;
+  grid-area: resumo !important;
   width: 430px !important;
-  max-width: 430px !important;
   min-width: 430px !important;
+  max-width: 430px !important;
   margin: 0 !important;
   padding: 0 !important;
   align-self: start !important;
   position: sticky !important;
-  top: 10px !important;
+  top: 12px !important;
 }
 
-/* Card interno mantém o visual que já ficou idêntico */
+/* Card do resumo lateral */
 .cadastro-receita-page > aside.cadastro-resumo-card .rn-receitanet-pixel {
   width: 430px !important;
   max-width: 430px !important;
-  height: calc(100vh - 100px) !important;
+  height: calc(100vh - 115px) !important;
   margin: 0 !important;
 }
 
-/* Reduz só um pouco para caber na lateral, sem deformar */
+/* Não espremer campos */
+.cadastro-receita-page input,
+.cadastro-receita-page select,
+.cadastro-receita-page textarea {
+  min-width: 0 !important;
+}
+
+.cadastro-receita-page .form-row,
+.cadastro-receita-page .cadastro-grid,
+.cadastro-receita-page .dados-grid,
+.cadastro-receita-page .tab-content,
+.cadastro-receita-page .campo {
+  min-width: 0 !important;
+}
+
+/* Ajuste interno do resumo para caber na lateral */
 .cadastro-receita-page .rn-px-top,
 .cadastro-receita-page .rn-px-server,
 .cadastro-receita-page .rn-px-status,
@@ -5814,22 +5849,34 @@ html, body, main, .content, #clienteDetalhes, .cadastro-resumo-card, .panel {
   font-size: 12px !important;
 }
 
-/* Sem barra horizontal */
-.cadastro-receita-page,
-.cadastro-receita-page *,
-.rn-receitanet-pixel,
-.rn-receitanet-pixel * {
-  box-sizing: border-box !important;
+/* Notebook menor: ainda mantém lado a lado, com rolagem horizontal apenas do conteúdo se necessário */
+@media (max-width: 1180px) {
+  .cadastro-receita-page {
+    grid-template-columns: minmax(560px, 1fr) 400px !important;
+  }
+
+  .cadastro-receita-page > section:first-of-type {
+    min-width: 560px !important;
+  }
+
+  .cadastro-receita-page > aside.cadastro-resumo-card,
+  .cadastro-receita-page > aside.cadastro-resumo-card .rn-receitanet-pixel {
+    width: 400px !important;
+    min-width: 400px !important;
+    max-width: 400px !important;
+  }
 }
 
-.rn-receitanet-pixel {
-  overflow-x: hidden !important;
-}
-
-/* Em telas pequenas volta para baixo */
+/* Celular: empilha para não quebrar */
 @media (max-width: 900px) {
   .cadastro-receita-page {
     display: block !important;
+    overflow-x: hidden !important;
+  }
+
+  .cadastro-receita-page > section:first-of-type {
+    min-width: 0 !important;
+    width: 100% !important;
   }
 
   .cadastro-receita-page > aside.cadastro-resumo-card {
@@ -5843,6 +5890,7 @@ html, body, main, .content, #clienteDetalhes, .cadastro-resumo-card, .panel {
   .cadastro-receita-page > aside.cadastro-resumo-card .rn-receitanet-pixel {
     width: 100% !important;
     max-width: 100% !important;
+    min-width: 0 !important;
     height: 72vh !important;
   }
 }
