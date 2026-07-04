@@ -4234,3 +4234,51 @@ tbody tr:hover {
   cursor: pointer;
 }
 
+
+
+/* Menu lateral aberto pelo botão azul de 3 linhas */
+@media (max-width: 768px) {
+  .sidebar,
+  aside,
+  nav.sidebar,
+  .menu-lateral {
+    position: fixed !important;
+    top: 0 !important;
+    left: -290px !important;
+    width: 270px !important;
+    max-width: 85vw !important;
+    height: 100vh !important;
+    z-index: 9999 !important;
+    overflow-y: auto !important;
+    transition: left .25s ease !important;
+  }
+
+  .sidebar.open,
+  .sidebar.mobile-open,
+  aside.open,
+  aside.mobile-open,
+  nav.sidebar.open,
+  nav.sidebar.mobile-open,
+  .menu-lateral.open,
+  .menu-lateral.mobile-open {
+    left: 0 !important;
+  }
+
+  .main-content,
+  .content,
+  .container,
+  main {
+    margin-left: 0 !important;
+    width: 100% !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .sidebar,
+  aside,
+  nav.sidebar,
+  .menu-lateral {
+    left: 0;
+  }
+}
+

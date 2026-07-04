@@ -2553,60 +2553,75 @@ document.addEventListener("DOMContentLoaded", function(){
 
 
 
-/* Correção definitiva: abrir aba Controles */
-(function(){
-  const paginaControle = "controle.html";
 
-  function abrirControle(e){
-    if(e) e.preventDefault();
-    window.location.href = paginaControle;
+
+
+
+/* Botão azul de 3 linhas abre a lateral/menu */
+function abrirMenu(){
+  const sidebar = document.querySelector(".sidebar, aside, nav.sidebar, .menu-lateral");
+  const overlay = document.getElementById("menuOverlay") || document.getElementById("mobileMenuOverlay");
+
+  if(sidebar){
+    sidebar.classList.add("open");
+    sidebar.classList.add("mobile-open");
   }
 
-  function texto(el){
-    return (el && el.textContent ? el.textContent : "").toLowerCase().trim();
+  if(overlay){
+    overlay.classList.add("show");
+  }
+}
+
+function fecharMenu(){
+  const sidebar = document.querySelector(".sidebar, aside, nav.sidebar, .menu-lateral");
+  const overlay = document.getElementById("menuOverlay") || document.getElementById("mobileMenuOverlay");
+
+  if(sidebar){
+    sidebar.classList.remove("open");
+    sidebar.classList.remove("mobile-open");
   }
 
-  function prepararControle(){
-    const seletores = [
-      "#btnControle",
-      "#btnControles",
-      "#botaoControle",
-      "#botaoControles",
-      "#abrirControle",
-      "#abrirControles",
-      ".btn-controle",
-      ".btn-controles",
-      ".botao-controle",
-      ".botao-controles",
-      ".botao-azul",
-      ".btn-azul",
-      ".blue-button",
-      ".controle-btn",
-      ".controles-btn",
-      "[data-page='controle']",
-      "[data-page='controles']",
-      "[data-link='controle']",
-      "[data-link='controles']"
-    ];
+  if(overlay){
+    overlay.classList.remove("show");
+  }
+}
 
-    document.querySelectorAll(seletores.join(",")).forEach(function(el){
-      el.addEventListener("click", abrirControle, true);
-      el.onclick = abrirControle;
-      el.style.cursor = "pointer";
+function alternarMenu(){
+  const sidebar = document.querySelector(".sidebar, aside, nav.sidebar, .menu-lateral");
+  if(!sidebar) return;
+
+  if(sidebar.classList.contains("open") || sidebar.classList.contains("mobile-open")){
+    fecharMenu();
+  }else{
+    abrirMenu();
+  }
+}
+
+document.addEventListener("DOMContentLoaded", function(){
+  // Garante que o botão azul de 3 linhas chame abrirMenu.
+  document.querySelectorAll(".menu-btn, #menuBtn, .hamburger, .btn-menu").forEach(function(btn){
+    btn.onclick = function(e){
+      e.preventDefault();
+      abrirMenu();
+    };
+  });
+
+  // Fecha lateral ao tocar fora.
+  const overlay = document.getElementById("menuOverlay") || document.getElementById("mobileMenuOverlay");
+  if(overlay){
+    overlay.onclick = fecharMenu;
+  }
+
+  // Fecha no celular depois de tocar em uma opção do menu.
+  const sidebar = document.querySelector(".sidebar, aside, nav.sidebar, .menu-lateral");
+  if(sidebar){
+    sidebar.querySelectorAll("a").forEach(function(link){
+      link.addEventListener("click", function(){
+        if(window.innerWidth <= 768){
+          setTimeout(fecharMenu, 150);
+        }
+      });
     });
-
-    document.querySelectorAll("a, button, div, span, li").forEach(function(el){
-      const t = texto(el);
-      if(t === "controle" || t === "controles" || t.includes("controle")){
-        el.addEventListener("click", abrirControle, true);
-        el.onclick = abrirControle;
-        el.style.cursor = "pointer";
-        if(el.tagName && el.tagName.toLowerCase() === "a") el.setAttribute("href", paginaControle);
-      }
-    });
   }
-
-  document.addEventListener("DOMContentLoaded", prepararControle);
-  setTimeout(prepararControle, 1000);
-})();
+});
 
