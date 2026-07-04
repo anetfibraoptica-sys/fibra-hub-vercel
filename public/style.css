@@ -5397,3 +5397,329 @@ body .content {
   }
 }
 
+
+
+/* ============================================================
+   RECEITANET PIXEL - REFEITO COM TODOS OS BOTÕES DA IMAGEM
+   Classe nova para não brigar com ajustes antigos.
+============================================================ */
+body .rn-receitanet-pixel {
+  width: 720px !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  height: 820px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  background: #111827 !important;
+  color: #e5e7eb !important;
+  border: 1px solid rgba(148,163,184,.40) !important;
+  border-top: 4px solid #b91c1c !important;
+  border-radius: 2px !important;
+  padding: 18px 20px 22px 20px !important;
+  margin: 0 auto 22px auto !important;
+  font-family: Arial, Helvetica, sans-serif !important;
+  box-sizing: border-box !important;
+}
+
+body .rn-receitanet-pixel *,
+body .rn-receitanet-pixel *::before,
+body .rn-receitanet-pixel *::after {
+  box-sizing: border-box !important;
+  max-width: 100% !important;
+}
+
+body .rn-receitanet-pixel::-webkit-scrollbar { width: 14px !important; height: 0 !important; }
+body .rn-receitanet-pixel::-webkit-scrollbar-track { background: #cbd5e1 !important; }
+body .rn-receitanet-pixel::-webkit-scrollbar-thumb { background: #475569 !important; border-radius: 9px !important; }
+
+body .rn-px-head {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: flex-start !important;
+  margin-bottom: 22px !important;
+}
+
+body .rn-px-head h2 {
+  margin: 0 !important;
+  font-size: 29px !important;
+  font-weight: 500 !important;
+  line-height: 1 !important;
+  color: #f9fafb !important;
+}
+
+body .rn-px-help {
+  width: 44px !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  padding: 0 !important;
+  flex: 0 0 44px !important;
+  background: #1f2937 !important;
+  border: 2px solid #475569 !important;
+  border-radius: 4px !important;
+  color: #93c5fd !important;
+  font-size: 22px !important;
+  font-weight: 900 !important;
+}
+
+body .rn-px-top,
+body .rn-px-server,
+body .rn-px-status,
+body .rn-px-contact {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+  column-gap: 52px !important;
+  width: 100% !important;
+  overflow: hidden !important;
+}
+
+body .rn-px-col { min-width: 0 !important; }
+
+body .rn-px-field {
+  margin: 0 0 10px 0 !important;
+  min-width: 0 !important;
+}
+
+body .rn-px-field b,
+body .rn-px-status b,
+body .rn-px-contact b,
+body .rn-px-table th {
+  display: block !important;
+  color: #f3f4f6 !important;
+  font-size: 18px !important;
+  line-height: 1.08 !important;
+  font-weight: 800 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+body .rn-px-field span,
+body .rn-px-status,
+body .rn-px-status p,
+body .rn-px-contact,
+body .rn-px-contact span,
+body .rn-px-table,
+body .rn-px-table td,
+body .rn-px-total {
+  color: #e5e7eb !important;
+  font-size: 18px !important;
+  line-height: 1.18 !important;
+  font-weight: 400 !important;
+}
+
+body .rn-px-field span,
+body .rn-px-contact span {
+  display: block !important;
+  margin-top: 2px !important;
+  overflow-wrap: break-word !important;
+  word-break: normal !important;
+}
+
+body .rn-px-login {
+  display: flex !important;
+  align-items: center !important;
+  gap: 9px !important;
+}
+
+body .rn-px-login i {
+  color: #3b82f6 !important;
+  font-size: 20px !important;
+  font-weight: 900 !important;
+  font-style: normal !important;
+  flex: 0 0 auto !important;
+}
+
+body .rn-px-space {
+  height: 82px !important;
+}
+
+body .rn-px-title {
+  margin: 14px 0 18px 0 !important;
+  color: #e5e7eb !important;
+  font-size: 30px !important;
+  line-height: 1.05 !important;
+  font-weight: 400 !important;
+}
+
+body .rn-px-oltnet {
+  color: #e5e7eb !important;
+  font-size: 30px !important;
+  line-height: 1.05 !important;
+  font-weight: 400 !important;
+  margin: 13px 0 8px 0 !important;
+}
+
+body .rn-px-ident {
+  display: inline-block !important;
+  width: auto !important;
+  background: #a83a49 !important;
+  color: #fff !important;
+  padding: 6px 10px !important;
+  border-radius: 3px !important;
+  font-size: 13px !important;
+  line-height: 1 !important;
+  font-weight: 800 !important;
+}
+
+body .rn-px-ident.ok { background: #16a34a !important; }
+
+body .rn-px-line {
+  border: 0 !important;
+  border-top: 2px solid rgba(148,163,184,.45) !important;
+  margin: 22px 0 20px 0 !important;
+}
+
+body .rn-px-status p {
+  margin: 0 0 4px 0 !important;
+  padding: 0 !important;
+}
+
+body .rn-px-status em {
+  font-style: normal !important;
+  font-weight: 900 !important;
+}
+
+body .rn-px-status .on { color: #22c55e !important; }
+body .rn-px-status .off { color: #ef4444 !important; }
+
+body .rn-px-buttons {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 12px !important;
+  width: 100% !important;
+  margin: 18px 0 20px 0 !important;
+}
+
+body .rn-px-btn {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  height: 48px !important;
+  min-height: 48px !important;
+  padding: 0 14px !important;
+  border: 0 !important;
+  border-radius: 2px !important;
+  color: #fff !important;
+  font-size: 17px !important;
+  line-height: 1 !important;
+  font-weight: 600 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+}
+
+body .rn-px-btn strong {
+  margin-left: auto !important;
+  color: #fff !important;
+  font-size: 17px !important;
+  font-weight: 800 !important;
+}
+
+body .rn-px-blue { background: #17286d !important; }
+body .rn-px-green { background: #166534 !important; }
+body .rn-px-red { background: #b94f38 !important; }
+
+body .rn-px-sub {
+  margin: 0 0 16px 0 !important;
+  color: #e5e7eb !important;
+  font-size: 28px !important;
+  line-height: 1.05 !important;
+  font-weight: 400 !important;
+}
+
+body .rn-px-table {
+  width: 100% !important;
+  max-width: 100% !important;
+  table-layout: fixed !important;
+  border-collapse: collapse !important;
+  color: #e5e7eb !important;
+}
+
+body .rn-px-table th {
+  text-align: left !important;
+  padding: 8px 10px 14px 10px !important;
+  white-space: normal !important;
+}
+
+body .rn-px-table td {
+  padding: 12px 10px !important;
+  white-space: normal !important;
+  overflow-wrap: break-word !important;
+}
+
+body .rn-px-table tbody tr {
+  background: rgba(148,163,184,.10) !important;
+}
+
+body .rn-px-total {
+  text-align: right !important;
+  font-weight: 700 !important;
+  margin: 12px 8px 12px 0 !important;
+}
+
+body .rn-px-contact b {
+  margin-top: 8px !important;
+}
+
+body .rn-px-pai {
+  display: inline-block !important;
+  width: auto !important;
+  background: #22c1c3 !important;
+  color: #fff !important;
+  padding: 8px 16px !important;
+  border-radius: 5px !important;
+  font-size: 17px !important;
+  line-height: 1 !important;
+  font-weight: 700 !important;
+}
+
+/* mata barra lateral horizontal do navegador/painel */
+html, body, main, .content, #clienteDetalhes, .cadastro-resumo-card, .panel {
+  overflow-x: hidden !important;
+}
+
+@media(max-width: 900px) {
+  body .rn-receitanet-pixel {
+    width: 100% !important;
+    height: 78vh !important;
+    padding: 16px 18px 22px 18px !important;
+  }
+  body .rn-px-top,
+  body .rn-px-server,
+  body .rn-px-status,
+  body .rn-px-contact {
+    column-gap: 32px !important;
+  }
+}
+
+@media(max-width: 768px) {
+  body .rn-receitanet-pixel {
+    height: 72vh !important;
+    padding: 14px !important;
+  }
+  body .rn-px-field b,
+  body .rn-px-status b,
+  body .rn-px-contact b,
+  body .rn-px-table th,
+  body .rn-px-field span,
+  body .rn-px-status,
+  body .rn-px-status p,
+  body .rn-px-contact,
+  body .rn-px-contact span,
+  body .rn-px-table,
+  body .rn-px-table td {
+    font-size: 15px !important;
+  }
+  body .rn-px-head h2,
+  body .rn-px-title,
+  body .rn-px-sub,
+  body .rn-px-oltnet {
+    font-size: 24px !important;
+  }
+  body .rn-px-btn {
+    font-size: 14px !important;
+  }
+  body .rn-px-btn strong {
+    font-size: 14px !important;
+  }
+}
+

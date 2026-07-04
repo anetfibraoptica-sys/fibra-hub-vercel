@@ -2363,44 +2363,48 @@ function rnResumoHtml(c, on){
   const tel3=rnCampo(c,["telefone3","celular3","fone3"],"--");
 
   return `
-  <section class="rn-cliente-card">
-    <div class="rn-head"><h2>Resumo</h2><button type="button">?</button></div>
+  <section class="rn-cliente-card rn-receitanet-pixel">
+    <div class="rn-px-head">
+      <h2>Resumo</h2>
+      <button type="button" class="rn-px-help">?</button>
+    </div>
 
-    <div class="rn-grid">
-      <div>
-        <div class="rn-field"><b>Login</b><span class="rn-login"><i>✓</i>${rnEsc(login||"--")}</span></div>
-        <div class="rn-field"><b>Nome</b><span>${rnEsc(nome)}</span></div>
-        <div class="rn-field"><b>CPF/CNPJ</b><span>${rnEsc(cpf)}</span></div>
-        <div class="rn-field"><b>Dia do Vencimento</b><span>${rnEsc(venc)}</span></div>
+    <div class="rn-px-top">
+      <div class="rn-px-col">
+        <div class="rn-px-field"><b>Login</b><span class="rn-px-login"><i>✓</i>${rnEsc(login||"--")}</span></div>
+        <div class="rn-px-field"><b>Nome</b><span>${rnEsc(nome)}</span></div>
+        <div class="rn-px-field"><b>CPF/CNPJ</b><span>${rnEsc(cpf)}</span></div>
+        <div class="rn-px-field"><b>Dia do Vencimento</b><span>${rnEsc(venc)}</span></div>
       </div>
-      <div>
-        <div class="rn-field"><b>Senha</b><span>${rnEsc(senha)}</span></div>
-        <div style="height:82px"></div>
-        <div class="rn-field"><b>Próxima Fatura Aberta</b><span>${rnEsc(proxima)}</span></div>
+      <div class="rn-px-col">
+        <div class="rn-px-field"><b>Senha</b><span>${rnEsc(senha)}</span></div>
+        <div class="rn-px-space"></div>
+        <div class="rn-px-field"><b>Próxima Fatura Aberta</b><span>${rnEsc(proxima)}</span></div>
       </div>
     </div>
 
-    <div class="rn-title">Servidor</div>
-    <div class="rn-grid">
-      <div>
-        <div class="rn-field"><b>SERVIDOR</b><span>${rnEsc(servidor)}</span></div>
-        <div class="rn-field"><b>ELEMENTO DE REDE</b><span>Conexão</span></div>
-        <div class="rn-field"><span>PPPOE</span></div>
-        <div class="rn-oltnet">OLTNET</div>
-        <span class="rn-ident ${online?"ok":""}">${online?"Identificado":"Não Identificado"}</span>
+    <div class="rn-px-title">Servidor</div>
+
+    <div class="rn-px-server">
+      <div class="rn-px-col">
+        <div class="rn-px-field"><b>SERVIDOR</b><span>${rnEsc(servidor)}</span></div>
+        <div class="rn-px-field"><b>ELEMENTO DE REDE</b><span>Conexão</span></div>
+        <div class="rn-px-field rn-px-pppoe"><span>PPPOE</span></div>
+        <div class="rn-px-oltnet">OLTNET</div>
+        <span class="rn-px-ident ${online?"ok":""}">${online?"Identificado":"Não Identificado"}</span>
       </div>
-      <div>
-        <div class="rn-field"><b>INTERFACE</b><span>${rnEsc(String(servico).toUpperCase())}</span></div>
-        <div class="rn-field"><b>IP ATUAL</b><span>${rnEsc(ip)}</span></div>
-        <div class="rn-field"><b>Profile</b><span>${rnEsc(profile)}</span></div>
+      <div class="rn-px-col">
+        <div class="rn-px-field"><b>INTERFACE</b><span>${rnEsc(String(servico).toUpperCase())}</span></div>
+        <div class="rn-px-field"><b>IP ATUAL</b><span>${rnEsc(ip)}</span></div>
+        <div class="rn-px-field"><b>Profile</b><span>${rnEsc(profile)}</span></div>
       </div>
     </div>
 
-    <hr>
+    <hr class="rn-px-line">
 
-    <div class="rn-status">
+    <div class="rn-px-status">
       <div>
-        <p><b>Status</b> <em class="${online?"on":"off"}">●</em> ${online?"Online":"Offline"}</p>
+        <p><b>Status</b><em class="${online?"on":"off"}">●</em> ${online?"Online":"Offline"}</p>
         <p><b>Serviço:</b> ${rnEsc(servico)}</p>
         <p><b>IP:</b> ${rnEsc(ip)}</p>
         <p><b>Profile Servidor:</b> ${rnEsc(profile)}</p>
@@ -2415,34 +2419,34 @@ function rnResumoHtml(c, on){
       </div>
     </div>
 
-    <div class="rn-actions">
-      <button class="rn-b1" type="button">Configurar Equipamento - Remoto</button>
-      <button class="rn-b2" type="button"><span>Configurar Equipamento - Interno</span><strong>HTTPS</strong></button>
-      <button class="rn-b3" type="button">Diagnosticar Cliente</button>
-      <button class="rn-b4" type="button">Monitoramento em Tempo Real</button>
+    <div class="rn-px-buttons">
+      <button type="button" class="rn-px-btn rn-px-blue">Configurar Equipamento - Remoto</button>
+      <button type="button" class="rn-px-btn rn-px-blue">Configurar Equipamento - Interno <strong>HTTPS</strong></button>
+      <button type="button" class="rn-px-btn rn-px-green">Diagnosticar Cliente</button>
+      <button type="button" class="rn-px-btn rn-px-red">Monitoramento em Tempo Real</button>
     </div>
 
-    <hr>
+    <hr class="rn-px-line">
 
-    <h3>Plano de Cobrança</h3>
-    <table class="rn-table">
+    <h3 class="rn-px-sub">Plano de Cobrança</h3>
+    <table class="rn-px-table rn-px-plano">
       <thead><tr><th>PLANO</th><th>VALOR UN</th><th>QTDADE</th></tr></thead>
       <tbody><tr><td>${rnEsc(plano)}</td><td>${rnMoeda(valor)}</td><td>1</td></tr></tbody>
     </table>
-    <div class="rn-total">Total: ${rnMoeda(valor)}</div>
+    <div class="rn-px-total">Total: ${rnMoeda(valor)}</div>
 
-    <hr>
+    <hr class="rn-px-line">
 
-    <h3>Estoque</h3>
-    <table class="rn-table">
+    <h3 class="rn-px-sub">Estoque</h3>
+    <table class="rn-px-table rn-px-estoque">
       <thead><tr><th>PRODUTO</th><th>QT.</th><th>UN</th><th>VALOR</th><th>DATA</th></tr></thead>
       <tbody><tr><td>Nenhum Produto</td><td>-</td><td>-</td><td>-</td><td>-</td></tr></tbody>
     </table>
 
-    <hr>
+    <hr class="rn-px-line">
 
-    <h3>Dados de Contato</h3>
-    <div class="rn-contato">
+    <h3 class="rn-px-sub">Dados de Contato</h3>
+    <div class="rn-px-contact">
       <div>
         <b>Endereço</b><span>${rnEsc(endereco)}</span>
         <b>Ponto de Ref.</b><span>${rnEsc(ref)}</span>
@@ -2459,10 +2463,10 @@ function rnResumoHtml(c, on){
       </div>
     </div>
 
-    <hr>
+    <hr class="rn-px-line">
 
-    <h3>Sistema Pai Controle</h3>
-    <span class="rn-pai">Desativado</span>
+    <h3 class="rn-px-sub">Sistema Pai Controle</h3>
+    <span class="rn-px-pai">Desativado</span>
   </section>`;
 }
 async function rnOnlineInfo(login){
