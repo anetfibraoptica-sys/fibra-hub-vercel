@@ -4903,3 +4903,85 @@ main,
   }
 }
 
+
+
+/* RESUMO FORÇADO RECEITANET ESCURO - SUBSTITUI VISUALMENTE O ANTIGO */
+#resumoCadastroReceitaNetForcado {
+  display:block !important;
+  visibility:visible !important;
+  opacity:1 !important;
+}
+
+.cadastro-resumo:not(:has(#resumoCadastroReceitaNetForcado)),
+#resumoCadastro:not(:has(#resumoCadastroReceitaNetForcado)),
+#abaResumo:not(:has(#resumoCadastroReceitaNetForcado)),
+#resumo:not(:has(#resumoCadastroReceitaNetForcado)),
+.resumo:not(:has(#resumoCadastroReceitaNetForcado)) {
+  display:none !important;
+}
+
+.rn-forcado-card {
+  background:#111827 !important;
+  color:#e5e7eb !important;
+  border:1px solid rgba(148,163,184,.35) !important;
+  border-top:4px solid #b91c1c !important;
+  border-radius:5px !important;
+  width:100% !important;
+  max-width:720px !important;
+  height:820px !important;
+  overflow-y:auto !important;
+  overflow-x:hidden !important;
+  padding:18px 22px 24px 22px !important;
+  margin:0 auto 22px auto !important;
+  font-family:Arial, Helvetica, sans-serif !important;
+  box-shadow:0 16px 35px rgba(0,0,0,.22) !important;
+}
+
+.rn-forcado-card::-webkit-scrollbar { width:14px; height:12px; }
+.rn-forcado-card::-webkit-scrollbar-track { background:#cbd5e1; }
+.rn-forcado-card::-webkit-scrollbar-thumb { background:#475569; border-radius:9px; }
+
+.rn-forcado-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:22px;}
+.rn-forcado-head h2{margin:0!important;font-size:28px!important;line-height:1!important;font-weight:500!important;color:#f9fafb!important;}
+.rn-forcado-head button{width:44px;height:44px;border-radius:4px;background:#1f2937;border:2px solid #475569;color:#93c5fd;font-size:22px;font-weight:900;}
+
+.rn-forcado-grid{display:grid!important;grid-template-columns:1fr 1fr!important;column-gap:44px!important;}
+.rn-forcado-field{margin:0 0 10px 0!important;}
+.rn-forcado-field b{display:block;color:#f3f4f6;font-size:18px;line-height:1.08;font-weight:800;}
+.rn-forcado-field span{display:block;color:#e5e7eb;font-size:18px;line-height:1.2;margin-top:2px;word-break:break-word;}
+.rn-forcado-field i{color:#3b82f6;font-style:normal;font-size:20px;font-weight:900;margin-right:8px;}
+.rn-forcado-title{margin:14px 0 18px 0;font-size:30px;font-weight:400;color:#e5e7eb;}
+.rn-forcado-oltnet{color:#e5e7eb;font-size:30px;margin:13px 0 8px 0;}
+.rn-forcado-ident{display:inline-block;background:#a83a49;color:white;padding:6px 10px;border-radius:3px;font-size:13px;font-weight:800;}
+.rn-forcado-ident.ok{background:#16a34a;}
+.rn-forcado-card hr{border:0;border-top:2px solid rgba(148,163,184,.45);margin:22px 0 20px 0;}
+.rn-forcado-status{display:grid;grid-template-columns:1fr 1fr;column-gap:44px;font-size:18px;line-height:1.35;}
+.rn-forcado-status p{margin:0 0 4px 0;}
+.rn-forcado-status b{font-weight:800;color:#f3f4f6;}
+.rn-forcado-status em{font-style:normal;}
+.rn-forcado-actions{display:grid;gap:12px;margin:18px 0 20px 0;}
+.rn-forcado-actions button{height:48px;width:100%;border:0;border-radius:2px;color:white;font-size:17px;font-weight:600;}
+.rn-forcado-actions .b1{background:#17286d;}
+.rn-forcado-actions .b2{background:#1e3a8a;display:flex;align-items:center;justify-content:center;gap:110px;}
+.rn-forcado-actions .b3{background:#166534;}
+.rn-forcado-actions .b4{background:#b94f38;}
+.rn-forcado-card h3{margin:0 0 16px 0;font-size:28px;font-weight:400;color:#e5e7eb;}
+.rn-forcado-card table{width:100%;border-collapse:collapse;color:#e5e7eb;font-size:17px;}
+.rn-forcado-card th{padding:8px 10px 14px 10px;text-align:left;color:#f3f4f6;font-weight:800;}
+.rn-forcado-card td{padding:12px 10px;}
+.rn-forcado-card tbody tr{background:rgba(148,163,184,.10);}
+.rn-forcado-total{text-align:right;margin:12px 8px 12px 0;font-size:18px;font-weight:700;color:#e5e7eb;}
+.rn-forcado-contato{display:grid;grid-template-columns:1fr 1fr;column-gap:46px;font-size:18px;}
+.rn-forcado-contato b{display:block;color:#f3f4f6;font-size:18px;font-weight:800;margin-top:8px;}
+.rn-forcado-contato span{display:block;color:#e5e7eb;line-height:1.14;}
+.rn-forcado-pai{display:inline-block;background:#22c1c3;color:white;padding:8px 16px;border-radius:5px;font-size:17px;font-weight:700;}
+
+@media(max-width:768px){
+  .rn-forcado-card{max-width:100%!important;height:72vh!important;padding:14px!important;}
+  .rn-forcado-grid,.rn-forcado-status,.rn-forcado-contato{grid-template-columns:1fr 1fr!important;column-gap:20px!important;}
+  .rn-forcado-field b,.rn-forcado-field span,.rn-forcado-status,.rn-forcado-card table,.rn-forcado-contato,.rn-forcado-contato b{font-size:15px!important;}
+  .rn-forcado-head h2,.rn-forcado-title,.rn-forcado-card h3,.rn-forcado-oltnet{font-size:24px!important;}
+  .rn-forcado-actions button{font-size:14px!important;}
+  .rn-forcado-actions .b2{gap:25px!important;}
+}
+
