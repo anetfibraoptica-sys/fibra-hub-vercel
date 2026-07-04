@@ -4419,57 +4419,1509 @@ main,
 
 
 /* ============================================================
-   BOTÕES COBRANÇA: Liberação por Confiança + Bloqueio
+   RESUMO IDENTICO AO RECEITANET - PAINEL ESCURO
 ============================================================ */
-.cobranca-acoes-extra{
+.resumo-receitanet-exato {
+  width: 100%;
+  max-width: 720px;
+  height: 820px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: #111827;
+  color: #e5e7eb;
+  border: 1px solid rgba(148,163,184,.35);
+  border-top: 4px solid #b91c1c;
+  border-radius: 4px;
+  padding: 18px 22px;
+  margin: 0 auto 22px auto;
+  font-family: Arial, Helvetica, sans-serif;
+  box-shadow: 0 18px 40px rgba(0,0,0,.22);
+}
+
+.resumo-receitanet-exato::-webkit-scrollbar {
+  width: 14px;
+}
+.resumo-receitanet-exato::-webkit-scrollbar-track {
+  background: #d1d5db;
+}
+.resumo-receitanet-exato::-webkit-scrollbar-thumb {
+  background: #4b5563;
+  border-radius: 8px;
+}
+
+.rrx-top {
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  margin-bottom: 22px;
+}
+.rrx-title {
+  font-size: 28px;
+  font-weight: 500;
+  margin:0;
+}
+.rrx-help {
+  width:44px;
+  height:44px;
+  border:2px solid #334155;
+  border-radius:4px;
+  background:#1e293b;
+  color:#93c5fd;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:22px;
+  font-weight:900;
+}
+
+.rrx-grid {
   display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:12px;
-  margin:14px 0 18px 0;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 44px;
+  row-gap: 8px;
 }
 
-.btn-liberacao-confianca,
-.btn-bloqueio-cliente{
-  border:0;
-  border-radius:8px;
-  padding:13px 16px;
-  color:#fff;
-  font-weight:700;
-  cursor:pointer;
-  min-height:44px;
+.rrx-block {
+  margin-bottom: 10px;
 }
 
-.btn-liberacao-confianca{
-  background:linear-gradient(135deg,#16a34a,#22c55e);
+.rrx-label {
+  display:block;
+  font-size: 18px;
+  font-weight: 800;
+  line-height:1.1;
+  color:#f3f4f6;
+}
+.rrx-value {
+  display:block;
+  font-size: 18px;
+  line-height:1.2;
+  color:#e5e7eb;
+  margin-top:2px;
+  word-break: break-word;
+}
+.rrx-login {
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.rrx-check {
+  color:#3b82f6;
+  font-weight:900;
+  font-size:20px;
 }
 
-.btn-bloqueio-cliente{
-  background:linear-gradient(135deg,#b91c1c,#ef4444);
+.rrx-section-title {
+  font-size:30px;
+  font-weight:400;
+  margin: 16px 0 18px 0;
 }
 
-.btn-liberacao-confianca:hover,
-.btn-bloqueio-cliente:hover{
-  filter:brightness(1.08);
+.rrx-oltnet {
+  font-size:30px;
+  margin: 14px 0 8px 0;
 }
 
-.badge-status-cobranca{
+.rrx-ident {
   display:inline-block;
-  padding:7px 12px;
-  border-radius:999px;
-  background:#334155;
+  background:#b23a4a;
   color:#fff;
+  font-weight:800;
   font-size:13px;
-  font-weight:700;
-  margin-bottom:10px;
+  padding:6px 10px;
+  border-radius:3px;
 }
-
-.badge-status-cobranca.liberado{
+.rrx-ident.online {
   background:#16a34a;
 }
 
-.badge-status-cobranca.bloqueado{
-  background:#b91c1c;
+.rrx-line {
+  border:0;
+  border-top:2px solid rgba(148,163,184,.45);
+  margin:22px 0 20px 0;
 }
+
+.rrx-status {
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 44px;
+  font-size:18px;
+  line-height:1.35;
+}
+.rrx-status p {
+  margin: 0 0 4px 0;
+}
+.rrx-status b {
+  font-weight:800;
+  color:#f3f4f6;
+}
+.rrx-dot-on {
+  color:#22c55e;
+  font-weight:900;
+}
+.rrx-dot-off {
+  color:#ef4444;
+  font-weight:900;
+}
+
+.rrx-actions {
+  margin:18px 0 20px 0;
+  display:grid;
+  gap:12px;
+}
+.rrx-btn {
+  height:48px;
+  border:0;
+  border-radius:2px;
+  color:#fff;
+  font-size:17px;
+  font-weight:600;
+  width:100%;
+}
+.rrx-blue { background:#17286d; }
+.rrx-blue2 { background:#1e3a8a; display:flex; align-items:center; justify-content:center; gap:110px; }
+.rrx-green { background:#166534; }
+.rrx-orange { background:#b94f38; }
+
+.rrx-heading {
+  font-size:28px;
+  font-weight:400;
+  margin: 0 0 16px 0;
+}
+.rrx-table {
+  width:100%;
+  border-collapse:collapse;
+  font-size:17px;
+}
+.rrx-table th {
+  text-align:left;
+  color:#f3f4f6;
+  font-weight:800;
+  padding: 8px 10px 14px 10px;
+}
+.rrx-table td {
+  padding:12px 10px;
+}
+.rrx-table tbody tr {
+  background: rgba(148,163,184,.10);
+}
+.rrx-total {
+  text-align:right;
+  font-size:18px;
+  font-weight:700;
+  margin: 12px 8px 12px 0;
+}
+
+.rrx-contact {
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap:46px;
+  font-size:18px;
+}
+.rrx-contact .rrx-label {
+  margin-top:8px;
+}
+
+@media (max-width: 768px) {
+  .resumo-receitanet-exato {
+    max-width: 100%;
+    height: 72vh;
+    padding: 14px;
+  }
+  .rrx-grid,
+  .rrx-status,
+  .rrx-contact {
+    grid-template-columns: 1fr 1fr;
+    column-gap: 20px;
+  }
+  .rrx-label,
+  .rrx-value,
+  .rrx-status,
+  .rrx-table,
+  .rrx-contact {
+    font-size: 15px;
+  }
+  .rrx-title,
+  .rrx-section-title,
+  .rrx-heading {
+    font-size: 24px;
+  }
+}
+
+
+
+/* ============================================================
+   CADASTRO - RESUMO MODELO RECEITANET ESCURO
+============================================================ */
+#resumoCadastro.cadastro-resumo,
+.cadastro-resumo {
+  background: transparent !important;
+  border: 0 !important;
+  padding: 0 !important;
+}
+
+.rn-card {
+  background: #111827;
+  color: #e5e7eb;
+  border: 1px solid rgba(148,163,184,.35);
+  border-top: 4px solid #b91c1c;
+  border-radius: 5px;
+  width: 100%;
+  max-width: 720px;
+  height: 820px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 18px 22px 24px 22px;
+  margin: 0 auto 22px auto;
+  font-family: Arial, Helvetica, sans-serif;
+  box-shadow: 0 16px 35px rgba(0,0,0,.22);
+}
+
+.rn-card::-webkit-scrollbar { width: 14px; height: 12px; }
+.rn-card::-webkit-scrollbar-track { background: #cbd5e1; }
+.rn-card::-webkit-scrollbar-thumb { background: #475569; border-radius: 9px; }
+
+.rn-head {
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  margin-bottom:22px;
+}
+.rn-head h2 {
+  margin:0;
+  font-size:28px;
+  line-height:1;
+  font-weight:500;
+  color:#f9fafb;
+}
+.rn-help {
+  width:44px;
+  height:44px;
+  border-radius:4px;
+  background:#1f2937;
+  border:2px solid #475569;
+  color:#93c5fd;
+  font-size:22px;
+  font-weight:900;
+}
+
+.rn-two {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  column-gap:44px;
+}
+.rn-field {
+  margin:0 0 10px 0;
+}
+.rn-field b {
+  display:block;
+  color:#f3f4f6;
+  font-size:18px;
+  line-height:1.08;
+  font-weight:800;
+}
+.rn-field span {
+  display:block;
+  color:#e5e7eb;
+  font-size:18px;
+  line-height:1.2;
+  margin-top:2px;
+  word-break:break-word;
+}
+.rn-login {
+  display:flex !important;
+  align-items:center;
+  gap:9px;
+}
+.rn-login i {
+  color:#3b82f6;
+  font-style:normal;
+  font-size:20px;
+  font-weight:900;
+}
+.rn-spacer {
+  height:82px;
+}
+.rn-section-title {
+  margin:14px 0 18px 0;
+  font-size:30px;
+  font-weight:400;
+  color:#e5e7eb;
+}
+.rn-small-gap {
+  margin-top:-8px;
+}
+.rn-oltnet {
+  color:#e5e7eb;
+  font-size:30px;
+  margin:13px 0 8px 0;
+}
+.rn-ident {
+  display:inline-block;
+  background:#a83a49;
+  color:#fff;
+  padding:6px 10px;
+  border-radius:3px;
+  font-size:13px;
+  font-weight:800;
+}
+.rn-ident.ok {
+  background:#16a34a;
+}
+.rn-line {
+  border:0;
+  border-top:2px solid rgba(148,163,184,.45);
+  margin:22px 0 20px 0;
+}
+.rn-status {
+  font-size:18px;
+  line-height:1.35;
+}
+.rn-status p {
+  margin:0 0 4px 0;
+}
+.rn-status b {
+  font-weight:800;
+  color:#f3f4f6;
+}
+.rn-status em {
+  font-style:normal;
+  font-weight:900;
+}
+.rn-status .on { color:#22c55e; }
+.rn-status .off { color:#ef4444; }
+
+.rn-actions {
+  display:grid;
+  gap:12px;
+  margin:18px 0 20px 0;
+}
+.rn-btn {
+  height:48px;
+  width:100%;
+  border:0;
+  border-radius:2px;
+  color:white;
+  font-size:17px;
+  font-weight:600;
+}
+.rn-btn.b1 { background:#17286d; }
+.rn-btn.b2 { background:#1e3a8a; display:flex; align-items:center; justify-content:center; gap:110px; }
+.rn-btn.b3 { background:#166534; }
+.rn-btn.b4 { background:#b94f38; }
+
+.rn-card h3 {
+  margin:0 0 16px 0;
+  font-size:28px;
+  font-weight:400;
+  color:#e5e7eb;
+}
+.rn-table {
+  width:100%;
+  border-collapse:collapse;
+  color:#e5e7eb;
+  font-size:17px;
+}
+.rn-table th {
+  padding:8px 10px 14px 10px;
+  text-align:left;
+  color:#f3f4f6;
+  font-weight:800;
+}
+.rn-table td {
+  padding:12px 10px;
+}
+.rn-table tbody tr {
+  background:rgba(148,163,184,.10);
+}
+.rn-total {
+  text-align:right;
+  margin:12px 8px 12px 0;
+  font-size:18px;
+  font-weight:700;
+  color:#e5e7eb;
+}
+.rn-contact {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  column-gap:46px;
+  font-size:18px;
+}
+.rn-contact b {
+  display:block;
+  color:#f3f4f6;
+  font-size:18px;
+  font-weight:800;
+  margin-top:8px;
+}
+.rn-contact span {
+  display:block;
+  color:#e5e7eb;
+  line-height:1.14;
+}
+.rn-pai {
+  display:inline-block;
+  background:#22c1c3;
+  color:#fff;
+  padding:8px 16px;
+  border-radius:5px;
+  font-size:17px;
+  font-weight:700;
+}
+
+@media (max-width:768px){
+  .rn-card {
+    max-width:100%;
+    height:72vh;
+    padding:14px;
+  }
+  .rn-two,
+  .rn-status,
+  .rn-contact {
+    grid-template-columns:1fr 1fr;
+    column-gap:20px;
+  }
+  .rn-field b,
+  .rn-field span,
+  .rn-status,
+  .rn-table,
+  .rn-contact,
+  .rn-contact b {
+    font-size:15px;
+  }
+  .rn-head h2,
+  .rn-section-title,
+  .rn-card h3,
+  .rn-oltnet {
+    font-size:24px;
+  }
+  .rn-btn {
+    font-size:14px;
+  }
+  .rn-btn.b2 {
+    gap:25px;
+  }
+}
+
+
+
+/* RESUMO FORÇADO RECEITANET ESCURO - SUBSTITUI VISUALMENTE O ANTIGO */
+#resumoCadastroReceitaNetForcado {
+  display:block !important;
+  visibility:visible !important;
+  opacity:1 !important;
+}
+
+.cadastro-resumo:not(:has(#resumoCadastroReceitaNetForcado)),
+#resumoCadastro:not(:has(#resumoCadastroReceitaNetForcado)),
+#abaResumo:not(:has(#resumoCadastroReceitaNetForcado)),
+#resumo:not(:has(#resumoCadastroReceitaNetForcado)),
+.resumo:not(:has(#resumoCadastroReceitaNetForcado)) {
+  display:none !important;
+}
+
+.rn-forcado-card {
+  background:#111827 !important;
+  color:#e5e7eb !important;
+  border:1px solid rgba(148,163,184,.35) !important;
+  border-top:4px solid #b91c1c !important;
+  border-radius:5px !important;
+  width:100% !important;
+  max-width:720px !important;
+  height:820px !important;
+  overflow-y:auto !important;
+  overflow-x:hidden !important;
+  padding:18px 22px 24px 22px !important;
+  margin:0 auto 22px auto !important;
+  font-family:Arial, Helvetica, sans-serif !important;
+  box-shadow:0 16px 35px rgba(0,0,0,.22) !important;
+}
+
+.rn-forcado-card::-webkit-scrollbar { width:14px; height:12px; }
+.rn-forcado-card::-webkit-scrollbar-track { background:#cbd5e1; }
+.rn-forcado-card::-webkit-scrollbar-thumb { background:#475569; border-radius:9px; }
+
+.rn-forcado-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:22px;}
+.rn-forcado-head h2{margin:0!important;font-size:28px!important;line-height:1!important;font-weight:500!important;color:#f9fafb!important;}
+.rn-forcado-head button{width:44px;height:44px;border-radius:4px;background:#1f2937;border:2px solid #475569;color:#93c5fd;font-size:22px;font-weight:900;}
+
+.rn-forcado-grid{display:grid!important;grid-template-columns:1fr 1fr!important;column-gap:44px!important;}
+.rn-forcado-field{margin:0 0 10px 0!important;}
+.rn-forcado-field b{display:block;color:#f3f4f6;font-size:18px;line-height:1.08;font-weight:800;}
+.rn-forcado-field span{display:block;color:#e5e7eb;font-size:18px;line-height:1.2;margin-top:2px;word-break:break-word;}
+.rn-forcado-field i{color:#3b82f6;font-style:normal;font-size:20px;font-weight:900;margin-right:8px;}
+.rn-forcado-title{margin:14px 0 18px 0;font-size:30px;font-weight:400;color:#e5e7eb;}
+.rn-forcado-oltnet{color:#e5e7eb;font-size:30px;margin:13px 0 8px 0;}
+.rn-forcado-ident{display:inline-block;background:#a83a49;color:white;padding:6px 10px;border-radius:3px;font-size:13px;font-weight:800;}
+.rn-forcado-ident.ok{background:#16a34a;}
+.rn-forcado-card hr{border:0;border-top:2px solid rgba(148,163,184,.45);margin:22px 0 20px 0;}
+.rn-forcado-status{display:grid;grid-template-columns:1fr 1fr;column-gap:44px;font-size:18px;line-height:1.35;}
+.rn-forcado-status p{margin:0 0 4px 0;}
+.rn-forcado-status b{font-weight:800;color:#f3f4f6;}
+.rn-forcado-status em{font-style:normal;}
+.rn-forcado-actions{display:grid;gap:12px;margin:18px 0 20px 0;}
+.rn-forcado-actions button{height:48px;width:100%;border:0;border-radius:2px;color:white;font-size:17px;font-weight:600;}
+.rn-forcado-actions .b1{background:#17286d;}
+.rn-forcado-actions .b2{background:#1e3a8a;display:flex;align-items:center;justify-content:center;gap:110px;}
+.rn-forcado-actions .b3{background:#166534;}
+.rn-forcado-actions .b4{background:#b94f38;}
+.rn-forcado-card h3{margin:0 0 16px 0;font-size:28px;font-weight:400;color:#e5e7eb;}
+.rn-forcado-card table{width:100%;border-collapse:collapse;color:#e5e7eb;font-size:17px;}
+.rn-forcado-card th{padding:8px 10px 14px 10px;text-align:left;color:#f3f4f6;font-weight:800;}
+.rn-forcado-card td{padding:12px 10px;}
+.rn-forcado-card tbody tr{background:rgba(148,163,184,.10);}
+.rn-forcado-total{text-align:right;margin:12px 8px 12px 0;font-size:18px;font-weight:700;color:#e5e7eb;}
+.rn-forcado-contato{display:grid;grid-template-columns:1fr 1fr;column-gap:46px;font-size:18px;}
+.rn-forcado-contato b{display:block;color:#f3f4f6;font-size:18px;font-weight:800;margin-top:8px;}
+.rn-forcado-contato span{display:block;color:#e5e7eb;line-height:1.14;}
+.rn-forcado-pai{display:inline-block;background:#22c1c3;color:white;padding:8px 16px;border-radius:5px;font-size:17px;font-weight:700;}
+
+@media(max-width:768px){
+  .rn-forcado-card{max-width:100%!important;height:72vh!important;padding:14px!important;}
+  .rn-forcado-grid,.rn-forcado-status,.rn-forcado-contato{grid-template-columns:1fr 1fr!important;column-gap:20px!important;}
+  .rn-forcado-field b,.rn-forcado-field span,.rn-forcado-status,.rn-forcado-card table,.rn-forcado-contato,.rn-forcado-contato b{font-size:15px!important;}
+  .rn-forcado-head h2,.rn-forcado-title,.rn-forcado-card h3,.rn-forcado-oltnet{font-size:24px!important;}
+  .rn-forcado-actions button{font-size:14px!important;}
+  .rn-forcado-actions .b2{gap:25px!important;}
+}
+
+
+
+/* RESUMO RECEITANET ESCURO - CLIENTE E CADASTRO */
+.rn-cliente-card {
+  background:#111827 !important;
+  color:#e5e7eb !important;
+  border:1px solid rgba(148,163,184,.35) !important;
+  border-top:4px solid #b91c1c !important;
+  border-radius:5px !important;
+  max-width:720px !important;
+  width:100% !important;
+  height:820px !important;
+  overflow-y:auto !important;
+  overflow-x:hidden !important;
+  padding:18px 22px 24px !important;
+  margin:0 auto 22px !important;
+  font-family:Arial, Helvetica, sans-serif !important;
+  box-shadow:0 16px 35px rgba(0,0,0,.22) !important;
+}
+.rn-cliente-card::-webkit-scrollbar{width:14px}
+.rn-cliente-card::-webkit-scrollbar-track{background:#cbd5e1}
+.rn-cliente-card::-webkit-scrollbar-thumb{background:#475569;border-radius:9px}
+.rn-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:22px}
+.rn-head h2{margin:0!important;font-size:28px!important;line-height:1!important;font-weight:500!important;color:#f9fafb!important}
+.rn-head button{width:44px;height:44px;border-radius:4px;background:#1f2937;border:2px solid #475569;color:#93c5fd;font-size:22px;font-weight:900}
+.rn-grid{display:grid!important;grid-template-columns:1fr 1fr!important;column-gap:44px!important}
+.rn-field{margin:0 0 10px!important}
+.rn-field b{display:block;color:#f3f4f6;font-size:18px;line-height:1.08;font-weight:800}
+.rn-field span{display:block;color:#e5e7eb;font-size:18px;line-height:1.2;margin-top:2px;word-break:break-word}
+.rn-login{display:flex!important;align-items:center;gap:9px}
+.rn-login i{color:#3b82f6;font-style:normal;font-size:20px;font-weight:900}
+.rn-title{margin:14px 0 18px;font-size:30px;font-weight:400;color:#e5e7eb}
+.rn-oltnet{color:#e5e7eb;font-size:30px;margin:13px 0 8px}
+.rn-ident{display:inline-block;background:#a83a49;color:#fff;padding:6px 10px;border-radius:3px;font-size:13px;font-weight:800}
+.rn-ident.ok{background:#16a34a}
+.rn-cliente-card hr{border:0;border-top:2px solid rgba(148,163,184,.45);margin:22px 0 20px}
+.rn-status{display:grid;grid-template-columns:1fr 1fr;column-gap:44px;font-size:18px;line-height:1.35}
+.rn-status p{margin:0 0 4px}
+.rn-status b{font-weight:800;color:#f3f4f6}
+.rn-status em{font-style:normal;font-weight:900}
+.rn-status .on{color:#22c55e}.rn-status .off{color:#ef4444}
+.rn-actions{display:grid;gap:12px;margin:18px 0 20px}
+.rn-actions button{height:48px;width:100%;border:0;border-radius:2px;color:white;font-size:17px;font-weight:600}
+.rn-b1{background:#17286d}.rn-b2{background:#1e3a8a;display:flex;align-items:center;justify-content:center;gap:110px}.rn-b3{background:#166534}.rn-b4{background:#b94f38}
+.rn-cliente-card h3{margin:0 0 16px;font-size:28px;font-weight:400;color:#e5e7eb}
+.rn-table{width:100%;border-collapse:collapse;color:#e5e7eb;font-size:17px}
+.rn-table th{padding:8px 10px 14px;text-align:left;color:#f3f4f6;font-weight:800}
+.rn-table td{padding:12px 10px}
+.rn-table tbody tr{background:rgba(148,163,184,.10)}
+.rn-total{text-align:right;margin:12px 8px 12px 0;font-size:18px;font-weight:700;color:#e5e7eb}
+.rn-contato{display:grid;grid-template-columns:1fr 1fr;column-gap:46px;font-size:18px}
+.rn-contato b{display:block;color:#f3f4f6;font-size:18px;font-weight:800;margin-top:8px}
+.rn-contato span{display:block;color:#e5e7eb;line-height:1.14}
+.rn-pai{display:inline-block;background:#22c1c3;color:white;padding:8px 16px;border-radius:5px;font-size:17px;font-weight:700}
+@media(max-width:768px){
+  .rn-cliente-card{max-width:100%!important;height:72vh!important;padding:14px!important}
+  .rn-grid,.rn-status,.rn-contato{grid-template-columns:1fr 1fr!important;column-gap:20px!important}
+  .rn-field b,.rn-field span,.rn-status,.rn-table,.rn-contato,.rn-contato b{font-size:15px!important}
+  .rn-head h2,.rn-title,.rn-cliente-card h3,.rn-oltnet{font-size:24px!important}
+  .rn-actions button{font-size:14px!important}
+  .rn-b2{gap:25px!important}
+}
+
+
+/* ============================================================
+   RESUMO RECEITANET FINAL
+   - Mesma proporção visual da referência
+   - Sem barra horizontal esquerda/direita
+   - Fonte e espaçamento ajustados
+============================================================ */
+
+body .rn-cliente-card {
+  box-sizing: border-box !important;
+  width: 100% !important;
+  max-width: 720px !important;
+  min-width: 0 !important;
+  height: 820px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  background: #111827 !important;
+  color: #e5e7eb !important;
+  border: 1px solid rgba(148,163,184,.35) !important;
+  border-top: 4px solid #b91c1c !important;
+  border-radius: 4px !important;
+  padding: 18px 22px 24px 22px !important;
+  margin: 0 auto 22px auto !important;
+  font-family: Arial, Helvetica, sans-serif !important;
+  font-size: 16px !important;
+  line-height: 1.18 !important;
+}
+
+body .rn-cliente-card *,
+body .rn-cliente-card *::before,
+body .rn-cliente-card *::after {
+  box-sizing: border-box !important;
+  max-width: 100% !important;
+}
+
+body .rn-cliente-card::-webkit-scrollbar {
+  width: 14px !important;
+  height: 0 !important;
+}
+
+body .rn-cliente-card::-webkit-scrollbar-track {
+  background: #cbd5e1 !important;
+}
+
+body .rn-cliente-card::-webkit-scrollbar-thumb {
+  background: #475569 !important;
+  border-radius: 9px !important;
+}
+
+/* topo */
+body .rn-cliente-card .rn-head {
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+  margin-bottom: 22px !important;
+}
+
+body .rn-cliente-card .rn-head h2 {
+  margin: 0 !important;
+  color: #f9fafb !important;
+  font-size: 28px !important;
+  line-height: 1 !important;
+  font-weight: 500 !important;
+}
+
+body .rn-cliente-card .rn-head button {
+  width: 44px !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  padding: 0 !important;
+  border-radius: 4px !important;
+  background: #1f2937 !important;
+  border: 2px solid #475569 !important;
+  color: #93c5fd !important;
+  font-size: 22px !important;
+  font-weight: 900 !important;
+  flex: 0 0 44px !important;
+}
+
+/* duas colunas iguais ao ReceitaNet */
+body .rn-cliente-card .rn-grid,
+body .rn-cliente-card .rn-status,
+body .rn-cliente-card .rn-contato {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+  column-gap: 42px !important;
+  width: 100% !important;
+  overflow: hidden !important;
+}
+
+body .rn-cliente-card .rn-field {
+  margin: 0 0 10px 0 !important;
+  min-width: 0 !important;
+}
+
+body .rn-cliente-card .rn-field b,
+body .rn-cliente-card .rn-status b,
+body .rn-cliente-card .rn-contato b,
+body .rn-cliente-card .rn-table th {
+  display: block !important;
+  color: #f3f4f6 !important;
+  font-size: 18px !important;
+  line-height: 1.08 !important;
+  font-weight: 800 !important;
+}
+
+body .rn-cliente-card .rn-field span,
+body .rn-cliente-card .rn-status,
+body .rn-cliente-card .rn-status p,
+body .rn-cliente-card .rn-table,
+body .rn-cliente-card .rn-table td,
+body .rn-cliente-card .rn-contato,
+body .rn-cliente-card .rn-contato span,
+body .rn-cliente-card .rn-total {
+  color: #e5e7eb !important;
+  font-size: 18px !important;
+  line-height: 1.2 !important;
+}
+
+body .rn-cliente-card .rn-field span,
+body .rn-cliente-card .rn-contato span {
+  display: block !important;
+  margin-top: 2px !important;
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
+}
+
+body .rn-cliente-card .rn-login {
+  display: flex !important;
+  align-items: center !important;
+  gap: 9px !important;
+  white-space: normal !important;
+}
+
+body .rn-cliente-card .rn-login i {
+  color: #3b82f6 !important;
+  font-style: normal !important;
+  font-size: 20px !important;
+  font-weight: 900 !important;
+  flex: 0 0 auto !important;
+}
+
+body .rn-cliente-card .rn-title {
+  margin: 14px 0 18px 0 !important;
+  color: #e5e7eb !important;
+  font-size: 30px !important;
+  line-height: 1.05 !important;
+  font-weight: 400 !important;
+}
+
+body .rn-cliente-card .rn-oltnet {
+  color: #e5e7eb !important;
+  font-size: 30px !important;
+  line-height: 1.05 !important;
+  font-weight: 400 !important;
+  margin: 13px 0 8px 0 !important;
+}
+
+body .rn-cliente-card .rn-ident,
+body .rn-cliente-card .rn-pai {
+  display: inline-block !important;
+  width: auto !important;
+  color: #fff !important;
+  font-size: 13px !important;
+  line-height: 1.1 !important;
+  font-weight: 800 !important;
+  padding: 6px 10px !important;
+  border-radius: 3px !important;
+  background: #a83a49 !important;
+}
+
+body .rn-cliente-card .rn-ident.ok {
+  background: #16a34a !important;
+}
+
+body .rn-cliente-card hr {
+  border: 0 !important;
+  border-top: 2px solid rgba(148,163,184,.45) !important;
+  margin: 22px 0 20px 0 !important;
+}
+
+body .rn-cliente-card .rn-status p {
+  margin: 0 0 4px 0 !important;
+}
+
+body .rn-cliente-card .rn-status em {
+  font-style: normal !important;
+  font-weight: 900 !important;
+}
+
+body .rn-cliente-card .rn-status .on {
+  color: #22c55e !important;
+}
+
+body .rn-cliente-card .rn-status .off {
+  color: #ef4444 !important;
+}
+
+/* Botões */
+body .rn-cliente-card .rn-actions {
+  display: grid !important;
+  gap: 12px !important;
+  width: 100% !important;
+  margin: 18px 0 20px 0 !important;
+}
+
+body .rn-cliente-card .rn-actions button {
+  width: 100% !important;
+  height: 48px !important;
+  min-height: 48px !important;
+  border: 0 !important;
+  border-radius: 2px !important;
+  color: #fff !important;
+  font-size: 17px !important;
+  line-height: 1 !important;
+  font-weight: 600 !important;
+  white-space: normal !important;
+  overflow: hidden !important;
+}
+
+body .rn-cliente-card .rn-b1 {
+  background: #17286d !important;
+}
+
+body .rn-cliente-card .rn-b2 {
+  background: #1e3a8a !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 80px !important;
+}
+
+body .rn-cliente-card .rn-b3 {
+  background: #166534 !important;
+}
+
+body .rn-cliente-card .rn-b4 {
+  background: #b94f38 !important;
+}
+
+/* Títulos e tabelas */
+body .rn-cliente-card h3 {
+  margin: 0 0 16px 0 !important;
+  color: #e5e7eb !important;
+  font-size: 28px !important;
+  line-height: 1.05 !important;
+  font-weight: 400 !important;
+}
+
+body .rn-cliente-card .rn-table {
+  width: 100% !important;
+  max-width: 100% !important;
+  table-layout: fixed !important;
+  border-collapse: collapse !important;
+}
+
+body .rn-cliente-card .rn-table th {
+  padding: 8px 10px 14px 10px !important;
+  text-align: left !important;
+  white-space: normal !important;
+}
+
+body .rn-cliente-card .rn-table td {
+  padding: 12px 10px !important;
+  white-space: normal !important;
+  overflow-wrap: break-word !important;
+}
+
+body .rn-cliente-card .rn-table tbody tr {
+  background: rgba(148,163,184,.10) !important;
+}
+
+body .rn-cliente-card .rn-total {
+  text-align: right !important;
+  font-weight: 700 !important;
+  margin: 12px 8px 12px 0 !important;
+}
+
+body .rn-cliente-card .rn-contato b {
+  margin-top: 8px !important;
+}
+
+/* Impede barra horizontal do painel externo também */
+body .cadastro-resumo-card,
+body #clienteDetalhes,
+body .panel,
+body main,
+body .content {
+  overflow-x: hidden !important;
+}
+
+/* Ajuste para notebook/tela estreita sem rolagem lateral */
+@media(max-width: 900px) {
+  body .rn-cliente-card {
+    max-width: 100% !important;
+    height: 78vh !important;
+    padding: 16px 18px 22px 18px !important;
+  }
+
+  body .rn-cliente-card .rn-grid,
+  body .rn-cliente-card .rn-status,
+  body .rn-cliente-card .rn-contato {
+    column-gap: 28px !important;
+  }
+
+  body .rn-cliente-card .rn-b2 {
+    gap: 34px !important;
+  }
+}
+
+@media(max-width: 768px) {
+  body .rn-cliente-card {
+    height: 72vh !important;
+    padding: 14px !important;
+  }
+
+  body .rn-cliente-card .rn-field b,
+  body .rn-cliente-card .rn-status b,
+  body .rn-cliente-card .rn-contato b,
+  body .rn-cliente-card .rn-table th {
+    font-size: 15px !important;
+  }
+
+  body .rn-cliente-card .rn-field span,
+  body .rn-cliente-card .rn-status,
+  body .rn-cliente-card .rn-status p,
+  body .rn-cliente-card .rn-table,
+  body .rn-cliente-card .rn-table td,
+  body .rn-cliente-card .rn-contato,
+  body .rn-cliente-card .rn-contato span,
+  body .rn-cliente-card .rn-total {
+    font-size: 15px !important;
+  }
+
+  body .rn-cliente-card .rn-head h2 {
+    font-size: 24px !important;
+  }
+
+  body .rn-cliente-card .rn-title,
+  body .rn-cliente-card h3,
+  body .rn-cliente-card .rn-oltnet {
+    font-size: 24px !important;
+  }
+
+  body .rn-cliente-card .rn-actions button {
+    font-size: 14px !important;
+  }
+}
+
+
+
+/* ============================================================
+   RECEITANET PIXEL - REFEITO COM TODOS OS BOTÕES DA IMAGEM
+   Classe nova para não brigar com ajustes antigos.
+============================================================ */
+body .rn-receitanet-pixel {
+  width: 720px !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  height: 820px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  background: #111827 !important;
+  color: #e5e7eb !important;
+  border: 1px solid rgba(148,163,184,.40) !important;
+  border-top: 4px solid #b91c1c !important;
+  border-radius: 2px !important;
+  padding: 18px 20px 22px 20px !important;
+  margin: 0 auto 22px auto !important;
+  font-family: Arial, Helvetica, sans-serif !important;
+  box-sizing: border-box !important;
+}
+
+body .rn-receitanet-pixel *,
+body .rn-receitanet-pixel *::before,
+body .rn-receitanet-pixel *::after {
+  box-sizing: border-box !important;
+  max-width: 100% !important;
+}
+
+body .rn-receitanet-pixel::-webkit-scrollbar { width: 14px !important; height: 0 !important; }
+body .rn-receitanet-pixel::-webkit-scrollbar-track { background: #cbd5e1 !important; }
+body .rn-receitanet-pixel::-webkit-scrollbar-thumb { background: #475569 !important; border-radius: 9px !important; }
+
+body .rn-px-head {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: flex-start !important;
+  margin-bottom: 22px !important;
+}
+
+body .rn-px-head h2 {
+  margin: 0 !important;
+  font-size: 29px !important;
+  font-weight: 500 !important;
+  line-height: 1 !important;
+  color: #f9fafb !important;
+}
+
+body .rn-px-help {
+  width: 44px !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  padding: 0 !important;
+  flex: 0 0 44px !important;
+  background: #1f2937 !important;
+  border: 2px solid #475569 !important;
+  border-radius: 4px !important;
+  color: #93c5fd !important;
+  font-size: 22px !important;
+  font-weight: 900 !important;
+}
+
+body .rn-px-top,
+body .rn-px-server,
+body .rn-px-status,
+body .rn-px-contact {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+  column-gap: 52px !important;
+  width: 100% !important;
+  overflow: hidden !important;
+}
+
+body .rn-px-col { min-width: 0 !important; }
+
+body .rn-px-field {
+  margin: 0 0 10px 0 !important;
+  min-width: 0 !important;
+}
+
+body .rn-px-field b,
+body .rn-px-status b,
+body .rn-px-contact b,
+body .rn-px-table th {
+  display: block !important;
+  color: #f3f4f6 !important;
+  font-size: 18px !important;
+  line-height: 1.08 !important;
+  font-weight: 800 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+body .rn-px-field span,
+body .rn-px-status,
+body .rn-px-status p,
+body .rn-px-contact,
+body .rn-px-contact span,
+body .rn-px-table,
+body .rn-px-table td,
+body .rn-px-total {
+  color: #e5e7eb !important;
+  font-size: 18px !important;
+  line-height: 1.18 !important;
+  font-weight: 400 !important;
+}
+
+body .rn-px-field span,
+body .rn-px-contact span {
+  display: block !important;
+  margin-top: 2px !important;
+  overflow-wrap: break-word !important;
+  word-break: normal !important;
+}
+
+body .rn-px-login {
+  display: flex !important;
+  align-items: center !important;
+  gap: 9px !important;
+}
+
+body .rn-px-login i {
+  color: #3b82f6 !important;
+  font-size: 20px !important;
+  font-weight: 900 !important;
+  font-style: normal !important;
+  flex: 0 0 auto !important;
+}
+
+body .rn-px-space {
+  height: 82px !important;
+}
+
+body .rn-px-title {
+  margin: 14px 0 18px 0 !important;
+  color: #e5e7eb !important;
+  font-size: 30px !important;
+  line-height: 1.05 !important;
+  font-weight: 400 !important;
+}
+
+body .rn-px-oltnet {
+  color: #e5e7eb !important;
+  font-size: 30px !important;
+  line-height: 1.05 !important;
+  font-weight: 400 !important;
+  margin: 13px 0 8px 0 !important;
+}
+
+body .rn-px-ident {
+  display: inline-block !important;
+  width: auto !important;
+  background: #a83a49 !important;
+  color: #fff !important;
+  padding: 6px 10px !important;
+  border-radius: 3px !important;
+  font-size: 13px !important;
+  line-height: 1 !important;
+  font-weight: 800 !important;
+}
+
+body .rn-px-ident.ok { background: #16a34a !important; }
+
+body .rn-px-line {
+  border: 0 !important;
+  border-top: 2px solid rgba(148,163,184,.45) !important;
+  margin: 22px 0 20px 0 !important;
+}
+
+body .rn-px-status p {
+  margin: 0 0 4px 0 !important;
+  padding: 0 !important;
+}
+
+body .rn-px-status em {
+  font-style: normal !important;
+  font-weight: 900 !important;
+}
+
+body .rn-px-status .on { color: #22c55e !important; }
+body .rn-px-status .off { color: #ef4444 !important; }
+
+body .rn-px-buttons {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 12px !important;
+  width: 100% !important;
+  margin: 18px 0 20px 0 !important;
+}
+
+body .rn-px-btn {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  height: 48px !important;
+  min-height: 48px !important;
+  padding: 0 14px !important;
+  border: 0 !important;
+  border-radius: 2px !important;
+  color: #fff !important;
+  font-size: 17px !important;
+  line-height: 1 !important;
+  font-weight: 600 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+}
+
+body .rn-px-btn strong {
+  margin-left: auto !important;
+  color: #fff !important;
+  font-size: 17px !important;
+  font-weight: 800 !important;
+}
+
+body .rn-px-blue { background: #17286d !important; }
+body .rn-px-green { background: #166534 !important; }
+body .rn-px-red { background: #b94f38 !important; }
+
+body .rn-px-sub {
+  margin: 0 0 16px 0 !important;
+  color: #e5e7eb !important;
+  font-size: 28px !important;
+  line-height: 1.05 !important;
+  font-weight: 400 !important;
+}
+
+body .rn-px-table {
+  width: 100% !important;
+  max-width: 100% !important;
+  table-layout: fixed !important;
+  border-collapse: collapse !important;
+  color: #e5e7eb !important;
+}
+
+body .rn-px-table th {
+  text-align: left !important;
+  padding: 8px 10px 14px 10px !important;
+  white-space: normal !important;
+}
+
+body .rn-px-table td {
+  padding: 12px 10px !important;
+  white-space: normal !important;
+  overflow-wrap: break-word !important;
+}
+
+body .rn-px-table tbody tr {
+  background: rgba(148,163,184,.10) !important;
+}
+
+body .rn-px-total {
+  text-align: right !important;
+  font-weight: 700 !important;
+  margin: 12px 8px 12px 0 !important;
+}
+
+body .rn-px-contact b {
+  margin-top: 8px !important;
+}
+
+body .rn-px-pai {
+  display: inline-block !important;
+  width: auto !important;
+  background: #22c1c3 !important;
+  color: #fff !important;
+  padding: 8px 16px !important;
+  border-radius: 5px !important;
+  font-size: 17px !important;
+  line-height: 1 !important;
+  font-weight: 700 !important;
+}
+
+/* mata barra lateral horizontal do navegador/painel */
+html, body, main, .content, #clienteDetalhes, .cadastro-resumo-card, .panel {
+  overflow-x: hidden !important;
+}
+
+@media(max-width: 900px) {
+  body .rn-receitanet-pixel {
+    width: 100% !important;
+    height: 78vh !important;
+    padding: 16px 18px 22px 18px !important;
+  }
+  body .rn-px-top,
+  body .rn-px-server,
+  body .rn-px-status,
+  body .rn-px-contact {
+    column-gap: 32px !important;
+  }
+}
+
+@media(max-width: 768px) {
+  body .rn-receitanet-pixel {
+    height: 72vh !important;
+    padding: 14px !important;
+  }
+  body .rn-px-field b,
+  body .rn-px-status b,
+  body .rn-px-contact b,
+  body .rn-px-table th,
+  body .rn-px-field span,
+  body .rn-px-status,
+  body .rn-px-status p,
+  body .rn-px-contact,
+  body .rn-px-contact span,
+  body .rn-px-table,
+  body .rn-px-table td {
+    font-size: 15px !important;
+  }
+  body .rn-px-head h2,
+  body .rn-px-title,
+  body .rn-px-sub,
+  body .rn-px-oltnet {
+    font-size: 24px !important;
+  }
+  body .rn-px-btn {
+    font-size: 14px !important;
+  }
+  body .rn-px-btn strong {
+    font-size: 14px !important;
+  }
+}
+
+
+
+/* ============================================================
+   CORREÇÃO: RESUMO NA LATERAL DIREITA DO CADASTRO
+   Mantém o resumo idêntico, mas coloca ao lado do formulário.
+============================================================ */
+
+/* Área principal do cadastro em duas colunas */
+body:has(.rn-receitanet-pixel) .cadastro-page,
+body:has(.rn-receitanet-pixel) .cadastro-layout,
+body:has(.rn-receitanet-pixel) .cadastro-container,
+body:has(.rn-receitanet-pixel) .content,
+body:has(.rn-receitanet-pixel) main .content {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 430px !important;
+  align-items: start !important;
+  gap: 20px !important;
+  width: 100% !important;
+  overflow-x: hidden !important;
+}
+
+/* Formulário à esquerda */
+body:has(.rn-receitanet-pixel) .cadastro-form,
+body:has(.rn-receitanet-pixel) .cadastro-form-card,
+body:has(.rn-receitanet-pixel) .cadastro-main,
+body:has(.rn-receitanet-pixel) form,
+body:has(.rn-receitanet-pixel) .form-card {
+  grid-column: 1 !important;
+  min-width: 0 !important;
+  width: 100% !important;
+}
+
+/* Resumo à direita */
+body:has(.rn-receitanet-pixel) .cadastro-resumo-card,
+body:has(.rn-receitanet-pixel) .cadastro-resumo,
+body:has(.rn-receitanet-pixel) aside:has(.rn-receitanet-pixel),
+body:has(.rn-receitanet-pixel) #resumoCadastro {
+  grid-column: 2 !important;
+  grid-row: 1 / span 20 !important;
+  align-self: start !important;
+  position: sticky !important;
+  top: 12px !important;
+  width: 430px !important;
+  max-width: 430px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Tamanho do cartão quando fica na lateral */
+body:has(.rn-receitanet-pixel) .rn-receitanet-pixel {
+  width: 430px !important;
+  max-width: 430px !important;
+  height: calc(100vh - 110px) !important;
+  margin: 0 !important;
+  padding: 16px 18px 22px 18px !important;
+}
+
+/* Evita que algum bloco force o resumo para baixo */
+body:has(.rn-receitanet-pixel) .observacao-box,
+body:has(.rn-receitanet-pixel) .cadastro-save-row,
+body:has(.rn-receitanet-pixel) .tab-content,
+body:has(.rn-receitanet-pixel) .form-row,
+body:has(.rn-receitanet-pixel) .campo {
+  min-width: 0 !important;
+}
+
+/* Reorganiza as colunas internas do resumo para caber na lateral igual ReceitaNet */
+body:has(.rn-receitanet-pixel) .rn-px-top,
+body:has(.rn-receitanet-pixel) .rn-px-server,
+body:has(.rn-receitanet-pixel) .rn-px-status,
+body:has(.rn-receitanet-pixel) .rn-px-contact {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+  column-gap: 24px !important;
+}
+
+/* Fontes proporcionais ao resumo lateral */
+body:has(.rn-receitanet-pixel) .rn-px-head h2 {
+  font-size: 24px !important;
+}
+
+body:has(.rn-receitanet-pixel) .rn-px-title,
+body:has(.rn-receitanet-pixel) .rn-px-sub,
+body:has(.rn-receitanet-pixel) .rn-px-oltnet {
+  font-size: 22px !important;
+}
+
+body:has(.rn-receitanet-pixel) .rn-px-field b,
+body:has(.rn-receitanet-pixel) .rn-px-status b,
+body:has(.rn-receitanet-pixel) .rn-px-contact b,
+body:has(.rn-receitanet-pixel) .rn-px-table th {
+  font-size: 13px !important;
+}
+
+body:has(.rn-receitanet-pixel) .rn-px-field span,
+body:has(.rn-receitanet-pixel) .rn-px-status,
+body:has(.rn-receitanet-pixel) .rn-px-status p,
+body:has(.rn-receitanet-pixel) .rn-px-contact,
+body:has(.rn-receitanet-pixel) .rn-px-contact span,
+body:has(.rn-receitanet-pixel) .rn-px-table,
+body:has(.rn-receitanet-pixel) .rn-px-table td,
+body:has(.rn-receitanet-pixel) .rn-px-total {
+  font-size: 12px !important;
+}
+
+body:has(.rn-receitanet-pixel) .rn-px-btn {
+  height: 38px !important;
+  min-height: 38px !important;
+  font-size: 12px !important;
+}
+
+body:has(.rn-receitanet-pixel) .rn-px-btn strong {
+  font-size: 12px !important;
+}
+
+/* Fallback para navegadores sem :has(), usando classes diretas */
+.cadastro-resumo-card .rn-receitanet-pixel,
+.cadastro-resumo .rn-receitanet-pixel,
+#resumoCadastro .rn-receitanet-pixel {
+  width: 430px !important;
+  max-width: 430px !important;
+}
+
+/* Mobile: volta para baixo naturalmente */
+@media(max-width: 900px) {
+  body:has(.rn-receitanet-pixel) .cadastro-page,
+  body:has(.rn-receitanet-pixel) .cadastro-layout,
+  body:has(.rn-receitanet-pixel) .cadastro-container,
+  body:has(.rn-receitanet-pixel) .content,
+  body:has(.rn-receitanet-pixel) main .content {
+    display: block !important;
+  }
+
+  body:has(.rn-receitanet-pixel) .cadastro-resumo-card,
+  body:has(.rn-receitanet-pixel) .cadastro-resumo,
+  body:has(.rn-receitanet-pixel) aside:has(.rn-receitanet-pixel),
+  body:has(.rn-receitanet-pixel) #resumoCadastro {
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-top: 16px !important;
+  }
+
+  body:has(.rn-receitanet-pixel) .rn-receitanet-pixel {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 72vh !important;
+  }
+}
+
+
+
+/* Fallback via JS: content.cadastro-com-resumo-lateral */
+main .content.cadastro-com-resumo-lateral,
+.content.cadastro-com-resumo-lateral {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 430px !important;
+  align-items: start !important;
+  gap: 20px !important;
+}
+
+main .content.cadastro-com-resumo-lateral .cadastro-resumo-card,
+.content.cadastro-com-resumo-lateral .cadastro-resumo-card,
+main .content.cadastro-com-resumo-lateral #resumoCadastro,
+.content.cadastro-com-resumo-lateral #resumoCadastro {
+  grid-column: 2 !important;
+  grid-row: 1 / span 20 !important;
+  position: sticky !important;
+  top: 12px !important;
+  width: 430px !important;
+  max-width: 430px !important;
+  margin: 0 !important;
+}
+
+@media(max-width:900px){
+  main .content.cadastro-com-resumo-lateral,
+  .content.cadastro-com-resumo-lateral {
+    display: block !important;
+  }
+}
+
+
+
+/* ============================================================
+   FEEDBACK DOS BOTÕES EXISTENTES DA ABA COBRANÇA
+   Não cria botão novo.
+============================================================ */
+.aviso-status-cobranca{
+  display:inline-block;
+  padding:7px 12px;
+  border-radius:999px;
+  color:#fff;
+  font-size:13px;
+  font-weight:700;
+  margin:8px 0 12px 0;
+  background:#334155;
+}
+
+.aviso-status-cobranca.liberado{ background:#16a34a; }
+.aviso-status-cobranca.bloqueado{ background:#b91c1c; }
 
 .fibra-toast{
   position:fixed;
@@ -4487,10 +5939,4 @@ main,
 .fibra-toast.ok{background:#16a34a;}
 .fibra-toast.erro{background:#b91c1c;}
 .fibra-toast.info{background:#2563eb;}
-
-@media(max-width:700px){
-  .cobranca-acoes-extra{
-    grid-template-columns:1fr;
-  }
-}
 

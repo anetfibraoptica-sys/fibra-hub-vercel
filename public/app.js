@@ -2311,28 +2311,200 @@ function carregarClienteSelecionadoNoCadastro(){
   return true;
 }
 
-function carregarClienteDetalhes(){
+
+/* ============================================================
+   RESUMO RECEITANET ESCURO - usado em cliente.html e cadastro.html
+============================================================ */
+function rnCampo(c, campos, padrao="--"){
+  for(const k of campos){
+    if(c && c[k] !== undefined && c[k] !== null && String(c[k]).trim() !== ""){
+      return String(c[k]).trim();
+    }
+  }
+  return padrao;
+}
+function rnEsc(v){
+  return String(v ?? "").replace(/[&<>"']/g, s => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[s]));
+}
+function rnMoeda(v){
+  let n=Number(String(v||"").replace(/[^\d,.-]/g,"").replace(",","."));
+  if(!isFinite(n)||n<=0) n=100;
+  return n.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+}
+function rnResumoHtml(c, on){
+  const login=rnCampo(c,["login","usuario","name","loginPppoe","pppoe"],"");
+  const senha=rnCampo(c,["senha","senhaPppoe","password"],"0000");
+  const nome=rnCampo(c,["nome","cliente","razaoSocial","name"],"--");
+  const cpf=rnCampo(c,["cpfCnpj","cpf","cnpj","documento"],"--");
+  const venc=rnCampo(c,["diaVencimento","vencimento"],"--");
+  const proxima=rnCampo(c,["proximaFatura","proximaFaturaAberta","dataProximaFatura"],"20/07/2026");
+
+  const online=!!on;
+  const servidor=online?(on.servidor||"Armando Mendes - Zumbi"):rnCampo(c,["servidor","pop","popServidor","servidorReceita"],"--");
+  const servico=online?(on.service||"PPP2"):rnCampo(c,["service","interface"],"PPP2");
+  const ip=online?(on.ip||on.address||"--"):rnCampo(c,["ip","address"],"--");
+  const profile=online?(on.profile||rnCampo(c,["profile","plano"],"600-MEGA")):rnCampo(c,["profile","plano"],"600-MEGA");
+  const mac=online?(on.callerId||on.mac||on["caller-id"]||"--"):rnCampo(c,["mac","callerId","caller-id"],"--");
+  const tempo=online?(on.uptime||"--"):"--";
+  const iface=online?(on.interface||on["interface"]||"VLAN 102"):rnCampo(c,["interface","vlan"],"--");
+
+  const plano=rnCampo(c,["plano","profile"],"Plano 600 MB - Fibra+");
+  const valor=rnCampo(c,["valorMensal","valor","mensalidade"],"100");
+
+  const endereco=rnCampo(c,["endereco","logradouro","rua"],"--");
+  const ref=rnCampo(c,["referencia","pontoReferencia"],"--");
+  const bairro=rnCampo(c,["bairro"],"--");
+  const estado=rnCampo(c,["uf","estado"],"AM");
+  const compl=rnCampo(c,["complemento"],"--");
+  const cidade=rnCampo(c,["cidade","localidade"],"MANAUS");
+  const ibge=rnCampo(c,["ibge"],"1302603");
+  const tel1=rnCampo(c,["telefone1","telefone","celular","fone"],"--");
+  const tel2=rnCampo(c,["telefone2","celular2","fone2"],"--");
+  const tel3=rnCampo(c,["telefone3","celular3","fone3"],"--");
+
+  return `
+  <section class="rn-cliente-card rn-receitanet-pixel">
+    <div class="rn-px-head">
+      <h2>Resumo</h2>
+      <button type="button" class="rn-px-help">?</button>
+    </div>
+
+    <div class="rn-px-top">
+      <div class="rn-px-col">
+        <div class="rn-px-field"><b>Login</b><span class="rn-px-login"><i>✓</i>${rnEsc(login||"--")}</span></div>
+        <div class="rn-px-field"><b>Nome</b><span>${rnEsc(nome)}</span></div>
+        <div class="rn-px-field"><b>CPF/CNPJ</b><span>${rnEsc(cpf)}</span></div>
+        <div class="rn-px-field"><b>Dia do Vencimento</b><span>${rnEsc(venc)}</span></div>
+      </div>
+      <div class="rn-px-col">
+        <div class="rn-px-field"><b>Senha</b><span>${rnEsc(senha)}</span></div>
+        <div class="rn-px-space"></div>
+        <div class="rn-px-field"><b>Próxima Fatura Aberta</b><span>${rnEsc(proxima)}</span></div>
+      </div>
+    </div>
+
+    <div class="rn-px-title">Servidor</div>
+
+    <div class="rn-px-server">
+      <div class="rn-px-col">
+        <div class="rn-px-field"><b>SERVIDOR</b><span>${rnEsc(servidor)}</span></div>
+        <div class="rn-px-field"><b>ELEMENTO DE REDE</b><span>Conexão</span></div>
+        <div class="rn-px-field rn-px-pppoe"><span>PPPOE</span></div>
+        <div class="rn-px-oltnet">OLTNET</div>
+        <span class="rn-px-ident ${online?"ok":""}">${online?"Identificado":"Não Identificado"}</span>
+      </div>
+      <div class="rn-px-col">
+        <div class="rn-px-field"><b>INTERFACE</b><span>${rnEsc(String(servico).toUpperCase())}</span></div>
+        <div class="rn-px-field"><b>IP ATUAL</b><span>${rnEsc(ip)}</span></div>
+        <div class="rn-px-field"><b>Profile</b><span>${rnEsc(profile)}</span></div>
+      </div>
+    </div>
+
+    <hr class="rn-px-line">
+
+    <div class="rn-px-status">
+      <div>
+        <p><b>Status</b><em class="${online?"on":"off"}">●</em> ${online?"Online":"Offline"}</p>
+        <p><b>Serviço:</b> ${rnEsc(servico)}</p>
+        <p><b>IP:</b> ${rnEsc(ip)}</p>
+        <p><b>Profile Servidor:</b> ${rnEsc(profile)}</p>
+        <p><b>MTU:</b> 1480</p>
+      </div>
+      <div>
+        <p><b>Login:</b> ${rnEsc(login||"--")}</p>
+        <p><b>Tempo:</b> ${rnEsc(tempo)}</p>
+        <p><b>MAC:</b> ${rnEsc(mac)}</p>
+        <p><b>Interface:</b> ${rnEsc(iface)}</p>
+        <p><b>MRU:</b> 1480</p>
+      </div>
+    </div>
+
+    <div class="rn-px-buttons">
+      <button type="button" class="rn-px-btn rn-px-blue">Configurar Equipamento - Remoto</button>
+      <button type="button" class="rn-px-btn rn-px-blue">Configurar Equipamento - Interno <strong>HTTPS</strong></button>
+      <button type="button" class="rn-px-btn rn-px-green">Diagnosticar Cliente</button>
+      <button type="button" class="rn-px-btn rn-px-red">Monitoramento em Tempo Real</button>
+    </div>
+
+    <hr class="rn-px-line">
+
+    <h3 class="rn-px-sub">Plano de Cobrança</h3>
+    <table class="rn-px-table rn-px-plano">
+      <thead><tr><th>PLANO</th><th>VALOR UN</th><th>QTDADE</th></tr></thead>
+      <tbody><tr><td>${rnEsc(plano)}</td><td>${rnMoeda(valor)}</td><td>1</td></tr></tbody>
+    </table>
+    <div class="rn-px-total">Total: ${rnMoeda(valor)}</div>
+
+    <hr class="rn-px-line">
+
+    <h3 class="rn-px-sub">Estoque</h3>
+    <table class="rn-px-table rn-px-estoque">
+      <thead><tr><th>PRODUTO</th><th>QT.</th><th>UN</th><th>VALOR</th><th>DATA</th></tr></thead>
+      <tbody><tr><td>Nenhum Produto</td><td>-</td><td>-</td><td>-</td><td>-</td></tr></tbody>
+    </table>
+
+    <hr class="rn-px-line">
+
+    <h3 class="rn-px-sub">Dados de Contato</h3>
+    <div class="rn-px-contact">
+      <div>
+        <b>Endereço</b><span>${rnEsc(endereco)}</span>
+        <b>Ponto de Ref.</b><span>${rnEsc(ref)}</span>
+        <b>Bairro</b><span>${rnEsc(bairro)}</span>
+        <b>Estado</b><span>${rnEsc(estado)}</span>
+        <b>Tel1</b><span>${rnEsc(tel1)}</span>
+        <b>Tel3</b><span>${rnEsc(tel3)}</span>
+      </div>
+      <div>
+        <b>Compl.</b><span>${rnEsc(compl)}</span>
+        <b>Cidade</b><span>${rnEsc(cidade)}</span>
+        <b>IBGE</b><span>${rnEsc(ibge)}</span>
+        <b>Tel2</b><span>${rnEsc(tel2)}</span>
+      </div>
+    </div>
+
+    <hr class="rn-px-line">
+
+    <h3 class="rn-px-sub">Sistema Pai Controle</h3>
+    <span class="rn-px-pai">Desativado</span>
+  </section>`;
+}
+async function rnOnlineInfo(login){
+  if(!login) return null;
+  try{
+    const resp=await fetch("/api/online",{cache:"no-store"});
+    const dados=await resp.json();
+    const lista=dados.clientes||[];
+    return lista.find(x=>String(x.usuario||x.name||x.login||x.user||"").toLowerCase().trim()===String(login).toLowerCase().trim())||null;
+  }catch(e){return null;}
+}
+
+
+async function carregarClienteDetalhes(){
   const box=document.getElementById("clienteDetalhes");
   if(!box) return;
+
   let c=null;
   try{ const a=localStorage.getItem("clienteOnlineSelecionado"); if(a) c=JSON.parse(a); }catch(e){}
   if(!c){ try{ const a=localStorage.getItem("clienteSelecionadoCompleto"); if(a) c=JSON.parse(a); }catch(e){} }
-  if(!c){ const login=String(localStorage.getItem("clienteEditarLogin")||"").toLowerCase().trim(); if(login) c=fibraGetClientesImportados().find(x=>fibraChaveCliente(x)===login); }
-  if(!c){ box.innerHTML='<section class="panel"><h3>Cliente não selecionado</h3><p>Volte para a lista de clientes e clique em um cliente.</p></section>'; return; }
-  const login=fibraPrimeiroValor(c,["login","usuario","name","loginPppoe","pppoe"]);
-  const nome=fibraPrimeiroValor(c,["nome","cliente","razaoSocial"]) || login;
-  const servidor=fibraPrimeiroValor(c,["servidor","pop","popServidor"]);
-  const ip=fibraPrimeiroValor(c,["ip","address"]);
-  const mac=fibraPrimeiroValor(c,["mac","callerId","caller-id"]);
-  const uptime=fibraPrimeiroValor(c,["uptime"]);
-  const plano=fibraPrimeiroValor(c,["plano","profile"]) || "PPPoE";
-  const telefone=fibraPrimeiroValor(c,["telefone1","telefone","celular","fone"]);
-  const endereco=fibraPrimeiroValor(c,["endereco","logradouro","rua"]);
-  box.innerHTML=`
-    <div class="grid-2">
-      <section class="panel"><h3>Dados do Cliente</h3><p><b>Login:</b> ${fibraEscapeHtml(login||"--")}</p><p><b>Nome:</b> ${fibraEscapeHtml(nome||"--")}</p><p><b>Telefone:</b> ${fibraEscapeHtml(telefone||"--")}</p><p><b>Endereço:</b> ${fibraEscapeHtml(endereco||"--")}</p><p><b>Status:</b> 🟢 Online/Importado</p></section>
-      <section class="panel"><h3>Conexão PPPoE</h3><p><b>Servidor:</b> ${fibraEscapeHtml(fibraNomeServidor(servidor)||"--")}</p><p><b>Plano/Profile:</b> ${fibraEscapeHtml(plano||"--")}</p><p><b>IP:</b> ${fibraEscapeHtml(ip||"--")}</p><p><b>MAC/Caller ID:</b> ${fibraEscapeHtml(mac||"--")}</p><p><b>Tempo conectado:</b> ${fibraEscapeHtml(uptime||"--")}</p></section>
-    </div><section class="panel"><h3>Ações</h3><button onclick="localStorage.setItem('clienteSelecionadoCompleto', JSON.stringify(JSON.parse(localStorage.getItem('clienteOnlineSelecionado')||localStorage.getItem('clienteSelecionadoCompleto')||'{}'))); location.href='cadastro.html'">Abrir no Cadastro</button> <button onclick="history.back()">Voltar</button></section>`;
+  if(!c){ try{ const a=localStorage.getItem("clienteCadastroSelecionado"); if(a) c=JSON.parse(a); }catch(e){} }
+
+  if(!c){
+    const login=String(localStorage.getItem("clienteEditarLogin")||"").toLowerCase().trim();
+    if(login && typeof fibraGetClientesImportados==="function"){
+      c=fibraGetClientesImportados().find(x=>fibraChaveCliente(x)===login);
+    }
+  }
+
+  if(!c){
+    box.innerHTML='<section class="panel"><h3>Cliente não selecionado</h3><p>Volte para a lista de clientes e clique em um cliente.</p></section>';
+    return;
+  }
+
+  const login=rnCampo(c,["login","usuario","name","loginPppoe","pppoe"],"");
+  const on=await rnOnlineInfo(login);
+
+  box.innerHTML = rnResumoHtml(c,on) + `<section class="panel" style="max-width:720px;margin:16px auto"><button onclick="history.back()">Voltar</button> <button onclick="localStorage.setItem('clienteSelecionadoCompleto', JSON.stringify(JSON.parse(localStorage.getItem('clienteOnlineSelecionado')||localStorage.getItem('clienteSelecionadoCompleto')||localStorage.getItem('clienteCadastroSelecionado')||'{}'))); location.href='cadastro.html'">Abrir no Cadastro</button></section>`;
 }
 
 function fibraGarantirSecaoOnline(){
@@ -2791,8 +2963,251 @@ document.addEventListener("DOMContentLoaded", function(){
 
 
 
+
+
+
 /* ============================================================
-   BOTÕES COBRANÇA: Liberação por Confiança + Bloqueio
+   CADASTRO - RESUMO MODELO RECEITANET ESCURO
+   Substitui somente o conteúdo do resumo na aba cadastro.
+============================================================ */
+(function(){
+  function getVal(obj, keys, def="--"){
+    for(const k of keys){
+      if(obj && obj[k] !== undefined && obj[k] !== null && String(obj[k]).trim() !== "") return String(obj[k]).trim();
+    }
+    return def;
+  }
+  function esc(v){
+    return String(v ?? "").replace(/[&<>"']/g, s => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[s]));
+  }
+  function moeda(v){
+    let n = Number(String(v || "").replace(/[^\d,.-]/g,"").replace(",","."));
+    if(!isFinite(n) || n <= 0) n = 100;
+    return n.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+  }
+  function clienteSelecionado(){
+    for(const key of ["clienteSelecionadoCompleto","clienteCadastroSelecionado","clienteEditar"]){
+      try{
+        const raw = localStorage.getItem(key);
+        if(raw){
+          const c = JSON.parse(raw);
+          if(c && Object.keys(c).length) return c;
+        }
+      }catch(e){}
+    }
+    return {};
+  }
+  async function onlinePorLogin(login){
+    if(!login) return null;
+    try{
+      const r = await fetch("/api/online", {cache:"no-store"});
+      const d = await r.json();
+      const lista = Array.isArray(d.clientes) ? d.clientes : [];
+      return lista.find(c => String(c.usuario || c.name || c.login || c.user || "").toLowerCase().trim() === String(login).toLowerCase().trim()) || null;
+    }catch(e){ return null; }
+  }
+  function montarResumo(c, on){
+    const login = getVal(c, ["loginPppoe","login","usuario","user","name","pppoe"], "");
+    const senha = getVal(c, ["senhaPppoe","senha","password"], "0000");
+    const nome = getVal(c, ["nome","cliente","razaoSocial","name"], "--");
+    const cpf = getVal(c, ["cpfCnpj","cpf","cnpj","documento"], "--");
+    const venc = getVal(c, ["diaVencimento","vencimento"], "--");
+    const prox = getVal(c, ["proximaFatura","proximaFaturaAberta","dataProximaFatura"], "20/07/2026");
+
+    const online = !!on;
+    const servidor = online ? (on.servidor || "Armando Mendes - Zumbi") : getVal(c, ["popServidor","servidor","servidorReceita"], "--");
+    const service = online ? (on.service || "PPP2") : getVal(c, ["service","tipo","interface"], "PPP2");
+    const serviceUp = String(service).toUpperCase();
+    const ip = online ? (on.ip || on.address || "--") : getVal(c, ["ip","address"], "--");
+    const profile = online ? (on.profile || getVal(c, ["profile","plano"], "600-MEGA")) : getVal(c, ["profile","plano"], "600-MEGA");
+    const mac = online ? (on.callerId || on.mac || on["caller-id"] || "--") : getVal(c, ["mac","callerId","caller-id"], "--");
+    const uptime = online ? (on.uptime || "--") : "--";
+    const vlan = online ? (on.interface || on["interface"] || "VLAN 102") : getVal(c, ["interface","vlan"], "--");
+
+    const valor = getVal(c, ["valorMensal","valor","mensalidade"], "100");
+    const plano = getVal(c, ["plano","profile"], "Plano 600 MB - Fibra+");
+
+    const endereco = getVal(c, ["endereco","logradouro","rua"], "--");
+    const ref = getVal(c, ["referencia","pontoReferencia"], "--");
+    const bairro = getVal(c, ["bairro"], "--");
+    const estado = getVal(c, ["uf","estado"], "AM");
+    const tel1 = getVal(c, ["telefone1","telefone","celular","fone"], "--");
+    const tel2 = getVal(c, ["telefone2","celular2","fone2"], "--");
+    const tel3 = getVal(c, ["telefone3","celular3","fone3"], "--");
+    const compl = getVal(c, ["complemento"], "--");
+    const cidade = getVal(c, ["cidade","localidade"], "MANAUS");
+    const ibge = getVal(c, ["ibge"], "1302603");
+
+    return `
+    <div class="rn-card">
+      <div class="rn-head">
+        <h2>Resumo</h2>
+        <button type="button" class="rn-help">?</button>
+      </div>
+
+      <div class="rn-two rn-principal">
+        <div>
+          <div class="rn-field"><b>Login</b><span class="rn-login"><i>✓</i> ${esc(login || "--")}</span></div>
+          <div class="rn-field"><b>Nome</b><span>${esc(nome)}</span></div>
+          <div class="rn-field"><b>CPF/CNPJ</b><span>${esc(cpf)}</span></div>
+          <div class="rn-field"><b>Dia do Vencimento</b><span>${esc(venc)}</span></div>
+        </div>
+        <div>
+          <div class="rn-field"><b>Senha</b><span>${esc(senha)}</span></div>
+          <div class="rn-spacer"></div>
+          <div class="rn-field"><b>Próxima Fatura Aberta</b><span>${esc(prox)}</span></div>
+        </div>
+      </div>
+
+      <div class="rn-section-title">Servidor</div>
+
+      <div class="rn-two rn-servidor">
+        <div>
+          <div class="rn-field"><b>SERVIDOR</b><span>${esc(servidor)}</span></div>
+          <div class="rn-field"><b>ELEMENTO DE REDE</b><span>Conexão</span></div>
+          <div class="rn-field rn-small-gap"><span>PPPOE</span></div>
+          <div class="rn-oltnet">OLTNET</div>
+          <span class="rn-ident ${online ? "ok" : ""}">${online ? "Identificado" : "Não Identificado"}</span>
+        </div>
+        <div>
+          <div class="rn-field"><b>INTERFACE</b><span>${esc(serviceUp)}</span></div>
+          <div class="rn-field"><b>IP ATUAL</b><span>${esc(ip)}</span></div>
+          <div class="rn-field"><b>Profile</b><span>${esc(profile)}</span></div>
+        </div>
+      </div>
+
+      <hr class="rn-line">
+
+      <div class="rn-two rn-status">
+        <div>
+          <p><b>Status</b><em class="${online ? "on" : "off"}">●</em> ${online ? "Online" : "Offline"}</p>
+          <p><b>Serviço:</b> ${esc(service)}</p>
+          <p><b>IP:</b> ${esc(ip)}</p>
+          <p><b>Profile Servidor:</b> ${esc(profile)}</p>
+          <p><b>MTU:</b> 1480</p>
+        </div>
+        <div>
+          <p><b>Login:</b> ${esc(login || "--")}</p>
+          <p><b>Tempo:</b> ${esc(uptime)}</p>
+          <p><b>MAC:</b> ${esc(mac)}</p>
+          <p><b>Interface:</b> ${esc(vlan)}</p>
+          <p><b>MRU:</b> 1480</p>
+        </div>
+      </div>
+
+      <div class="rn-actions">
+        <button class="rn-btn b1" type="button">Configurar Equipamento - Remoto</button>
+        <button class="rn-btn b2" type="button"><span>Configurar Equipamento - Interno</span><strong>HTTPS</strong></button>
+        <button class="rn-btn b3" type="button">Diagnosticar Cliente</button>
+        <button class="rn-btn b4" type="button">Monitoramento em Tempo Real</button>
+      </div>
+
+      <hr class="rn-line">
+
+      <h3>Plano de Cobrança</h3>
+      <table class="rn-table">
+        <thead><tr><th>PLANO</th><th>VALOR UN</th><th>QTDADE</th></tr></thead>
+        <tbody><tr><td>${esc(plano)}</td><td>${moeda(valor)}</td><td>1</td></tr></tbody>
+      </table>
+      <div class="rn-total">Total: ${moeda(valor)}</div>
+
+      <hr class="rn-line">
+
+      <h3>Estoque</h3>
+      <table class="rn-table">
+        <thead><tr><th>PRODUTO</th><th>QT.</th><th>UN</th><th>VALOR</th><th>DATA</th></tr></thead>
+        <tbody><tr><td>Nenhum Produto</td><td>-</td><td>-</td><td>-</td><td>-</td></tr></tbody>
+      </table>
+
+      <hr class="rn-line">
+
+      <h3>Dados de Contato</h3>
+      <div class="rn-contact">
+        <div>
+          <b>Endereço</b><span>${esc(endereco)}</span>
+          <b>Ponto de Ref.</b><span>${esc(ref)}</span>
+          <b>Bairro</b><span>${esc(bairro)}</span>
+          <b>Estado</b><span>${esc(estado)}</span>
+          <b>Tel1</b><span>${esc(tel1)}</span>
+          <b>Tel3</b><span>${esc(tel3)}</span>
+        </div>
+        <div>
+          <b>Compl.</b><span>${esc(compl)}</span>
+          <b>Cidade</b><span>${esc(cidade)}</span>
+          <b>IBGE</b><span>${esc(ibge)}</span>
+          <b>Tel2</b><span>${esc(tel2)}</span>
+        </div>
+      </div>
+
+      <hr class="rn-line">
+
+      <h3>Sistema Pai Controle</h3>
+      <span class="rn-pai">Desativado</span>
+    </div>`;
+  }
+  async function aplicarResumo(){
+    if(!location.pathname.toLowerCase().includes("cadastro")) return;
+
+    const c = clienteSelecionado();
+    const login = getVal(c, ["loginPppoe","login","usuario","user","name","pppoe"], "");
+    const on = await onlinePorLogin(login);
+    const novo = montarResumo(c, on);
+
+    // Remover resumos injetados antigos, mas manter formulário.
+    document.querySelectorAll("#resumoReceitaNetExato,#resumoReceitaNetEscuro,#fibraResumoRestaurado,#resumoMikrotikIntegrado,.fibra-status-mikrotik-card").forEach(el => el.remove());
+
+    let alvo = document.querySelector(".cadastro-resumo, #resumoCadastro, #abaResumo, #resumo, .resumo, .summary");
+    if(alvo){
+      alvo.outerHTML = `<section id="resumoCadastro" class="cadastro-resumo">${novo}</section>`;
+    }else{
+      const main = document.querySelector("main") || document.body;
+      main.insertAdjacentHTML("beforeend", `<section id="resumoCadastro" class="cadastro-resumo">${novo}</section>`);
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", function(){
+    setTimeout(aplicarResumo, 500);
+    setTimeout(aplicarResumo, 1600);
+  });
+})();
+
+
+async function renderizarResumoReceitaNetCadastroFinal(){
+  if(!location.pathname.toLowerCase().includes("cadastro")) return;
+  let c=null;
+  try{ const a=localStorage.getItem("clienteSelecionadoCompleto"); if(a) c=JSON.parse(a); }catch(e){}
+  if(!c){ try{ const a=localStorage.getItem("clienteCadastroSelecionado"); if(a) c=JSON.parse(a); }catch(e){} }
+  if(!c){ try{ const a=localStorage.getItem("clienteEditar"); if(a) c=JSON.parse(a); }catch(e){} }
+  if(!c) c={};
+  const login=rnCampo(c,["login","usuario","name","loginPppoe","pppoe"],"");
+  const on=await rnOnlineInfo(login);
+  const alvo=document.querySelector(".cadastro-resumo-card, .cadastro-resumo, #resumoCadastro, #abaResumo, #resumo, .resumo");
+  if(alvo){
+    alvo.outerHTML = `<aside class="cadastro-resumo-card">${rnResumoHtml(c,on)}</aside>`;
+  }
+}
+document.addEventListener("DOMContentLoaded",function(){
+  setTimeout(renderizarResumoReceitaNetCadastroFinal,600);
+  setTimeout(renderizarResumoReceitaNetCadastroFinal,1600);
+});
+
+
+/* Garantir layout lateral do resumo no Cadastro */
+document.addEventListener("DOMContentLoaded", function(){
+  function aplicarLayoutResumoLateral(){
+    if(!document.querySelector(".rn-receitanet-pixel")) return;
+    const content = document.querySelector("main .content") || document.querySelector(".content");
+    if(content) content.classList.add("cadastro-com-resumo-lateral");
+  }
+  setTimeout(aplicarLayoutResumoLateral, 300);
+  setTimeout(aplicarLayoutResumoLateral, 1200);
+});
+
+
+
+/* ============================================================
+   AÇÕES DOS BOTÕES EXISTENTES DA ABA COBRANÇA
+   Não cria botões novos.
 ============================================================ */
 function fibraClienteAtualCobranca(){
   const chaves = ["clienteSelecionadoCompleto","clienteCadastroSelecionado","clienteEditar","clienteOnlineSelecionado"];
@@ -2856,7 +3271,9 @@ function fibraSalvarStatusCobranca(status){
   try{ clientes = JSON.parse(localStorage.getItem("clientesImportados") || "[]"); }catch(e){}
   if(!Array.isArray(clientes)) clientes = [];
 
-  const idx = clientes.findIndex(c => String(c.login || c.usuario || c.name || c.loginPppoe || c.pppoe || "").toLowerCase().trim() === login.toLowerCase());
+  const idx = clientes.findIndex(c =>
+    String(c.login || c.usuario || c.name || c.loginPppoe || c.pppoe || "").toLowerCase().trim() === login.toLowerCase()
+  );
 
   const agora = new Date().toLocaleString("pt-BR");
   const dadosStatus = {
@@ -2879,17 +3296,56 @@ function fibraSalvarStatusCobranca(status){
   return { login, atualizadoEm: agora };
 }
 
-async function fibraAplicarAddressList(login, lista){
-  // Tenta aplicar no backend se existir endpoint. Se não existir, salva localmente sem quebrar.
+async function fibraAplicarCobrancaServidor(login, acao){
+  try{
+    const resp = await fetch("/api/cobranca/" + acao, {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ login })
+    });
+    if(resp.ok) return true;
+  }catch(e){}
+
   try{
     const resp = await fetch("/api/mikrotik/address-list", {
       method: "POST",
       headers: {"Content-Type":"application/json"},
-      body: JSON.stringify({ login, lista })
+      body: JSON.stringify({ login, lista: acao })
     });
     if(resp.ok) return true;
   }catch(e){}
+
   return false;
+}
+
+function fibraAtualizarStatusCobrancaVisual(status){
+  const campo =
+    document.getElementById("cadStatusCobranca") ||
+    document.querySelector("[name='statusCobranca']") ||
+    document.querySelector("[name='cobrancaStatus']");
+
+  if(campo){
+    campo.value = status === "liberado_confianca" ? "ATIVADO" : "BLOQUEADO";
+  }
+
+  let aviso = document.getElementById("avisoStatusCobranca");
+  if(!aviso){
+    aviso = document.createElement("div");
+    aviso.id = "avisoStatusCobranca";
+    aviso.className = "aviso-status-cobranca";
+    const aba = document.getElementById("tab-cobranca") || document.querySelector(".cobranca-receitanet-exato");
+    if(aba) aba.prepend(aviso);
+  }
+
+  if(aviso){
+    if(status === "liberado_confianca"){
+      aviso.textContent = "Cliente em Liberação por Confiança";
+      aviso.className = "aviso-status-cobranca liberado";
+    }else if(status === "bloqueado"){
+      aviso.textContent = "Cliente Bloqueado";
+      aviso.className = "aviso-status-cobranca bloqueado";
+    }
+  }
 }
 
 async function liberacaoPorConfiancaCliente(){
@@ -2899,14 +3355,12 @@ async function liberacaoPorConfiancaCliente(){
     return;
   }
 
-  const ok = confirm("Liberar por confiança o cliente " + login + "?");
-  if(!ok) return;
+  if(!confirm("Liberar por confiança o cliente " + login + "?")) return;
 
-  const salvo = fibraSalvarStatusCobranca("liberado_confianca");
-  await fibraAplicarAddressList(login, "liberado_confianca");
-
-  fibraAtualizarVisualCobranca("liberado_confianca");
-  fibraToast("Cliente liberado por confiança: " + login, "ok");
+  fibraSalvarStatusCobranca("liberado_confianca");
+  await fibraAplicarCobrancaServidor(login, "liberado_confianca");
+  fibraAtualizarStatusCobrancaVisual("liberado_confianca");
+  fibraToast("Liberação por confiança aplicada: " + login, "ok");
 }
 
 async function bloquearClienteCobranca(){
@@ -2916,43 +3370,37 @@ async function bloquearClienteCobranca(){
     return;
   }
 
-  const ok = confirm("Bloquear cliente " + login + "?");
-  if(!ok) return;
+  if(!confirm("Bloquear o cliente " + login + "?")) return;
 
-  const salvo = fibraSalvarStatusCobranca("bloqueado");
-  await fibraAplicarAddressList(login, "bloqueado");
-
-  fibraAtualizarVisualCobranca("bloqueado");
-  fibraToast("Cliente bloqueado: " + login, "erro");
-}
-
-function fibraAtualizarVisualCobranca(status){
-  let badge = document.getElementById("badgeStatusCobranca");
-  if(!badge){
-    badge = document.createElement("span");
-    badge.id = "badgeStatusCobranca";
-    badge.className = "badge-status-cobranca";
-    const alvo = document.querySelector(".cobranca-acoes-extra") || document.querySelector("#tab-cobranca") || document.body;
-    alvo.prepend(badge);
-  }
-
-  if(status === "liberado_confianca"){
-    badge.textContent = "Liberação por Confiança";
-    badge.className = "badge-status-cobranca liberado";
-  }else if(status === "bloqueado"){
-    badge.textContent = "Bloqueado";
-    badge.className = "badge-status-cobranca bloqueado";
-  }else{
-    badge.textContent = "Normal";
-    badge.className = "badge-status-cobranca";
-  }
+  fibraSalvarStatusCobranca("bloqueado");
+  await fibraAplicarCobrancaServidor(login, "bloqueado");
+  fibraAtualizarStatusCobrancaVisual("bloqueado");
+  fibraToast("Bloqueio aplicado: " + login, "erro");
 }
 
 document.addEventListener("DOMContentLoaded", function(){
+  document.querySelectorAll("button, input[type='button'], input[type='submit']").forEach(function(btn){
+    const texto = (btn.innerText || btn.value || "").toLowerCase();
+
+    if(texto.includes("liberação") && texto.includes("confiança")){
+      btn.onclick = function(e){
+        e.preventDefault();
+        liberacaoPorConfiancaCliente();
+      };
+    }
+
+    if(texto.trim() === "bloqueio"){
+      btn.onclick = function(e){
+        e.preventDefault();
+        bloquearClienteCobranca();
+      };
+    }
+  });
+
   try{
     const c = fibraClienteAtualCobranca();
     const st = c.statusCobranca || c.cobrancaStatus;
-    if(st) fibraAtualizarVisualCobranca(st);
+    if(st) fibraAtualizarStatusCobrancaVisual(st);
   }catch(e){}
 });
 
