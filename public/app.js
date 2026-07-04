@@ -2549,58 +2549,64 @@ document.addEventListener("DOMContentLoaded", function(){
 
 
 
-/* Botão azul abre a aba Controle */
+
+
+
+
+/* Correção definitiva: abrir aba Controles */
 (function(){
-  function irControle(){
-    window.location.href = "controle.html";
+  const paginaControle = "controle.html";
+
+  function abrirControle(e){
+    if(e) e.preventDefault();
+    window.location.href = paginaControle;
   }
 
-  function prepararBotaoControle(){
+  function texto(el){
+    return (el && el.textContent ? el.textContent : "").toLowerCase().trim();
+  }
+
+  function prepararControle(){
     const seletores = [
       "#btnControle",
+      "#btnControles",
       "#botaoControle",
+      "#botaoControles",
       "#abrirControle",
+      "#abrirControles",
       ".btn-controle",
+      ".btn-controles",
       ".botao-controle",
-      ".botao-azul-controle",
+      ".botao-controles",
+      ".botao-azul",
+      ".btn-azul",
+      ".blue-button",
       ".controle-btn",
+      ".controles-btn",
       "[data-page='controle']",
-      "[data-link='controle']"
+      "[data-page='controles']",
+      "[data-link='controle']",
+      "[data-link='controles']"
     ];
 
     document.querySelectorAll(seletores.join(",")).forEach(function(el){
-      el.onclick = function(e){
-        e.preventDefault();
-        irControle();
-      };
+      el.addEventListener("click", abrirControle, true);
+      el.onclick = abrirControle;
       el.style.cursor = "pointer";
     });
 
-    // Corrige botões/links que já têm o texto Controle/Controles.
-    document.querySelectorAll("a, button, .menu-item, .nav-item, .sidebar a, .sidebar button").forEach(function(el){
-      const texto = (el.textContent || "").toLowerCase().trim();
-      if(texto === "controle" || texto === "controles" || texto.includes("controle")){
-        el.onclick = function(e){
-          e.preventDefault();
-          irControle();
-        };
+    document.querySelectorAll("a, button, div, span, li").forEach(function(el){
+      const t = texto(el);
+      if(t === "controle" || t === "controles" || t.includes("controle")){
+        el.addEventListener("click", abrirControle, true);
+        el.onclick = abrirControle;
         el.style.cursor = "pointer";
+        if(el.tagName && el.tagName.toLowerCase() === "a") el.setAttribute("href", paginaControle);
       }
     });
-
-    // Caso o "botão azul" seja um botão sem texto criado no mobile,
-    // use a classe abaixo se ele existir no projeto.
-    const azul = document.querySelector(".botao-azul, .btn-azul, .blue-button, .mobile-blue-button");
-    if(azul && !azul.dataset.fibraControle){
-      azul.dataset.fibraControle = "1";
-      azul.onclick = function(e){
-        e.preventDefault();
-        irControle();
-      };
-      azul.style.cursor = "pointer";
-    }
   }
 
-  document.addEventListener("DOMContentLoaded", prepararBotaoControle);
+  document.addEventListener("DOMContentLoaded", prepararControle);
+  setTimeout(prepararControle, 1000);
 })();
 
