@@ -3190,3 +3190,16 @@ document.addEventListener("DOMContentLoaded",function(){
   setTimeout(renderizarResumoReceitaNetCadastroFinal,600);
   setTimeout(renderizarResumoReceitaNetCadastroFinal,1600);
 });
+
+
+/* Garantir layout lateral do resumo no Cadastro */
+document.addEventListener("DOMContentLoaded", function(){
+  function aplicarLayoutResumoLateral(){
+    if(!document.querySelector(".rn-receitanet-pixel")) return;
+    const content = document.querySelector("main .content") || document.querySelector(".content");
+    if(content) content.classList.add("cadastro-com-resumo-lateral");
+  }
+  setTimeout(aplicarLayoutResumoLateral, 300);
+  setTimeout(aplicarLayoutResumoLateral, 1200);
+});
+
