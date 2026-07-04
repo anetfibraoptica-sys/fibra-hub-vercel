@@ -2789,3 +2789,226 @@ document.addEventListener("DOMContentLoaded", function(){
   });
 });
 
+
+
+/* ============================================================
+   RESUMO RECEITANET ESCURO NA ABA CADASTRO DE CLIENTES
+============================================================ */
+function fibraCampoCliente(c, campos, padrao = "--"){
+  for(const k of campos){
+    if(c && c[k] !== undefined && c[k] !== null && String(c[k]).trim() !== ""){
+      return String(c[k]).trim();
+    }
+  }
+  return padrao;
+}
+
+function fibraMoeda(valor){
+  const n = Number(String(valor || "").replace(/[^\d,.-]/g,"").replace(",","."));
+  if(!isFinite(n) || n <= 0) return "R$ 0,00";
+  return n.toLocaleString("pt-BR", {style:"currency", currency:"BRL"});
+}
+
+function fibraClienteSelecionado(){
+  const chaves = ["clienteSelecionadoCompleto","clienteCadastroSelecionado","clienteEditar"];
+  for(const chave of chaves){
+    try{
+      const raw = localStorage.getItem(chave);
+      if(raw){
+        const obj = JSON.parse(raw);
+        if(obj && Object.keys(obj).length) return obj;
+      }
+    }catch(e){}
+  }
+  return {};
+}
+
+async function fibraStatusOnlinePorLogin(login){
+  if(!login) return null;
+  try{
+    const resp = await fetch("/api/online", {cache:"no-store"});
+    const dados = await resp.json();
+    const lista = Array.isArray(dados.clientes) ? dados.clientes : [];
+    return lista.find(c => String(c.usuario || c.name || c.login || c.user || "").toLowerCase().trim() === String(login).toLowerCase().trim()) || null;
+  }catch(e){
+    console.warn("Falha ao consultar /api/online", e);
+    return null;
+  }
+}
+
+function fibraEscape(v){
+  return String(v ?? "").replace(/[&<>"']/g, s => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[s]));
+}
+
+function fibraResumoHtml(cliente, onlineInfo){
+  const login = fibraCampoCliente(cliente, ["loginPppoe","login","usuario","user","name","pppoe"], "");
+  const senha = fibraCampoCliente(cliente, ["senhaPppoe","senha","password"], "0000");
+  const nome = fibraCampoCliente(cliente, ["nome","cliente","razaoSocial","name"], "--");
+  const cpf = fibraCampoCliente(cliente, ["cpfCnpj","cpf","cnpj","documento"], "--");
+  const venc = fibraCampoCliente(cliente, ["diaVencimento","vencimento"], "--");
+  const prox = fibraCampoCliente(cliente, ["proximaFatura","proximaFaturaAberta","dataProximaFatura"], venc !== "--" ? `${String(venc).padStart(2,"0")}/07/2026` : "--");
+
+  const servidor = onlineInfo ? (onlineInfo.servidor || "Armando Mendes - Zumbi") : fibraCampoCliente(cliente, ["popServidor","servidor","servidorReceita"], "--");
+  const service = onlineInfo ? (onlineInfo.service || "PPPOE") : fibraCampoCliente(cliente, ["service","interface"], "PPPOE");
+  const ip = onlineInfo ? (onlineInfo.ip || onlineInfo.address || "--") : fibraCampoCliente(cliente, ["ip","address"], "");
+  const profile = onlineInfo ? (onlineInfo.profile || onlineInfo["profile"] || fibraCampoCliente(cliente, ["profile","plano"], "600-MEGA")) : fibraCampoCliente(cliente, ["profile","plano"], "--");
+  const mac = onlineInfo ? (onlineInfo.callerId || onlineInfo.mac || onlineInfo["caller-id"] || "--") : fibraCampoCliente(cliente, ["mac","callerId","caller-id"], "--");
+  const uptime = onlineInfo ? (onlineInfo.uptime || "--") : "--";
+  const interfaceAtual = onlineInfo ? (onlineInfo.interface || onlineInfo["interface"] || "VLAN 102") : fibraCampoCliente(cliente, ["interface","vlan"], "--");
+  const online = !!onlineInfo;
+  const valor = fibraCampoCliente(cliente, ["valorMensal","valor","mensalidade"], "100");
+  const plano = fibraCampoCliente(cliente, ["plano","profile"], "Plano 600 MB - Fibra+");
+
+  const endereco = fibraCampoCliente(cliente, ["endereco","logradouro","rua"], "--");
+  const referencia = fibraCampoCliente(cliente, ["referencia","pontoReferencia"], "--");
+  const bairro = fibraCampoCliente(cliente, ["bairro"], "--");
+  const cidade = fibraCampoCliente(cliente, ["cidade","localidade"], "MANAUS");
+  const estado = fibraCampoCliente(cliente, ["uf","estado"], "AM");
+  const ibge = fibraCampoCliente(cliente, ["ibge"], "1302603");
+  const tel1 = fibraCampoCliente(cliente, ["telefone1","telefone","celular","fone"], "--");
+  const tel2 = fibraCampoCliente(cliente, ["telefone2","celular2","fone2"], "--");
+  const tel3 = fibraCampoCliente(cliente, ["telefone3","celular3","fone3"], "--");
+  const compl = fibraCampoCliente(cliente, ["complemento"], "--");
+
+  return `
+  <section id="resumoReceitaNetEscuro" class="resumo-receitanet-dark">
+    <div class="rr-topo">
+      <h2>Resumo</h2>
+      <span class="rr-help">?</span>
+    </div>
+
+    <div class="rr-grid-2 rr-info">
+      <div>
+        <div><span class="rr-label">Login</span><span class="rr-value rr-login-line"><span class="rr-check">✔</span> ${fibraEscape(login || "--")}</span></div>
+        <div><span class="rr-label">Nome</span><span class="rr-value">${fibraEscape(nome)}</span></div>
+        <div><span class="rr-label">CPF/CNPJ</span><span class="rr-value">${fibraEscape(cpf)}</span></div>
+        <div><span class="rr-label">Dia do Vencimento</span><span class="rr-value">${fibraEscape(venc)}</span></div>
+      </div>
+      <div>
+        <div><span class="rr-label">Senha</span><span class="rr-value">${fibraEscape(senha)}</span></div>
+        <div style="margin-top:92px"><span class="rr-label">Próxima Fatura Aberta</span><span class="rr-value">${fibraEscape(prox)}</span></div>
+      </div>
+    </div>
+
+    <div class="rr-section-title">Servidor</div>
+    <div class="rr-grid-2 rr-info">
+      <div>
+        <div><span class="rr-label">SERVIDOR</span><span class="rr-value">${fibraEscape(servidor)}</span></div>
+        <div><span class="rr-label">ELEMENTO DE REDE</span><span class="rr-value">Conexão</span></div>
+        <div><span class="rr-value">PPPOE</span></div>
+        <div><span class="rr-value" style="font-size:28px;margin-top:12px">OLTNET</span></div>
+        <span class="rr-ident ${online ? "online" : ""}">${online ? "Identificado" : "Não Identificado"}</span>
+      </div>
+      <div>
+        <div><span class="rr-label">INTERFACE</span><span class="rr-value">${fibraEscape(service).toUpperCase()}</span></div>
+        <div><span class="rr-label">IP ATUAL</span><span class="rr-value">${fibraEscape(ip)}</span></div>
+        <div><span class="rr-label">Profile</span><span class="rr-value">${fibraEscape(profile)}</span></div>
+      </div>
+    </div>
+
+    <hr class="rr-divider">
+
+    <div class="rr-status-box">
+      <div>
+        <div class="rr-status-line"><b>Status</b><span class="${online ? "rr-dot-online" : "rr-dot-offline"}">●</span> ${online ? "Online" : "Offline"}</div>
+        <div class="rr-status-line"><b>Serviço:</b> ${fibraEscape(service || "PPP2")}</div>
+        <div class="rr-status-line"><b>IP:</b> ${fibraEscape(ip || "--")}</div>
+        <div class="rr-status-line"><b>Profile Servidor:</b> ${fibraEscape(profile || "--")}</div>
+        <div class="rr-status-line"><b>MTU:</b> 1480</div>
+      </div>
+      <div>
+        <div class="rr-status-line"><b>Login:</b> ${fibraEscape(login || "--")}</div>
+        <div class="rr-status-line"><b>Tempo:</b> ${fibraEscape(uptime || "--")}</div>
+        <div class="rr-status-line"><b>MAC:</b> ${fibraEscape(mac || "--")}</div>
+        <div class="rr-status-line"><b>Interface:</b> ${fibraEscape(interfaceAtual || "--")}</div>
+        <div class="rr-status-line"><b>MRU:</b> 1480</div>
+      </div>
+    </div>
+
+    <div class="rr-buttons">
+      <button type="button" class="rr-btn rr-btn-blue">Configurar Equipamento - Remoto</button>
+      <button type="button" class="rr-btn rr-btn-blue2"><span>Configurar Equipamento - Interno</span><b>HTTPS</b></button>
+      <button type="button" class="rr-btn rr-btn-green">Diagnosticar Cliente</button>
+      <button type="button" class="rr-btn rr-btn-orange">Monitoramento em Tempo Real</button>
+    </div>
+
+    <hr class="rr-divider">
+
+    <div class="rr-section-heading">Plano de Cobrança</div>
+    <table class="rr-table">
+      <thead><tr><th>PLANO</th><th>VALOR UN</th><th>QTDADE</th></tr></thead>
+      <tbody><tr><td>${fibraEscape(plano)}</td><td>${fibraMoeda(valor)}</td><td>1</td></tr></tbody>
+    </table>
+    <div class="rr-total">Total: ${fibraMoeda(valor)}</div>
+
+    <hr class="rr-divider">
+
+    <div class="rr-section-heading">Estoque</div>
+    <table class="rr-table">
+      <thead><tr><th>PRODUTO</th><th>QT.</th><th>UN</th><th>VALOR</th><th>DATA</th></tr></thead>
+      <tbody><tr><td>Nenhum Produto</td><td>-</td><td>-</td><td>-</td><td>-</td></tr></tbody>
+    </table>
+
+    <hr class="rr-divider">
+
+    <div class="rr-section-heading">Dados de Contato</div>
+    <div class="rr-contato">
+      <div>
+        <span class="rr-label">Endereço</span><span class="rr-value">${fibraEscape(endereco)}</span>
+        <span class="rr-label">Ponto de Ref.</span><span class="rr-value">${fibraEscape(referencia)}</span>
+        <span class="rr-label">Bairro</span><span class="rr-value">${fibraEscape(bairro)}</span>
+        <span class="rr-label">Estado</span><span class="rr-value">${fibraEscape(estado)}</span>
+        <span class="rr-label">Tel1</span><span class="rr-value">${fibraEscape(tel1)}</span>
+        <span class="rr-label">Tel3</span><span class="rr-value">${fibraEscape(tel3)}</span>
+      </div>
+      <div>
+        <span class="rr-label">Compl.</span><span class="rr-value">${fibraEscape(compl)}</span>
+        <span class="rr-label">Cidade</span><span class="rr-value">${fibraEscape(cidade)}</span>
+        <span class="rr-label">IBGE</span><span class="rr-value">${fibraEscape(ibge)}</span>
+        <span class="rr-label">Tel2</span><span class="rr-value">${fibraEscape(tel2)}</span>
+      </div>
+    </div>
+  </section>`;
+}
+
+async function renderizarResumoReceitaNetEscuro(){
+  const cliente = fibraClienteSelecionado();
+  const login = fibraCampoCliente(cliente, ["loginPppoe","login","usuario","user","name","pppoe"], "");
+  const onlineInfo = await fibraStatusOnlinePorLogin(login);
+  const html = fibraResumoHtml(cliente, onlineInfo);
+
+  // Oculta/remova resumos antigos duplicados para deixar somente o novo resumo escuro.
+  document.querySelectorAll("#fibraResumoRestaurado, #resumoMikrotikIntegrado, .fibra-status-mikrotik-card").forEach(el => el.remove());
+
+  let alvo =
+    document.querySelector("#resumoCadastro") ||
+    document.querySelector("#abaResumo") ||
+    document.querySelector(".cadastro-resumo") ||
+    document.querySelector(".resumo") ||
+    document.querySelector("main") ||
+    document.body;
+
+  if(alvo && alvo.id === "resumoReceitaNetEscuro") return;
+
+  const existente = document.getElementById("resumoReceitaNetEscuro");
+  if(existente){
+    existente.outerHTML = html;
+    return;
+  }
+
+  // Se a página tem formulário à esquerda e resumo à direita, coloca no lugar do primeiro resumo/panel depois do form.
+  const oldResumo = document.querySelector(".resumo, .summary, #resumo, #resumoCadastro, #abaResumo, .cadastro-resumo");
+  if(oldResumo){
+    oldResumo.outerHTML = html;
+  }else if(alvo){
+    alvo.insertAdjacentHTML("beforeend", html);
+  }
+}
+
+document.addEventListener("DOMContentLoaded", function(){
+  if(location.pathname.toLowerCase().includes("cadastro")){
+    setTimeout(renderizarResumoReceitaNetEscuro, 500);
+    setTimeout(renderizarResumoReceitaNetEscuro, 1600);
+  }
+});
+
