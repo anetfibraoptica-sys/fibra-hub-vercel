@@ -80,7 +80,7 @@ function sair(){
   window.location.href = "index.html";
 }
 
-async function carregarDashboard(){
+async async function carregarDashboard(){
   try{
     const r = await fetch("/api/servidores?_=" + Date.now());
     if(r.ok){
@@ -244,7 +244,7 @@ function listaServidores(dados){
   return [];
 }
 
-async function carregarDashboard(){
+async async function carregarDashboard(){
   try{
     const r = await fetch("/api/servidores?_=" + Date.now());
     if(r.ok){
