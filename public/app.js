@@ -2792,9 +2792,9 @@ document.addEventListener("DOMContentLoaded", function(){
 
 
 /* ============================================================
-   RESUMO RECEITANET ESCURO NA ABA CADASTRO DE CLIENTES
+   RESUMO IDENTICO AO RECEITANET NA ABA CADASTRO
 ============================================================ */
-function fibraCampoCliente(c, campos, padrao = "--"){
+function rrxCampo(c, campos, padrao = "--"){
   for(const k of campos){
     if(c && c[k] !== undefined && c[k] !== null && String(c[k]).trim() !== ""){
       return String(c[k]).trim();
@@ -2802,14 +2802,15 @@ function fibraCampoCliente(c, campos, padrao = "--"){
   }
   return padrao;
 }
-
-function fibraMoeda(valor){
-  const n = Number(String(valor || "").replace(/[^\d,.-]/g,"").replace(",","."));
-  if(!isFinite(n) || n <= 0) return "R$ 0,00";
+function rrxEscape(v){
+  return String(v ?? "").replace(/[&<>"']/g, s => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[s]));
+}
+function rrxMoeda(v){
+  let n = Number(String(v || "").replace(/[^\d,.-]/g,"").replace(",","."));
+  if(!isFinite(n) || n <= 0) n = 100;
   return n.toLocaleString("pt-BR", {style:"currency", currency:"BRL"});
 }
-
-function fibraClienteSelecionado(){
+function rrxCliente(){
   const chaves = ["clienteSelecionadoCompleto","clienteCadastroSelecionado","clienteEditar"];
   for(const chave of chaves){
     try{
@@ -2822,193 +2823,162 @@ function fibraClienteSelecionado(){
   }
   return {};
 }
-
-async function fibraStatusOnlinePorLogin(login){
+async function rrxOnline(login){
   if(!login) return null;
   try{
-    const resp = await fetch("/api/online", {cache:"no-store"});
-    const dados = await resp.json();
-    const lista = Array.isArray(dados.clientes) ? dados.clientes : [];
+    const r = await fetch("/api/online", {cache:"no-store"});
+    const d = await r.json();
+    const lista = Array.isArray(d.clientes) ? d.clientes : [];
     return lista.find(c => String(c.usuario || c.name || c.login || c.user || "").toLowerCase().trim() === String(login).toLowerCase().trim()) || null;
-  }catch(e){
-    console.warn("Falha ao consultar /api/online", e);
-    return null;
-  }
+  }catch(e){ return null; }
 }
-
-function fibraEscape(v){
-  return String(v ?? "").replace(/[&<>"']/g, s => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[s]));
-}
-
-function fibraResumoHtml(cliente, onlineInfo){
-  const login = fibraCampoCliente(cliente, ["loginPppoe","login","usuario","user","name","pppoe"], "");
-  const senha = fibraCampoCliente(cliente, ["senhaPppoe","senha","password"], "0000");
-  const nome = fibraCampoCliente(cliente, ["nome","cliente","razaoSocial","name"], "--");
-  const cpf = fibraCampoCliente(cliente, ["cpfCnpj","cpf","cnpj","documento"], "--");
-  const venc = fibraCampoCliente(cliente, ["diaVencimento","vencimento"], "--");
-  const prox = fibraCampoCliente(cliente, ["proximaFatura","proximaFaturaAberta","dataProximaFatura"], venc !== "--" ? `${String(venc).padStart(2,"0")}/07/2026` : "--");
-
-  const servidor = onlineInfo ? (onlineInfo.servidor || "Armando Mendes - Zumbi") : fibraCampoCliente(cliente, ["popServidor","servidor","servidorReceita"], "--");
-  const service = onlineInfo ? (onlineInfo.service || "PPPOE") : fibraCampoCliente(cliente, ["service","interface"], "PPPOE");
-  const ip = onlineInfo ? (onlineInfo.ip || onlineInfo.address || "--") : fibraCampoCliente(cliente, ["ip","address"], "");
-  const profile = onlineInfo ? (onlineInfo.profile || onlineInfo["profile"] || fibraCampoCliente(cliente, ["profile","plano"], "600-MEGA")) : fibraCampoCliente(cliente, ["profile","plano"], "--");
-  const mac = onlineInfo ? (onlineInfo.callerId || onlineInfo.mac || onlineInfo["caller-id"] || "--") : fibraCampoCliente(cliente, ["mac","callerId","caller-id"], "--");
-  const uptime = onlineInfo ? (onlineInfo.uptime || "--") : "--";
-  const interfaceAtual = onlineInfo ? (onlineInfo.interface || onlineInfo["interface"] || "VLAN 102") : fibraCampoCliente(cliente, ["interface","vlan"], "--");
-  const online = !!onlineInfo;
-  const valor = fibraCampoCliente(cliente, ["valorMensal","valor","mensalidade"], "100");
-  const plano = fibraCampoCliente(cliente, ["plano","profile"], "Plano 600 MB - Fibra+");
-
-  const endereco = fibraCampoCliente(cliente, ["endereco","logradouro","rua"], "--");
-  const referencia = fibraCampoCliente(cliente, ["referencia","pontoReferencia"], "--");
-  const bairro = fibraCampoCliente(cliente, ["bairro"], "--");
-  const cidade = fibraCampoCliente(cliente, ["cidade","localidade"], "MANAUS");
-  const estado = fibraCampoCliente(cliente, ["uf","estado"], "AM");
-  const ibge = fibraCampoCliente(cliente, ["ibge"], "1302603");
-  const tel1 = fibraCampoCliente(cliente, ["telefone1","telefone","celular","fone"], "--");
-  const tel2 = fibraCampoCliente(cliente, ["telefone2","celular2","fone2"], "--");
-  const tel3 = fibraCampoCliente(cliente, ["telefone3","celular3","fone3"], "--");
-  const compl = fibraCampoCliente(cliente, ["complemento"], "--");
+function rrxHtml(c, on){
+  const login = rrxCampo(c, ["loginPppoe","login","usuario","user","name","pppoe"], "");
+  const senha = rrxCampo(c, ["senhaPppoe","senha","password"], "0000");
+  const nome = rrxCampo(c, ["nome","cliente","razaoSocial","name"], "--");
+  const cpf = rrxCampo(c, ["cpfCnpj","cpf","cnpj","documento"], "--");
+  const venc = rrxCampo(c, ["diaVencimento","vencimento"], "--");
+  const proxima = rrxCampo(c, ["proximaFatura","proximaFaturaAberta","dataProximaFatura"], "20/07/2026");
+  const servidor = on ? (on.servidor || "Armando Mendes - Zumbi") : rrxCampo(c, ["popServidor","servidor","servidorReceita"], "--");
+  const service = on ? (on.service || "PPP2") : rrxCampo(c, ["service","interface"], "PPP2");
+  const ip = on ? (on.ip || on.address || "--") : rrxCampo(c, ["ip","address"], "--");
+  const profile = on ? (on.profile || rrxCampo(c, ["profile","plano"], "600-MEGA")) : rrxCampo(c, ["profile","plano"], "600-MEGA");
+  const mac = on ? (on.callerId || on.mac || on["caller-id"] || "--") : rrxCampo(c, ["mac","callerId","caller-id"], "--");
+  const uptime = on ? (on.uptime || "--") : "--";
+  const iface = on ? (on.interface || on["interface"] || "VLAN 102") : rrxCampo(c, ["interface","vlan"], "--");
+  const online = !!on;
+  const valor = rrxCampo(c, ["valorMensal","valor","mensalidade"], "100");
+  const plano = rrxCampo(c, ["plano","profile"], "Plano 600 MB - Fibra+");
+  const endereco = rrxCampo(c, ["endereco","logradouro","rua"], "--");
+  const ref = rrxCampo(c, ["referencia","pontoReferencia"], "--");
+  const bairro = rrxCampo(c, ["bairro"], "--");
+  const estado = rrxCampo(c, ["uf","estado"], "AM");
+  const tel1 = rrxCampo(c, ["telefone1","telefone","celular","fone"], "--");
+  const tel2 = rrxCampo(c, ["telefone2","celular2","fone2"], "--");
+  const tel3 = rrxCampo(c, ["telefone3","celular3","fone3"], "--");
+  const compl = rrxCampo(c, ["complemento"], "--");
+  const cidade = rrxCampo(c, ["cidade","localidade"], "MANAUS");
+  const ibge = rrxCampo(c, ["ibge"], "1302603");
 
   return `
-  <section id="resumoReceitaNetEscuro" class="resumo-receitanet-dark">
-    <div class="rr-topo">
-      <h2>Resumo</h2>
-      <span class="rr-help">?</span>
+<section id="resumoReceitaNetExato" class="resumo-receitanet-exato">
+  <div class="rrx-top">
+    <h2 class="rrx-title">Resumo</h2>
+    <div class="rrx-help">?</div>
+  </div>
+
+  <div class="rrx-grid">
+    <div>
+      <div class="rrx-block"><span class="rrx-label">Login</span><span class="rrx-value rrx-login"><span class="rrx-check">✔</span>${rrxEscape(login)}</span></div>
+      <div class="rrx-block"><span class="rrx-label">Nome</span><span class="rrx-value">${rrxEscape(nome)}</span></div>
+      <div class="rrx-block"><span class="rrx-label">CPF/CNPJ</span><span class="rrx-value">${rrxEscape(cpf)}</span></div>
+      <div class="rrx-block"><span class="rrx-label">Dia do Vencimento</span><span class="rrx-value">${rrxEscape(venc)}</span></div>
     </div>
-
-    <div class="rr-grid-2 rr-info">
-      <div>
-        <div><span class="rr-label">Login</span><span class="rr-value rr-login-line"><span class="rr-check">✔</span> ${fibraEscape(login || "--")}</span></div>
-        <div><span class="rr-label">Nome</span><span class="rr-value">${fibraEscape(nome)}</span></div>
-        <div><span class="rr-label">CPF/CNPJ</span><span class="rr-value">${fibraEscape(cpf)}</span></div>
-        <div><span class="rr-label">Dia do Vencimento</span><span class="rr-value">${fibraEscape(venc)}</span></div>
-      </div>
-      <div>
-        <div><span class="rr-label">Senha</span><span class="rr-value">${fibraEscape(senha)}</span></div>
-        <div style="margin-top:92px"><span class="rr-label">Próxima Fatura Aberta</span><span class="rr-value">${fibraEscape(prox)}</span></div>
-      </div>
+    <div>
+      <div class="rrx-block"><span class="rrx-label">Senha</span><span class="rrx-value">${rrxEscape(senha)}</span></div>
+      <div class="rrx-block" style="margin-top:82px"><span class="rrx-label">Próxima Fatura Aberta</span><span class="rrx-value">${rrxEscape(proxima)}</span></div>
     </div>
+  </div>
 
-    <div class="rr-section-title">Servidor</div>
-    <div class="rr-grid-2 rr-info">
-      <div>
-        <div><span class="rr-label">SERVIDOR</span><span class="rr-value">${fibraEscape(servidor)}</span></div>
-        <div><span class="rr-label">ELEMENTO DE REDE</span><span class="rr-value">Conexão</span></div>
-        <div><span class="rr-value">PPPOE</span></div>
-        <div><span class="rr-value" style="font-size:28px;margin-top:12px">OLTNET</span></div>
-        <span class="rr-ident ${online ? "online" : ""}">${online ? "Identificado" : "Não Identificado"}</span>
-      </div>
-      <div>
-        <div><span class="rr-label">INTERFACE</span><span class="rr-value">${fibraEscape(service).toUpperCase()}</span></div>
-        <div><span class="rr-label">IP ATUAL</span><span class="rr-value">${fibraEscape(ip)}</span></div>
-        <div><span class="rr-label">Profile</span><span class="rr-value">${fibraEscape(profile)}</span></div>
-      </div>
+  <div class="rrx-section-title">Servidor</div>
+  <div class="rrx-grid">
+    <div>
+      <div class="rrx-block"><span class="rrx-label">SERVIDOR</span><span class="rrx-value">${rrxEscape(servidor)}</span></div>
+      <div class="rrx-block"><span class="rrx-label">ELEMENTO DE REDE</span><span class="rrx-value">Conexão</span></div>
+      <div class="rrx-block"><span class="rrx-value">PPPOE</span></div>
+      <div class="rrx-oltnet">OLTNET</div>
+      <span class="rrx-ident ${online ? "online" : ""}">${online ? "Identificado" : "Não Identificado"}</span>
     </div>
-
-    <hr class="rr-divider">
-
-    <div class="rr-status-box">
-      <div>
-        <div class="rr-status-line"><b>Status</b><span class="${online ? "rr-dot-online" : "rr-dot-offline"}">●</span> ${online ? "Online" : "Offline"}</div>
-        <div class="rr-status-line"><b>Serviço:</b> ${fibraEscape(service || "PPP2")}</div>
-        <div class="rr-status-line"><b>IP:</b> ${fibraEscape(ip || "--")}</div>
-        <div class="rr-status-line"><b>Profile Servidor:</b> ${fibraEscape(profile || "--")}</div>
-        <div class="rr-status-line"><b>MTU:</b> 1480</div>
-      </div>
-      <div>
-        <div class="rr-status-line"><b>Login:</b> ${fibraEscape(login || "--")}</div>
-        <div class="rr-status-line"><b>Tempo:</b> ${fibraEscape(uptime || "--")}</div>
-        <div class="rr-status-line"><b>MAC:</b> ${fibraEscape(mac || "--")}</div>
-        <div class="rr-status-line"><b>Interface:</b> ${fibraEscape(interfaceAtual || "--")}</div>
-        <div class="rr-status-line"><b>MRU:</b> 1480</div>
-      </div>
+    <div>
+      <div class="rrx-block"><span class="rrx-label">INTERFACE</span><span class="rrx-value">${rrxEscape(String(service).toUpperCase())}</span></div>
+      <div class="rrx-block"><span class="rrx-label">IP ATUAL</span><span class="rrx-value">${rrxEscape(ip)}</span></div>
+      <div class="rrx-block"><span class="rrx-label">Profile</span><span class="rrx-value">${rrxEscape(profile)}</span></div>
     </div>
+  </div>
 
-    <div class="rr-buttons">
-      <button type="button" class="rr-btn rr-btn-blue">Configurar Equipamento - Remoto</button>
-      <button type="button" class="rr-btn rr-btn-blue2"><span>Configurar Equipamento - Interno</span><b>HTTPS</b></button>
-      <button type="button" class="rr-btn rr-btn-green">Diagnosticar Cliente</button>
-      <button type="button" class="rr-btn rr-btn-orange">Monitoramento em Tempo Real</button>
+  <hr class="rrx-line">
+
+  <div class="rrx-status">
+    <div>
+      <p><b>Status</b><span class="${online ? "rrx-dot-on" : "rrx-dot-off"}">●</span> ${online ? "Online" : "Offline"}</p>
+      <p><b>Serviço:</b> ${rrxEscape(service)}</p>
+      <p><b>IP:</b> ${rrxEscape(ip)}</p>
+      <p><b>Profile Servidor:</b> ${rrxEscape(profile)}</p>
+      <p><b>MTU:</b> 1480</p>
     </div>
-
-    <hr class="rr-divider">
-
-    <div class="rr-section-heading">Plano de Cobrança</div>
-    <table class="rr-table">
-      <thead><tr><th>PLANO</th><th>VALOR UN</th><th>QTDADE</th></tr></thead>
-      <tbody><tr><td>${fibraEscape(plano)}</td><td>${fibraMoeda(valor)}</td><td>1</td></tr></tbody>
-    </table>
-    <div class="rr-total">Total: ${fibraMoeda(valor)}</div>
-
-    <hr class="rr-divider">
-
-    <div class="rr-section-heading">Estoque</div>
-    <table class="rr-table">
-      <thead><tr><th>PRODUTO</th><th>QT.</th><th>UN</th><th>VALOR</th><th>DATA</th></tr></thead>
-      <tbody><tr><td>Nenhum Produto</td><td>-</td><td>-</td><td>-</td><td>-</td></tr></tbody>
-    </table>
-
-    <hr class="rr-divider">
-
-    <div class="rr-section-heading">Dados de Contato</div>
-    <div class="rr-contato">
-      <div>
-        <span class="rr-label">Endereço</span><span class="rr-value">${fibraEscape(endereco)}</span>
-        <span class="rr-label">Ponto de Ref.</span><span class="rr-value">${fibraEscape(referencia)}</span>
-        <span class="rr-label">Bairro</span><span class="rr-value">${fibraEscape(bairro)}</span>
-        <span class="rr-label">Estado</span><span class="rr-value">${fibraEscape(estado)}</span>
-        <span class="rr-label">Tel1</span><span class="rr-value">${fibraEscape(tel1)}</span>
-        <span class="rr-label">Tel3</span><span class="rr-value">${fibraEscape(tel3)}</span>
-      </div>
-      <div>
-        <span class="rr-label">Compl.</span><span class="rr-value">${fibraEscape(compl)}</span>
-        <span class="rr-label">Cidade</span><span class="rr-value">${fibraEscape(cidade)}</span>
-        <span class="rr-label">IBGE</span><span class="rr-value">${fibraEscape(ibge)}</span>
-        <span class="rr-label">Tel2</span><span class="rr-value">${fibraEscape(tel2)}</span>
-      </div>
+    <div>
+      <p><b>Login:</b> ${rrxEscape(login)}</p>
+      <p><b>Tempo:</b> ${rrxEscape(uptime)}</p>
+      <p><b>MAC:</b> ${rrxEscape(mac)}</p>
+      <p><b>Interface:</b> ${rrxEscape(iface)}</p>
+      <p><b>MRU:</b> 1480</p>
     </div>
-  </section>`;
+  </div>
+
+  <div class="rrx-actions">
+    <button class="rrx-btn rrx-blue" type="button">Configurar Equipamento - Remoto</button>
+    <button class="rrx-btn rrx-blue2" type="button"><span>Configurar Equipamento - Interno</span><b>HTTPS</b></button>
+    <button class="rrx-btn rrx-green" type="button">Diagnosticar Cliente</button>
+    <button class="rrx-btn rrx-orange" type="button">Monitoramento em Tempo Real</button>
+  </div>
+
+  <hr class="rrx-line">
+
+  <div class="rrx-heading">Plano de Cobrança</div>
+  <table class="rrx-table">
+    <thead><tr><th>PLANO</th><th>VALOR UN</th><th>QTDADE</th></tr></thead>
+    <tbody><tr><td>${rrxEscape(plano)}</td><td>${rrxMoeda(valor)}</td><td>1</td></tr></tbody>
+  </table>
+  <div class="rrx-total">Total: ${rrxMoeda(valor)}</div>
+
+  <hr class="rrx-line">
+
+  <div class="rrx-heading">Estoque</div>
+  <table class="rrx-table">
+    <thead><tr><th>PRODUTO</th><th>QT.</th><th>UN</th><th>VALOR</th><th>DATA</th></tr></thead>
+    <tbody><tr><td>Nenhum Produto</td><td>-</td><td>-</td><td>-</td><td>-</td></tr></tbody>
+  </table>
+
+  <hr class="rrx-line">
+
+  <div class="rrx-heading">Dados de Contato</div>
+  <div class="rrx-contact">
+    <div>
+      <span class="rrx-label">Endereço</span><span class="rrx-value">${rrxEscape(endereco)}</span>
+      <span class="rrx-label">Ponto de Ref.</span><span class="rrx-value">${rrxEscape(ref)}</span>
+      <span class="rrx-label">Bairro</span><span class="rrx-value">${rrxEscape(bairro)}</span>
+      <span class="rrx-label">Estado</span><span class="rrx-value">${rrxEscape(estado)}</span>
+      <span class="rrx-label">Tel1</span><span class="rrx-value">${rrxEscape(tel1)}</span>
+      <span class="rrx-label">Tel3</span><span class="rrx-value">${rrxEscape(tel3)}</span>
+    </div>
+    <div>
+      <span class="rrx-label">Compl.</span><span class="rrx-value">${rrxEscape(compl)}</span>
+      <span class="rrx-label">Cidade</span><span class="rrx-value">${rrxEscape(cidade)}</span>
+      <span class="rrx-label">IBGE</span><span class="rrx-value">${rrxEscape(ibge)}</span>
+      <span class="rrx-label">Tel2</span><span class="rrx-value">${rrxEscape(tel2)}</span>
+    </div>
+  </div>
+</section>`;
 }
+async function renderResumoReceitaNetExato(){
+  if(!location.pathname.toLowerCase().includes("cadastro")) return;
+  const cliente = rrxCliente();
+  const login = rrxCampo(cliente, ["loginPppoe","login","usuario","user","name","pppoe"], "");
+  const on = await rrxOnline(login);
+  const html = rrxHtml(cliente, on);
 
-async function renderizarResumoReceitaNetEscuro(){
-  const cliente = fibraClienteSelecionado();
-  const login = fibraCampoCliente(cliente, ["loginPppoe","login","usuario","user","name","pppoe"], "");
-  const onlineInfo = await fibraStatusOnlinePorLogin(login);
-  const html = fibraResumoHtml(cliente, onlineInfo);
+  document.querySelectorAll("#fibraResumoRestaurado,#resumoMikrotikIntegrado,.fibra-status-mikrotik-card,#resumoReceitaNetEscuro").forEach(el => el.remove());
 
-  // Oculta/remova resumos antigos duplicados para deixar somente o novo resumo escuro.
-  document.querySelectorAll("#fibraResumoRestaurado, #resumoMikrotikIntegrado, .fibra-status-mikrotik-card").forEach(el => el.remove());
-
-  let alvo =
-    document.querySelector("#resumoCadastro") ||
-    document.querySelector("#abaResumo") ||
-    document.querySelector(".cadastro-resumo") ||
-    document.querySelector(".resumo") ||
-    document.querySelector("main") ||
-    document.body;
-
-  if(alvo && alvo.id === "resumoReceitaNetEscuro") return;
-
-  const existente = document.getElementById("resumoReceitaNetEscuro");
-  if(existente){
-    existente.outerHTML = html;
-    return;
-  }
-
-  // Se a página tem formulário à esquerda e resumo à direita, coloca no lugar do primeiro resumo/panel depois do form.
-  const oldResumo = document.querySelector(".resumo, .summary, #resumo, #resumoCadastro, #abaResumo, .cadastro-resumo");
-  if(oldResumo){
-    oldResumo.outerHTML = html;
-  }else if(alvo){
-    alvo.insertAdjacentHTML("beforeend", html);
+  const antigo = document.querySelector("#resumoReceitaNetExato,.resumo,.cadastro-resumo,#resumoCadastro,#abaResumo,#resumo");
+  if(antigo){
+    antigo.outerHTML = html;
+  } else {
+    const main = document.querySelector("main") || document.body;
+    main.insertAdjacentHTML("beforeend", html);
   }
 }
-
 document.addEventListener("DOMContentLoaded", function(){
-  if(location.pathname.toLowerCase().includes("cadastro")){
-    setTimeout(renderizarResumoReceitaNetEscuro, 500);
-    setTimeout(renderizarResumoReceitaNetEscuro, 1600);
-  }
+  setTimeout(renderResumoReceitaNetExato, 400);
+  setTimeout(renderResumoReceitaNetExato, 1400);
 });
 
