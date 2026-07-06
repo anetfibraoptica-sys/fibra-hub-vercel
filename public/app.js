@@ -1,3 +1,157 @@
+
+/* ============================================================
+   CADASTRO NOVO LIMPO FORTE
+   Bloqueia carregamento do último cliente quando for novo cadastro.
+   Editar cliente continua funcionando normalmente.
+============================================================ */
+(function(){
+  const CHAVES_CLIENTE = [
+    "clienteSelecionadoCompleto",
+    "clienteCadastroSelecionado",
+    "clienteEditar",
+    "clienteOnlineSelecionado",
+    "clienteEditarLogin",
+    "clienteSelecionado",
+    "clienteAtual",
+    "fibraClienteAtual",
+    "ultimoClienteSelecionado",
+    "ultimoClienteConsulta",
+    "clienteConsultaSelecionado",
+    "clienteDetalhes",
+    "clienteClicado",
+    "clienteImportadoSelecionado"
+  ];
+
+  function ehCadastro(){
+    return location.pathname.toLowerCase().includes("cadastro");
+  }
+
+  function temParametroEdicao(){
+    const url = new URL(location.href);
+    const keys = ["id","login","cliente","editar","edit","user","usuario"];
+    return keys.some(k => url.searchParams.has(k));
+  }
+
+  function isNovoCadastro(){
+    const url = new URL(location.href);
+    return (
+      url.searchParams.get("novo") === "1" ||
+      url.searchParams.get("novo") === "true" ||
+      sessionStorage.getItem("fibraAbrirCadastroNovo") === "1" ||
+      (ehCadastro() && !temParametroEdicao())
+    );
+  }
+
+  function limparStoragesCliente(){
+    CHAVES_CLIENTE.forEach(function(chave){
+      try{ localStorage.removeItem(chave); }catch(e){}
+      try{ sessionStorage.removeItem(chave); }catch(e){}
+    });
+  }
+
+  function limparFormularioCadastro(){
+    const forms = document.querySelectorAll("form");
+    forms.forEach(function(form){
+      form.querySelectorAll("input, select, textarea").forEach(function(el){
+        const type = (el.type || "").toLowerCase();
+        const name = (el.name || "").toLowerCase();
+
+        if(type === "hidden") return;
+        if(type === "button" || type === "submit" || type === "reset") return;
+
+        if(type === "checkbox" || type === "radio"){
+          el.checked = false;
+          return;
+        }
+
+        if(el.tagName === "SELECT"){
+          el.selectedIndex = 0;
+          return;
+        }
+
+        // mantém senha padrão se o campo for senha/cli_senha
+        if(name.includes("senha") || el.id.toLowerCase().includes("senha")){
+          el.value = "0000";
+          return;
+        }
+
+        el.value = "";
+      });
+    });
+  }
+
+  function limparResumo(){
+    const resumo = document.querySelector(".cadastro-resumo-card");
+    if(!resumo) return;
+
+    resumo.querySelectorAll(".resumo-value").forEach(function(el){
+      const label = (el.previousElementSibling && el.previousElementSibling.textContent || "").toLowerCase();
+
+      if(label.includes("senha")) el.textContent = "0000";
+      else if(label.includes("próxima") || label.includes("proxima")) el.textContent = "Nenhuma fatura disponível";
+      else if(label.includes("dia")) el.textContent = "-";
+      else el.textContent = "-";
+    });
+  }
+
+  function limparTelaNovoCadastro(){
+    if(!ehCadastro() || !isNovoCadastro()) return;
+
+    window.__FIBRA_CADASTRO_NOVO__ = true;
+    limparStoragesCliente();
+    limparFormularioCadastro();
+    limparResumo();
+  }
+
+  // Executa cedo
+  limparTelaNovoCadastro();
+
+  // Executa várias vezes porque o app original pode preencher depois
+  [0, 50, 150, 350, 700, 1200, 2000].forEach(function(ms){
+    setTimeout(limparTelaNovoCadastro, ms);
+  });
+
+  document.addEventListener("DOMContentLoaded", function(){
+    limparTelaNovoCadastro();
+
+    // Observa mudanças no formulário e limpa se algum script tentar preencher o último cliente
+    if(ehCadastro() && isNovoCadastro()){
+      const alvo = document.body;
+      let timer = null;
+      const obs = new MutationObserver(function(){
+        clearTimeout(timer);
+        timer = setTimeout(limparTelaNovoCadastro, 20);
+      });
+      obs.observe(alvo, { childList:true, subtree:true, attributes:true, attributeFilter:["value"] });
+      setTimeout(function(){ obs.disconnect(); }, 3500);
+    }
+  });
+
+  // Ao clicar no menu Cadastro/Novo Cliente, marca como novo e limpa antes de navegar
+  document.addEventListener("click", function(ev){
+    const a = ev.target.closest && ev.target.closest("a[href]");
+    if(!a) return;
+
+    const href = a.getAttribute("href") || "";
+    const hrefLower = href.toLowerCase();
+    const texto = (a.textContent || "").toLowerCase();
+
+    const linkCadastro = hrefLower.includes("cadastro.html") || hrefLower.includes("clientes_cadastro");
+    const textoCadastro = texto.includes("cadastro") || texto.includes("novo cliente") || texto.includes("cadastrar");
+
+    if(linkCadastro && textoCadastro && !hrefLower.includes("login=") && !hrefLower.includes("editar") && !hrefLower.includes("id=")){
+      limparStoragesCliente();
+      sessionStorage.setItem("fibraAbrirCadastroNovo", "1");
+
+      // garante parâmetro novo=1 no link
+      if(hrefLower.includes("cadastro.html") && !hrefLower.includes("novo=1")){
+        ev.preventDefault();
+        location.href = href.includes("?") ? href + "&novo=1" : href + "?novo=1";
+      }
+    }
+  }, true);
+})();
+
 function qs(id){
   return document.getElementById(id);
 }
@@ -3029,109 +3183,4 @@ document.addEventListener("DOMContentLoaded", function(){
 
 
 
-/* ============================================================
-   CADASTRO NOVO LIMPO
-   Cadastro = tela limpa.
-   Editar cliente continua carregando os dados normalmente.
-============================================================ */
-(function(){
-  const CHAVES_CLIENTE = [
-    "clienteSelecionadoCompleto",
-    "clienteCadastroSelecionado",
-    "clienteEditar",
-    "clienteOnlineSelecionado",
-    "clienteEditarLogin",
-    "clienteSelecionado",
-    "clienteAtual",
-    "fibraClienteAtual"
-  ];
-
-  function limparClienteSelecionado(){
-    CHAVES_CLIENTE.forEach(function(chave){
-      try{ localStorage.removeItem(chave); }catch(e){}
-    });
-  }
-
-  function limparCamposCadastro(){
-    document.querySelectorAll("form input, form select, form textarea").forEach(function(el){
-      const type = (el.type || "").toLowerCase();
-
-      if(type === "hidden") return;
-      if(type === "button" || type === "submit" || type === "reset") return;
-
-      if(type === "checkbox" || type === "radio"){
-        el.checked = false;
-        return;
-      }
-
-      if(el.tagName === "SELECT"){
-        el.selectedIndex = 0;
-        return;
-      }
-
-      el.value = "";
-    });
-  }
-
-  function limparResumoCadastro(){
-    const resumo = document.querySelector(".cadastro-resumo-card");
-    if(!resumo) return;
-
-    resumo.querySelectorAll(".resumo-value").forEach(function(el){
-      const label = (el.previousElementSibling && el.previousElementSibling.textContent || "").toLowerCase();
-
-      if(label.includes("senha")) el.textContent = "0000";
-      else if(label.includes("próxima") || label.includes("proxima")) el.textContent = "Nenhuma fatura disponível";
-      else el.textContent = "-";
-    });
-  }
-
-  function ehPaginaCadastro(){
-    const p = location.pathname.toLowerCase();
-    return p.includes("cadastro");
-  }
-
-  function deveAbrirNovo(){
-    const url = new URL(location.href);
-    return (
-      url.searchParams.get("novo") === "1" ||
-      url.searchParams.get("novo") === "true" ||
-      sessionStorage.getItem("fibraAbrirCadastroNovo") === "1"
-    );
-  }
-
-  function aplicarCadastroNovo(){
-    if(!ehPaginaCadastro()) return;
-    if(!deveAbrirNovo()) return;
-
-    limparClienteSelecionado();
-
-    [50, 500, 1200].forEach(function(ms){
-      setTimeout(function(){
-        limparCamposCadastro();
-        limparResumoCadastro();
-        sessionStorage.removeItem("fibraAbrirCadastroNovo");
-      }, ms);
-    });
-  }
-
-  document.addEventListener("click", function(ev){
-    const a = ev.target.closest && ev.target.closest("a[href]");
-    if(!a) return;
-
-    const href = a.getAttribute("href") || "";
-    const hrefLower = href.toLowerCase();
-    const texto = (a.textContent || "").toLowerCase();
-
-    const linkCadastro = hrefLower.includes("cadastro.html") || hrefLower.includes("clientes_cadastro");
-    const textoCadastro = texto.includes("cadastro") || texto.includes("novo cliente") || texto.includes("cadastrar");
-
-    if(linkCadastro && textoCadastro && !hrefLower.includes("?id=") && !hrefLower.includes("login=") && !hrefLower.includes("editar")){
-      limparClienteSelecionado();
-      sessionStorage.setItem("fibraAbrirCadastroNovo", "1");
-    }
-  }, true);
-
-  document.addEventListener("DOMContentLoaded", aplicarCadastroNovo);
-})();
 
