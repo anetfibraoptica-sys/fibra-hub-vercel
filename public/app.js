@@ -193,14 +193,7 @@ async function fibraCarregarOnlineSeparado(){
   }catch(e){ tbody.innerHTML=`<tr><td colspan="6">Erro ao carregar: ${fibraEscapeHtml(e.message)}</td></tr>`; }
 }
 
-document.addEventListener('DOMContentLoaded',()=>{
-  setTimeout(()=>{
-    fibraCarregarOnlineSeparado();
-    if(!cadastroDeveAbrirLimpo()){
-      carregarClienteSelecionadoNoCadastro();
-    }
-  },500);
-});
+document.addEventListener('DOMContentLoaded',()=>{ setTimeout(()=>{ fibraCarregarOnlineSeparado(); if(!cadastroDeveAbrirLimpo()){carregarClienteSelecionadoNoCadastro();} },500); });
 
 
 /* Compatibilidade base de clientes importados ReceitaNet */
