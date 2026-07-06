@@ -3027,3 +3027,111 @@ document.addEventListener("DOMContentLoaded", function(){
   window.addEventListener("storage", montarResumoReceitaNet);
 })();
 
+
+
+/* ============================================================
+   CADASTRO NOVO LIMPO
+   Cadastro = tela limpa.
+   Editar cliente continua carregando os dados normalmente.
+============================================================ */
+(function(){
+  const CHAVES_CLIENTE = [
+    "clienteSelecionadoCompleto",
+    "clienteCadastroSelecionado",
+    "clienteEditar",
+    "clienteOnlineSelecionado",
+    "clienteEditarLogin",
+    "clienteSelecionado",
+    "clienteAtual",
+    "fibraClienteAtual"
+  ];
+
+  function limparClienteSelecionado(){
+    CHAVES_CLIENTE.forEach(function(chave){
+      try{ localStorage.removeItem(chave); }catch(e){}
+    });
+  }
+
+  function limparCamposCadastro(){
+    document.querySelectorAll("form input, form select, form textarea").forEach(function(el){
+      const type = (el.type || "").toLowerCase();
+
+      if(type === "hidden") return;
+      if(type === "button" || type === "submit" || type === "reset") return;
+
+      if(type === "checkbox" || type === "radio"){
+        el.checked = false;
+        return;
+      }
+
+      if(el.tagName === "SELECT"){
+        el.selectedIndex = 0;
+        return;
+      }
+
+      el.value = "";
+    });
+  }
+
+  function limparResumoCadastro(){
+    const resumo = document.querySelector(".cadastro-resumo-card");
+    if(!resumo) return;
+
+    resumo.querySelectorAll(".resumo-value").forEach(function(el){
+      const label = (el.previousElementSibling && el.previousElementSibling.textContent || "").toLowerCase();
+
+      if(label.includes("senha")) el.textContent = "0000";
+      else if(label.includes("próxima") || label.includes("proxima")) el.textContent = "Nenhuma fatura disponível";
+      else el.textContent = "-";
+    });
+  }
+
+  function ehPaginaCadastro(){
+    const p = location.pathname.toLowerCase();
+    return p.includes("cadastro");
+  }
+
+  function deveAbrirNovo(){
+    const url = new URL(location.href);
+    return (
+      url.searchParams.get("novo") === "1" ||
+      url.searchParams.get("novo") === "true" ||
+      sessionStorage.getItem("fibraAbrirCadastroNovo") === "1"
+    );
+  }
+
+  function aplicarCadastroNovo(){
+    if(!ehPaginaCadastro()) return;
+    if(!deveAbrirNovo()) return;
+
+    limparClienteSelecionado();
+
+    [50, 500, 1200].forEach(function(ms){
+      setTimeout(function(){
+        limparCamposCadastro();
+        limparResumoCadastro();
+        sessionStorage.removeItem("fibraAbrirCadastroNovo");
+      }, ms);
+    });
+  }
+
+  document.addEventListener("click", function(ev){
+    const a = ev.target.closest && ev.target.closest("a[href]");
+    if(!a) return;
+
+    const href = a.getAttribute("href") || "";
+    const hrefLower = href.toLowerCase();
+    const texto = (a.textContent || "").toLowerCase();
+
+    const linkCadastro = hrefLower.includes("cadastro.html") || hrefLower.includes("clientes_cadastro");
+    const textoCadastro = texto.includes("cadastro") || texto.includes("novo cliente") || texto.includes("cadastrar");
+
+    if(linkCadastro && textoCadastro && !hrefLower.includes("?id=") && !hrefLower.includes("login=") && !hrefLower.includes("editar")){
+      limparClienteSelecionado();
+      sessionStorage.setItem("fibraAbrirCadastroNovo", "1");
+    }
+  }, true);
+
+  document.addEventListener("DOMContentLoaded", aplicarCadastroNovo);
+})();
+
