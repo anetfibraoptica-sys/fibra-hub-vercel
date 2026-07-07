@@ -175,13 +175,13 @@ function fibraGarantirSecaoOnline(){
   const sec=document.createElement("section");
   sec.id="fibraOnlineSeparado";
   sec.className="panel";
-  sec.innerHTML=`<h2>Clientes PPPoE Online</h2><div id="fibraResumoServidores" class="servers-grid servidores-apenas-cards"></div>`;
+  sec.innerHTML=`<h2>Servidores</h2><div id="fibraResumoServidores" class="servers-grid servidores-apenas-cards"></div>`;
   main.appendChild(sec);
 }
 function fibraCardServidor(nome, ok, total, erro){
   return `<div class="server-card ${ok?'online':'offline'} servidor-card-centralizado">
     <div class="servidor-card-conteudo">
-      <h3>${fibraEscapeHtml(nome)}</h3>
+      <h3>${fibraEscapeHtml(nome)} 🟢</h3>
       <b>${total || 0}</b>
       <span>Clientes 🟢</span>
     </div>
