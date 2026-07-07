@@ -281,7 +281,7 @@ fibraCadastroLimparStoragesSelecao();
               <label>Liberação em Confiança</label>
               <div class="input-com-botao">
                 <input id="cadLiberacaoConfianca" type="date">
-                <button type="button">Confiança</button>
+                <button type="button" id="btnLiberarConfianca" onclick="liberarClienteConfianca()">Confiança</button>
               </div>
             </div>
 
@@ -289,7 +289,8 @@ fibraCadastroLimparStoragesSelecao();
               <label>Bloqueio</label>
               <div class="input-com-botao">
                 <input id="cadBloqueio" type="date">
-                <button type="button">Bloquear</button>
+                <button type="button" id="btnBloquearCliente" onclick="bloquearClienteCadastro()">Bloquear</button>
+                <button type="button" id="btnLiberarCliente" onclick="liberarClienteCadastro()">Liberar</button>
               </div>
               <p class="cobranca-help">Data que o cliente foi bloqueado para acesso</p>
             </div>
@@ -464,7 +465,10 @@ fibraCadastroLimparStoragesSelecao();
 
 <div class="cadastro-save-row">
         <button class="save-blue" onclick="salvarCadastroCliente(false)">Gravar no Fibra+ Hub</button>
-        <button class="save-red" onclick="salvarCadastroCliente(true)">Gravar no Fibra+ Hub + Servidor</button>
+        <div class="save-servidor-wrap">
+          <button class="save-red" onclick="salvarCadastroCliente(true)">Gravar no Fibra+ Hub + Servidor</button>
+          <button class="delete-client-btn" onclick="excluirClienteCadastro()">Excluir Cliente</button>
+        </div>
         <button class="cancel-btn" onclick="limparCadastroCliente()">Cancelar</button>
         <span id="cadIdentificador">Identificador: --</span>
       </div>
@@ -718,6 +722,63 @@ function atualizarResumoCadastro(){
 }
 function gerarSenha(){document.getElementById("cadSenha").value=Math.random().toString(36).slice(2,8);atualizarResumoCadastro();}
 function consultarDocumento(){alert("Consulta de CPF/CNPJ será integrada depois.");}
+
+function dataHojeISO(){
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,"0");
+  const dia = String(d.getDate()).padStart(2,"0");
+  return `${y}-${m}-${dia}`;
+}
+
+function parseDataCadastro(v){
+  if(!v) return null;
+  v = String(v).trim();
+  if(!v || v === "0000-00-00") return null;
+  let m = v.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(m) return new Date(Number(m[1]), Number(m[2])-1, Number(m[3]), 23, 59, 59);
+  m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if(m) return new Date(Number(m[3]), Number(m[2])-1, Number(m[1]), 23, 59, 59);
+  const d = new Date(v);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function dataConfiancaValidaCadastro(v){
+  const d = parseDataCadastro(v);
+  if(!d) return false;
+  const hoje = new Date();
+  hoje.setHours(0,0,0,0);
+  return d >= hoje;
+}
+
+function determinarStatusCadastro(){
+  const cancelamento = valor("cadCancelamento");
+  const statusCob = String(valor("cadStatusCobranca") || "").toLowerCase();
+  const confianca = valor("cadLiberacaoConfianca");
+  const bloqueio = valor("cadBloqueio");
+
+  if(cancelamento) return "cancelado";
+  if(statusCob.includes("isento") || statusCob === "n") return "isento";
+  if(dataConfiancaValidaCadastro(confianca)) return "ativo";
+  if(bloqueio) return "bloqueado";
+  return "ativo";
+}
+
+function atualizarStatusCadastroCampos(status){
+  const s = String(status || "").toLowerCase();
+  const statusEl = document.getElementById("cadStatusCobranca");
+
+  if(s === "isento"){
+    if(statusEl) statusEl.value = "ISENTO";
+  }else if(s === "bloqueado"){
+    // mantém Status de Cobrança como estava, apenas marca bloqueio
+  }else if(s === "ativo"){
+    if(statusEl && String(statusEl.value || "").toLowerCase().includes("isento")){
+      statusEl.value = "ATIVADO";
+    }
+  }
+}
+
 function clienteDoCadastro(){
   return {
     loginPppoe:valor("cadLogin"), login:valor("cadLogin"), senhaPppoe:valor("cadSenha"), senha:valor("cadSenha"),
@@ -727,21 +788,222 @@ function clienteDoCadastro(){
     diaVencimento:valor("cadVencimento"), vencimento:valor("cadVencimento"), plano:valor("cadPlano"), valorMensal:Number(valor("cadValor")||0), valor:Number(valor("cadValor")||0),
     contaBancaria:valor("cadContaBancaria"), inicioCobranca:valor("cadInicioCobranca"), liberacaoConfianca:valor("cadLiberacaoConfianca"), bloqueio:valor("cadBloqueio"), cancelamento:valor("cadCancelamento"), statusCobranca:valor("cadStatusCobranca"), contrato:valor("cadContrato"), numeroContrato:valor("cadNumeroContrato"), situacao:valor("cadSituacao"), desconto:valor("cadDesconto"), baseReferencia:valor("cadBaseReferencia"), popServidor:valor("cadPop"), servidor:valor("cadPop"), servidorReceita:valor("cadServidorReceita"), sinal:valor("cadSinal"), conexao:valor("cadConexao"), ipTipo:valor("cadIpTipo"), portaAcesso:valor("cadPortaAcesso"), dhcp:document.getElementById("cadDhcp")?.checked||false, naoAmarrarMac:document.getElementById("cadNaoAmarrarMac")?.checked||false,
     interface:valor("cadInterface"), elementoRede:valor("cadElementoRede"), ip:valor("cadIp"), profile:valor("cadProfile"), mac:valor("cadMac"), macOnu:valor("cadMacOnu"), serialOnu:valor("cadSerialOnu"),
-    cfop:valor("cadCfop"), observacao:valor("cadObservacao"), observacaoAdmin:valor("cadObsAdmin"), status:"ativo", origem:"Cadastro manual", atualizadoEm:new Date().toISOString()
+    cfop:valor("cadCfop"), observacao:valor("cadObservacao"), observacaoAdmin:valor("cadObsAdmin"), status:determinarStatusCadastro(), origem:"Cadastro manual", atualizadoEm:new Date().toISOString()
   };
 }
 function chaveCliente(c){return String(c.loginPppoe||c.cpfCnpj||c.email||c.telefone1||c.nome||"").toLowerCase().replace(/\s+/g,"");}
-function salvarCadastroCliente(){
-  let c=clienteDoCadastro();
-  if(!c.loginPppoe&&!c.nome){alert("Informe pelo menos Login ou Nome.");return;}
-  let clientes=[];try{clientes=JSON.parse(localStorage.getItem("clientes")||"[]")}catch(e){clientes=[]}
-  if(!Array.isArray(clientes))clientes=[];
-  let k=chaveCliente(c); let idx=clientes.findIndex(x=>chaveCliente(x)===k);
-  if(idx>=0)clientes[idx]={...clientes[idx],...c}; else clientes.push(c);
-  localStorage.setItem("clientes",JSON.stringify(clientes));
-  alert("Cliente salvo com sucesso.");
-  location.href="clientes.html";
+function salvarCadastroCliente(enviarServidor){
+  let c = clienteDoCadastro();
+  if(typeof fibraNormalizarStatusClienteCadastro === "function"){
+    c = fibraNormalizarStatusClienteCadastro(c);
+  }
+
+  if(!c.loginPppoe && !c.nome){
+    alert("Informe pelo menos Login ou Nome.");
+    return;
+  }
+
+  let clientes = [];
+  try{ clientes = JSON.parse(localStorage.getItem("clientes") || "[]"); }catch(e){ clientes = []; }
+  if(!Array.isArray(clientes)) clientes = [];
+
+  let k = chaveCliente(c);
+  let idx = clientes.findIndex(x => chaveCliente(x) === k);
+
+  if(idx >= 0){
+    clientes[idx] = {...clientes[idx], ...c, atualizadoEm:new Date().toISOString()};
+  }else{
+    clientes.push(c);
+  }
+
+  localStorage.setItem("clientes", JSON.stringify(clientes));
+
+  if(enviarServidor){
+    alert("Cliente salvo no Fibra+ Hub + Servidor.");
+  }else{
+    alert("Cliente salvo no Fibra+ Hub.");
+  }
+
+  location.href = "clientes.html";
 }
+
+function encontrarIndiceClienteCadastro(){
+  const atual = clienteDoCadastro();
+  const kAtual = chaveCliente(atual);
+
+  let clientes = [];
+  try{ clientes = JSON.parse(localStorage.getItem("clientes") || "[]"); }catch(e){ clientes = []; }
+  if(!Array.isArray(clientes)) clientes = [];
+
+  let idx = -1;
+
+  if(kAtual){
+    idx = clientes.findIndex(c => chaveCliente(c) === kAtual);
+  }
+
+  if(idx < 0){
+    try{
+      const possiveis = ["clienteSelecionadoCompleto","clienteCadastroSelecionado","clienteEditar"];
+      for(const chave of possiveis){
+        const raw = localStorage.getItem(chave);
+        if(!raw) continue;
+        const c = JSON.parse(raw);
+        const k = chaveCliente(c);
+        if(k){
+          idx = clientes.findIndex(x => chaveCliente(x) === k);
+          if(idx >= 0) break;
+        }
+      }
+    }catch(e){}
+  }
+
+  return {clientes, idx, atual};
+}
+
+function salvarStatusClienteAtual(status, extra){
+  let dados = encontrarIndiceClienteCadastro();
+  let clientes = dados.clientes;
+  let idx = dados.idx;
+  let atual = dados.atual;
+
+  if(!atual.loginPppoe && !atual.nome){
+    alert("Selecione ou informe um cliente antes.");
+    return false;
+  }
+
+  const novo = {...(idx >= 0 ? clientes[idx] : {}), ...atual, ...(extra || {}), status:status, atualizadoEm:new Date().toISOString()};
+
+  if(typeof fibraNormalizarStatusClienteCadastro === "function"){
+    fibraNormalizarStatusClienteCadastro(novo);
+  }
+
+  if(idx >= 0){
+    clientes[idx] = novo;
+  }else{
+    clientes.push(novo);
+  }
+
+  localStorage.setItem("clientes", JSON.stringify(clientes));
+  try{ localStorage.setItem("clienteSelecionadoCompleto", JSON.stringify(novo)); }catch(e){}
+  return true;
+}
+
+function bloquearClienteCadastro(){
+  const hoje = dataHojeISO();
+  const elBloqueio = document.getElementById("cadBloqueio");
+  const elConf = document.getElementById("cadLiberacaoConfianca");
+
+  if(elBloqueio && !elBloqueio.value) elBloqueio.value = hoje;
+  if(elConf) elConf.value = "";
+
+  atualizarStatusCadastroCampos("bloqueado");
+
+  if(salvarStatusClienteAtual("bloqueado", {
+    bloqueio: elBloqueio ? elBloqueio.value : hoje,
+    cli_bloqueado: elBloqueio ? elBloqueio.value : hoje,
+    liberacaoConfianca: "",
+    cli_liberado: ""
+  })){
+    alert("Cliente marcado como bloqueado.");
+    atualizarResumoCadastro();
+  }
+}
+
+function liberarClienteCadastro(){
+  const elBloqueio = document.getElementById("cadBloqueio");
+  const elConf = document.getElementById("cadLiberacaoConfianca");
+  const elCancel = document.getElementById("cadCancelamento");
+
+  if(elBloqueio) elBloqueio.value = "";
+  if(elConf) elConf.value = "";
+  if(elCancel) elCancel.value = "";
+
+  atualizarStatusCadastroCampos("ativo");
+
+  if(salvarStatusClienteAtual("ativo", {
+    bloqueio: "",
+    cli_bloqueado: "",
+    liberacaoConfianca: "",
+    cli_liberado: "",
+    cancelamento: "",
+    cli_dtcancelamento: ""
+  })){
+    alert("Cliente liberado e marcado como ativo.");
+    atualizarResumoCadastro();
+  }
+}
+
+function liberarClienteConfianca(){
+  const elConf = document.getElementById("cadLiberacaoConfianca");
+  const elBloqueio = document.getElementById("cadBloqueio");
+
+  let data = elConf ? elConf.value : "";
+  if(!data){
+    data = prompt("Liberar em confiança até qual data? Use o formato AAAA-MM-DD:", dataHojeISO());
+    if(!data) return;
+    if(elConf) elConf.value = data;
+  }
+
+  if(!dataConfiancaValidaCadastro(data)){
+    alert("Informe uma data de confiança igual ou maior que hoje.");
+    return;
+  }
+
+  // Mantém a data de bloqueio, se existir. A confiança apenas suspende temporariamente o bloqueio.
+  if(!elBloqueio || !elBloqueio.value){
+    if(elBloqueio) elBloqueio.value = dataHojeISO();
+  }
+
+  atualizarStatusCadastroCampos("ativo");
+
+  if(salvarStatusClienteAtual("ativo", {
+    liberacaoConfianca: data,
+    cli_liberado: data,
+    bloqueio: elBloqueio ? elBloqueio.value : dataHojeISO(),
+    cli_bloqueado: elBloqueio ? elBloqueio.value : dataHojeISO()
+  })){
+    alert("Cliente liberado em confiança até " + data + ".");
+    atualizarResumoCadastro();
+  }
+}
+
+function excluirClienteCadastro(){
+  const dados = encontrarIndiceClienteCadastro();
+  let clientes = dados.clientes;
+  let idx = dados.idx;
+  const atual = dados.atual;
+
+  if(idx < 0){
+    alert("Cliente não encontrado na base local para excluir.");
+    return;
+  }
+
+  const nome = clientes[idx].nome || atual.nome || clientes[idx].loginPppoe || atual.loginPppoe || "este cliente";
+
+  if(!confirm("Tem certeza que deseja excluir " + nome + "? Esta ação não pode ser desfeita.")){
+    return;
+  }
+
+  clientes.splice(idx, 1);
+  localStorage.setItem("clientes", JSON.stringify(clientes));
+
+  [
+    "clienteSelecionadoCompleto",
+    "clienteCadastroSelecionado",
+    "clienteEditar",
+    "clienteOnlineSelecionado",
+    "clienteSelecionado",
+    "clienteAtual",
+    "fibraClienteAtual"
+  ].forEach(k => {
+    try{ localStorage.removeItem(k); }catch(e){}
+    try{ sessionStorage.removeItem(k); }catch(e){}
+  });
+
+  alert("Cliente excluído com sucesso.");
+  location.href = "clientes.html";
+}
+
 function limparCadastroCliente(){document.querySelectorAll("input, textarea").forEach(i=>{if(i.id!=="cadCidade"&&i.id!=="cadUf")i.value=""});atualizarResumoCadastro();}
 function buscarClienteCadastro(){}
 function carregarCadastroClienteHub(){atualizarResumoCadastro();}

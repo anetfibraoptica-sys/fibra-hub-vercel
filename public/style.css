@@ -5116,3 +5116,42 @@ button,
   }
 }
 
+
+
+/* ============================================================
+   BOTÃO EXCLUIR CLIENTE NO CADASTRO
+   Local: abaixo de Gravar no Fibra+ Hub + Servidor.
+============================================================ */
+.save-servidor-wrap{
+  display:inline-flex !important;
+  flex-direction:column !important;
+  align-items:stretch !important;
+  gap:6px !important;
+  vertical-align:top !important;
+}
+.delete-client-btn{
+  background:#b91c1c !important;
+  color:#fff !important;
+  border:0 !important;
+  border-radius:8px !important;
+  padding:10px 16px !important;
+  font-weight:800 !important;
+  cursor:pointer !important;
+  box-shadow:none !important;
+}
+.delete-client-btn:hover{
+  background:#991b1b !important;
+}
+.input-com-botao #btnLiberarCliente{
+  background:#16a34a !important;
+  color:#fff !important;
+}
+.input-com-botao #btnBloquearCliente{
+  background:#b91c1c !important;
+  color:#fff !important;
+}
+.input-com-botao #btnLiberarConfianca{
+  background:#2563eb !important;
+  color:#fff !important;
+}
+
