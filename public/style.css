@@ -5668,3 +5668,35 @@ button,
   font-weight:800;
   cursor:pointer;
 }
+
+
+/* Fix página Usuários */
+.app{
+  display:flex;
+  min-height:100vh;
+  background:#0f172a;
+  color:#f9fafb;
+}
+.content.main{
+  flex:1;
+  padding:24px;
+  min-width:0;
+}
+.table-wrap{
+  width:100%;
+  overflow:auto;
+}
+.table-wrap table{
+  width:100%;
+  border-collapse:collapse;
+}
+.table-wrap th,
+.table-wrap td{
+  padding:10px;
+  border-bottom:1px solid #374151;
+  color:#e5e7eb;
+}
+@media(max-width:800px){
+  .app{display:block;}
+  .content.main{padding:16px;}
+}

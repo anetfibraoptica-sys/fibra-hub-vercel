@@ -8,9 +8,10 @@
   <script src="00-fix-definitivo.js"></script>
   <script src="supabase-client.js"></script>
   <script src="auth-painel.js"></script>
+  <script src="fix-usuarios.js"></script>
 </head>
 <body onload="protegerPagina()">
-  <div class="app-shell">
+  <div class="app">
     <aside class="sidebar">
       <div class="brand"><span class="fibra">Fibra</span><span class="brand-dot"></span><span class="plus">+</span></div>
       <nav class="nav">
@@ -24,17 +25,22 @@
       </nav>
     </aside>
 
-    <main class="main">
+    <main class="content main">
       <header class="topbar">
-        <h1>Usuários do Painel</h1>
-        <span class="usuario-logado"></span>
+        <div>
+          <h1>Usuários</h1>
+          <p>Cadastre e gerencie os acessos ao Fibra+ Hub.</p>
+        </div>
+        <div class="topbar-actions">
+          <span class="badge badge-live">ONLINE</span>
+          <span id="usuarioLogado" class="usuario-logado"></span>
+        </div>
       </header>
 
-      <section class="panel" id="configUsuariosPainel">
-        <h3>Cadastro de usuários</h3>
+      <section class="panel card" id="configUsuariosPainel">
+        <h3>Usuários do Painel</h3>
         <p class="cadastro-note">
-          Cadastre quem poderá acessar o Fibra+ Hub. Cada baixa manual, recebimento e alteração
-          poderá ficar registrada com o usuário responsável.
+          Cadastre quem poderá acessar o Fibra+ Hub. Cada baixa manual, recebimento e alteração poderá ficar registrada com o usuário responsável.
         </p>
 
         <div class="grid-2">
@@ -90,7 +96,7 @@
               </tr>
             </thead>
             <tbody id="tabelaUsuariosPainel">
-              <tr><td colspan="5">Nenhum usuário carregado.</td></tr>
+              <tr><td colspan="5">Carregando usuários...</td></tr>
             </tbody>
           </table>
         </div>
@@ -101,6 +107,7 @@
 <script>
 async function salvarUsuarioPainel(){
   try{
+    if(!window.FibraAuth) throw new Error("Módulo de usuários não carregou.");
     await FibraAuth.criarUsuario({
       nome: document.getElementById("cfgUsuarioNome").value,
       usuario: document.getElementById("cfgUsuarioLogin").value,
@@ -113,18 +120,20 @@ async function salvarUsuarioPainel(){
     listarUsuariosPainel();
   }catch(e){
     alert("Erro ao salvar usuário: " + e.message);
+    console.error(e);
   }
 }
 
 async function listarUsuariosPainel(){
   const tb = document.getElementById("tabelaUsuariosPainel");
+  if(!tb) return;
   try{
+    if(!window.FibraAuth) throw new Error("Módulo de usuários não carregou.");
     const lista = await FibraAuth.listarUsuarios();
     if(!lista.length){
       tb.innerHTML = '<tr><td colspan="5">Nenhum usuário cadastrado.</td></tr>';
       return;
     }
-
     tb.innerHTML = lista.map(u => `
       <tr>
         <td>${u.nome || "--"}</td>
@@ -136,11 +145,12 @@ async function listarUsuariosPainel(){
     `).join("");
   }catch(e){
     tb.innerHTML = '<tr><td colspan="5">Erro ao carregar usuários: '+e.message+'</td></tr>';
+    console.error(e);
   }
 }
 
 document.addEventListener("DOMContentLoaded", function(){
-  setTimeout(listarUsuariosPainel, 800);
+  setTimeout(listarUsuariosPainel, 900);
 });
 document.addEventListener("fibra:supabase-sync", listarUsuariosPainel);
 </script>
