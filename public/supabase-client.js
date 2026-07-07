@@ -118,6 +118,8 @@ const FibraDB = {
       serial_onu: c.serialOnu || c.serial_onu || null,
       pop_servidor: c.popServidor || c.pop_servidor || null,
       status: c.status || c.situacao || "ativo",
+      efi_conta_id: c.efiContaId || c.efi_conta_id || null,
+      efi_conta_nome: c.efiContaNome || c.efi_conta_nome || c.conta || null,
       motivo_bloqueio: c.motivo_bloqueio || c.motivoBloqueio || null,
       boleto_bloqueio_numero: c.boleto_bloqueio_numero || c.boletoBloqueioNumero || null,
       boleto_bloqueio_vencimento: c.boleto_bloqueio_vencimento || c.boletoBloqueioVencimento || null,
@@ -176,6 +178,8 @@ const FibraDB = {
       serialOnu: r.serial_onu,
       popServidor: r.pop_servidor,
       status: r.status,
+      efiContaId: r.efi_conta_id,
+      efiContaNome: r.efi_conta_nome,
       dataCadastro: r.data_cadastro,
       dataAtivacao: r.data_ativacao,
       dataBloqueio: r.data_bloqueio,
@@ -211,6 +215,8 @@ const FibraDB = {
       link_pdf: b.linkPdf || b.link_pdf || b.pdf || null,
       efi_charge_id: b.efiChargeId || b.efi_charge_id || null,
       efi_status: b.efiStatus || b.efi_status || null,
+      efi_conta_id: b.efiContaId || b.efi_conta_id || null,
+      efi_conta_nome: b.efiContaNome || b.efi_conta_nome || null,
       observacao: b.observacao || null,
       dados: b,
       origem: b.origem || "Fibra+ Hub",
@@ -247,6 +253,8 @@ const FibraDB = {
       linkPdf: r.link_pdf,
       efiChargeId: r.efi_charge_id,
       efiStatus: r.efi_status,
+      efiContaId: r.efi_conta_id,
+      efiContaNome: r.efi_conta_nome,
       observacao: r.observacao
     };
   },
@@ -346,6 +354,35 @@ const FibraDB = {
 
   async registrarPagamento(pag){
     try{ await this.upsert("pagamentos", pag); }catch(e){ console.warn("Pagamento não salvo:", e.message); }
+  },
+
+
+  async salvarContaEfi(conta){
+    const row = {
+      nome: conta.nome,
+      titular: conta.titular || null,
+      cpf_titular: conta.cpfTitular || conta.cpf_titular || null,
+      client_id: conta.clientId || conta.client_id || null,
+      client_secret: conta.clientSecret || conta.client_secret || null,
+      chave_pix: conta.chavePix || conta.chave_pix || null,
+      ambiente: conta.ambiente || "producao",
+      status: conta.status || "ativo",
+      conta_padrao: !!conta.contaPadrao,
+      observacao: conta.observacao || null,
+      dados: conta,
+      atualizado_em: new Date().toISOString()
+    };
+    return await this.upsert("efi_contas", row, "nome");
+  },
+
+  async carregarContasEfi(){
+    const rows = await this.getAll("efi_contas", "&order=nome.asc");
+    localStorage.setItem("efi_contas", JSON.stringify(rows || []));
+    return rows || [];
+  },
+
+  async excluirContaEfi(nome){
+    return await this.deleteWhere("efi_contas", "nome", nome);
   },
 
   async sincronizarTudo(){

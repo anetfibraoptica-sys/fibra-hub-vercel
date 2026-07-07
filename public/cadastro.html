@@ -2718,4 +2718,70 @@ window.fibraStatusBoleto = function(b){
 })();
 </script>
 
+
+<script>
+/* Contas Efí no Cadastro > Cobrança */
+async function carregarContasEfiNoCadastro(){
+  if(!window.FibraDB) return;
+  let contas = [];
+  try{ contas = await FibraDB.carregarContasEfi(); }catch(e){ console.warn("Erro contas Efí:", e.message); }
+  contas = (contas || []).filter(c => String(c.status || "ativo").toLowerCase() === "ativo");
+
+  let select = document.getElementById("efiContaCliente") ||
+               document.getElementById("contaEfi") ||
+               document.getElementById("contaCobranca") ||
+               document.querySelector('select[name="conta"]') ||
+               document.querySelector('select[name="contaEfi"]');
+
+  if(!select){
+    const labels = Array.from(document.querySelectorAll("label"));
+    const labelConta = labels.find(l => (l.textContent || "").trim().toLowerCase() === "conta");
+    if(labelConta){
+      const box = labelConta.parentElement || labelConta.closest(".form-group") || labelConta;
+      select = document.createElement("select");
+      select.id = "efiContaCliente";
+      select.name = "efiContaCliente";
+      box.appendChild(select);
+    }
+  }
+
+  if(!select) return;
+
+  select.innerHTML = '<option value="">Selecione a conta Efí</option>' + contas.map(c =>
+    `<option value="${c.id}" data-nome="${c.nome}">${c.nome}${c.titular ? " - " + c.titular : ""}</option>`
+  ).join("");
+
+  const atualId = localStorage.getItem("cliente_efi_conta_id") || "";
+  if(atualId) select.value = atualId;
+
+  select.addEventListener("change", function(){
+    const opt = select.options[select.selectedIndex];
+    localStorage.setItem("cliente_efi_conta_id", select.value || "");
+    localStorage.setItem("cliente_efi_conta_nome", opt ? (opt.dataset.nome || opt.textContent || "") : "");
+  });
+}
+
+document.addEventListener("DOMContentLoaded", function(){
+  setTimeout(carregarContasEfiNoCadastro, 800);
+});
+document.addEventListener("fibra:supabase-sync", carregarContasEfiNoCadastro);
+
+// Complementa o cliente salvo com a conta Efí escolhida
+(function(){
+  const oldClienteDoCadastro = window.clienteDoCadastro;
+  if(typeof oldClienteDoCadastro === "function"){
+    window.clienteDoCadastro = function(){
+      const c = oldClienteDoCadastro();
+      const sel = document.getElementById("efiContaCliente") || document.getElementById("contaEfi") || document.getElementById("contaCobranca");
+      if(sel){
+        const opt = sel.options[sel.selectedIndex];
+        c.efiContaId = sel.value || "";
+        c.efiContaNome = opt ? (opt.dataset.nome || opt.textContent || "") : "";
+      }
+      return c;
+    };
+  }
+})();
+</script>
+
 </body></html>
