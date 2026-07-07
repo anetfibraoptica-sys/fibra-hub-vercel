@@ -518,5 +518,14 @@ window.addEventListener("pageshow", function(){
 })();
 </script>
 
+
+<script>
+document.addEventListener("fibra:supabase-sync", function(){
+  if(typeof carregarClientes === "function") try{carregarClientes();}catch(e){}
+  if(typeof renderClientes === "function") try{renderClientes();}catch(e){}
+  if(typeof renderizarClientes === "function") try{renderizarClientes();}catch(e){}
+});
+</script>
+
 </body>
 </html>

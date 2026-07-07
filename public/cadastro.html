@@ -2612,4 +2612,86 @@ window.fibraStatusBoleto = function(b){
 };
 </script>
 
+
+<script>
+/* ============================================================
+   Supabase: Cadastro e Boletos
+============================================================ */
+(function(){
+  function clienteAtualSeguro(){
+    try{ if(typeof clienteDoCadastro === "function") return clienteDoCadastro() || {}; }catch(e){}
+    const c = {};
+    document.querySelectorAll("input,select,textarea").forEach(el => {
+      const id = el.id || el.name || "";
+      if(!id) return;
+      const key = id.replace(/^cli[_-]?/,"");
+      c[key] = el.value;
+    });
+    c.loginPppoe = c.loginPppoe || c.login || c.usuario || c.login_pppoe;
+    c.nome = c.nome || c.nomeCliente || c.razaoSocial;
+    c.cpfCnpj = c.cpfCnpj || c.cpf || c.cnpj;
+    return c;
+  }
+
+  async function salvarClienteSupabaseAtual(){
+    if(!window.FibraDB) return;
+    const c = clienteAtualSeguro();
+    if(!(c.loginPppoe || c.login || c.cpfCnpj || c.cpf || c.nome)) return;
+    try{
+      await FibraDB.salvarCliente(c);
+      console.log("Cliente salvo no Supabase.");
+    }catch(e){
+      console.warn("Erro ao salvar cliente no Supabase:", e.message);
+    }
+  }
+
+  document.addEventListener("click", function(e){
+    const el = e.target.closest("button,a,input[type=button],input[type=submit]");
+    if(!el) return;
+    const txt = (el.textContent || el.value || "").toLowerCase();
+    if(txt.includes("gravar") || txt.includes("salvar")){
+      setTimeout(salvarClienteSupabaseAtual, 500);
+    }
+  }, true);
+
+  const oldSalvarBoletos = window.fibraSalvarBoletosStorage;
+  window.fibraSalvarBoletosStorage = function(lista){
+    lista = Array.isArray(lista) ? lista : [];
+    if(typeof oldSalvarBoletos === "function") oldSalvarBoletos(lista);
+    else {
+      ["boletos","titulos","cobrancas"].forEach(k => localStorage.setItem(k, JSON.stringify(lista)));
+    }
+    if(window.FibraDB){
+      FibraDB.salvarBoletos(lista).catch(e => console.warn("Erro ao salvar boletos no Supabase:", e.message));
+    }
+  };
+
+  const oldExcluir = window.excluirBoletoCliente;
+  window.excluirBoletoCliente = async function(numero){
+    if(!confirm("Deseja realmente excluir este boleto?\\n\\nEsta ação não poderá ser desfeita.")) return;
+    let lista = [];
+    try{ lista = JSON.parse(localStorage.getItem("boletos") || "[]"); }catch(e){}
+    lista = lista.filter(b => String(b.numero || b.id || b.nossoNumero || b.titulo) !== String(numero));
+    ["boletos","titulos","cobrancas"].forEach(k => localStorage.setItem(k, JSON.stringify(lista)));
+    if(window.FibraDB){
+      try{ await FibraDB.excluirBoleto(numero); }catch(e){ console.warn("Erro ao excluir no Supabase:", e.message); }
+    }
+    if(typeof renderizarBoletosCliente === "function") renderizarBoletosCliente();
+  };
+
+  const oldConfirmarBaixa = window.confirmarBaixaManual;
+  window.confirmarBaixaManual = async function(){
+    if(typeof oldConfirmarBaixa === "function") oldConfirmarBaixa();
+    try{
+      let lista = JSON.parse(localStorage.getItem("boletos") || "[]");
+      if(window.FibraDB){
+        await FibraDB.salvarBoletos(lista);
+      }
+    }catch(e){
+      console.warn("Erro ao sincronizar baixa manual:", e.message);
+    }
+  };
+})();
+</script>
+
 </body></html>
