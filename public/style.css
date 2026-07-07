@@ -5451,3 +5451,42 @@ button,
   font-size:15px;
   min-width:34px;
 }
+
+
+/* Boletos completo */
+.fibra-modal-close,.fibra-help-btn{display:none !important;}
+.fibra-boletos-toolbar{display:none !important;}
+.fibra-submodal{
+  display:none;
+  position:fixed;
+  inset:0;
+  z-index:1000001;
+  background:rgba(0,0,0,.45);
+}
+.fibra-submodal.aberto{display:flex;align-items:center;justify-content:center;}
+.fibra-submodal-box{
+  background:#fff;
+  color:#1f2937;
+  width:min(520px,92vw);
+  max-height:88vh;
+  overflow:auto;
+  padding:20px;
+  border-radius:8px;
+  box-shadow:0 20px 60px rgba(0,0,0,.45);
+}
+.fibra-submodal-box h3{margin-top:0;text-align:center;}
+.fibra-submodal-box label{display:block;margin-top:10px;font-weight:800;}
+.fibra-submodal-box input,.fibra-submodal-box select,.fibra-submodal-box textarea{
+  width:100%;box-sizing:border-box;padding:10px;border:1px solid #cbd5e1;border-radius:6px;margin-top:4px;
+}
+.fibra-submodal-box textarea{min-height:70px;}
+.fibra-submodal-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:16px;}
+.fibra-submodal-actions button{border:0;border-radius:6px;padding:10px 14px;background:#2563eb;color:white;font-weight:800;cursor:pointer;}
+.detalhe-box{width:min(760px,94vw);}
+.detalhe-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
+.detalhe-grid p{background:#f8fafc;border:1px solid #e5e7eb;border-radius:6px;padding:10px;margin:0;}
+.detalhe-grid b{display:block;color:#475569;margin-bottom:4px;}
+.detalhe-grid span{word-break:break-word;}
+.linha-clicavel{cursor:pointer;}
+.linha-clicavel:hover{background:#f8fafc;}
+@media(max-width:700px){.detalhe-grid{grid-template-columns:1fr;}}
