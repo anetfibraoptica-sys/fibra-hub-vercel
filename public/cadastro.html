@@ -2884,4 +2884,247 @@ document.addEventListener("fibra:supabase-sync", carregarContasEfiNoCadastro);
 })();
 </script>
 
+
+<style id="fixResumoCadastroForcado">
+/* ============================================================
+   FIX FORÇADO - Cadastro Cliente / Resumo
+   Aplicado direto no cadastro.html para sobrescrever CSS antigo.
+============================================================ */
+
+body{
+  overflow-x:hidden !important;
+}
+
+/* Área principal do cadastro */
+main,
+.main,
+.content,
+.page,
+.page-content{
+  max-width:100vw !important;
+  overflow-x:hidden !important;
+  box-sizing:border-box !important;
+}
+
+/* O cadastro precisa usar 2 colunas proporcionais, sem cortar o resumo */
+.cadastro-wrap,
+.cadastro-page,
+.cadastro-container,
+.cadastro-content,
+.cadastro-body,
+.cliente-page,
+.cliente-wrap,
+.cliente-container,
+.cliente-content,
+.cliente-layout,
+.form-resumo,
+.dados-cliente-wrapper,
+main > .grid,
+.main > .grid,
+.content > .grid{
+  display:grid !important;
+  grid-template-columns:minmax(0, 1fr) minmax(280px, 360px) !important;
+  gap:18px !important;
+  align-items:start !important;
+  width:100% !important;
+  max-width:100% !important;
+  box-sizing:border-box !important;
+}
+
+/* Se a tela não tiver classe, pega o container pai do Resumo */
+.fibra-resumo-parent-fix{
+  display:grid !important;
+  grid-template-columns:minmax(0, 1fr) minmax(280px, 360px) !important;
+  gap:18px !important;
+  align-items:start !important;
+  width:100% !important;
+  max-width:100% !important;
+  box-sizing:border-box !important;
+}
+
+/* Card Resumo */
+.fibra-resumo-fix,
+.resumo,
+.card-resumo,
+.resumo-cliente,
+#resumoCliente,
+#cardResumo,
+#resumoCadastro,
+.summary-card,
+.cliente-resumo{
+  width:100% !important;
+  max-width:360px !important;
+  min-width:0 !important;
+  height:auto !important;
+  max-height:none !important;
+  overflow:visible !important;
+  box-sizing:border-box !important;
+  padding:16px !important;
+  font-size:13px !important;
+}
+
+/* Conteúdo do Resumo fica mais compacto */
+.fibra-resumo-fix *,
+.resumo *,
+.card-resumo *,
+.resumo-cliente *,
+#resumoCliente *,
+#cardResumo *,
+#resumoCadastro *{
+  max-width:100% !important;
+  min-width:0 !important;
+  box-sizing:border-box !important;
+  overflow-wrap:anywhere !important;
+  word-break:normal !important;
+}
+
+/* Títulos e textos internos menores para notebook */
+.fibra-resumo-fix h1,
+.fibra-resumo-fix h2,
+.fibra-resumo-fix h3,
+.fibra-resumo-fix h4,
+.resumo h1,
+.resumo h2,
+.resumo h3,
+.resumo h4,
+.card-resumo h1,
+.card-resumo h2,
+.card-resumo h3,
+.card-resumo h4,
+.resumo-cliente h1,
+.resumo-cliente h2,
+.resumo-cliente h3,
+.resumo-cliente h4{
+  font-size:20px !important;
+  line-height:1.15 !important;
+  margin:8px 0 12px !important;
+}
+
+/* Servidor/OLTNET/Plano dentro do resumo não pode aumentar demais */
+.fibra-resumo-fix .servidor,
+.fibra-resumo-fix .oltnet,
+.fibra-resumo-fix .plano,
+.fibra-resumo-fix section,
+.fibra-resumo-fix div{
+  max-width:100% !important;
+}
+
+/* Botões do resumo compactos */
+.fibra-resumo-fix button,
+.resumo button,
+.card-resumo button,
+.resumo-cliente button{
+  width:100% !important;
+  max-width:100% !important;
+  font-size:12px !important;
+  padding:8px 10px !important;
+  white-space:normal !important;
+}
+
+/* Coluna do formulário pode encolher */
+form,
+.form,
+.cadastro-form,
+.dados-cliente,
+.panel,
+.card{
+  min-width:0 !important;
+  box-sizing:border-box !important;
+}
+
+/* Em telas até notebook, joga resumo para baixo */
+@media (max-width: 1100px){
+  .cadastro-wrap,
+  .cadastro-page,
+  .cadastro-container,
+  .cadastro-content,
+  .cadastro-body,
+  .cliente-page,
+  .cliente-wrap,
+  .cliente-container,
+  .cliente-content,
+  .cliente-layout,
+  .form-resumo,
+  .dados-cliente-wrapper,
+  main > .grid,
+  .main > .grid,
+  .content > .grid,
+  .fibra-resumo-parent-fix{
+    grid-template-columns:1fr !important;
+  }
+
+  .fibra-resumo-fix,
+  .resumo,
+  .card-resumo,
+  .resumo-cliente,
+  #resumoCliente,
+  #cardResumo,
+  #resumoCadastro,
+  .summary-card,
+  .cliente-resumo{
+    max-width:100% !important;
+  }
+}
+</style>
+
+
+<script id="fixResumoCadastroForcadoJs">
+/* Marca automaticamente o card Resumo real e seu pai */
+(function(){
+  function aplicarFixResumo(){
+    const candidatos = Array.from(document.querySelectorAll("section,aside,div,article,.card,.panel"));
+    let resumo = null;
+
+    for(const el of candidatos){
+      const texto = (el.innerText || el.textContent || "").trim().toLowerCase();
+      if(!texto) continue;
+
+      const temResumo = texto.includes("resumo");
+      const temServidor = texto.includes("servidor");
+      const temCpf = texto.includes("cpf/cnpj");
+      const temLogin = texto.includes("login");
+
+      if(temResumo && temServidor && (temCpf || temLogin)){
+        resumo = el;
+        break;
+      }
+    }
+
+    if(!resumo){
+      const titulo = Array.from(document.querySelectorAll("h1,h2,h3,h4")).find(h => 
+        (h.textContent || "").trim().toLowerCase() === "resumo"
+      );
+      if(titulo) resumo = titulo.closest("section,aside,div,.card,.panel");
+    }
+
+    if(resumo){
+      resumo.classList.add("fibra-resumo-fix");
+
+      let pai = resumo.parentElement;
+      while(pai && pai !== document.body){
+        const filhosGrandes = Array.from(pai.children).filter(ch => {
+          const r = ch.getBoundingClientRect();
+          return r.width > 180 && r.height > 120;
+        });
+
+        if(filhosGrandes.length >= 2){
+          pai.classList.add("fibra-resumo-parent-fix");
+          break;
+        }
+
+        pai = pai.parentElement;
+      }
+    }
+
+    document.documentElement.style.overflowX = "hidden";
+    document.body.style.overflowX = "hidden";
+  }
+
+  document.addEventListener("DOMContentLoaded", aplicarFixResumo);
+  setTimeout(aplicarFixResumo, 300);
+  setTimeout(aplicarFixResumo, 1000);
+  setTimeout(aplicarFixResumo, 2000);
+})();
+</script>
+
 </body></html>
