@@ -343,3 +343,23 @@ async function fibraSincronizarSupabaseAoAbrir(){
 document.addEventListener("DOMContentLoaded", () => {
   setTimeout(fibraSincronizarSupabaseAoAbrir, 300);
 });
+
+
+document.addEventListener("fibra:supabase-sync", function(){
+  setTimeout(function(){
+    [
+      "carregarClientes",
+      "renderClientes",
+      "renderizarClientes",
+      "listarClientes",
+      "atualizarListaClientes",
+      "carregarDashboard",
+      "atualizarDashboard",
+      "renderizarBoletosCliente"
+    ].forEach(function(fn){
+      try{
+        if(typeof window[fn] === "function") window[fn]();
+      }catch(e){}
+    });
+  }, 200);
+});
