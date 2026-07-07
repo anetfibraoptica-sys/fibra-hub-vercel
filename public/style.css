@@ -5689,3 +5689,123 @@ button,
 #modalBoletosCliente[aria-hidden="false"]{
   pointer-events:auto !important;
 }
+
+
+/* ============================================================
+   FIX Cadastro Cliente - Resumo responsivo em 100% zoom
+   Evita corte do card Resumo e melhora telas menores.
+============================================================ */
+
+/* O conteúdo principal não deve estourar a largura da janela */
+body,
+html{
+  max-width:100%;
+  overflow-x:hidden;
+}
+
+.main,
+.content{
+  min-width:0 !important;
+  max-width:100% !important;
+  overflow-x:hidden !important;
+}
+
+/* Containers do cadastro em grid flexível */
+.cadastro-container,
+.cadastro-layout,
+.cliente-layout,
+.cliente-cadastro,
+.cadastro-grid,
+.form-resumo,
+.dados-cliente-wrapper{
+  display:grid !important;
+  grid-template-columns:minmax(360px, 1fr) minmax(300px, 420px) !important;
+  gap:24px !important;
+  align-items:start !important;
+  max-width:100% !important;
+  box-sizing:border-box !important;
+}
+
+/* Coluna direita / Resumo não pode ter largura fixa maior que a tela */
+.resumo,
+.card-resumo,
+.resumo-cliente,
+#resumoCliente,
+#cardResumo,
+#resumoCadastro,
+.summary-card,
+.cliente-resumo{
+  width:100% !important;
+  max-width:420px !important;
+  min-width:0 !important;
+  box-sizing:border-box !important;
+  overflow:visible !important;
+  height:auto !important;
+  max-height:none !important;
+}
+
+/* Campos e cards internos não devem empurrar o layout */
+.panel,
+.card,
+.form-card,
+.resumo *,
+.card-resumo *,
+.resumo-cliente *,
+#resumoCliente *,
+#cardResumo *,
+#resumoCadastro *{
+  box-sizing:border-box !important;
+  min-width:0 !important;
+}
+
+/* Botões do resumo cabem dentro do card */
+.resumo button,
+.card-resumo button,
+.resumo-cliente button,
+#resumoCliente button,
+#cardResumo button,
+#resumoCadastro button{
+  max-width:100% !important;
+  white-space:normal !important;
+}
+
+/* Inputs não estouram coluna */
+input,
+select,
+textarea{
+  max-width:100% !important;
+  box-sizing:border-box !important;
+}
+
+/* Em telas de notebook menores, resumo vai para baixo */
+@media (max-width: 1180px){
+  .cadastro-container,
+  .cadastro-layout,
+  .cliente-layout,
+  .cliente-cadastro,
+  .cadastro-grid,
+  .form-resumo,
+  .dados-cliente-wrapper{
+    grid-template-columns:1fr !important;
+  }
+
+  .resumo,
+  .card-resumo,
+  .resumo-cliente,
+  #resumoCliente,
+  #cardResumo,
+  #resumoCadastro,
+  .summary-card,
+  .cliente-resumo{
+    max-width:100% !important;
+    width:100% !important;
+  }
+}
+
+/* Se a página tiver scroll interno, liberar scroll vertical normal */
+.cadastro-page,
+.cadastro-main,
+.cliente-page{
+  overflow-y:auto !important;
+  overflow-x:hidden !important;
+}

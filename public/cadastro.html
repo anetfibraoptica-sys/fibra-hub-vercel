@@ -2850,4 +2850,38 @@ document.addEventListener("fibra:supabase-sync", carregarContasEfiNoCadastro);
 })();
 </script>
 
+
+<script>
+/* Fix layout cadastro/resumo em telas menores */
+(function(){
+  function aplicarLayoutResumoResponsivo(){
+    const h = Array.from(document.querySelectorAll("h1,h2,h3,h4,div,section")).find(el =>
+      (el.textContent || "").trim().toLowerCase() === "resumo"
+    );
+
+    if(h){
+      const card = h.closest(".card,.panel,section,aside,div");
+      if(card && !card.classList.contains("resumo-cliente")){
+        card.classList.add("resumo-cliente");
+      }
+    }
+
+    const resumo = document.querySelector(".resumo-cliente,#resumoCliente,#cardResumo,#resumoCadastro");
+    const form = document.querySelector("form,.cadastro-form,.dados-cliente,.panel");
+    if(resumo && form){
+      const parent = resumo.parentElement;
+      if(parent && parent.children.length >= 2){
+        parent.classList.add("cliente-layout");
+      }
+    }
+
+    document.body.style.overflowX = "hidden";
+  }
+
+  document.addEventListener("DOMContentLoaded", aplicarLayoutResumoResponsivo);
+  setTimeout(aplicarLayoutResumoResponsivo, 500);
+  setTimeout(aplicarLayoutResumoResponsivo, 1500);
+})();
+</script>
+
 </body></html>
