@@ -17,5 +17,21 @@
 <a href="planos.html" class=""><span class="icon">▦</span>Planos</a>
 <a href="usuarios.html" class=""><span class="icon">👥</span>Usuários</a>
 <a href="configuracoes.html" class=""><span class="icon"></span>Configurações</a>
-<a href="backup.html" class=""><span class="icon">☁</span>Backup</a><a href="#" onclick="sair()"><span class="icon">↪</span></a></nav></aside><main class="main"><header class="topbar"><h1>Dashboard</h1><div class="topbar-right"><span id="liveStatus" class="badge badge-off">CONECTANDO</span><span class="badge">2 Servidores</span><span class="badge">Administrador</span></div></header><section class="content"><section class="cards dashboard-receita-only"><div class="card"><div class="card-icon bg-green">💰</div><small>Receita</small><h2 id="receitaTotal">R$ 0,00</h2></div></section><div class="footer"><span>© 2026 Fibra+</span><span>Hub com 2 servidores MikroTik</span></div></section></main></div><script src="/socket.io/socket.io.js"></script><script src="app.js"></script>
+<a href="backup.html" class=""><span class="icon">☁</span>Backup</a><a href="#" onclick="sair()"><span class="icon">↪</span></a></nav></aside><main class="main"><header class="topbar"><h1>Dashboard</h1><div class="topbar-right"><span id="liveStatus" class="badge badge-off">CONECTANDO</span><span class="badge">2 Servidores</span><span class="badge">Administrador</span></div></header><section class="content"><section class="cards dashboard-financeiro-cards">
+  <div class="card">
+    <div class="card-icon bg-green">💰</div>
+    <small>Receita</small>
+    <h2 id="receitaTotal">R$ 0,00</h2>
+  </div>
+  <div class="card">
+    <div class="card-icon bg-blue">💵</div>
+    <small>Recebimento do Mês</small>
+    <h2 id="recebimentoMesTotal">R$ 0,00</h2>
+  </div>
+  <div class="card">
+    <div class="card-icon bg-red">📉</div>
+    <small>Em Aberto</small>
+    <h2 id="emAbertoTotal">R$ 0,00</h2>
+  </div>
+</section><div class="footer"><span>© 2026 Fibra+</span><span>Hub com 2 servidores MikroTik</span></div></section></main></div><script src="/socket.io/socket.io.js"></script><script src="app.js"></script>
 </body></html>

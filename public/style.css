@@ -5264,3 +5264,14 @@ button,
     grid-template-columns:1fr !important;
   }
 }
+
+
+/* Dashboard financeiro: 3 cards no topo */
+.dashboard-financeiro-cards{
+  grid-template-columns:repeat(3, minmax(220px, 1fr)) !important;
+}
+@media (max-width: 900px){
+  .dashboard-financeiro-cards{
+    grid-template-columns:1fr !important;
+  }
+}

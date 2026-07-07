@@ -876,3 +876,167 @@ document.addEventListener("DOMContentLoaded", function(){
 
 
 
+
+
+/* ============================================================
+   DASHBOARD FINANCEIRO
+   Receita = recebido no mês.
+   Recebimento do Mês = previsão mensal dos clientes cobrados.
+   Em Aberto = previsão - recebido.
+============================================================ */
+(function(){
+  function moedaBR(valor){
+    valor = Number(valor || 0);
+    return valor.toLocaleString("pt-BR", {style:"currency", currency:"BRL"});
+  }
+
+  function normalizar(v){
+    return String(v || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
+  }
+
+  function num(v){
+    if(v === undefined || v === null || v === "") return 0;
+    if(typeof v === "number") return isNaN(v) ? 0 : v;
+    let s = String(v).trim();
+    s = s.replace(/[R$\s]/g, "");
+    if(s.includes(",") && s.includes(".")){
+      s = s.replace(/\./g, "").replace(",", ".");
+    }else if(s.includes(",")){
+      s = s.replace(",", ".");
+    }
+    const n = Number(s);
+    return isNaN(n) ? 0 : n;
+  }
+
+  function primeiro(obj, campos){
+    for(const c of campos){
+      if(obj && obj[c] !== undefined && obj[c] !== null && String(obj[c]).trim() !== ""){
+        return obj[c];
+      }
+    }
+    return "";
+  }
+
+  function getClientes(){
+    const chaves = ["clientes", "clientesReceitaNet", "fibra_clientes", "clientes_importados"];
+    for(const chave of chaves){
+      try{
+        const lista = JSON.parse(localStorage.getItem(chave) || "[]");
+        if(Array.isArray(lista)) return lista;
+      }catch(e){}
+    }
+    return [];
+  }
+
+  function getPagamentos(){
+    const chaves = ["pagamentos", "recebimentos", "financeiroPagamentos", "fibra_pagamentos", "lancamentosFinanceiros"];
+    for(const chave of chaves){
+      try{
+        const lista = JSON.parse(localStorage.getItem(chave) || "[]");
+        if(Array.isArray(lista)) return lista;
+      }catch(e){}
+    }
+    return [];
+  }
+
+  function dataNoMesAtual(v){
+    if(!v) return false;
+    const d = new Date(v);
+    if(isNaN(d.getTime())) return false;
+    const hoje = new Date();
+    return d.getMonth() === hoje.getMonth() && d.getFullYear() === hoje.getFullYear();
+  }
+
+  function clienteCancelado(c){
+    const s = normalizar(primeiro(c, ["status","situacao","statusCobranca","cli_status","estadoCliente","status_cliente","cobranca"]));
+    const cancel = primeiro(c, ["cancelamento","dataCancelamento","dtCancelamento","cli_dtcancelamento"]);
+    return s.includes("cancel") || s.includes("encerrado") || !!String(cancel || "").trim();
+  }
+
+  function clienteIsento(c){
+    const s = normalizar(primeiro(c, ["status","situacao","statusCobranca","cli_boleto","boleto","cobranca","tipoCobranca"]));
+    return s.includes("isento") || s === "n" || s === "nao cobrar";
+  }
+
+  function valorCliente(c){
+    return num(primeiro(c, [
+      "valorMensal",
+      "valor",
+      "mensalidade",
+      "valorPlano",
+      "planoValor",
+      "valor_plano",
+      "cli_valor",
+      "preco",
+      "price"
+    ]));
+  }
+
+  function valorPagamento(p){
+    return num(primeiro(p, ["valor","valorPago","pago","recebido","total","amount"]));
+  }
+
+  function pagamentoRecebidoNoMes(p){
+    const status = normalizar(primeiro(p, ["status","situacao","estado","tipo"]));
+    const data = primeiro(p, ["dataPagamento","pagamento","recebidoEm","dataRecebimento","data","createdAt"]);
+    const pago = status.includes("pago") || status.includes("receb") || status.includes("baixado") || p.pago === true || p.recebido === true;
+
+    if(!pago && status) return false;
+    if(data) return dataNoMesAtual(data);
+
+    // Se não existir data, considera como receita atual apenas se estiver marcado como pago/recebido.
+    return pago;
+  }
+
+  function calcularFinanceiroDashboard(){
+    const clientes = getClientes();
+
+    const recebimentoMes = clientes
+      .filter(c => !clienteCancelado(c) && !clienteIsento(c))
+      .reduce((soma, c) => soma + valorCliente(c), 0);
+
+    const pagamentos = getPagamentos();
+    let receita = pagamentos
+      .filter(pagamentoRecebidoNoMes)
+      .reduce((soma, p) => soma + valorPagamento(p), 0);
+
+    // Compatibilidade: se não existir lista financeira, tenta somar clientes marcados como pagos no mês.
+    if(!pagamentos.length){
+      receita = clientes
+        .filter(c => {
+          const s = normalizar(primeiro(c, ["statusPagamento","statusFinanceiro","pagamentoStatus","situacaoPagamento","cobranca"]));
+          return s.includes("pago") || s.includes("receb") || s.includes("baixado");
+        })
+        .reduce((soma, c) => soma + valorCliente(c), 0);
+    }
+
+    const emAberto = Math.max(recebimentoMes - receita, 0);
+
+    const set = (id, valor) => {
+      const el = document.getElementById(id);
+      if(el) el.textContent = moedaBR(valor);
+    };
+
+    set("receitaTotal", receita);
+    set("recebimentoMesTotal", recebimentoMes);
+    set("emAbertoTotal", emAberto);
+  }
+
+  const antiga = window.carregarDashboard;
+  window.carregarDashboard = function(){
+    if(typeof antiga === "function"){
+      try{ antiga.apply(this, arguments); }catch(e){}
+    }
+    calcularFinanceiroDashboard();
+  };
+
+  document.addEventListener("DOMContentLoaded", function(){
+    setTimeout(calcularFinanceiroDashboard, 100);
+    setTimeout(calcularFinanceiroDashboard, 800);
+  });
+})();
+
