@@ -1,11 +1,8 @@
 
 /* ============================================================
-   Fix Vercel definitivo: socket.io + campos number com vírgula
 ============================================================ */
 (function(){
-  // remove scripts socket.io que alguma página tenha injetado depois
   document.addEventListener("DOMContentLoaded", function(){
-    document.querySelectorAll('script[src*="socket.io"]').forEach(s => s.remove());
 
     // Corrige inputs number que tenham valor brasileiro tipo 0,00
     document.querySelectorAll('input[type="number"]').forEach(inp => {

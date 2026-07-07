@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+<script src="00-fix-definitivo.js"></script>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cadastro de Cliente - Fibra+ Hub</title><link rel="stylesheet" href="style.css">
 
@@ -8,8 +9,6 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@300;400;600;700&display=swap" rel="stylesheet">
 
-<script src="compat-vercel.js"></script>
-<script src="fix-final.js"></script>
 </head>
 <body onload="protegerPagina(); iniciarSocket(); carregarCadastroClienteHub();">
 
@@ -655,8 +654,6 @@ fibraCadastroLimparStoragesSelecao();
   </section>
 </section>
 </main></div>
-
-<script src="/socket.io/socket.io.js">
 function consultarCepContato(){ buscarCepAutomatico(); }
 </script><script src="supabase-client.js"></script>
 <script src="app.js"></script>
@@ -1814,7 +1811,7 @@ document.addEventListener("click", function(e){
     <label>Primeiro vencimento</label>
     <input id="mensalidadePrimeiroVencimento" type="date">
     <label>Quantidade</label>
-    <input id="mensalidadeQuantidade" type="number" min="1" value="12">
+    <input id="mensalidadeQuantidade" type="text" inputmode="decimal" min="1" value="12">
     <label>Periodicidade</label>
     <select id="mensalidadePeriodicidade">
       <option value="mensal">Mensal</option>
