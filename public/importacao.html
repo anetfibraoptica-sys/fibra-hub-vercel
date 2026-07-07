@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@300;400;600;700&display=swap" rel="stylesheet">
 
+<script src="supabase-client.js"></script>
 </head>
 <body onload="protegerPagina(); iniciarSocket(); iniciarImportacaoHub();"><div class="sidebar-overlay" onclick="fecharMenuLateral()"></div>
 <button id="mobileMenuBtn" class="mobile-menu-btn" type="button" onclick="abrirMenuLateral()">☰ Menu</button>
@@ -127,6 +128,8 @@ async function importarReceitaNetHub(ev){
   localStorage.setItem("clientesReceitaNet", JSON.stringify(final));
   localStorage.setItem("fibra_clientes", JSON.stringify(final));
   localStorage.setItem("clientes_importados", JSON.stringify(final));
+  try{ if(window.FibraDB){ resultadoImportacao.innerHTML += "<br>☁ Salvando clientes no Supabase..."; await FibraDB.salvarClientes(final); resultadoImportacao.innerHTML += "<br>✅ Clientes salvos no Supabase."; } }
+  catch(e){ resultadoImportacao.innerHTML += "<br>⚠ Erro Supabase: " + e.message; }
   localStorage.setItem("ultimaImportacaoReceitaNet", JSON.stringify({
     arquivo: file.name,
     encontrados: imp.length,
@@ -376,6 +379,8 @@ async function importarBoletosReceitaNetHub(ev){
   localStorage.setItem("boletos",JSON.stringify(final));
   localStorage.setItem("titulos",JSON.stringify(final));
   localStorage.setItem("cobrancas",JSON.stringify(final));
+  try{ if(window.FibraDB){ const bx=document.getElementById("resultadoImportacaoBoletos"); if(bx) bx.innerHTML += "<br>☁ Salvando boletos no Supabase..."; await FibraDB.salvarBoletos(final); if(bx) bx.innerHTML += "<br>✅ Boletos salvos no Supabase."; } }
+  catch(e){ const bx=document.getElementById("resultadoImportacaoBoletos"); if(bx) bx.innerHTML += "<br>⚠ Erro Supabase: " + e.message; }
   corrigirBoletosImportadosReceitaNet();
   const vinculoBoletosClientes = vincularBoletosNosClientesFibra(final);
   const st=atualizarClientesPorBoletos(final);
