@@ -1014,6 +1014,37 @@ document.addEventListener("DOMContentLoaded", function(){
         .reduce((soma, c) => soma + valorCliente(c), 0);
     }
 
+    
+    function getBoletos(){
+      const chaves = ["boletos", "titulos", "cobrancas", "financeiroBoletos", "contasReceber", "lancamentosFinanceiros"];
+      for(const chave of chaves){
+        try{
+          const lista = JSON.parse(localStorage.getItem(chave) || "[]");
+          if(Array.isArray(lista) && lista.length) return lista;
+        }catch(e){}
+      }
+      return [];
+    }
+
+    function boletoPago(b){
+      const s = normalizar(primeiro(b, ["status","situacao","estado","baixa","pagamentoStatus"]));
+      return s.includes("pago") || s.includes("baixado") || s.includes("receb") || b.pago === true || b.recebido === true;
+    }
+
+    function boletoCancelado(b){
+      const s = normalizar(primeiro(b, ["status","situacao","estado"]));
+      return s.includes("cancel") || s.includes("estornado");
+    }
+
+    let boletosAbertos = getBoletos()
+      .filter(b => !boletoPago(b) && !boletoCancelado(b))
+      .length;
+
+    // Compatibilidade: se não houver lista de boletos, usa clientes cobrados sem pagamento como previsão de boletos abertos.
+    if(!getBoletos().length){
+      boletosAbertos = clientes.filter(c => !clienteCancelado(c) && !clienteIsento(c)).length;
+    }
+
     const emAberto = Math.max(recebimentoMes - receita, 0);
 
     const set = (id, valor) => {
@@ -1024,6 +1055,8 @@ document.addEventListener("DOMContentLoaded", function(){
     set("receitaTotal", receita);
     set("recebimentoMesTotal", recebimentoMes);
     set("emAbertoTotal", emAberto);
+    const boletosEl = document.getElementById("boletosAbertosTotal");
+    if(boletosEl) boletosEl.textContent = boletosAbertos;
   }
 
   const antiga = window.carregarDashboard;

@@ -5268,7 +5268,7 @@ button,
 
 /* Dashboard financeiro: 3 cards no topo */
 .dashboard-financeiro-cards{
-  grid-template-columns:repeat(3, minmax(220px, 1fr)) !important;
+  grid-template-columns:repeat(4, minmax(200px, 1fr)) !important;
 }
 @media (max-width: 900px){
   .dashboard-financeiro-cards{
