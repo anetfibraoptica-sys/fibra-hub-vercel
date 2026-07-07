@@ -37,6 +37,22 @@
 <section class="content">
 <section class="cards"><div class="card"><div class="card-icon bg-blue">👥</div><small>Encontrados</small><h2 id="impEncontrados">0</h2></div><div class="card"><div class="card-icon bg-green">✅</div><small>Novos</small><h2 id="impNovos">0</h2></div><div class="card"><div class="card-icon bg-orange">🔄</div><small>Atualizados</small><h2 id="impAtualizados">0</h2></div><div class="card"><div class="card-icon bg-blue">📋</div><small>Total em Clientes</small><h2 id="impTotalClientes">0</h2></div></section>
 <section class="panel"><h3>Importar clientes do ReceitaNet</h3><p class="cadastro-note">Use o CSV exportado do ReceitaNet. Esta versão lê o arquivo como <b>ISO-8859-1</b>, salvando todos os campos do cliente.</p><div class="cadastro-actions"><label class="csv-import-btn">Selecionar CSV ReceitaNet<input id="csvReceitaNet" type="file" accept=".csv,text/csv" onchange="importarReceitaNetHub(event)" hidden></label><button onclick="limparBaseClientesHub()">Limpar base local</button></div><div id="resultadoImportacao" class="import-result">Aguardando arquivo CSV.</div></section>
+
+<section class="panel">
+  <h3>Importar boletos do ReceitaNet</h3>
+  <p class="cadastro-note">
+    Use o CSV/planilha exportado do ReceitaNet. Ao importar, o Fibra+ Hub também atualiza automaticamente
+    os clientes como <b>Ativos</b> ou <b>Bloqueados</b> conforme boletos vencidos.
+  </p>
+  <div class="cadastro-actions">
+    <label class="csv-import-btn">Selecionar CSV de Boletos
+      <input id="csvBoletosReceitaNet" type="file" accept=".csv,text/csv,.txt" onchange="importarBoletosReceitaNetHub(event)" hidden>
+    </label>
+    <button onclick="recalcularStatusClientesPorBoletos()">Atualizar status pelos boletos</button>
+  </div>
+  <div id="resultadoImportacaoBoletos" class="import-result">Aguardando arquivo de boletos.</div>
+</section>
+
 <section class="panel"><h3>Prévia da última importação</h3><div class="table-wrap"><table><thead><tr><th>Login</th><th>Nome</th><th>CPF/CNPJ</th><th>Telefone</th><th>Endereço</th><th>Plano</th><th>Venc.</th><th>POP</th></tr></thead><tbody id="previewImportacao"><tr><td colspan="8">Nenhum arquivo importado ainda.</td></tr></tbody></table></div></section>
 <div class="footer"><span>© 2026 Fibra+</span><span>Importação ReceitaNet</span></div>
 </section></main></div>
@@ -152,5 +168,238 @@ function limparBaseClientesHub(){
     location.reload();
   }
 }
+
+/* ============================================================
+   IMPORTAÇÃO DE BOLETOS RECEITANET + STATUS ATIVO/BLOQUEADO
+============================================================ */
+function bNorm(v){
+  return String(v || "")
+    .replace(/\uFFFD/g,"")
+    .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .replace(/[^\w\s/.-]/g,"")
+    .replace(/\s+/g," ")
+    .trim()
+    .toLowerCase();
+}
+function bNum(v){return String(v||"").replace(/\D/g,"");}
+function bMoney(v){
+  let s=String(v||"").replace(/[^\d,.-]/g,"");
+  if(s.includes(",") && s.includes(".")) s=s.replace(/\./g,"").replace(",",".");
+  else s=s.replace(",",".");
+  return Number(s)||0;
+}
+function bSplit(line,sep){
+  let out=[],cur="",q=false;
+  for(let i=0;i<line.length;i++){
+    let ch=line[i],nx=line[i+1];
+    if(ch=='"'&&nx=='"'){cur+='"';i++;continue}
+    if(ch=='"'){q=!q;continue}
+    if(ch==sep&&!q){out.push(cur.trim());cur="";continue}
+    cur+=ch;
+  }
+  out.push(cur.trim());
+  return out;
+}
+function bSep(text){
+  let f=text.split(/\r?\n/).find(l=>l.trim())||"";
+  let s=(f.match(/;/g)||[]).length,c=(f.match(/,/g)||[]).length,t=(f.match(/\t/g)||[]).length;
+  if(t>s&&t>c)return"\t";
+  return s>=c?";":",";
+}
+function bHeader(h){return bNorm(h);}
+function bGet(row,idxs,names){
+  for(let n of names||[]){
+    let k=bHeader(n);
+    if(row.obj[k]!==undefined&&String(row.obj[k]).trim())return row.obj[k];
+  }
+  for(let n of names||[]){
+    let k=bHeader(n);
+    let found=Object.keys(row.obj).find(x=>x===k||x.includes(k)||k.includes(x));
+    if(found&&String(row.obj[found]).trim())return row.obj[found];
+  }
+  for(let i of idxs||[]){
+    if(row.cols[i]!==undefined&&String(row.cols[i]).trim())return row.cols[i];
+  }
+  return "";
+}
+function bParseData(v){
+  if(!v) return "";
+  v=String(v).trim();
+  let m=v.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(m) return `${m[1]}-${m[2]}-${m[3]}`;
+  m=v.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if(m) return `${m[3]}-${m[2]}-${m[1]}`;
+  let d=new Date(v);
+  if(!isNaN(d.getTime())) return d.toISOString().slice(0,10);
+  return v;
+}
+function bMap(row){
+  const status=bGet(row,[8],["Status","Situação","Situacao","Baixa","Estado"]);
+  const valor=bMoney(bGet(row,[3],["Valor","Valor Boleto","Valor do Boleto","Valor Título","Valor Titulo","Mensalidade"]));
+  const total=bMoney(bGet(row,[6],["Total","Valor Total","Total do Boleto"])) || valor;
+  const numero=bGet(row,[0],["Número","Numero","Nº","No","ID","Título","Titulo","Nosso Número","Nosso Numero"]);
+  const login=bGet(row,[1],["Login","Login PPPoE","Cliente Login","Usuário","Usuario"]);
+  const nome=bGet(row,[2],["Cliente","Nome","Nome Cliente","Razão Social","Razao Social"]);
+  const cpf=bGet(row,[],["CPF","CNPJ","CPF/CNPJ","Documento"]);
+  const venc=bParseData(bGet(row,[4],["Vencimento","Data Vencimento","Data de Vencimento","Dt Vencimento"]));
+  const emiss=bParseData(bGet(row,[5],["Emissão","Emissao","Data Emissão","Data Emissao","Data de Emissão","Data de Emissao"]));
+  const pagamento=bParseData(bGet(row,[],["Pagamento","Data Pagamento","Data de Pagamento","Data da Baixa","Baixado em"]));
+  const desc=bGet(row,[],["Descrição","Descricao","Referência","Referencia","Histórico","Historico"]) || "Boleto importado ReceitaNet";
+  const pix=bGet(row,[],["Pix","PIX","Copia e Cola","Pix Copia e Cola","Código Pix","Codigo Pix"]);
+  const linha=bGet(row,[],["Linha Digitável","Linha Digitavel","Código de Barras","Codigo de Barras"]);
+  if(!numero && !login && !nome && !cpf && !venc && !valor) return null;
+  const st=bStatusImportado(status,pagamento,venc);
+  return {
+    numero: numero || Date.now()+Math.floor(Math.random()*10000),
+    login: login,
+    nome: nome,
+    cpfCnpj: cpf,
+    categoria: bGet(row,[],["Categoria"]) || "Mensalidade",
+    descricao: desc,
+    emissao: emiss || "",
+    vencimento: venc || "",
+    valor: valor,
+    total: total,
+    status: st,
+    dataPagamento: pagamento || "",
+    valorPago: st==="pago" ? total : 0,
+    linhaDigitavel: linha,
+    pix: pix,
+    origem: "ReceitaNet Boletos",
+    importadoEm: new Date().toISOString()
+  };
+}
+function bStatusImportado(status,pagamento,venc){
+  const s=bNorm(status);
+  if(s.includes("cancel")||s.includes("estornado")) return "cancelado";
+  if(s.includes("pago")||s.includes("baixado")||s.includes("receb")||pagamento) return "pago";
+  if(venc){
+    const d=new Date(venc+"T00:00:00");
+    const hoje=new Date(); hoje.setHours(0,0,0,0);
+    if(!isNaN(d.getTime()) && d<hoje) return "vencido";
+  }
+  return "pendente";
+}
+function bParse(text){
+  const sp=bSep(text);
+  const lines=text.split(/\r?\n/).filter(l=>l.trim());
+  if(lines.length<2)return[];
+  const heads=bSplit(lines[0],sp).map(bHeader);
+  const arr=[];
+  for(let i=1;i<lines.length;i++){
+    const cols=bSplit(lines[i],sp),obj={};
+    heads.forEach((h,j)=>obj[h]=cols[j]||"");
+    const b=bMap({obj,cols});
+    if(b) arr.push(b);
+  }
+  return arr;
+}
+function bKeyBoleto(b){
+  return String(b.numero||"").trim() || [b.login,b.cpfCnpj,b.vencimento,b.valor].join("|").toLowerCase();
+}
+function bKeyCliente(c){
+  return bNorm(c.loginPppoe||c.login)||bNum(c.cpfCnpj||c.cpf)||bNorm(c.email)||bNum(c.telefone1||c.telefone)||bNum(c.telefone2)||bNorm(c.nome);
+}
+function bKeyDonoBoleto(b){
+  return bNorm(b.login)||bNum(b.cpfCnpj)||bNorm(b.nome);
+}
+function bClienteCancelado(c){
+  const s=bNorm(c.status||c.situacao||c.statusCobranca||c.cli_status||"");
+  return s.includes("cancel") || !!String(c.cancelamento||c.dataCancelamento||c.dtCancelamento||c.cli_dtcancelamento||c.dataCancelamento||"").trim();
+}
+function bClienteIsento(c){
+  const s=bNorm(c.status||c.situacao||c.statusCobranca||c.cli_boleto||c.boleto||c.cobranca||"");
+  return s.includes("isento") || s==="n" || s.includes("nao cobrar");
+}
+function bConfiancaValida(c){
+  const raw=c.liberacaoConfianca||c.liberadoConfianca||c.liberado||c.dataLiberacaoConfianca||c.cli_liberado||"";
+  if(!raw) return false;
+  const d=new Date(bParseData(raw)+"T23:59:59");
+  if(isNaN(d.getTime())) return false;
+  const hoje=new Date(); hoje.setHours(0,0,0,0);
+  return d>=hoje;
+}
+function bBoletoAbertoVencido(b){
+  const st=bStatusImportado(b.status,b.dataPagamento,b.vencimento);
+  return st==="vencido";
+}
+function bMesmoCliente(c,b){
+  const kc=bKeyCliente(c), kb=bKeyDonoBoleto(b);
+  if(!kc || !kb) return false;
+  return kc===kb || kc.includes(kb) || kb.includes(kc);
+}
+function atualizarClientesPorBoletos(listaBoletos){
+  let clientes=[];
+  try{clientes=JSON.parse(localStorage.getItem("clientes")||"[]")}catch(e){clientes=[]}
+  if(!Array.isArray(clientes))clientes=[];
+  let ativos=0,bloqueados=0,preservados=0;
+  const hoje=new Date().toISOString().slice(0,10);
+  clientes=clientes.map(c=>{
+    if(bClienteCancelado(c) || bClienteIsento(c) || bConfiancaValida(c)){
+      preservados++;
+      return c;
+    }
+    const temVencido=listaBoletos.some(b=>bMesmoCliente(c,b)&&bBoletoAbertoVencido(b));
+    if(temVencido){
+      bloqueados++;
+      return {...c,status:"bloqueado",bloqueio:c.bloqueio||hoje,cli_bloqueado:c.cli_bloqueado||hoje,statusAtualizadoPorBoletos:true,atualizadoEm:new Date().toISOString()};
+    }else{
+      ativos++;
+      return {...c,status:"ativo",bloqueio:"",cli_bloqueado:"",statusAtualizadoPorBoletos:true,atualizadoEm:new Date().toISOString()};
+    }
+  });
+  localStorage.setItem("clientes",JSON.stringify(clientes));
+  localStorage.setItem("clientesReceitaNet",JSON.stringify(clientes));
+  localStorage.setItem("fibra_clientes",JSON.stringify(clientes));
+  localStorage.setItem("clientes_importados",JSON.stringify(clientes));
+  return {ativos,bloqueados,preservados,total:clientes.length};
+}
+async function importarBoletosReceitaNetHub(ev){
+  const file=ev.target.files&&ev.target.files[0];
+  if(!file)return;
+  const box=document.getElementById("resultadoImportacaoBoletos");
+  if(box) box.innerHTML="Lendo boletos...";
+  const text=await readFileLatin1(file);
+  const importados=bParse(text);
+  let boletos=[];
+  try{boletos=JSON.parse(localStorage.getItem("boletos")||"[]")}catch(e){boletos=[]}
+  if(!Array.isArray(boletos))boletos=[];
+  const mapa=new Map();
+  boletos.forEach(b=>mapa.set(bKeyBoleto(b),b));
+  let novos=0,atualizados=0;
+  importados.forEach(b=>{
+    const k=bKeyBoleto(b);
+    if(mapa.has(k)){mapa.set(k,{...mapa.get(k),...b});atualizados++;}
+    else{mapa.set(k,b);novos++;}
+  });
+  const final=Array.from(mapa.values());
+  localStorage.setItem("boletos",JSON.stringify(final));
+  localStorage.setItem("titulos",JSON.stringify(final));
+  localStorage.setItem("cobrancas",JSON.stringify(final));
+  const st=atualizarClientesPorBoletos(final);
+  localStorage.setItem("ultimaImportacaoBoletosReceitaNet",JSON.stringify({arquivo:file.name,encontrados:importados.length,novos,atualizados,total:final.length,status:st,data:new Date().toISOString()}));
+  if(box) box.innerHTML=`<b>Boletos importados com sucesso.</b><br>
+  🧾 Encontrados no arquivo: ${importados.length}<br>
+  ✅ Novos: ${novos}<br>
+  🔄 Atualizados: ${atualizados}<br>
+  📋 Total de boletos no Fibra+ Hub: ${final.length}<br><br>
+  <b>Status dos clientes atualizado:</b><br>
+  🟢 Ativos: ${st.ativos}<br>
+  🔴 Bloqueados: ${st.bloqueados}<br>
+  🟡 Preservados (cancelado/isento/confiança): ${st.preservados}`;
+}
+function recalcularStatusClientesPorBoletos(){
+  let boletos=[];
+  try{boletos=JSON.parse(localStorage.getItem("boletos")||"[]")}catch(e){boletos=[]}
+  if(!Array.isArray(boletos))boletos=[];
+  const st=atualizarClientesPorBoletos(boletos);
+  const box=document.getElementById("resultadoImportacaoBoletos");
+  if(box) box.innerHTML=`<b>Status recalculado pelos boletos atuais.</b><br>
+  🟢 Ativos: ${st.ativos}<br>
+  🔴 Bloqueados: ${st.bloqueados}<br>
+  🟡 Preservados (cancelado/isento/confiança): ${st.preservados}<br>
+  📋 Total de clientes: ${st.total}`;
+}
+
 </script>
 </body></html>

@@ -5592,3 +5592,10 @@ button,
 .detalhe-grid b{display:block;color:#93c5fd;margin-bottom:4px;}
 .detalhe-grid span{word-break:break-word;color:#f9fafb;}
 @media(max-width:700px){.detalhe-grid{grid-template-columns:1fr;}}
+
+
+/* Importação de boletos */
+#importacaoBoletosResumo,
+#resultadoImportacaoBoletos{
+  line-height:1.7;
+}
