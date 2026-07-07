@@ -1785,24 +1785,6 @@ function verDetalhesBoleto(index){
 </script>
 
 
-<script>
-/* FIX: abrir modal ao clicar no botão existente Boletos */
-document.addEventListener("click", function(e){
-  const el = e.target.closest("a,button,div,span");
-  if(!el) return;
-
-  const texto = (el.textContent || "").trim().toLowerCase();
-  if(texto === "boletos" || texto.includes("boletos")){
-    if(typeof abrirModalBoletosCliente === "function"){
-      e.preventDefault();
-      abrirModalBoletosCliente();
-      return false;
-    }
-  }
-}, true);
-</script>
-
-
 <!-- Modal Gerar Mensalidades -->
 <div id="modalGerarMensalidades" class="fibra-submodal" aria-hidden="true">
   <div class="fibra-submodal-box">
@@ -2779,6 +2761,90 @@ document.addEventListener("fibra:supabase-sync", carregarContasEfiNoCadastro);
         c.efiContaNome = opt ? (opt.dataset.nome || opt.textContent || "") : "";
       }
       return c;
+    };
+  }
+})();
+</script>
+
+
+<script>
+/* ============================================================
+   FIX DEFINITIVO: Boletos abre somente no botão Boletos
+============================================================ */
+(function(){
+  function ehBotaoBoletos(el){
+    if(!el) return false;
+
+    const texto = (el.textContent || el.value || el.getAttribute("aria-label") || "").trim().toLowerCase();
+    const id = (el.id || "").toLowerCase();
+    const cls = (el.className || "").toString().toLowerCase();
+    const acao = (el.dataset && (el.dataset.action || el.dataset.acao || "")) || "";
+
+    // Só aceita elementos clicáveis reais, não DIVs/containers inteiros.
+    const tag = (el.tagName || "").toLowerCase();
+    const clicavel = tag === "button" || tag === "a" || tag === "input";
+    if(!clicavel) return false;
+
+    if(acao.toLowerCase() === "boletos") return true;
+    if(id === "btnboletoscliente" || id === "btn-boletos-cliente" || id === "abrirboletoscliente") return true;
+    if(cls.includes("btn-boletos") || cls.includes("abrir-boletos")) return true;
+
+    // Texto precisa ser exatamente Boletos ou conter ícone + Boletos, sem aceitar containers com muito texto.
+    const limpo = texto.replace(/[^\p{L}\p{N}\s]/gu, "").replace(/\s+/g," ").trim();
+    return limpo === "boletos" || limpo === "lista de boletos";
+  }
+
+  document.addEventListener("click", function(e){
+    const alvo = e.target.closest("button,a,input");
+    if(!ehBotaoBoletos(alvo)) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    if(typeof abrirModalBoletosCliente === "function"){
+      abrirModalBoletosCliente();
+    }
+  }, true);
+
+  // Protege campos/áreas do cadastro contra qualquer handler antigo que tenha sobrado.
+  document.addEventListener("click", function(e){
+    const formArea = e.target.closest("input,select,textarea,label,.form-group,.grid-2,.tab-content,.tabs,.panel,.card");
+    const alvo = e.target.closest("button,a,input");
+    if(formArea && !ehBotaoBoletos(alvo)){
+      e.stopPropagation();
+    }
+  }, false);
+
+  // Garante que o backdrop do modal não fique invisível capturando a tela inteira quando fechado.
+  function corrigirModalBoletos(){
+    const modal = document.getElementById("modalBoletosCliente");
+    if(!modal) return;
+    if(!modal.classList.contains("aberto") && modal.getAttribute("aria-hidden") !== "false"){
+      modal.style.pointerEvents = "none";
+    }else{
+      modal.style.pointerEvents = "auto";
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", corrigirModalBoletos);
+  setInterval(corrigirModalBoletos, 800);
+
+  const oldAbrir = window.abrirModalBoletosCliente;
+  if(typeof oldAbrir === "function"){
+    window.abrirModalBoletosCliente = function(){
+      const modal = document.getElementById("modalBoletosCliente");
+      if(modal) modal.style.pointerEvents = "auto";
+      return oldAbrir.apply(this, arguments);
+    };
+  }
+
+  const oldFechar = window.fecharModalBoletosCliente;
+  if(typeof oldFechar === "function"){
+    window.fecharModalBoletosCliente = function(){
+      const r = oldFechar.apply(this, arguments);
+      const modal = document.getElementById("modalBoletosCliente");
+      if(modal) modal.style.pointerEvents = "none";
+      return r;
     };
   }
 })();

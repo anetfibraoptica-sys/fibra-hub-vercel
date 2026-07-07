@@ -5678,3 +5678,14 @@ button,
 #configUsuariosPainel table{width:100%;border-collapse:collapse}
 #configUsuariosPainel th,#configUsuariosPainel td{padding:10px;border-bottom:1px solid rgba(255,255,255,.12)}
 #configUsuariosPainel input,#configUsuariosPainel select{width:100%}
+
+
+/* Fix clique indevido em Boletos */
+#modalBoletosCliente[aria-hidden="true"],
+#modalBoletosCliente:not(.aberto){
+  pointer-events:none !important;
+}
+#modalBoletosCliente.aberto,
+#modalBoletosCliente[aria-hidden="false"]{
+  pointer-events:auto !important;
+}
