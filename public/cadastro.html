@@ -2185,4 +2185,293 @@ function whatsappBoletoSelecionado(){enviarWhatsappBoletoCliente(boletoSeleciona
 function cancelarBoletoSelecionado(){cancelarBoletoCliente(boletoSelecionadoNumero); fecharSubmodaisBoletos();}
 </script>
 
+
+<script>
+/* ============================================================
+   BOLETOS - LISTA LIMPA COM VISUALIZAR E AÇÕES NOS DETALHES
+============================================================ */
+var boletoSelecionadoNumero = null;
+
+function fibraMoedaBR(v){
+  v = Number(v || 0);
+  return v.toLocaleString("pt-BR", {style:"currency", currency:"BRL"});
+}
+function fibraNormalizarTexto(v){
+  return String(v || "").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
+}
+function fibraNumero(v){
+  if(v === undefined || v === null || v === "") return 0;
+  if(typeof v === "number") return isNaN(v) ? 0 : v;
+  let s = String(v).replace(/[R$\s]/g,"").trim();
+  if(s.includes(",") && s.includes(".")) s = s.replace(/\./g,"").replace(",",".");
+  else if(s.includes(",")) s = s.replace(",",".");
+  const n = Number(s);
+  return isNaN(n) ? 0 : n;
+}
+function fibraValorCampo(obj, campos){
+  for(const c of campos){
+    if(obj && obj[c] !== undefined && obj[c] !== null && String(obj[c]).trim() !== "") return obj[c];
+  }
+  return "";
+}
+function dataHojeISO(){
+  const d = new Date();
+  return d.toISOString().slice(0,10);
+}
+function addMes(data, qtd){
+  const d = new Date(data + "T12:00:00");
+  const dia = d.getDate();
+  d.setMonth(d.getMonth() + qtd);
+  if(d.getDate() < dia) d.setDate(0);
+  return d.toISOString().slice(0,10);
+}
+function addDias(data, dias){
+  const d = new Date(data + "T12:00:00");
+  d.setDate(d.getDate() + dias);
+  return d.toISOString().slice(0,10);
+}
+function clienteAtualBoletos(){
+  try{return typeof clienteDoCadastro==="function" ? clienteDoCadastro() : {};}catch(e){return {}}
+}
+function chaveClienteBoletos(){
+  const c = clienteAtualBoletos();
+  return String(c.loginPppoe || c.login || c.cpfCnpj || c.cpf || c.nome || "").toLowerCase().trim();
+}
+function fibraGetBoletosStorage(){
+  try{
+    const lista = JSON.parse(localStorage.getItem("boletos") || "[]");
+    return Array.isArray(lista) ? lista : [];
+  }catch(e){return []}
+}
+function fibraSalvarBoletosStorage(lista){
+  localStorage.setItem("boletos", JSON.stringify(lista || []));
+}
+function fibraStatusBoleto(b){
+  const s = fibraNormalizarTexto(fibraValorCampo(b, ["status","situacao","estado","baixa","pagamentoStatus"]));
+  if(s.includes("cancel") || s.includes("estornado")) return "cancelado";
+  if(s.includes("pago") || s.includes("baixado") || s.includes("receb")) return "pago";
+  const venc = fibraValorCampo(b, ["vencimento","dataVencimento","dtVencimento","dueDate"]);
+  if(venc){
+    const d = new Date(venc + "T00:00:00");
+    const hoje = new Date(); hoje.setHours(0,0,0,0);
+    if(!isNaN(d.getTime()) && d < hoje) return "vencido";
+  }
+  return "pendente";
+}
+function fibraTotalBoleto(b){
+  return Math.max(fibraNumero(fibraValorCampo(b, ["total","valorTotal","valor","valorBoleto","amount"])), 0);
+}
+function fibraBoletosClienteAtual(){
+  const chave = chaveClienteBoletos();
+  return fibraGetBoletosStorage().filter(b=>{
+    const dono = String(fibraValorCampo(b, ["login","clienteLogin","loginPppoe","cpfCnpj","cpf","cliente","nome"]) || "").toLowerCase().trim();
+    if(!chave) return true;
+    return !dono || dono === chave || dono.includes(chave) || chave.includes(dono);
+  });
+}
+function abrirModalBoletosCliente(){
+  const modal=document.getElementById("modalBoletosCliente");
+  if(!modal) return;
+  modal.classList.add("aberto");
+  modal.setAttribute("aria-hidden","false");
+  renderizarBoletosCliente();
+}
+function fecharModalBoletosCliente(){
+  fecharSubmodaisBoletos();
+  const modal=document.getElementById("modalBoletosCliente");
+  if(!modal) return;
+  modal.classList.remove("aberto");
+  modal.setAttribute("aria-hidden","true");
+}
+function renderizarBoletosCliente(){
+  const tbody=document.getElementById("tbodyBoletosCliente");
+  if(!tbody) return;
+  const boletos=fibraBoletosClienteAtual().sort((a,b)=>String(a.vencimento||"").localeCompare(String(b.vencimento||"")));
+  let vencidos=0, aberto=0, pagos=0;
+  boletos.forEach(b=>{
+    const total=fibraTotalBoleto(b), st=fibraStatusBoleto(b);
+    if(st==="pago") pagos += fibraNumero(b.valorPago || total);
+    else if(st==="vencido") vencidos += total;
+    else if(st==="pendente") aberto += total;
+  });
+  const set=(id,v)=>{const el=document.getElementById(id); if(el) el.textContent=fibraMoedaBR(v)};
+  set("boletoResumoVencidos",vencidos);
+  set("boletoResumoAberto",aberto);
+  set("boletoResumoPagos",pagos);
+  if(!boletos.length){
+    tbody.innerHTML='<tr><td colspan="6">Nenhum boleto encontrado.</td></tr>';
+    return;
+  }
+  tbody.innerHTML=boletos.map((b,i)=>{
+    const numero=fibraValorCampo(b,["numero","id","nossoNumero","titulo"]) || (i+1);
+    const venc=b.vencimento||"--", emissao=b.emissao||"--";
+    const valor=fibraNumero(b.valor), total=fibraTotalBoleto(b);
+    const status=fibraStatusBoleto(b);
+    return `<tr class="linha-clicavel" onclick="abrirDetalhesBoleto('${numero}')">
+      <td><strong class="boleto-numero-link" onclick="event.stopPropagation();abrirDetalhesBoleto('${numero}')">#${numero}</strong></td>
+      <td><b>Vencimento:</b> ${venc}<br><b>Emissão:</b> ${emissao}</td>
+      <td><b>Valor:</b> ${fibraMoedaBR(valor)}</td>
+      <td><strong>${fibraMoedaBR(total)}</strong></td>
+      <td><span class="boleto-status ${status}">${status.charAt(0).toUpperCase()+status.slice(1)}</span></td>
+      <td class="boleto-acoes" onclick="event.stopPropagation()">
+        <button class="btn-visualizar-boleto" title="Visualizar Boleto" onclick="abrirDetalhesBoleto('${numero}')">👁 Visualizar</button>
+      </td>
+    </tr>`;
+  }).join("");
+}
+function abrirModalGerarMensalidades(){
+  const c=clienteAtualBoletos();
+  const modal=document.getElementById("modalGerarMensalidades");
+  if(!modal) return;
+  document.getElementById("mensalidadeValor").value = c.valorMensal || c.valor || "";
+  document.getElementById("mensalidadePrimeiroVencimento").value = dataHojeISO();
+  modal.classList.add("aberto");
+}
+function abrirModalBoletoAvulso(){
+  const modal=document.getElementById("modalBoletoAvulso");
+  if(!modal) return;
+  document.getElementById("avulsoEmissao").value = dataHojeISO();
+  document.getElementById("avulsoVencimento").value = dataHojeISO();
+  modal.classList.add("aberto");
+}
+function fecharSubmodaisBoletos(){
+  document.querySelectorAll(".fibra-submodal").forEach(m=>m.classList.remove("aberto"));
+}
+function gerarMensalidadesCliente(){
+  const c=clienteAtualBoletos(), lista=fibraGetBoletosStorage();
+  const valor=fibraNumero(document.getElementById("mensalidadeValor").value);
+  const primeiro=document.getElementById("mensalidadePrimeiroVencimento").value;
+  const qtd=Math.max(1, Number(document.getElementById("mensalidadeQuantidade").value || 1));
+  const per=document.getElementById("mensalidadePeriodicidade").value;
+  if(!valor || !primeiro){alert("Informe valor e primeiro vencimento."); return;}
+  for(let i=0;i<qtd;i++){
+    const venc = per==="mensal" ? addMes(primeiro,i) : addDias(primeiro, per==="quinzenal" ? i*15 : i*7);
+    lista.push({
+      numero: Date.now()+i,
+      login:c.loginPppoe||c.login||"",
+      nome:c.nome||"",
+      cpfCnpj:c.cpfCnpj||c.cpf||"",
+      categoria:"Mensalidade",
+      descricao:`Mensalidade ${venc.slice(5,7)}/${venc.slice(0,4)}`,
+      emissao:dataHojeISO(),
+      vencimento:venc,
+      valor:valor,
+      total:valor,
+      status:"pendente",
+      origem:"manual"
+    });
+  }
+  fibraSalvarBoletosStorage(lista);
+  fecharSubmodaisBoletos();
+  renderizarBoletosCliente();
+}
+function gerarBoletoAvulsoCliente(){
+  const c=clienteAtualBoletos(), lista=fibraGetBoletosStorage();
+  const valor=fibraNumero(document.getElementById("avulsoValor").value);
+  const venc=document.getElementById("avulsoVencimento").value;
+  if(!valor || !venc){alert("Informe valor e vencimento."); return;}
+  lista.push({
+    numero:Date.now(),
+    login:c.loginPppoe||c.login||"",
+    nome:c.nome||"",
+    cpfCnpj:c.cpfCnpj||c.cpf||"",
+    categoria:document.getElementById("avulsoCategoria").value,
+    descricao:document.getElementById("avulsoDescricao").value || "Boleto Avulso",
+    emissao:document.getElementById("avulsoEmissao").value || dataHojeISO(),
+    vencimento:venc,
+    valor:valor,
+    total:valor,
+    observacao:document.getElementById("avulsoObservacao").value,
+    status:"pendente",
+    origem:"avulso"
+  });
+  fibraSalvarBoletosStorage(lista);
+  fecharSubmodaisBoletos();
+  renderizarBoletosCliente();
+}
+function encontrarBoleto(numero){
+  return fibraGetBoletosStorage().find(b=>String(fibraValorCampo(b,["numero","id","nossoNumero","titulo"]))===String(numero));
+}
+function abrirDetalhesBoleto(numero){
+  boletoSelecionadoNumero=numero;
+  const b=encontrarBoleto(numero);
+  if(!b) return;
+  const c=clienteAtualBoletos(), total=fibraTotalBoleto(b), pago=fibraNumero(b.valorPago || 0);
+  const dif=Math.max(total-pago,0);
+  document.getElementById("conteudoDetalhesBoleto").innerHTML = `
+    <div class="detalhe-grid">
+      <p><b>Cliente</b><span>${c.nome || b.nome || "--"}</span></p>
+      <p><b>Categoria</b><span>${b.categoria || "--"}</span></p>
+      <p><b>Descrição</b><span>${b.descricao || "--"}</span></p>
+      <p><b>Número</b><span>${numero}</span></p>
+      <p><b>Valor do boleto</b><span>${fibraMoedaBR(total)}</span></p>
+      <p><b>Valor pago</b><span>${fibraMoedaBR(pago)}</span></p>
+      <p><b>Diferença</b><span>${fibraMoedaBR(dif)}</span></p>
+      <p><b>Emissão</b><span>${b.emissao || "--"}</span></p>
+      <p><b>Vencimento</b><span>${b.vencimento || "--"}</span></p>
+      <p><b>Status</b><span>${fibraStatusBoleto(b)}</span></p>
+      <p><b>Situação na Efí</b><span>${b.efiStatus || "Aguardando integração"}</span></p>
+      <p><b>Linha Digitável</b><span>${b.linhaDigitavel || "--"}</span></p>
+      <p><b>Pix Copia e Cola</b><span>${b.pix || b.codigoPix || "--"}</span></p>
+      <p><b>Observação</b><span>${b.observacao || "--"}</span></p>
+    </div>`;
+  document.getElementById("modalDetalhesBoleto").classList.add("aberto");
+}
+function abrirBaixaManualNumero(numero){ boletoSelecionadoNumero=numero; abrirModalBaixaManual(); }
+function abrirModalBaixaManual(){
+  const b=encontrarBoleto(boletoSelecionadoNumero);
+  if(!b) return;
+  const total=fibraTotalBoleto(b);
+  document.getElementById("baixaValorBoleto").value = fibraMoedaBR(total);
+  document.getElementById("baixaValorPago").value = total.toFixed(2).replace(".",",");
+  document.getElementById("baixaDataPagamento").value = dataHojeISO();
+  document.getElementById("modalBaixaManual").classList.add("aberto");
+}
+function fecharSubmodalBaixa(){document.getElementById("modalBaixaManual").classList.remove("aberto");}
+function confirmarBaixaManual(){
+  const lista=fibraGetBoletosStorage();
+  const idx=lista.findIndex(b=>String(fibraValorCampo(b,["numero","id","nossoNumero","titulo"]))===String(boletoSelecionadoNumero));
+  if(idx<0) return;
+  lista[idx].status="pago";
+  lista[idx].valorPago=fibraNumero(document.getElementById("baixaValorPago").value);
+  lista[idx].dataPagamento=document.getElementById("baixaDataPagamento").value || dataHojeISO();
+  lista[idx].formaPagamento=document.getElementById("baixaFormaPagamento").value;
+  lista[idx].observacaoBaixa=document.getElementById("baixaObservacao").value;
+  fibraSalvarBoletosStorage(lista);
+  fecharSubmodaisBoletos();
+  renderizarBoletosCliente();
+}
+function segundaViaBoletoCliente(numero){
+  const b=encontrarBoleto(numero); const link=b&&(b.link||b.pdf||b.url||b.segundaVia);
+  if(link) window.open(link,"_blank"); else alert("Segunda via/PDF disponível após integração com a Efí.");
+}
+function copiarPixBoletoCliente(numero){
+  const b=encontrarBoleto(numero); const pix=b&&(b.pix||b.codigoPix||b.copiaCola);
+  if(!pix){alert("Pix disponível após integração com a Efí."); return;}
+  navigator.clipboard?.writeText(pix); alert("Pix copiado.");
+}
+function enviarWhatsappBoletoCliente(numero){
+  const b=encontrarBoleto(numero), c=clienteAtualBoletos();
+  if(!b) return;
+  const tel=String(c.telefone1||c.telefone2||"").replace(/\D/g,"");
+  const msg=`Olá ${c.nome||""}, segue seu boleto.\nNúmero: ${numero}\nVencimento: ${b.vencimento||""}\nValor: ${fibraMoedaBR(fibraTotalBoleto(b))}`;
+  window.open(tel?`https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`:`https://wa.me/?text=${encodeURIComponent(msg)}`,"_blank");
+}
+function marcarBoletoPagoCliente(numero){ boletoSelecionadoNumero=numero; abrirModalBaixaManual(); }
+function cancelarBoletoCliente(numero){ excluirBoletoCliente(numero); }
+function excluirBoletoCliente(numero){
+  if(!confirm("Deseja realmente excluir este boleto?\\n\\nEsta ação não poderá ser desfeita.")) return;
+  const lista=fibraGetBoletosStorage();
+  const nova=lista.filter(b=>String(fibraValorCampo(b,["numero","id","nossoNumero","titulo"]))!==String(numero));
+  fibraSalvarBoletosStorage(nova);
+  fecharSubmodaisBoletos();
+  renderizarBoletosCliente();
+}
+function segundaViaBoletoSelecionado(){segundaViaBoletoCliente(boletoSelecionadoNumero);}
+function copiarPixBoletoSelecionado(){copiarPixBoletoCliente(boletoSelecionadoNumero);}
+function whatsappBoletoSelecionado(){enviarWhatsappBoletoCliente(boletoSelecionadoNumero);}
+function excluirBoletoSelecionado(){excluirBoletoCliente(boletoSelecionadoNumero);}
+function cancelarBoletoSelecionado(){excluirBoletoSelecionado();}
+</script>
+
 </body></html>
