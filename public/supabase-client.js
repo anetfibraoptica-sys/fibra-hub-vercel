@@ -279,10 +279,33 @@ const FibraDB = {
     return [];
   },
 
+
+  deduplicarBoletos(boletos){
+    const mapa = new Map();
+    (boletos || []).forEach((b, idx) => {
+      const numero = String(b.numero || b.id || b.nossoNumero || b.titulo || "").trim();
+      const chave = numero || (String(b.login || "") + "|" + String(b.vencimento || "") + "|" + String(b.valor || "") + "|" + idx);
+      mapa.set(chave, {...(mapa.get(chave) || {}), ...b, numero: numero || chave});
+    });
+    return Array.from(mapa.values());
+  },
+
   async salvarBoletos(boletos){
-    const rows = (boletos || []).map(b => this.boletoToRow(b)).filter(r => r.numero);
+    const limpos = this.deduplicarBoletos(boletos || []);
+    const rows = limpos.map(b => this.boletoToRow(b)).filter(r => r.numero);
     if(!rows.length) return [];
-    return await this.upsert("boletos", rows, "numero");
+
+    const retorno = [];
+    const lote = 200;
+
+    for(let i = 0; i < rows.length; i += lote){
+      const parte = rows.slice(i, i + lote);
+      const r = await this.upsert("boletos", parte, "numero");
+      if(Array.isArray(r)) retorno.push(...r);
+    }
+
+    this.setCacheBoletos(limpos);
+    return retorno;
   },
 
   async salvarBoleto(boleto){

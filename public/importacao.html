@@ -916,6 +916,17 @@ window.importarReceitaNetHub = async function(ev){
     console.error(e);
   }
 };
+
+function fsDeduplicarBoletos(lista){
+  const mapa = new Map();
+  (lista || []).forEach((b, idx) => {
+    const numero = String(b.numero || b.id || b.nossoNumero || b.titulo || "").trim();
+    const chave = numero || (String(b.login || "") + "|" + String(b.vencimento || "") + "|" + String(b.valor || "") + "|" + idx);
+    mapa.set(chave, {...(mapa.get(chave) || {}), ...b, numero: numero || chave});
+  });
+  return Array.from(mapa.values());
+}
+
 window.importarBoletosReceitaNetHub = async function(ev){
   const file = ev.target.files && ev.target.files[0];
   if(!file) return;
@@ -924,10 +935,12 @@ window.importarBoletosReceitaNetHub = async function(ev){
     if(box) box.innerHTML = "Lendo CSV de boletos...";
     const text = await fsReadFile(file);
     const rows = fsParseCsv(text);
-    const boletos = rows.map(fsBoletoFromRow).filter(Boolean);
+    let boletos = rows.map(fsBoletoFromRow).filter(Boolean);
+    const totalAntesDedup = boletos.length;
+    boletos = fsDeduplicarBoletos(boletos);
     if(!boletos.length) throw new Error("Nenhum boleto encontrado no arquivo.");
     ["boletos","titulos","cobrancas"].forEach(k => localStorage.setItem(k, JSON.stringify(boletos)));
-    if(box) box.innerHTML = `Encontrados ${boletos.length} boletos.<br>☁ Salvando no Supabase...`;
+    if(box) box.innerHTML = `Encontrados ${totalAntesDedup} boletos no CSV.<br>Após remover duplicados: ${boletos.length}.<br>☁ Salvando no Supabase...`;
     await fsSalvarBoletosSupabase(boletos);
     if(box) box.innerHTML += `<br>✅ Boletos salvos no Supabase: ${boletos.length}`;
   }catch(e){
