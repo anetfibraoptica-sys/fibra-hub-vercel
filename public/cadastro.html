@@ -105,7 +105,7 @@ fibraCadastroLimparStoragesSelecao();
     <button class="sc azul-claro">↻<span>Rescisão</span></button>
     <button class="sc verde">📄<span>Contrato</span></button>
     <button class="sc cinza">▤<span>Drive</span></button>
-    <button class="sc ciano">▥<span>Boleto Avulso</span></button>
+    <button type="button" onclick="abrirModalBoletosCliente();return false;" class="sc ciano">▥<span>Boleto Avulso</span></button>
     <button class="sc vermelho">▥<span>Boletos</span></button>
     <button class="sc verde">▥<span>Gerar Carnê</span></button>
     <button class="sc azul">▥<span>Recibos/Carnês</span></button>
@@ -1484,7 +1484,7 @@ function fibraNormalizarStatusClienteCadastro(c){
         <button type="button" class="fibra-help-btn">?</button>
         <strong>Lista de Boletos</strong>
       </div>
-      <button type="button" class="fibra-modal-close" onclick="fecharModalBoletosCliente()">×</button>
+      <button type="button" class="fibra-modal-close" onclick="abrirModalBoletosCliente();return false;">×</button>
     </div>
 
     <div class="fibra-boletos-resumo">
@@ -1524,8 +1524,8 @@ function fibraNormalizarStatusClienteCadastro(c){
     </div>
 
     <div class="fibra-boletos-footer">
-      <button type="button" onclick="gerarBoletoCliente()">Gerar Novo Boleto</button>
-      <button type="button" onclick="renderizarBoletosCliente()">Atualizar</button>
+      <button type="button" onclick="abrirModalBoletosCliente();return false;">Gerar Novo Boleto</button>
+      <button type="button" onclick="abrirModalBoletosCliente();return false;">Atualizar</button>
       <button type="button" onclick="fecharModalBoletosCliente()">Fechar</button>
     </div>
   </div>
@@ -1761,6 +1761,24 @@ function verDetalhesBoleto(index){
   const b = fibraBoletosClienteAtual()[index];
   alert(JSON.stringify(b || {}, null, 2));
 }
+</script>
+
+
+<script>
+/* FIX: abrir modal ao clicar no botão existente Boletos */
+document.addEventListener("click", function(e){
+  const el = e.target.closest("a,button,div,span");
+  if(!el) return;
+
+  const texto = (el.textContent || "").trim().toLowerCase();
+  if(texto === "boletos" || texto.includes("boletos")){
+    if(typeof abrirModalBoletosCliente === "function"){
+      e.preventDefault();
+      abrirModalBoletosCliente();
+      return false;
+    }
+  }
+}, true);
 </script>
 
 </body></html>

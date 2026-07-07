@@ -5410,3 +5410,24 @@ button,
   .fibra-boletos-resumo{grid-template-columns:1fr;}
   .fibra-boletos-toolbar{flex-direction:column;}
 }
+
+
+/* FIX: garantir exibição do modal de boletos */
+.fibra-modal-boletos{
+  display:none;
+  position:fixed;
+  inset:0;
+  z-index:999999 !important;
+}
+.fibra-modal-boletos.aberto{
+  display:block !important;
+}
+.fibra-modal-boletos-backdrop{
+  position:absolute;
+  inset:0;
+  background:rgba(0,0,0,.55);
+}
+.fibra-modal-boletos-box{
+  position:relative;
+  z-index:1000000;
+}
