@@ -5155,3 +5155,42 @@ button,
   color:#fff !important;
 }
 
+
+
+
+/* Ajuste largura botões servidor/excluir */
+.save-servidor-wrap{
+  width:100% !important;
+  display:flex !important;
+  flex-direction:column !important;
+  gap:10px !important;
+}
+.save-servidor-wrap .save-red,
+.save-servidor-wrap .delete-client-btn{
+  width:100% !important;
+  display:block !important;
+  box-sizing:border-box !important;
+  flex:0 0 auto !important;
+}
+.cadastro-save-row{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+.cadastro-save-row > button,
+.cadastro-save-row > .save-servidor-wrap{
+  width:100% !important;
+}
+
+
+/* Ajuste SOMENTE de tamanho - preserva cores existentes */
+.save-servidor-wrap{
+  width:100% !important;
+}
+.save-servidor-wrap .save-red,
+.save-servidor-wrap .delete-client-btn{
+  width:100% !important;
+  min-height:48px !important;
+  box-sizing:border-box !important;
+  align-self:stretch !important;
+}
