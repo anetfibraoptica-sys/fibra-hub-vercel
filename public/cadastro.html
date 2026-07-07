@@ -9,6 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@300;400;600;700&display=swap" rel="stylesheet">
 
 <script src="compat-vercel.js"></script>
+<script src="fix-final.js"></script>
 </head>
 <body onload="protegerPagina(); iniciarSocket(); carregarCadastroClienteHub();">
 
@@ -344,7 +345,7 @@ fibraCadastroLimparStoragesSelecao();
               <label>Desconto</label>
               <div class="desconto-row">
                 <label class="checkline"><input id="cadDescontoAteVenc" type="checkbox"> Até Vencimento?</label>
-                <input id="cadDesconto" type="number" step="0.01" value="0,00">
+                <input id="cadDesconto" type="text" step="0.01" value="R$ 0,00">
               </div>
             </div>
 

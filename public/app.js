@@ -1,4 +1,14 @@
 
+/* Fix número BR para campos input number */
+function fibraSetValorCampo(id, valor){
+  const el = document.getElementById(id);
+  if(!el) return;
+  let v = String(valor ?? "");
+  if(el.type === "number") v = v.replace(/\./g, "").replace(",", ".");
+  el.value = v;
+}
+
+
 /* ============================================================
    AJUSTE: REMOVER GRÁFICO EM TEMPO REAL
    Mantém dashboard, clientes online e atualização dos dados,
