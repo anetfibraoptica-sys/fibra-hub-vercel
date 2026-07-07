@@ -170,10 +170,43 @@ function getClientesBase(){
   return [];
 }
 function statusIconeCliente(c){
-  const status = normalizarTexto(primeiroValor(c, ["status","situacao","statusCobranca"]));
-  if(status.includes("bloque") || status.includes("cancel")){
+  const status = normalizarTexto(primeiroValor(c, ["status","situacao","statusCobranca","cli_status","estadoCliente","status_cliente","cobranca"]) || "");
+  const bloqueio = primeiroValor(c, ["bloqueio","dataBloqueio","dtBloqueio","cli_bloqueado"]) || "";
+  const cancelamento = primeiroValor(c, ["cancelamento","dataCancelamento","dtCancelamento","cli_dtcancelamento"]) || "";
+  const confiancaRaw = primeiroValor(c, ["liberacaoConfianca","liberadoConfianca","liberado","dataLiberacaoConfianca","cli_liberado","confianca","liberacao"]) || "";
+
+  function parseData(v){
+    if(!v) return null;
+    v = String(v).trim();
+    if(!v || v === "0000-00-00") return null;
+    let m = v.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if(m) return new Date(Number(m[1]), Number(m[2])-1, Number(m[3]), 23, 59, 59);
+    m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+    if(m) return new Date(Number(m[3]), Number(m[2])-1, Number(m[1]), 23, 59, 59);
+    const d = new Date(v);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  function confiancaValida(){
+    const d = parseData(confiancaRaw);
+    if(!d) return false;
+    const hoje = new Date();
+    hoje.setHours(0,0,0,0);
+    return d >= hoje;
+  }
+
+  if(status.includes("cancel") || status.includes("encerrado") || String(cancelamento).trim()){
     return '<span class="cliente-status bloqueado">♟</span>';
   }
+
+  if(confiancaValida()){
+    return '<span class="cliente-status ativo">✓</span>';
+  }
+
+  if(status.includes("bloque") || status.includes("suspens") || status.includes("cortado") || String(bloqueio).trim()){
+    return '<span class="cliente-status bloqueado">♟</span>';
+  }
+
   return '<span class="cliente-status ativo">✓</span>';
 }
 function montarEnderecoCliente(c){
@@ -211,18 +244,116 @@ function preencherVencimentos(){
   sel.dataset.ok = "1";
 }
 function atualizarContadores(clientes){
+  clientes = Array.isArray(clientes) ? clientes : [];
   const total = clientes.length;
-  const bloq = clientes.filter(c=>normalizarTexto(JSON.stringify(c)).includes("bloque")).length;
-  const cancel = clientes.filter(c=>normalizarTexto(JSON.stringify(c)).includes("cancel")).length;
-  const isentos = clientes.filter(c=>normalizarTexto(JSON.stringify(c)).includes("isento")).length;
-  const ativos = Math.max(total - bloq - cancel, 0);
-  const set = (id,v)=>{ const el=document.getElementById(id); if(el) el.textContent=v; };
-  set("qtdTotal", total);
+
+  function texto(c, campos){
+    return normalizarTexto(primeiroValor(c, campos) || "");
+  }
+
+  function valorCampo(c, campos){
+    return primeiroValor(c, campos) || "";
+  }
+
+  function temData(c, campos){
+    return campos.some(k => {
+      const v = c && c[k];
+      return v !== undefined && v !== null && String(v).trim() !== "" && String(v).trim() !== "0000-00-00";
+    });
+  }
+
+  function parseData(v){
+    if(!v) return null;
+    v = String(v).trim();
+    if(!v || v === "0000-00-00") return null;
+
+    let m = v.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if(m) return new Date(Number(m[1]), Number(m[2])-1, Number(m[3]), 23, 59, 59);
+
+    m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+    if(m) return new Date(Number(m[3]), Number(m[2])-1, Number(m[1]), 23, 59, 59);
+
+    const d = new Date(v);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  function ehCancelado(c){
+    const s = texto(c, ["status","situacao","statusCobranca","cli_status","estadoCliente","status_cliente","cobranca"]);
+    return (
+      s.includes("cancel") ||
+      s.includes("encerrado") ||
+      temData(c, ["cancelamento","dataCancelamento","dtCancelamento","cli_dtcancelamento"])
+    );
+  }
+
+  function ehIsento(c){
+    const s = texto(c, ["status","situacao","statusCobranca","cli_boleto","boleto","cobranca","tipoCobranca"]);
+    return (
+      s.includes("isento") ||
+      s === "n" ||
+      s === "nao cobrar" ||
+      s === "não cobrar"
+    );
+  }
+
+  function confiancaValida(c){
+    const raw = valorCampo(c, [
+      "liberacaoConfianca",
+      "liberadoConfianca",
+      "liberado",
+      "dataLiberacaoConfianca",
+      "cli_liberado",
+      "confianca",
+      "liberacao"
+    ]);
+    const d = parseData(raw);
+    if(!d) return false;
+
+    const hoje = new Date();
+    hoje.setHours(0,0,0,0);
+
+    return d >= hoje;
+  }
+
+  function ehBloqueado(c){
+    const s = texto(c, ["status","situacao","statusCobranca","cli_status","estadoCliente","status_cliente","cobranca"]);
+    return (
+      s.includes("bloque") ||
+      s.includes("suspens") ||
+      s.includes("cortado") ||
+      temData(c, ["bloqueio","dataBloqueio","dtBloqueio","cli_bloqueado"])
+    );
+  }
+
+  /*
+    Prioridade:
+    1. Cancelado
+    2. Isento
+    3. Liberação em Confiança válida = Ativo
+    4. Bloqueado
+    5. Ativo
+
+    Quando a confiança vencer, se ainda houver bloqueio, volta para Bloqueados.
+  */
+  const cancel = clientes.filter(c => ehCancelado(c)).length;
+  const isentos = clientes.filter(c => !ehCancelado(c) && ehIsento(c)).length;
+  const confianca = clientes.filter(c => !ehCancelado(c) && !ehIsento(c) && confiancaValida(c)).length;
+  const bloq = clientes.filter(c => !ehCancelado(c) && !ehIsento(c) && !confiancaValida(c) && ehBloqueado(c)).length;
+  const ativos = Math.max(total - cancel - isentos - bloq, 0);
+
+  const set = (id, valor) => {
+    const el = document.getElementById(id);
+    if(el) el.textContent = valor;
+  };
+
   set("qtdAtivos", ativos);
   set("qtdBloqueados", bloq);
   set("qtdCancelados", cancel);
   set("qtdIsentos", isentos);
+  set("qtdTotal", total);
   set("qtdNaoAtivos", 0);
+
+  ["qtdConfianca","qtdLiberadosConfianca","qtdLiberacaoConfianca"].forEach(id => set(id, confianca));
 }
 function carregarClientesReceitaNet(){
   preencherVencimentos();

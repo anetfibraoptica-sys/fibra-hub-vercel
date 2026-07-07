@@ -1163,4 +1163,53 @@ document.addEventListener("DOMContentLoaded", function(){
 })();
 </script>
 
+
+<script>
+/* NORMALIZAR STATUS CLIENTE FIBRAHUB
+   Pago/em dia fica ativo; bloqueado/isento/cancelado contam nos cards corretos.
+*/
+function fibraNormalizarStatusClienteCadastro(c){
+  if(!c) return c;
+
+  function parseData(v){
+    if(!v) return null;
+    v = String(v).trim();
+    if(!v || v === "0000-00-00") return null;
+    let m = v.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if(m) return new Date(Number(m[1]), Number(m[2])-1, Number(m[3]), 23, 59, 59);
+    m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+    if(m) return new Date(Number(m[3]), Number(m[2])-1, Number(m[1]), 23, 59, 59);
+    const d = new Date(v);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  function confiancaValida(v){
+    const d = parseData(v);
+    if(!d) return false;
+    const hoje = new Date();
+    hoje.setHours(0,0,0,0);
+    return d >= hoje;
+  }
+
+  const statusCob = String(c.statusCobranca || c.cli_boleto || c.boleto || "").toLowerCase();
+  const bloqueio = String(c.bloqueio || c.cli_bloqueado || "").trim();
+  const cancelamento = String(c.cancelamento || c.cli_dtcancelamento || "").trim();
+  const confianca = String(c.liberacaoConfianca || c.cli_liberado || c.liberadoConfianca || "").trim();
+
+  if(cancelamento){
+    c.status = "cancelado";
+  }else if(statusCob.includes("isento") || statusCob === "n"){
+    c.status = "isento";
+  }else if(confiancaValida(confianca)){
+    c.status = "ativo";
+  }else if(bloqueio){
+    c.status = "bloqueado";
+  }else{
+    c.status = c.status || "ativo";
+  }
+
+  return c;
+}
+</script>
+
 </body></html>
