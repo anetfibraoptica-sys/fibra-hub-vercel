@@ -698,4 +698,264 @@ function corrigirBoletosImportadosReceitaNet(){
 }
 
 </script>
+
+<script>
+/* ============================================================
+   IMPORTAÇÃO DIRETA SUPABASE - CORREÇÃO DEFINITIVA
+============================================================ */
+function fsNorm(v){
+  return String(v || "")
+    .replace(/\uFFFD/g,"")
+    .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .replace(/[^\w\s@./-]/g,"")
+    .replace(/\s+/g," ")
+    .trim()
+    .toLowerCase();
+}
+function fsDoc(v){ return String(v || "").replace(/\D/g,""); }
+function fsMoney(v){
+  if(v === null || v === undefined || v === "") return 0;
+  let s = String(v).replace(/[R$\s]/g,"").trim();
+  if(s.includes(",") && s.includes(".")) s = s.replace(/\./g,"").replace(",",".");
+  else if(s.includes(",")) s = s.replace(",",".");
+  s = s.replace(/[^\d.-]/g,"");
+  const n = Number(s);
+  return isNaN(n) ? 0 : n;
+}
+function fsDate(v){
+  if(!v) return null;
+  v = String(v).trim();
+  let m = v.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(m) return `${m[1]}-${m[2]}-${m[3]}`;
+  m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if(m) return `${m[3]}-${m[2]}-${m[1]}`;
+  return null;
+}
+function fsDetectSep(text){
+  const first = text.split(/\r?\n/).find(l => l.trim()) || "";
+  const sc = (first.match(/;/g)||[]).length;
+  const cc = (first.match(/,/g)||[]).length;
+  const tc = (first.match(/\t/g)||[]).length;
+  if(tc > sc && tc > cc) return "\t";
+  return sc >= cc ? ";" : ",";
+}
+function fsParseCsv(text){
+  const sep = fsDetectSep(text);
+  const rows = [];
+  let row = [], cur = "", q = false;
+  for(let i=0;i<text.length;i++){
+    const ch = text[i], nx = text[i+1];
+    if(ch === '"' && nx === '"'){ cur += '"'; i++; continue; }
+    if(ch === '"'){ q = !q; continue; }
+    if(ch === sep && !q){ row.push(cur.trim()); cur = ""; continue; }
+    if((ch === "\n" || ch === "\r") && !q){
+      if(ch === "\r" && nx === "\n") i++;
+      row.push(cur.trim()); cur = "";
+      if(row.some(v => String(v).trim() !== "")) rows.push(row);
+      row = [];
+      continue;
+    }
+    cur += ch;
+  }
+  row.push(cur.trim());
+  if(row.some(v => String(v).trim() !== "")) rows.push(row);
+  if(rows.length < 2) return [];
+  const headers = rows[0].map(h => fsNorm(h));
+  return rows.slice(1).map(cols => {
+    const obj = {};
+    headers.forEach((h,i) => obj[h] = cols[i] || "");
+    return {obj, cols};
+  });
+}
+function fsGet(row, names, idxs){
+  for(const n of names || []){
+    const k = fsNorm(n);
+    if(row.obj[k] !== undefined && String(row.obj[k]).trim()) return row.obj[k];
+  }
+  for(const n of names || []){
+    const k = fsNorm(n);
+    const found = Object.keys(row.obj).find(x => x === k || x.includes(k) || k.includes(x));
+    if(found && String(row.obj[found]).trim()) return row.obj[found];
+  }
+  for(const i of idxs || []){
+    if(row.cols[i] !== undefined && String(row.cols[i]).trim()) return row.cols[i];
+  }
+  return "";
+}
+function fsReadFile(file){
+  return new Promise((resolve,reject) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve(fr.result);
+    fr.onerror = reject;
+    fr.readAsText(file, "UTF-8");
+  });
+}
+function fsClienteFromRow(row){
+  const login = fsGet(row,["Login","Login PPPoE","Usuario","Usuário"],[0]);
+  const nome = fsGet(row,["Nome","Cliente","Nome Cliente"],[5,1]);
+  const cpf = fsGet(row,["CPF","CPF/CNPJ","Documento"],[3,2]);
+  const cnpj = fsGet(row,["CNPJ"],[2]);
+  const servidor = fsGet(row,["Servidor"],[32]);
+  const plano = fsGet(row,["Plano","Planos de Cobranças","Planos de Cobrancas","Profile","Banda de Tráfego/Profile"],[41,34]);
+  if(!login && !nome && !cpf && !cnpj) return null;
+  return {
+    loginPppoe: login,
+    login: login,
+    nome: nome,
+    cpfCnpj: cpf || cnpj,
+    cpf: cpf,
+    cnpj: cnpj,
+    telefone1: fsGet(row,["Telefone 1","Telefone","Celular"],[15]),
+    telefone2: fsGet(row,["Telefone 2"],[16]),
+    telefone3: fsGet(row,["Telefone 3"],[17]),
+    email: fsGet(row,["Email","E-mail"],[26]),
+    endereco: fsGet(row,["Endereço","Endereco"],[6]),
+    referencia: fsGet(row,["Referência","Referencia"],[7]),
+    cidade: fsGet(row,["Cidade"],[8]),
+    uf: fsGet(row,["UF"],[9]),
+    bairro: fsGet(row,["Bairro"],[10]),
+    cep: fsGet(row,["CEP"],[11]),
+    complemento: fsGet(row,["Complemento"],[12]),
+    diaVencimento: Number(fsDoc(fsGet(row,["Dia de Vencimento","Dia Vencimento"],[14]))) || null,
+    plano: plano,
+    valorMensal: fsMoney(fsGet(row,["Valor Mensal","Valor","Mensalidade"],[])),
+    servidorReceita: servidor,
+    servidorIp: fsGet(row,["Servidor IP"],[33]),
+    profile: fsGet(row,["Profile","Banda de Tráfego/Profile"],[34]),
+    ip: fsGet(row,["IP"],[35]),
+    interface: fsGet(row,["Interface"],[36]),
+    tecnologia: fsGet(row,["Tecnologia"],[37]),
+    elementoRede: fsGet(row,["Elemento de Rede"],[38]),
+    mac: fsGet(row,["MAC"],[27]),
+    macOnu: fsGet(row,["MAC/ONU"],[39]),
+    serialOnu: fsGet(row,["Serial ONU"],[40]),
+    status: "ativo",
+    origem: "ReceitaNet CSV",
+    atualizadoEm: new Date().toISOString()
+  };
+}
+function fsStatusBoleto(status, pagamento, vencimento){
+  const s = fsNorm(status);
+  if(s.includes("cancel") || s.includes("estornado")) return "cancelado";
+  if(s.includes("pago") || s.includes("baixado") || s.includes("receb")) return "pago";
+  if(s.includes("pendente") || s === "" || s.includes("aberto")){
+    if(vencimento){
+      const d = new Date(vencimento + "T00:00:00");
+      const h = new Date(); h.setHours(0,0,0,0);
+      if(!isNaN(d.getTime()) && d < h) return "vencido";
+    }
+    return "pendente";
+  }
+  if(pagamento) return "pago";
+  return "pendente";
+}
+function fsBoletoFromRow(row){
+  const numero = fsGet(row,["Nº Boleto","NÂº Boleto","N Boleto","Numero Boleto","Número Boleto","Numero","ID"],[4]);
+  const login = fsGet(row,["Login","Login PPPoE","Cliente Login","Usuario","Usuário"],[0]);
+  const nome = fsGet(row,["Nome","Cliente","Nome Cliente"],[1]);
+  const cpf = fsGet(row,["CPF","CPF/CNPJ","Documento"],[2]);
+  const emissao = fsDate(fsGet(row,["Emissão","Emissao","Data Emissão","Data Emissao"],[5]));
+  const vencimento = fsDate(fsGet(row,["Vencimento","Data Vencimento","Data de Vencimento"],[6]));
+  const pagamento = fsDate(fsGet(row,["Pagamento","Data Pagamento","Data de Pagamento"],[7]));
+  const valor = fsMoney(fsGet(row,["Valor Boleto","Valor do Boleto","Valor","Mensalidade"],[9]));
+  const valorPago = fsMoney(fsGet(row,["Valor Pago","Pago","Valor Recebido"],[10]));
+  const desconto = fsMoney(fsGet(row,["Desconto"],[8]));
+  const statusRaw = fsGet(row,["Status","Situação","Situacao","Estado"],[11]);
+  if(!numero && !login && !nome && !cpf && !valor && !vencimento) return null;
+  const status = fsStatusBoleto(statusRaw, pagamento, vencimento);
+  return {
+    numero: String(numero || Date.now() + Math.floor(Math.random()*9999)),
+    login: login,
+    nome: nome,
+    cpfCnpj: cpf,
+    categoria: "Mensalidade",
+    descricao: "Boleto importado ReceitaNet",
+    emissao: emissao,
+    vencimento: vencimento,
+    pagamento: pagamento,
+    desconto: desconto,
+    valor: valor,
+    total: valor,
+    valorPago: status === "pago" ? (valorPago || valor) : valorPago,
+    status: status,
+    banco: fsGet(row,["Banco"],[12]),
+    agenciaConta: fsGet(row,["Agencia-Conta/Sigla","Agência-Conta/Sigla"],[13]),
+    identificacaoCarne: fsGet(row,["Identificação/Carnê","Identificacao/Carne","Identificação","Carnê"],[14]),
+    origem: "ReceitaNet Boletos CSV",
+    importadoEm: new Date().toISOString()
+  };
+}
+async function fsSalvarClientesSupabase(clientes){
+  if(!window.FibraDB) throw new Error("FibraDB não carregou.");
+  await FibraDB.salvarClientes(clientes);
+  await FibraDB.carregarClientes();
+}
+async function fsSalvarBoletosSupabase(boletos){
+  if(!window.FibraDB) throw new Error("FibraDB não carregou.");
+  await FibraDB.salvarBoletos(boletos);
+  await FibraDB.carregarBoletos();
+}
+window.importarReceitaNetHub = async function(ev){
+  const file = ev.target.files && ev.target.files[0];
+  if(!file) return;
+  const box = document.getElementById("resultadoImportacao");
+  try{
+    if(box) box.innerHTML = "Lendo CSV de clientes...";
+    const text = await fsReadFile(file);
+    const rows = fsParseCsv(text);
+    const clientes = rows.map(fsClienteFromRow).filter(Boolean);
+    if(!clientes.length) throw new Error("Nenhum cliente encontrado no arquivo.");
+    ["clientes","clientesReceitaNet","fibra_clientes","clientes_importados"].forEach(k => localStorage.setItem(k, JSON.stringify(clientes)));
+    if(box) box.innerHTML = `Encontrados ${clientes.length} clientes.<br>☁ Salvando no Supabase...`;
+    await fsSalvarClientesSupabase(clientes);
+    if(box) box.innerHTML += `<br>✅ Clientes salvos no Supabase: ${clientes.length}`;
+    const a = document.getElementById("impEncontrados"); if(a) a.textContent = clientes.length;
+    const t = document.getElementById("impTotalClientes"); if(t) t.textContent = clientes.length;
+  }catch(e){
+    if(box) box.innerHTML = "❌ Erro na importação: " + e.message;
+    console.error(e);
+  }
+};
+window.importarBoletosReceitaNetHub = async function(ev){
+  const file = ev.target.files && ev.target.files[0];
+  if(!file) return;
+  const box = document.getElementById("resultadoImportacaoBoletos");
+  try{
+    if(box) box.innerHTML = "Lendo CSV de boletos...";
+    const text = await fsReadFile(file);
+    const rows = fsParseCsv(text);
+    const boletos = rows.map(fsBoletoFromRow).filter(Boolean);
+    if(!boletos.length) throw new Error("Nenhum boleto encontrado no arquivo.");
+    ["boletos","titulos","cobrancas"].forEach(k => localStorage.setItem(k, JSON.stringify(boletos)));
+    if(box) box.innerHTML = `Encontrados ${boletos.length} boletos.<br>☁ Salvando no Supabase...`;
+    await fsSalvarBoletosSupabase(boletos);
+    if(box) box.innerHTML += `<br>✅ Boletos salvos no Supabase: ${boletos.length}`;
+  }catch(e){
+    if(box) box.innerHTML = "❌ Erro na importação de boletos: " + e.message;
+    console.error(e);
+  }
+};
+window.testarSupabaseFibra = async function(){
+  const box = document.getElementById("resultadoImportacao") || document.body;
+  try{
+    const clientes = await FibraDB.carregarClientes();
+    const boletos = await FibraDB.carregarBoletos();
+    alert(`Supabase OK\nClientes: ${clientes.length}\nBoletos: ${boletos.length}`);
+  }catch(e){
+    alert("Erro Supabase: " + e.message);
+  }
+};
+document.addEventListener("DOMContentLoaded", function(){
+  const panel = document.querySelector(".cadastro-actions");
+  if(panel && !document.getElementById("btnTestarSupabaseFibra")){
+    const b = document.createElement("button");
+    b.id = "btnTestarSupabaseFibra";
+    b.type = "button";
+    b.textContent = "Testar Supabase";
+    b.onclick = testarSupabaseFibra;
+    panel.appendChild(b);
+  }
+});
+</script>
+
 </body></html>
