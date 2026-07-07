@@ -2587,4 +2587,28 @@ function cancelarBoletoSelecionado(){excluirBoletoSelecionado();}
 })();
 </script>
 
+
+<script>
+/* CORREÇÃO STATUS NO MODAL DE BOLETOS */
+window.fibraStatusBoleto = function(b){
+  const raw = String((b && (b.statusOriginal || b.statusReceitaNet || b.status || b.situacao || b.estado)) || "")
+    .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .toLowerCase().trim();
+
+  if(raw.includes("cancel") || raw.includes("estornado")) return "cancelado";
+  if(raw.includes("pago") || raw.includes("baixado") || raw.includes("receb")) return "pago";
+
+  // Pendente do ReceitaNet deve aparecer como Pendente ou Vencido conforme a data.
+  const venc = b && (b.vencimento || b.dataVencimento || b.dtVencimento);
+  if(venc){
+    const d = new Date(String(venc).slice(0,10) + "T00:00:00");
+    const hoje = new Date();
+    hoje.setHours(0,0,0,0);
+    if(!isNaN(d.getTime()) && d < hoje) return "vencido";
+  }
+
+  return "pendente";
+};
+</script>
+
 </body></html>

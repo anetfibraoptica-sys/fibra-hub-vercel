@@ -376,6 +376,7 @@ async function importarBoletosReceitaNetHub(ev){
   localStorage.setItem("boletos",JSON.stringify(final));
   localStorage.setItem("titulos",JSON.stringify(final));
   localStorage.setItem("cobrancas",JSON.stringify(final));
+  corrigirBoletosImportadosReceitaNet();
   const vinculoBoletosClientes = vincularBoletosNosClientesFibra(final);
   const st=atualizarClientesPorBoletos(final);
   localStorage.setItem("ultimaImportacaoBoletosReceitaNet",JSON.stringify({arquivo:file.name,encontrados:importados.length,novos,atualizados,total:final.length,status:st,data:new Date().toISOString()}));
@@ -612,6 +613,82 @@ function bParse(text){
   }
 
   return arr;
+}
+
+
+/* ============================================================
+   CORREÇÃO STATUS RECEITANET
+   Respeita Status do CSV: Pendente não pode virar Pago por causa de valor/data mal interpretada.
+============================================================ */
+function bStatusImportado(status, pagamento, venc){
+  const s = bNorm(status);
+
+  if(s.includes("cancel") || s.includes("estornado")){
+    return "cancelado";
+  }
+
+  if(s.includes("pago") || s.includes("baixado") || s.includes("receb")){
+    return "pago";
+  }
+
+  // Se o ReceitaNet disse Pendente, nunca marca como pago.
+  if(s.includes("pendente") || s === "" || s.includes("aberto")){
+    if(venc){
+      const d = new Date(bParseData(venc) + "T00:00:00");
+      const hoje = new Date();
+      hoje.setHours(0,0,0,0);
+      if(!isNaN(d.getTime()) && d < hoje){
+        return "vencido";
+      }
+    }
+    return "pendente";
+  }
+
+  // Só usa data de pagamento como pago quando o status não veio como pendente.
+  if(pagamento && String(pagamento).trim() && String(pagamento).trim() !== "0.00"){
+    return "pago";
+  }
+
+  if(venc){
+    const d = new Date(bParseData(venc) + "T00:00:00");
+    const hoje = new Date();
+    hoje.setHours(0,0,0,0);
+    if(!isNaN(d.getTime()) && d < hoje){
+      return "vencido";
+    }
+  }
+
+  return "pendente";
+}
+
+function corrigirBoletosImportadosReceitaNet(){
+  let boletos = [];
+  try{ boletos = JSON.parse(localStorage.getItem("boletos") || "[]"); }catch(e){ boletos = []; }
+  if(!Array.isArray(boletos)) boletos = [];
+
+  boletos = boletos.map(b => {
+    const statusOriginal = b.statusReceitaNet || b.statusOriginal || b.status || "";
+    const statusCorrigido = bStatusImportado(statusOriginal, b.pagamento || b.dataPagamento || "", b.vencimento || "");
+    return {
+      ...b,
+      statusOriginal: statusOriginal,
+      status: statusCorrigido,
+      valorPago: statusCorrigido === "pago" ? (Number(b.valorPago || b.total || b.valor || 0)) : Number(b.valorPago || 0)
+    };
+  });
+
+  localStorage.setItem("boletos", JSON.stringify(boletos));
+  localStorage.setItem("titulos", JSON.stringify(boletos));
+  localStorage.setItem("cobrancas", JSON.stringify(boletos));
+
+  if(typeof vincularBoletosNosClientesFibra === "function"){
+    vincularBoletosNosClientesFibra(boletos);
+  }
+  if(typeof atualizarClientesPorBoletos === "function"){
+    atualizarClientesPorBoletos(boletos);
+  }
+
+  return boletos.length;
 }
 
 </script>
