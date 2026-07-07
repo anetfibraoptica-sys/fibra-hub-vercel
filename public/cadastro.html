@@ -2474,4 +2474,117 @@ function excluirBoletoSelecionado(){excluirBoletoCliente(boletoSelecionadoNumero
 function cancelarBoletoSelecionado(){excluirBoletoSelecionado();}
 </script>
 
+
+<script>
+/* ============================================================
+   CORREÇÃO: MODAL BOLETOS BUSCA boletos DO CLIENTE + BASE GLOBAL
+============================================================ */
+(function(){
+  function n(v){
+    return String(v || "")
+      .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+      .replace(/\s+/g," ")
+      .trim()
+      .toLowerCase();
+  }
+  function doc(v){ return String(v || "").replace(/\D/g,""); }
+  function campo(obj, campos){
+    for(const c of campos){
+      if(obj && obj[c] !== undefined && obj[c] !== null && String(obj[c]).trim() !== "") return obj[c];
+    }
+    return "";
+  }
+  function keyCliente(c){
+    return n(c.loginPppoe || c.login || c.usuario || c.user) ||
+           doc(c.cpfCnpj || c.cpf || c.cnpj) ||
+           n(c.nome || c.cliente || c.razaoSocial);
+  }
+  function keyBoleto(b){
+    return n(b.login || b.loginPppoe || b.clienteLogin || b.usuario) ||
+           doc(b.cpfCnpj || b.cpf || b.cnpj || b.documento) ||
+           n(b.nome || b.cliente || b.nomeCliente);
+  }
+  function numeroBoleto(b){
+    return String(campo(b, ["numero","id","nossoNumero","titulo","nBoleto","boleto"]) || "").trim();
+  }
+  function mesmoCliente(c,b){
+    const kc = keyCliente(c);
+    const kb = keyBoleto(b);
+    if(!kc || !kb) return false;
+    return kc === kb || kc.includes(kb) || kb.includes(kc);
+  }
+  function clienteAtual(){
+    try{
+      if(typeof clienteDoCadastro === "function") return clienteDoCadastro() || {};
+    }catch(e){}
+    try{
+      return JSON.parse(localStorage.getItem("clienteSelecionadoCompleto") || "{}");
+    }catch(e){}
+    return {};
+  }
+  function getBoletosGlobais(){
+    const chaves = ["boletos","titulos","cobrancas","financeiroBoletos","contasReceber","lancamentosFinanceiros"];
+    for(const chave of chaves){
+      try{
+        const lista = JSON.parse(localStorage.getItem(chave) || "[]");
+        if(Array.isArray(lista) && lista.length) return lista;
+      }catch(e){}
+    }
+    return [];
+  }
+
+  window.fibraBoletosClienteAtual = function(){
+    const c = clienteAtual();
+    const mapa = new Map();
+
+    // 1. boletos anexados diretamente ao cliente
+    (Array.isArray(c.boletos) ? c.boletos : []).forEach(b => {
+      const k = numeroBoleto(b) || JSON.stringify(b);
+      mapa.set(k, b);
+    });
+
+    // 2. boletos da base global vinculados pelo login/cpf/nome
+    getBoletosGlobais().filter(b => mesmoCliente(c,b)).forEach(b => {
+      const k = numeroBoleto(b) || JSON.stringify(b);
+      mapa.set(k, {...(mapa.get(k) || {}), ...b});
+    });
+
+    return Array.from(mapa.values());
+  };
+
+  window.fibraGetBoletosStorage = function(){
+    try{
+      const lista = JSON.parse(localStorage.getItem("boletos") || "[]");
+      return Array.isArray(lista) ? lista : [];
+    }catch(e){ return []; }
+  };
+
+  window.fibraSalvarBoletosStorage = function(lista){
+    lista = Array.isArray(lista) ? lista : [];
+    localStorage.setItem("boletos", JSON.stringify(lista));
+    localStorage.setItem("titulos", JSON.stringify(lista));
+    localStorage.setItem("cobrancas", JSON.stringify(lista));
+
+    // Atualiza também dentro do cliente atual
+    const c = clienteAtual();
+    let clientes = [];
+    try{ clientes = JSON.parse(localStorage.getItem("clientes") || "[]"); }catch(e){ clientes = []; }
+    if(!Array.isArray(clientes)) clientes = [];
+
+    const kc = keyCliente(c);
+    if(kc){
+      clientes = clientes.map(cli => {
+        if(keyCliente(cli) !== kc) return cli;
+        const boletosCliente = lista.filter(b => mesmoCliente(cli,b));
+        return {...cli, boletos: boletosCliente, qtdBoletos: boletosCliente.length, atualizadoEm: new Date().toISOString()};
+      });
+      localStorage.setItem("clientes", JSON.stringify(clientes));
+      localStorage.setItem("clientesReceitaNet", JSON.stringify(clientes));
+      localStorage.setItem("fibra_clientes", JSON.stringify(clientes));
+      localStorage.setItem("clientes_importados", JSON.stringify(clientes));
+    }
+  };
+})();
+</script>
+
 </body></html>

@@ -376,13 +376,14 @@ async function importarBoletosReceitaNetHub(ev){
   localStorage.setItem("boletos",JSON.stringify(final));
   localStorage.setItem("titulos",JSON.stringify(final));
   localStorage.setItem("cobrancas",JSON.stringify(final));
+  const vinculoBoletosClientes = vincularBoletosNosClientesFibra(final);
   const st=atualizarClientesPorBoletos(final);
   localStorage.setItem("ultimaImportacaoBoletosReceitaNet",JSON.stringify({arquivo:file.name,encontrados:importados.length,novos,atualizados,total:final.length,status:st,data:new Date().toISOString()}));
   if(box) box.innerHTML=`<b>Boletos importados com sucesso.</b><br>
   🧾 Encontrados no arquivo: ${importados.length}<br>
   ✅ Novos: ${novos}<br>
   🔄 Atualizados: ${atualizados}<br>
-  📋 Total de boletos no Fibra+ Hub: ${final.length}<br><br>
+  📋 Total de boletos no Fibra+ Hub: ${final.length}<br>🔗 Boletos vinculados aos clientes: ${vinculoBoletosClientes.vinculados}<br><br>
   <b>Status dos clientes atualizado:</b><br>
   🟢 Ativos: ${st.ativos}<br>
   🔴 Bloqueados: ${st.bloqueados}<br>
@@ -392,13 +393,92 @@ function recalcularStatusClientesPorBoletos(){
   let boletos=[];
   try{boletos=JSON.parse(localStorage.getItem("boletos")||"[]")}catch(e){boletos=[]}
   if(!Array.isArray(boletos))boletos=[];
+  const vinculoRecalculo = vincularBoletosNosClientesFibra(boletos);
   const st=atualizarClientesPorBoletos(boletos);
   const box=document.getElementById("resultadoImportacaoBoletos");
   if(box) box.innerHTML=`<b>Status recalculado pelos boletos atuais.</b><br>
   🟢 Ativos: ${st.ativos}<br>
   🔴 Bloqueados: ${st.bloqueados}<br>
   🟡 Preservados (cancelado/isento/confiança): ${st.preservados}<br>
-  📋 Total de clientes: ${st.total}`;
+  📋 Total de clientes: ${st.total}<br>🔗 Boletos vinculados aos clientes: ${vinculoRecalculo.vinculados}`;
+}
+
+
+/* ============================================================
+   VÍNCULO DE BOLETOS DENTRO DO CADASTRO DO CLIENTE
+   - Usa Login como prioridade.
+   - Depois CPF/CNPJ.
+   - Depois Nome.
+============================================================ */
+function fbNorm(v){
+  return String(v || "")
+    .replace(/\uFFFD/g,"")
+    .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .replace(/\s+/g," ")
+    .trim()
+    .toLowerCase();
+}
+function fbDoc(v){ return String(v || "").replace(/\D/g,""); }
+function fbClienteKey(c){
+  return fbNorm(c.loginPppoe || c.login || c.usuario || c.user) ||
+         fbDoc(c.cpfCnpj || c.cpf || c.cnpj) ||
+         fbNorm(c.nome || c.cliente || c.razaoSocial);
+}
+function fbBoletoKeyCliente(b){
+  return fbNorm(b.login || b.loginPppoe || b.clienteLogin || b.usuario) ||
+         fbDoc(b.cpfCnpj || b.cpf || b.cnpj || b.documento) ||
+         fbNorm(b.nome || b.cliente || b.nomeCliente);
+}
+function fbBoletoNumero(b){
+  return String(b.numero || b.id || b.nossoNumero || b.titulo || "").trim();
+}
+function fbMesmoCliente(c,b){
+  const kc = fbClienteKey(c);
+  const kb = fbBoletoKeyCliente(b);
+  if(!kc || !kb) return false;
+  return kc === kb || kc.includes(kb) || kb.includes(kc);
+}
+function vincularBoletosNosClientesFibra(listaBoletos){
+  let clientes = [];
+  try{ clientes = JSON.parse(localStorage.getItem("clientes") || "[]"); }catch(e){ clientes = []; }
+  if(!Array.isArray(clientes)) clientes = [];
+
+  const boletos = Array.isArray(listaBoletos) ? listaBoletos : [];
+  let vinculados = 0;
+
+  clientes = clientes.map(c => {
+    const doCliente = boletos.filter(b => fbMesmoCliente(c,b));
+    const mapa = new Map();
+
+    // mantém boletos já existentes do cliente
+    (Array.isArray(c.boletos) ? c.boletos : []).forEach(b => {
+      const n = fbBoletoNumero(b) || JSON.stringify(b);
+      mapa.set(n, b);
+    });
+
+    // adiciona/atualiza boletos importados
+    doCliente.forEach(b => {
+      const n = fbBoletoNumero(b) || JSON.stringify(b);
+      mapa.set(n, {...(mapa.get(n) || {}), ...b});
+    });
+
+    const boletosCliente = Array.from(mapa.values());
+    vinculados += doCliente.length;
+
+    return {
+      ...c,
+      boletos: boletosCliente,
+      qtdBoletos: boletosCliente.length,
+      atualizadoEm: new Date().toISOString()
+    };
+  });
+
+  localStorage.setItem("clientes", JSON.stringify(clientes));
+  localStorage.setItem("clientesReceitaNet", JSON.stringify(clientes));
+  localStorage.setItem("fibra_clientes", JSON.stringify(clientes));
+  localStorage.setItem("clientes_importados", JSON.stringify(clientes));
+
+  return {clientes: clientes.length, vinculados};
 }
 
 </script>
