@@ -5275,3 +5275,138 @@ button,
     grid-template-columns:1fr !important;
   }
 }
+
+
+/* Modal Lista de Boletos */
+.fibra-modal-boletos{
+  display:none;
+  position:fixed;
+  inset:0;
+  z-index:9999;
+}
+.fibra-modal-boletos.aberto{
+  display:block;
+}
+.fibra-modal-boletos-backdrop{
+  position:absolute;
+  inset:0;
+  background:rgba(0,0,0,.55);
+}
+.fibra-modal-boletos-box{
+  position:relative;
+  width:min(1100px, 94vw);
+  max-height:86vh;
+  overflow:auto;
+  margin:5vh auto;
+  background:#f4f7fb;
+  color:#1f2937;
+  border-radius:4px;
+  box-shadow:0 20px 60px rgba(0,0,0,.45);
+  padding:18px;
+}
+.fibra-modal-boletos-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:14px;
+}
+.fibra-modal-title{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  font-size:22px;
+}
+.fibra-help-btn,.fibra-modal-close,.mini-info{
+  border:1px solid #cbd5e1;
+  background:#e5e7eb;
+  color:#1f2937;
+  border-radius:4px;
+  font-weight:800;
+  cursor:pointer;
+}
+.fibra-modal-close{
+  font-size:24px;
+  width:36px;
+  height:36px;
+}
+.fibra-boletos-resumo{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  margin-bottom:18px;
+}
+.fibra-boleto-card{
+  padding:16px;
+  text-align:center;
+  color:#fff;
+  font-weight:800;
+}
+.fibra-boleto-card.vencidos{background:#b91c1c;}
+.fibra-boleto-card.aberto{background:#dc4a2d;}
+.fibra-boleto-card.pagos{background:#166534;}
+.fibra-boletos-toolbar{
+  display:flex;
+  gap:10px;
+  margin-bottom:14px;
+}
+.fibra-boletos-toolbar input,
+.fibra-boletos-toolbar select{
+  padding:10px;
+  border:1px solid #cbd5e1;
+  border-radius:6px;
+  flex:1;
+}
+.fibra-boletos-toolbar button,
+.fibra-boletos-footer button{
+  padding:10px 14px;
+  border:0;
+  border-radius:6px;
+  background:#2563eb;
+  color:#fff;
+  font-weight:800;
+  cursor:pointer;
+}
+.fibra-boletos-table{
+  width:100%;
+  border-collapse:collapse;
+  background:#fff;
+}
+.fibra-boletos-table th,
+.fibra-boletos-table td{
+  padding:14px;
+  border-bottom:1px solid #e5e7eb;
+  text-align:left;
+  vertical-align:top;
+}
+.fibra-boletos-table th{
+  color:#1e293b;
+  font-size:14px;
+  text-transform:uppercase;
+}
+.boleto-status{
+  display:inline-block;
+  padding:6px 10px;
+  border-radius:14px;
+  font-weight:800;
+}
+.boleto-status.pago{background:#dcfce7;color:#166534;}
+.boleto-status.pendente{background:#ffedd5;color:#9a3412;}
+.boleto-status.vencido{background:#fee2e2;color:#991b1b;}
+.boleto-status.cancelado{background:#e5e7eb;color:#374151;}
+.boleto-acoes button{
+  margin:2px;
+  border:0;
+  border-radius:5px;
+  padding:7px 8px;
+  cursor:pointer;
+  background:#e5e7eb;
+}
+.fibra-boletos-footer{
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+  margin-top:16px;
+}
+@media(max-width:800px){
+  .fibra-boletos-resumo{grid-template-columns:1fr;}
+  .fibra-boletos-toolbar{flex-direction:column;}
+}

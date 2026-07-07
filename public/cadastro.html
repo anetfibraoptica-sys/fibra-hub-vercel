@@ -1474,4 +1474,293 @@ function fibraNormalizarStatusClienteCadastro(c){
 }
 </script>
 
+
+<!-- Modal Lista de Boletos - Fibra+ Hub -->
+<div id="modalBoletosCliente" class="fibra-modal-boletos" aria-hidden="true">
+  <div class="fibra-modal-boletos-backdrop" onclick="fecharModalBoletosCliente()"></div>
+  <div class="fibra-modal-boletos-box" role="dialog" aria-modal="true">
+    <div class="fibra-modal-boletos-header">
+      <div class="fibra-modal-title">
+        <button type="button" class="fibra-help-btn">?</button>
+        <strong>Lista de Boletos</strong>
+      </div>
+      <button type="button" class="fibra-modal-close" onclick="fecharModalBoletosCliente()">×</button>
+    </div>
+
+    <div class="fibra-boletos-resumo">
+      <div class="fibra-boleto-card vencidos">Vencidos: <strong id="boletoResumoVencidos">R$ 0,00</strong></div>
+      <div class="fibra-boleto-card aberto">Em Aberto: <strong id="boletoResumoAberto">R$ 0,00</strong></div>
+      <div class="fibra-boleto-card pagos">Pagos: <strong id="boletoResumoPagos">R$ 0,00</strong></div>
+    </div>
+
+    <div class="fibra-boletos-toolbar">
+      <input id="buscaBoletoCliente" type="text" placeholder="Pesquisar boleto..." oninput="renderizarBoletosCliente()">
+      <select id="filtroStatusBoletoCliente" onchange="renderizarBoletosCliente()">
+        <option value="todos">Todos</option>
+        <option value="pendente">Pendentes</option>
+        <option value="vencido">Vencidos</option>
+        <option value="pago">Pagos</option>
+        <option value="cancelado">Cancelados</option>
+      </select>
+      <button type="button" onclick="gerarBoletoCliente()">+ Gerar Novo Boleto</button>
+    </div>
+
+    <div class="fibra-boletos-table-wrap">
+      <table class="fibra-boletos-table">
+        <thead>
+          <tr>
+            <th>Nº</th>
+            <th>Datas</th>
+            <th>Valor</th>
+            <th>Total</th>
+            <th>Status</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyBoletosCliente">
+          <tr><td colspan="6">Nenhum boleto encontrado.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="fibra-boletos-footer">
+      <button type="button" onclick="gerarBoletoCliente()">Gerar Novo Boleto</button>
+      <button type="button" onclick="renderizarBoletosCliente()">Atualizar</button>
+      <button type="button" onclick="fecharModalBoletosCliente()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+
+<script>
+/* ============================================================
+   MODAL LISTA DE BOLETOS DO CLIENTE
+============================================================ */
+function fibraMoedaBR(v){
+  v = Number(v || 0);
+  return v.toLocaleString("pt-BR", {style:"currency", currency:"BRL"});
+}
+
+function fibraNormalizarTexto(v){
+  return String(v || "").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
+}
+
+function fibraNumero(v){
+  if(v === undefined || v === null || v === "") return 0;
+  if(typeof v === "number") return isNaN(v) ? 0 : v;
+  let s = String(v).replace(/[R$\s]/g,"").trim();
+  if(s.includes(",") && s.includes(".")) s = s.replace(/\./g,"").replace(",",".");
+  else if(s.includes(",")) s = s.replace(",",".");
+  const n = Number(s);
+  return isNaN(n) ? 0 : n;
+}
+
+function fibraValorCampo(obj, campos){
+  for(const c of campos){
+    if(obj && obj[c] !== undefined && obj[c] !== null && String(obj[c]).trim() !== "") return obj[c];
+  }
+  return "";
+}
+
+function fibraLoginClienteAtualBoletos(){
+  try{
+    const c = typeof clienteDoCadastro === "function" ? clienteDoCadastro() : {};
+    return String(c.loginPppoe || c.login || c.cpfCnpj || c.cpf || c.nome || "").toLowerCase().trim();
+  }catch(e){
+    return "";
+  }
+}
+
+function fibraGetBoletosStorage(){
+  const chaves = ["boletos", "titulos", "cobrancas", "financeiroBoletos", "contasReceber", "lancamentosFinanceiros"];
+  for(const chave of chaves){
+    try{
+      const lista = JSON.parse(localStorage.getItem(chave) || "[]");
+      if(Array.isArray(lista)) return {chave, lista};
+    }catch(e){}
+  }
+  return {chave:"boletos", lista:[]};
+}
+
+function fibraSalvarBoletosStorage(lista){
+  localStorage.setItem("boletos", JSON.stringify(lista || []));
+}
+
+function fibraStatusBoleto(b){
+  const s = fibraNormalizarTexto(fibraValorCampo(b, ["status","situacao","estado","baixa","pagamentoStatus"]));
+  if(s.includes("cancel") || s.includes("estornado")) return "cancelado";
+  if(s.includes("pago") || s.includes("baixado") || s.includes("receb")) return "pago";
+
+  const venc = fibraValorCampo(b, ["vencimento","dataVencimento","dtVencimento","dueDate"]);
+  if(venc){
+    const d = new Date(venc);
+    const hoje = new Date();
+    hoje.setHours(0,0,0,0);
+    if(!isNaN(d.getTime()) && d < hoje) return "vencido";
+  }
+
+  return "pendente";
+}
+
+function fibraTotalBoleto(b){
+  const valor = fibraNumero(fibraValorCampo(b, ["total","valorTotal","valor","valorBoleto","amount"]));
+  const juros = fibraNumero(fibraValorCampo(b, ["juros","multa","jurosMulta"]));
+  const desconto = fibraNumero(fibraValorCampo(b, ["desconto"]));
+  return Math.max(valor + juros - desconto, 0);
+}
+
+function fibraBoletosClienteAtual(){
+  const {lista} = fibraGetBoletosStorage();
+  const chaveCliente = fibraLoginClienteAtualBoletos();
+
+  return lista.filter(b => {
+    const dono = String(fibraValorCampo(b, ["login","clienteLogin","loginPppoe","cpfCnpj","cpf","cliente","nome"]) || "").toLowerCase().trim();
+    if(!chaveCliente) return true;
+    return !dono || dono === chaveCliente || dono.includes(chaveCliente) || chaveCliente.includes(dono);
+  });
+}
+
+function abrirModalBoletosCliente(){
+  const modal = document.getElementById("modalBoletosCliente");
+  if(!modal) return;
+  modal.classList.add("aberto");
+  modal.setAttribute("aria-hidden","false");
+  renderizarBoletosCliente();
+}
+
+function fecharModalBoletosCliente(){
+  const modal = document.getElementById("modalBoletosCliente");
+  if(!modal) return;
+  modal.classList.remove("aberto");
+  modal.setAttribute("aria-hidden","true");
+}
+
+function renderizarBoletosCliente(){
+  const tbody = document.getElementById("tbodyBoletosCliente");
+  if(!tbody) return;
+
+  let boletos = fibraBoletosClienteAtual();
+  const busca = fibraNormalizarTexto(document.getElementById("buscaBoletoCliente")?.value || "");
+  const filtro = document.getElementById("filtroStatusBoletoCliente")?.value || "todos";
+
+  if(busca){
+    boletos = boletos.filter(b => JSON.stringify(b).toLowerCase().includes(busca));
+  }
+
+  if(filtro !== "todos"){
+    boletos = boletos.filter(b => fibraStatusBoleto(b) === filtro);
+  }
+
+  let vencidos = 0, aberto = 0, pagos = 0;
+  fibraBoletosClienteAtual().forEach(b => {
+    const total = fibraTotalBoleto(b);
+    const st = fibraStatusBoleto(b);
+    if(st === "pago") pagos += total;
+    else if(st === "vencido") vencidos += total;
+    else if(st === "pendente") aberto += total;
+  });
+
+  const setTxt = (id, v) => { const el = document.getElementById(id); if(el) el.textContent = fibraMoedaBR(v); };
+  setTxt("boletoResumoVencidos", vencidos);
+  setTxt("boletoResumoAberto", aberto);
+  setTxt("boletoResumoPagos", pagos);
+
+  if(!boletos.length){
+    tbody.innerHTML = '<tr><td colspan="6">Nenhum boleto encontrado.</td></tr>';
+    return;
+  }
+
+  boletos.sort((a,b) => String(fibraValorCampo(a,["vencimento","dataVencimento","dtVencimento"]) || "").localeCompare(String(fibraValorCampo(b,["vencimento","dataVencimento","dtVencimento"]) || "")));
+
+  tbody.innerHTML = boletos.map((b, i) => {
+    const numero = fibraValorCampo(b, ["numero","id","nossoNumero","titulo"]) || (i+1);
+    const venc = fibraValorCampo(b, ["vencimento","dataVencimento","dtVencimento","dueDate"]) || "--";
+    const emissao = fibraValorCampo(b, ["emissao","dataEmissao","createdAt"]) || "--";
+    const valor = fibraNumero(fibraValorCampo(b, ["valor","valorBoleto","amount"]));
+    const juros = fibraNumero(fibraValorCampo(b, ["juros","multa","jurosMulta"]));
+    const desconto = fibraNumero(fibraValorCampo(b, ["desconto"]));
+    const total = fibraTotalBoleto(b);
+    const status = fibraStatusBoleto(b);
+    const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
+
+    return `<tr>
+      <td><strong>${numero}</strong> <button class="mini-info" onclick="verDetalhesBoleto(${i})">i</button></td>
+      <td><b>Vencimento:</b> ${venc}<br><b>Emissão:</b> ${emissao}</td>
+      <td><b>Valor:</b> ${fibraMoedaBR(valor)}<br><b>Juros+Multa:</b> ${fibraMoedaBR(juros)}<br><b>Desconto:</b> ${fibraMoedaBR(desconto)}</td>
+      <td><strong>${fibraMoedaBR(total)}</strong></td>
+      <td><span class="boleto-status ${status}">${statusLabel}</span></td>
+      <td class="boleto-acoes">
+        <button onclick="marcarBoletoPagoCliente('${numero}')">💳</button>
+        <button onclick="copiarPixBoletoCliente('${numero}')">📲</button>
+        <button onclick="cancelarBoletoCliente('${numero}')">❌</button>
+        <button onclick="window.print()">🖨</button>
+      </td>
+    </tr>`;
+  }).join("");
+}
+
+function gerarBoletoCliente(){
+  const {lista} = fibraGetBoletosStorage();
+  const cliente = typeof clienteDoCadastro === "function" ? clienteDoCadastro() : {};
+  const valor = fibraNumero(cliente.valorMensal || cliente.valor || prompt("Valor do boleto:", "100,00"));
+  const vencimento = prompt("Data de vencimento (AAAA-MM-DD):", new Date().toISOString().slice(0,10));
+  if(!vencimento) return;
+
+  const novo = {
+    numero: Date.now(),
+    login: cliente.loginPppoe || cliente.login || "",
+    nome: cliente.nome || "",
+    cpfCnpj: cliente.cpfCnpj || cliente.cpf || "",
+    emissao: new Date().toISOString().slice(0,10),
+    vencimento,
+    valor,
+    total: valor,
+    status: "pendente",
+    pix: ""
+  };
+
+  lista.push(novo);
+  fibraSalvarBoletosStorage(lista);
+  renderizarBoletosCliente();
+}
+
+function marcarBoletoPagoCliente(numero){
+  const dados = fibraGetBoletosStorage();
+  const lista = dados.lista;
+  const idx = lista.findIndex(b => String(fibraValorCampo(b,["numero","id","nossoNumero","titulo"])) === String(numero));
+  if(idx < 0) return;
+  lista[idx].status = "pago";
+  lista[idx].dataPagamento = new Date().toISOString().slice(0,10);
+  fibraSalvarBoletosStorage(lista);
+  renderizarBoletosCliente();
+}
+
+function cancelarBoletoCliente(numero){
+  if(!confirm("Cancelar este boleto?")) return;
+  const dados = fibraGetBoletosStorage();
+  const lista = dados.lista;
+  const idx = lista.findIndex(b => String(fibraValorCampo(b,["numero","id","nossoNumero","titulo"])) === String(numero));
+  if(idx < 0) return;
+  lista[idx].status = "cancelado";
+  fibraSalvarBoletosStorage(lista);
+  renderizarBoletosCliente();
+}
+
+function copiarPixBoletoCliente(numero){
+  const boleto = fibraBoletosClienteAtual().find(b => String(fibraValorCampo(b,["numero","id","nossoNumero","titulo"])) === String(numero));
+  const pix = boleto ? (boleto.pix || boleto.codigoPix || boleto.copiaCola || "") : "";
+  if(!pix){
+    alert("Este boleto ainda não possui Pix cadastrado.");
+    return;
+  }
+  navigator.clipboard?.writeText(pix);
+  alert("Pix copiado.");
+}
+
+function verDetalhesBoleto(index){
+  const b = fibraBoletosClienteAtual()[index];
+  alert(JSON.stringify(b || {}, null, 2));
+}
+</script>
+
 </body></html>
