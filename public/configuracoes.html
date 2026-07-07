@@ -50,46 +50,84 @@
   </div>
 </section>
 
+
 <section class="panel" id="configUsuariosPainel">
   <h3>Usuários do Painel</h3>
   <p class="cadastro-note">
-    Esta área ficará preparada para controlar quem acessa o painel, quem recebe valores,
-    quem faz baixa manual e quais permissões cada usuário terá.
+    Cadastre usuários reais para acessar o Fibra+ Hub. O login antigo <b>admin/admin</b> foi removido.
+    Cada baixa manual, recebimento e alteração poderá ficar registrada com o usuário responsável.
   </p>
 
   <div class="grid-2">
     <div class="form-group">
-      <label>Nome do usuário</label>
+      <label>Nome completo</label>
       <input id="cfgUsuarioNome" type="text" placeholder="Ex: Adriano">
+    </div>
+
+    <div class="form-group">
+      <label>Usuário de acesso</label>
+      <input id="cfgUsuarioLogin" type="text" placeholder="Ex: adriano">
+    </div>
+
+    <div class="form-group">
+      <label>Senha</label>
+      <input id="cfgUsuarioSenha" type="password" placeholder="Senha de acesso">
     </div>
 
     <div class="form-group">
       <label>Função</label>
       <select id="cfgUsuarioFuncao">
+        <option>SuperAdmin</option>
         <option>Administrador</option>
         <option>Financeiro</option>
         <option>Atendimento</option>
         <option>Técnico</option>
       </select>
     </div>
+
+    <div class="form-group">
+      <label>Status</label>
+      <select id="cfgUsuarioStatus">
+        <option value="ativo">Ativo</option>
+        <option value="inativo">Inativo</option>
+      </select>
+    </div>
   </div>
 
   <div class="cadastro-actions">
-    <button type="button" onclick="alert('Cadastro de usuários será ligado ao login do painel na próxima etapa.')">
-      Preparar usuário
-    </button>
+    <button type="button" onclick="salvarUsuarioPainel()">Salvar usuário</button>
+    <button type="button" onclick="listarUsuariosPainel()">Atualizar lista</button>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Nome</th>
+          <th>Usuário</th>
+          <th>Função</th>
+          <th>Status</th>
+          <th>Último acesso</th>
+        </tr>
+      </thead>
+      <tbody id="tabelaUsuariosPainel">
+        <tr><td colspan="5">Nenhum usuário carregado.</td></tr>
+      </tbody>
+    </table>
   </div>
 
   <div class="config-resumo">
-    Futuro controle:
-    <br>• identificar quem recebeu pagamento;
-    <br>• identificar quem deu baixa manual;
-    <br>• limitar acesso por função;
-    <br>• registrar logs das ações.
+    Auditoria futura:
+    <br>• quem recebeu pagamento;
+    <br>• quem deu baixa manual;
+    <br>• quem criou ou excluiu boleto;
+    <br>• quem alterou clientes e configurações.
   </div>
 </section>
 
+
 <div class="footer"><span>© 2026 Fibra+</span><span>Hub com 2 servidores MikroTik</span></div></section></main></div><script src="supabase-client.js"></script>
+<script src="auth-painel.js"></script>
 <script src="app.js"></script>
 <script src="pppoe-stable.js"></script>
 <script src="pppoe-search.js"></script>

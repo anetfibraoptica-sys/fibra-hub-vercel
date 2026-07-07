@@ -656,6 +656,7 @@ fibraCadastroLimparStoragesSelecao();
 </main></div>
 function consultarCepContato(){ buscarCepAutomatico(); }
 </script><script src="supabase-client.js"></script>
+<script src="auth-painel.js"></script>
 <script src="app.js"></script>
 <script>
 function abrirTabCadastro(nome){
@@ -2694,4 +2695,27 @@ window.fibraStatusBoleto = function(b){
 </script>
 
 <script src="bloqueio-configuravel.js"></script>
+
+<script>
+/* Auditoria de baixa manual */
+(function(){
+  const oldConfirmarBaixaManualAuditoria = window.confirmarBaixaManual;
+  window.confirmarBaixaManual = async function(){
+    const numero = window.boletoSelecionadoNumero || "";
+    const valorPago = document.getElementById("baixaValorPago")?.value || "";
+    if(typeof oldConfirmarBaixaManualAuditoria === "function"){
+      await oldConfirmarBaixaManualAuditoria();
+    }
+    if(window.FibraAuth){
+      FibraAuth.auditar("baixa manual", "boletos", numero, {
+        boleto_numero:numero,
+        valor: String(valorPago).replace(",", "."),
+        forma_pagamento: document.getElementById("baixaFormaPagamento")?.value || "",
+        observacao: document.getElementById("baixaObservacao")?.value || ""
+      });
+    }
+  };
+})();
+</script>
+
 </body></html>
