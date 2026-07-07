@@ -50,7 +50,7 @@
     </label>
     <button onclick="recalcularStatusClientesPorBoletos()">Atualizar status pelos boletos</button>
   </div>
-  <div id="resultadoImportacaoBoletos" class="import-result">Aguardando arquivo de boletos.</div>
+  <div id="resultadoImportacaoBoletos" class="import-result">Aguardando arquivo de boletos. Aceita CSV do ReceitaNet com várias linhas por cliente.</div>
 </section>
 
 <section class="panel"><h3>Prévia da última importação</h3><div class="table-wrap"><table><thead><tr><th>Login</th><th>Nome</th><th>CPF/CNPJ</th><th>Telefone</th><th>Endereço</th><th>Plano</th><th>Venc.</th><th>POP</th></tr></thead><tbody id="previewImportacao"><tr><td colspan="8">Nenhum arquivo importado ainda.</td></tr></tbody></table></div></section>
@@ -479,6 +479,139 @@ function vincularBoletosNosClientesFibra(listaBoletos){
   localStorage.setItem("clientes_importados", JSON.stringify(clientes));
 
   return {clientes: clientes.length, vinculados};
+}
+
+
+/* ============================================================
+   CORREÇÃO CSV RECEITANET COM QUEBRA DE LINHA NO CAMPO CARNÊ
+   - Lê registros completos mesmo com quebra dentro de aspas.
+   - Reconhece Nº Boleto / NÂº Boleto / Valor Boleto / Valor Pago.
+   - Importa todos os boletos do cliente, não apenas 1.
+============================================================ */
+function bRecordsCsv(text, sepChar){
+  const rows = [];
+  let row = [];
+  let cur = "";
+  let q = false;
+
+  for(let i=0;i<text.length;i++){
+    const ch = text[i];
+    const nx = text[i+1];
+
+    if(ch === '"' && nx === '"'){
+      cur += '"';
+      i++;
+      continue;
+    }
+
+    if(ch === '"'){
+      q = !q;
+      continue;
+    }
+
+    if(ch === sepChar && !q){
+      row.push(cur.trim());
+      cur = "";
+      continue;
+    }
+
+    if((ch === "\n" || ch === "\r") && !q){
+      if(ch === "\r" && nx === "\n") i++;
+      row.push(cur.trim());
+      cur = "";
+      if(row.some(v => String(v).trim() !== "")) rows.push(row);
+      row = [];
+      continue;
+    }
+
+    cur += ch;
+  }
+
+  row.push(cur.trim());
+  if(row.some(v => String(v).trim() !== "")) rows.push(row);
+  return rows;
+}
+
+function bGet2(row, names, idxs){
+  for(const n of names || []){
+    const k = bHeader(n);
+    if(row.obj[k] !== undefined && String(row.obj[k]).trim()) return row.obj[k];
+  }
+
+  for(const n of names || []){
+    const k = bHeader(n);
+    const found = Object.keys(row.obj).find(x => x === k || x.includes(k) || k.includes(x));
+    if(found && String(row.obj[found]).trim()) return row.obj[found];
+  }
+
+  for(const i of idxs || []){
+    if(row.cols[i] !== undefined && String(row.cols[i]).trim()) return row.cols[i];
+  }
+
+  return "";
+}
+
+function bMapReceitaNet(row){
+  const numero = bGet2(row, ["Nº Boleto","NÂº Boleto","N Boleto","No Boleto","Numero Boleto","Número Boleto","Numero","ID"], [4]);
+  const login = bGet2(row, ["Login","Login PPPoE","Usuário","Usuario"], [0]);
+  const nome = bGet2(row, ["Nome","Cliente","Nome Cliente"], [1]);
+  const cpf = bGet2(row, ["CPF","CNPJ","CPF/CNPJ","Documento"], [2]);
+  const dia = bGet2(row, ["Dia Vencimento","Dia de Vencimento"], [3]);
+  const emissao = bParseData(bGet2(row, ["Emissão","Emissao","Data Emissão","Data Emissao","Data de Emissão","Data de Emissao"], [5]));
+  const vencimento = bParseData(bGet2(row, ["Vencimento","Data Vencimento","Data de Vencimento","Dt Vencimento"], [6]));
+  const pagamento = bParseData(bGet2(row, ["Pagamento","Data Pagamento","Data de Pagamento","Data da Baixa","Baixado em"], [7]));
+  const desconto = bMoney(bGet2(row, ["Desconto"], [8]));
+  const valor = bMoney(bGet2(row, ["Valor Boleto","Valor do Boleto","Valor Título","Valor Titulo","Mensalidade","Valor"], [9]));
+  const valorPago = bMoney(bGet2(row, ["Valor Pago","Pago","Valor Recebido"], [10]));
+  const statusRaw = bGet2(row, ["Status","Situação","Situacao","Baixa","Estado"], [11]);
+  const banco = bGet2(row, ["Banco"], [12]);
+  const agencia = bGet2(row, ["Agencia-Conta/Sigla","Agência-Conta/Sigla","Agencia Conta","Conta"], [13]);
+  const ident = bGet2(row, ["Identificação/Carnê","Identificacao/Carne","Identificação","Identificacao","Carnê","Carne"], [14]);
+
+  if(!numero && !login && !nome && !cpf && !vencimento && !valor) return null;
+
+  const st = bStatusImportado(statusRaw, pagamento, vencimento);
+  return {
+    numero: numero || Date.now()+Math.floor(Math.random()*10000),
+    login: login,
+    nome: nome,
+    cpfCnpj: cpf,
+    diaVencimento: dia,
+    categoria: "Mensalidade",
+    descricao: "Boleto importado ReceitaNet",
+    emissao: emissao || "",
+    vencimento: vencimento || "",
+    pagamento: pagamento || "",
+    desconto: desconto,
+    valor: valor,
+    total: valor,
+    valorPago: st === "pago" ? (valorPago || valor) : valorPago,
+    status: st,
+    banco: banco,
+    agenciaConta: agencia,
+    identificacaoCarne: ident,
+    origem: "ReceitaNet Boletos CSV",
+    importadoEm: new Date().toISOString()
+  };
+}
+
+function bParse(text){
+  const sp = bSep(text);
+  const rows = bRecordsCsv(text, sp);
+  if(rows.length < 2) return [];
+
+  const heads = rows[0].map(bHeader);
+  const arr = [];
+
+  for(let i=1;i<rows.length;i++){
+    const cols = rows[i];
+    const obj = {};
+    heads.forEach((h,j) => obj[h] = cols[j] || "");
+    const boleto = bMapReceitaNet({obj, cols});
+    if(boleto) arr.push(boleto);
+  }
+
+  return arr;
 }
 
 </script>
