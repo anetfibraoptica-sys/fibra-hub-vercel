@@ -5431,3 +5431,23 @@ button,
   position:relative;
   z-index:1000000;
 }
+
+
+/* Modal Boletos limpo */
+.fibra-boletos-toolbar{
+  display:none !important;
+}
+.fibra-modal-title{
+  gap:0 !important;
+}
+.fibra-modal-title strong{
+  font-size:24px !important;
+  font-weight:800 !important;
+}
+.boleto-acoes{
+  white-space:nowrap;
+}
+.boleto-acoes button{
+  font-size:15px;
+  min-width:34px;
+}

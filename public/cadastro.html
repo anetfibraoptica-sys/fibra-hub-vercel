@@ -1481,7 +1481,6 @@ function fibraNormalizarStatusClienteCadastro(c){
   <div class="fibra-modal-boletos-box" role="dialog" aria-modal="true">
     <div class="fibra-modal-boletos-header">
       <div class="fibra-modal-title">
-        <button type="button" class="fibra-help-btn">?</button>
         <strong>Lista de Boletos</strong>
       </div>
       <button type="button" class="fibra-modal-close" onclick="abrirModalBoletosCliente();return false;">×</button>
@@ -1492,20 +1491,7 @@ function fibraNormalizarStatusClienteCadastro(c){
       <div class="fibra-boleto-card aberto">Em Aberto: <strong id="boletoResumoAberto">R$ 0,00</strong></div>
       <div class="fibra-boleto-card pagos">Pagos: <strong id="boletoResumoPagos">R$ 0,00</strong></div>
     </div>
-
-    <div class="fibra-boletos-toolbar">
-      <input id="buscaBoletoCliente" type="text" placeholder="Pesquisar boleto..." oninput="renderizarBoletosCliente()">
-      <select id="filtroStatusBoletoCliente" onchange="renderizarBoletosCliente()">
-        <option value="todos">Todos</option>
-        <option value="pendente">Pendentes</option>
-        <option value="vencido">Vencidos</option>
-        <option value="pago">Pagos</option>
-        <option value="cancelado">Cancelados</option>
-      </select>
-      <button type="button" onclick="gerarBoletoCliente()">+ Gerar Novo Boleto</button>
-    </div>
-
-    <div class="fibra-boletos-table-wrap">
+<div class="fibra-boletos-table-wrap">
       <table class="fibra-boletos-table">
         <thead>
           <tr>
@@ -1640,18 +1626,7 @@ function renderizarBoletosCliente(){
   if(!tbody) return;
 
   let boletos = fibraBoletosClienteAtual();
-  const busca = fibraNormalizarTexto(document.getElementById("buscaBoletoCliente")?.value || "");
-  const filtro = document.getElementById("filtroStatusBoletoCliente")?.value || "todos";
-
-  if(busca){
-    boletos = boletos.filter(b => JSON.stringify(b).toLowerCase().includes(busca));
-  }
-
-  if(filtro !== "todos"){
-    boletos = boletos.filter(b => fibraStatusBoleto(b) === filtro);
-  }
-
-  let vencidos = 0, aberto = 0, pagos = 0;
+let vencidos = 0, aberto = 0, pagos = 0;
   fibraBoletosClienteAtual().forEach(b => {
     const total = fibraTotalBoleto(b);
     const st = fibraStatusBoleto(b);
@@ -1690,10 +1665,12 @@ function renderizarBoletosCliente(){
       <td><strong>${fibraMoedaBR(total)}</strong></td>
       <td><span class="boleto-status ${status}">${statusLabel}</span></td>
       <td class="boleto-acoes">
-        <button onclick="marcarBoletoPagoCliente('${numero}')">💳</button>
-        <button onclick="copiarPixBoletoCliente('${numero}')">📲</button>
-        <button onclick="cancelarBoletoCliente('${numero}')">❌</button>
-        <button onclick="window.print()">🖨</button>
+        <button title="Visualizar" onclick="verDetalhesBoleto(${i})">👁</button>
+        <button title="Segunda via / PDF" onclick="segundaViaBoletoCliente('${numero}')">📄</button>
+        <button title="Copiar Pix" onclick="copiarPixBoletoCliente('${numero}')">📲</button>
+        <button title="Enviar WhatsApp" onclick="enviarWhatsappBoletoCliente('${numero}')">📱</button>
+        <button title="Marcar como Pago" onclick="marcarBoletoPagoCliente('${numero}')">💳</button>
+        <button title="Cancelar boleto" onclick="cancelarBoletoCliente('${numero}')">❌</button>
       </td>
     </tr>`;
   }).join("");
@@ -1755,6 +1732,48 @@ function copiarPixBoletoCliente(numero){
   }
   navigator.clipboard?.writeText(pix);
   alert("Pix copiado.");
+}
+
+
+function segundaViaBoletoCliente(numero){
+  const boleto = fibraBoletosClienteAtual().find(b => String(fibraValorCampo(b,["numero","id","nossoNumero","titulo"])) === String(numero));
+  if(!boleto){
+    alert("Boleto não encontrado.");
+    return;
+  }
+
+  const link = boleto.link || boleto.pdf || boleto.url || boleto.segundaVia || "";
+  if(link){
+    window.open(link, "_blank");
+    return;
+  }
+
+  alert("Segunda via/PDF ainda não disponível para este boleto. Quando integrar com a Efí, este botão abrirá o PDF real.");
+}
+
+function enviarWhatsappBoletoCliente(numero){
+  const boleto = fibraBoletosClienteAtual().find(b => String(fibraValorCampo(b,["numero","id","nossoNumero","titulo"])) === String(numero));
+  const cliente = typeof clienteDoCadastro === "function" ? clienteDoCadastro() : {};
+  if(!boleto){
+    alert("Boleto não encontrado.");
+    return;
+  }
+
+  const telefone = String(cliente.telefone1 || cliente.telefone2 || "").replace(/\D/g,"");
+  const venc = fibraValorCampo(boleto, ["vencimento","dataVencimento","dtVencimento","dueDate"]) || "";
+  const total = fibraMoedaBR(fibraTotalBoleto(boleto));
+  const pix = boleto.pix || boleto.codigoPix || boleto.copiaCola || "";
+  const link = boleto.link || boleto.pdf || boleto.url || boleto.segundaVia || "";
+
+  let msg = `Olá ${cliente.nome || ""}, segue seu boleto Fibra+ Hub.\n\nNúmero: ${numero}\nVencimento: ${venc}\nValor: ${total}`;
+  if(pix) msg += `\nPix copia e cola: ${pix}`;
+  if(link) msg += `\nSegunda via: ${link}`;
+
+  const url = telefone
+    ? `https://wa.me/55${telefone}?text=${encodeURIComponent(msg)}`
+    : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+
+  window.open(url, "_blank");
 }
 
 function verDetalhesBoleto(index){
