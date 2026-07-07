@@ -257,15 +257,4 @@
   };
 
   document.addEventListener("DOMContentLoaded", function(){
-    // adiciona botão na importação, se existir painel
-    const box = document.querySelector(".cadastro-actions");
-    if(box && !document.getElementById("btnConfigBloqueioFibra")){
-      const btn = document.createElement("button");
-      btn.id = "btnConfigBloqueioFibra";
-      btn.type = "button";
-      btn.textContent = "Configurar dias de bloqueio";
-      btn.onclick = window.fibraAbrirConfigBloqueio;
-      box.appendChild(btn);
-    }
-  });
 })();

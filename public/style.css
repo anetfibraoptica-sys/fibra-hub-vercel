@@ -5599,3 +5599,21 @@ button,
 #resultadoImportacaoBoletos{
   line-height:1.7;
 }
+
+
+/* Configurações - Financeiro e Usuários */
+.config-resumo{
+  background:#0f172a;
+  border:1px solid #374151;
+  border-radius:8px;
+  padding:12px;
+  color:#e5e7eb;
+  line-height:1.5;
+  min-height:48px;
+}
+.form-group small{
+  display:block;
+  margin-top:6px;
+  color:#9ca3af;
+  line-height:1.4;
+}
