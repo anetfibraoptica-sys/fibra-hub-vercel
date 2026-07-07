@@ -50,7 +50,11 @@
     <label class="csv-import-btn">Selecionar CSV de Boletos
       <input id="csvBoletosReceitaNet" type="file" accept=".csv,text/csv,.txt" onchange="importarBoletosReceitaNetHub(event)" hidden>
     </label>
-    <button onclick="recalcularStatusClientesPorBoletos()">Atualizar status pelos boletos</button>
+    <button onclick="fibraAtualizarStatusPorBoletos().then(r=>alert(`Status atualizado.
+Ativos: ${r.ativos}
+Bloqueados: ${r.bloqueados}
+Preservados: ${r.preservados}
+Regra: ${r.diasConfig} dias`))">Atualizar status pelos boletos</button>
   </div>
   <div id="resultadoImportacaoBoletos" class="import-result">Aguardando arquivo de boletos. Aceita CSV do ReceitaNet com várias linhas por cliente.</div>
 </section>
@@ -971,4 +975,175 @@ document.addEventListener("DOMContentLoaded", function(){
 });
 </script>
 
+
+<script>
+/* ============================================================
+   REGRA DE BLOQUEIO POR BOLETO VENCIDO
+   Cliente só vira BLOQUEADO após 4 dias de atraso.
+   Exemplo: venceu dia 05/07, nos dias 06,07,08,09 continua ativo.
+   A partir do 5º dia de atraso vira bloqueado.
+============================================================ */
+const FIBRA_DIAS_TOLERANCIA_BLOQUEIO = 4;
+
+function fibraParseDataStatus(v){
+  if(!v) return null;
+  v = String(v).trim();
+  let m = v.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(m) return new Date(`${m[1]}-${m[2]}-${m[3]}T00:00:00`);
+  m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if(m) return new Date(`${m[3]}-${m[2]}-${m[1]}T00:00:00`);
+  const d = new Date(v);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function fibraDiasAtrasoBoleto(b){
+  const venc = fibraParseDataStatus(b.vencimento || b.dataVencimento || b.dtVencimento);
+  if(!venc) return 0;
+
+  const hoje = new Date();
+  hoje.setHours(0,0,0,0);
+  venc.setHours(0,0,0,0);
+
+  const diff = Math.floor((hoje - venc) / 86400000);
+  return diff > 0 ? diff : 0;
+}
+
+function fibraBoletoPagoOuCancelado(b){
+  const s = String(b.status || b.statusOriginal || b.statusReceitaNet || "")
+    .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .toLowerCase();
+
+  return s.includes("pago") ||
+         s.includes("baixado") ||
+         s.includes("receb") ||
+         s.includes("cancel") ||
+         s.includes("estornado");
+}
+
+function fibraBoletoBloqueiaCliente(b){
+  if(fibraBoletoPagoOuCancelado(b)) return false;
+  return fibraDiasAtrasoBoleto(b) > FIBRA_DIAS_TOLERANCIA_BLOQUEIO;
+}
+
+function fibraClienteCanceladoStatus(c){
+  const s = String(c.status || c.situacao || c.statusCobranca || "")
+    .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .toLowerCase();
+
+  return s.includes("cancel") ||
+         !!String(c.dataCancelamento || c.dtCancelamento || c.cancelamento || "").trim();
+}
+
+function fibraClienteIsentoStatus(c){
+  const s = String(c.status || c.situacao || c.statusCobranca || c.cobranca || "")
+    .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .toLowerCase();
+
+  return s.includes("isento") || s.includes("nao cobrar");
+}
+
+function fibraConfiancaValidaStatus(c){
+  const raw = c.liberacaoConfiancaAte || c.liberacao_confianca_ate || c.liberacaoConfianca || c.dataLiberacaoConfianca || "";
+  const d = fibraParseDataStatus(raw);
+  if(!d) return false;
+
+  const hoje = new Date();
+  hoje.setHours(0,0,0,0);
+  d.setHours(23,59,59,999);
+
+  return d >= hoje;
+}
+
+function fibraKeyStatusCliente(c){
+  return String(c.loginPppoe || c.login || c.usuario || c.cpfCnpj || c.cpf || c.cnpj || c.nome || "")
+    .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .replace(/\D/g, m => m === "@" ? "@" : "")
+    .toLowerCase()
+    .trim();
+}
+
+function fibraNormStatus(v){
+  return String(v || "")
+    .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .replace(/\s+/g," ")
+    .toLowerCase()
+    .trim();
+}
+
+function fibraDocStatus(v){
+  return String(v || "").replace(/\D/g,"");
+}
+
+function fibraMesmoClienteBoleto(c,b){
+  const clogin = fibraNormStatus(c.loginPppoe || c.login || c.usuario);
+  const blogin = fibraNormStatus(b.login || b.loginPppoe || b.clienteLogin);
+  if(clogin && blogin && clogin === blogin) return true;
+
+  const cdoc = fibraDocStatus(c.cpfCnpj || c.cpf || c.cnpj);
+  const bdoc = fibraDocStatus(b.cpfCnpj || b.cpf || b.cnpj);
+  if(cdoc && bdoc && cdoc === bdoc) return true;
+
+  const cnome = fibraNormStatus(c.nome);
+  const bnome = fibraNormStatus(b.nome || b.cliente);
+  if(cnome && bnome && (cnome === bnome || cnome.includes(bnome) || bnome.includes(cnome))) return true;
+
+  return false;
+}
+
+window.atualizarClientesPorBoletos = function(listaBoletos){
+  let clientes = [];
+  try{ clientes = JSON.parse(localStorage.getItem("clientes") || "[]"); }catch(e){ clientes = []; }
+  if(!Array.isArray(clientes)) clientes = [];
+
+  const boletos = Array.isArray(listaBoletos) ? listaBoletos : [];
+  const hojeISO = new Date().toISOString().slice(0,10);
+
+  let ativos = 0;
+  let bloqueados = 0;
+  let preservados = 0;
+
+  clientes = clientes.map(c => {
+    if(fibraClienteCanceladoStatus(c) || fibraClienteIsentoStatus(c) || fibraConfiancaValidaStatus(c)){
+      preservados++;
+      return c;
+    }
+
+    const deveBloquear = boletos.some(b => fibraMesmoClienteBoleto(c,b) && fibraBoletoBloqueiaCliente(b));
+
+    if(deveBloquear){
+      bloqueados++;
+      return {
+        ...c,
+        status: "bloqueado",
+        dataBloqueio: c.dataBloqueio || hojeISO,
+        bloqueio: c.bloqueio || hojeISO,
+        statusAtualizadoPorBoletos: true,
+        regraBloqueio: "boleto vencido acima de 4 dias",
+        atualizadoEm: new Date().toISOString()
+      };
+    }
+
+    ativos++;
+    return {
+      ...c,
+      status: "ativo",
+      dataBloqueio: "",
+      bloqueio: "",
+      statusAtualizadoPorBoletos: true,
+      regraBloqueio: "sem boleto acima de 4 dias",
+      atualizadoEm: new Date().toISOString()
+    };
+  });
+
+  ["clientes","clientesReceitaNet","fibra_clientes","clientes_importados"].forEach(k => localStorage.setItem(k, JSON.stringify(clientes)));
+
+  if(window.FibraDB){
+    FibraDB.salvarClientes(clientes).catch(e => console.warn("Erro ao salvar status no Supabase:", e.message));
+  }
+
+  return {ativos,bloqueados,preservados,total:clientes.length};
+};
+</script>
+
+<script src="bloqueio-configuravel.js"></script>
 </body></html>

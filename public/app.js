@@ -1,4 +1,8 @@
 
+/* Regra global Fibra+ Hub: bloqueio só após 4 dias de atraso */
+window.FIBRA_DIAS_TOLERANCIA_BLOQUEIO = 4;
+
+
 /* Fix número BR para campos input number */
 function fibraSetValorCampo(id, valor){
   const el = document.getElementById(id);
