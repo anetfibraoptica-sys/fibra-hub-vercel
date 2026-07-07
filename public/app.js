@@ -175,22 +175,36 @@ function fibraGarantirSecaoOnline(){
   const sec=document.createElement("section");
   sec.id="fibraOnlineSeparado";
   sec.className="panel";
-  sec.innerHTML=`<h2>Clientes PPPoE Online</h2><p>Lista vinda da API MikroTik. Não substitui os clientes importados.</p><div id="fibraResumoServidores" class="servers-grid"></div><table class="data-table"><thead><tr><th>Login</th><th>Servidor</th><th>IP</th><th>MAC</th><th>Uptime</th><th>Status</th></tr></thead><tbody id="fibraTbodyOnlineSeparado"><tr><td colspan="6">Carregando...</td></tr></tbody></table>`;
+  sec.innerHTML=`<h2>Clientes PPPoE Online</h2><div id="fibraResumoServidores" class="servers-grid servidores-apenas-cards"></div>`;
   main.appendChild(sec);
 }
-function fibraCardServidor(nome, ok, total, erro){return `<div class="server-card ${ok?'online':'offline'}"><div class="server-head"><div><h3>${fibraEscapeHtml(nome)}</h3><small>${ok?'Conectado':'Sem conexão'}</small></div><span class="${ok?'badge-online':'badge-offline'}">${ok?'Online':'Offline'}</span></div><div class="server-metrics"><div><b>${total||0}</b><span>PPPoE online</span></div></div>${erro?`<p class="server-error">${fibraEscapeHtml(erro)}</p>`:''}</div>`}
+function fibraCardServidor(nome, ok, total, erro){
+  return `<div class="server-card ${ok?'online':'offline'} servidor-card-centralizado">
+    <div class="servidor-card-conteudo">
+      <h3>${fibraEscapeHtml(nome)}</h3>
+      <b>${total || 0}</b>
+      <span>Clientes 🟢</span>
+    </div>
+    ${erro ? `<p class="server-error">${fibraEscapeHtml(erro)}</p>` : ''}
+  </div>`;
+}
+
 async function fibraCarregarOnlineSeparado(){
   fibraGarantirSecaoOnline();
-  const tbody=document.getElementById("fibraTbodyOnlineSeparado"); if(!tbody) return;
   const resumo=document.getElementById("fibraResumoServidores");
+  if(!resumo) return;
   try{
     const dados=await fibraFetchJson('/api/online');
-    const arm=dados?.servidores?.armando||{}; const col=dados?.servidores?.colonia||{};
-    if(resumo) resumo.innerHTML=fibraCardServidor('Armando Mendes',!!arm.ok,arm.total||(arm.clientes||[]).length,arm.erro)+fibraCardServidor('Colônia Antônio Aleixo',!!col.ok,col.total||(col.clientes||[]).length,col.erro);
-    const lista=Array.isArray(dados.clientes)?dados.clientes:[];
-    if(!lista.length){ tbody.innerHTML='<tr><td colspan="6">Nenhum cliente PPPoE online encontrado.</td></tr>'; return; }
-    tbody.innerHTML=lista.map(c=>{ const cliente={login:c.usuario||c.name||c.login||'',nome:c.nome||c.usuario||c.name||'',servidor:c.servidor||'',pop:c.servidor||'',ip:c.ip||c.address||'',mac:c.callerId||c.mac||c['caller-id']||'',uptime:c.uptime||'',service:c.service||'pppoe',raw:c}; return `<tr class="linha-clicavel" onclick='abrirClienteOnline(${JSON.stringify(cliente).replace(/'/g,"&apos;")})'><td>${fibraEscapeHtml(cliente.login)}</td><td>${fibraEscapeHtml(fibraNomeServidor(cliente.servidor))}</td><td>${fibraEscapeHtml(cliente.ip)}</td><td>${fibraEscapeHtml(cliente.mac)}</td><td>${fibraEscapeHtml(cliente.uptime)}</td><td>🟢 Online</td></tr>`; }).join('');
-  }catch(e){ tbody.innerHTML=`<tr><td colspan="6">Erro ao carregar: ${fibraEscapeHtml(e.message)}</td></tr>`; }
+    const arm=dados?.servidores?.armando||{};
+    const col=dados?.servidores?.colonia||{};
+    resumo.innerHTML =
+      fibraCardServidor('Armando Mendes', !!arm.ok, arm.total || (arm.clientes || []).length, arm.erro) +
+      fibraCardServidor('Colônia Antônio Aleixo', !!col.ok, col.total || (col.clientes || []).length, col.erro);
+  }catch(e){
+    resumo.innerHTML =
+      fibraCardServidor('Armando Mendes', false, 0, e.message) +
+      fibraCardServidor('Colônia Antônio Aleixo', false, 0, e.message);
+  }
 }
 
 document.addEventListener('DOMContentLoaded',()=>{ setTimeout(()=>{ fibraCarregarOnlineSeparado(); if(!cadastroDeveAbrirLimpo()){carregarClienteSelecionadoNoCadastro();} },500); });

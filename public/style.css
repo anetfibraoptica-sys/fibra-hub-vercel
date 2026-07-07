@@ -5204,3 +5204,63 @@ button,
 .dashboard-receita-only .card{
   width:100%;
 }
+
+
+/* Dashboard: somente cards dos servidores, textos centralizados */
+#fibraOnlineSeparado .data-table,
+#fibraOnlineSeparado table,
+#fibraOnlineSeparado > p{
+  display:none !important;
+}
+
+.servidores-apenas-cards{
+  display:grid !important;
+  grid-template-columns:repeat(2, minmax(260px, 1fr)) !important;
+  gap:18px !important;
+}
+
+.servidor-card-centralizado{
+  min-height:210px !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  text-align:center !important;
+}
+
+.servidor-card-centralizado .servidor-card-conteudo{
+  width:100% !important;
+  min-height:150px !important;
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:center !important;
+  justify-content:center !important;
+  text-align:center !important;
+  gap:18px !important;
+}
+
+.servidor-card-centralizado h3{
+  width:100% !important;
+  text-align:center !important;
+  margin:0 !important;
+}
+
+.servidor-card-centralizado b{
+  display:block !important;
+  width:100% !important;
+  text-align:center !important;
+  font-size:42px !important;
+  line-height:1 !important;
+}
+
+.servidor-card-centralizado span{
+  display:block !important;
+  width:100% !important;
+  text-align:center !important;
+  font-weight:700 !important;
+}
+
+@media (max-width: 800px){
+  .servidores-apenas-cards{
+    grid-template-columns:1fr !important;
+  }
+}
