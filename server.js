@@ -1092,6 +1092,89 @@ app.get("/api/status-mikrotik", async (req, res) => {
   }
 });
 
+
+/* ============================================================
+   PROFILES PPP MIKROTIK
+   Retorna os profiles de velocidade do MikroTik selecionado.
+   Comando RouterOS: /ppp/profile/print
+============================================================ */
+const cacheProfilesMikrotik = new Map();
+
+app.get("/api/mikrotik/profiles", async (req, res) => {
+  const normalizar = (v) => String(v || "")
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+
+  try {
+    const servidorNome = String(req.query.servidor || "").trim();
+    const force = String(req.query.force || "").trim() === "1";
+
+    if (!servidorNome || servidorNome === "-" || servidorNome === "--" || normalizar(servidorNome).includes("sem servidor")) {
+      return res.json({ ok:false, profiles:[], motivo:"servidor_nao_informado" });
+    }
+
+    const cacheKey = normalizar(servidorNome);
+    const cache = cacheProfilesMikrotik.get(cacheKey);
+    const agora = Date.now();
+
+    if (!force && cache && (agora - cache.ts) < 5 * 60 * 1000) {
+      return res.json({ ok:true, servidor:servidorNome, profiles:cache.profiles, cache:true });
+    }
+
+    // Usa a mesma base do /api/online: servidorConfig + routerosSend + parseRouterosRows.
+    const cfg = servidorConfig(servidorNome);
+
+    if (!cfg.host || !cfg.user || !cfg.pass) {
+      return res.status(500).json({
+        ok:false,
+        profiles:[],
+        motivo:"mikrotik_nao_configurado",
+        servidor: cfg.key || servidorNome,
+        mensagem:"Variáveis do MikroTik não configuradas para " + (cfg.key || servidorNome)
+      });
+    }
+
+    const resp = await routerosSend(
+      cfg.host,
+      cfg.port,
+      cfg.user,
+      cfg.pass,
+      [["/ppp/profile/print"]],
+      15000
+    );
+
+    const rows = parseRouterosRows(resp);
+
+    const ocultar = new Set(["default", "default-encryption"]);
+
+    const profiles = rows
+      .map((p) => String(p.name || p.profile || "").trim())
+      .filter(Boolean)
+      .filter((name) => !ocultar.has(normalizar(name)))
+      .filter((name, idx, arr) => arr.findIndex(x => normalizar(x) === normalizar(name)) === idx)
+      .sort((a,b) => a.localeCompare(b, "pt-BR", { numeric:true }));
+
+    cacheProfilesMikrotik.set(cacheKey, { ts:agora, profiles });
+
+    return res.json({
+      ok:true,
+      servidor: cfg.key || servidorNome,
+      profiles,
+      cache:false
+    });
+  } catch (err) {
+    console.error("Erro /api/mikrotik/profiles:", err);
+    return res.status(500).json({
+      ok:false,
+      profiles:[],
+      erro:true,
+      mensagem:err.message
+    });
+  }
+});
+
+
 io.on("connection",(socket)=>{
   socket.emit("hub-update", geral());
   socket.emit("mikrotik-update", geral());
@@ -1199,3 +1282,6 @@ app.get("/api/cliente/status", async (req, res) => {
     return res.status(500).json({ online:false, erro:true, motivo:"erro_endpoint_status_cliente", mensagem:err.message });
   }
 });
+
+
+

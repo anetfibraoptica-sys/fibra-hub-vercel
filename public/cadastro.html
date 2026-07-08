@@ -511,7 +511,7 @@ fibraCadastroLimparStoragesSelecao();
         </div>
         <div>
           <b>Próxima Fatura Aberta</b>
-          <span>Nenhuma fatura disponível</span>
+          <span id="resProximaFatura">Nenhuma fatura disponível</span>
         </div>
       </div>
 
@@ -2545,6 +2545,230 @@ document.addEventListener("DOMContentLoaded", function(){
   });
 
   window.aplicarPPPoEServidorCadastro = aplicarPPPoE;
+})();
+</script>
+
+
+
+<script>
+/* ============================================================
+   CORREÇÃO FINAL - PROFILE, SERVIDOR E FATURA
+   Usa os IDs reais da tela:
+   - servidor: cadPop
+   - profile: cadProfile
+   - resumo servidor: resServidor
+   - próxima fatura: resProximaFatura
+============================================================ */
+(function(){
+  function norm(v){
+    return String(v || "").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
+  }
+
+  function el(id){ return document.getElementById(id); }
+  function val(id){ return (el(id)?.value || "").trim(); }
+  function txt(id){ return (el(id)?.textContent || "").trim(); }
+  function setTxt(id, value){ const x = el(id); if(x) x.textContent = value || "--"; }
+
+  function servidorAtual(){
+    return val("cadPop") || val("cadServidorReceita") || txt("resServidor") || "";
+  }
+
+  function servidorValido(v){
+    const s = norm(v);
+    return !!(s && s !== "-" && s !== "--" && !s.includes("sem servidor") && !s.includes("selecione"));
+  }
+
+  function atualizarServidorResumo(){
+    const servidor = servidorAtual();
+    setTxt("resServidor", servidorValido(servidor) ? servidor : "--");
+  }
+
+  function setProfileOptions(select, profiles, valorAntes){
+    select.innerHTML = "";
+
+    const opt0 = document.createElement("option");
+    opt0.value = "";
+    opt0.textContent = profiles.length ? "Selecione o Profile" : "Nenhum profile encontrado";
+    select.appendChild(opt0);
+
+    profiles.forEach(function(p){
+      const opt = document.createElement("option");
+      opt.value = p;
+      opt.textContent = p;
+      select.appendChild(opt);
+    });
+
+    if(valorAntes && profiles.some(p => norm(p) === norm(valorAntes))){
+      select.value = profiles.find(p => norm(p) === norm(valorAntes));
+    }else{
+      select.value = "";
+    }
+
+    select.dispatchEvent(new Event("input", {bubbles:true}));
+    select.dispatchEvent(new Event("change", {bubbles:true}));
+  }
+
+  async function carregarProfilesMikrotik(force){
+    const select = el("cadProfile");
+    if(!select) return;
+
+    const servidor = servidorAtual();
+    atualizarServidorResumo();
+
+    if(!servidorValido(servidor)){
+      setProfileOptions(select, [], select.value);
+      return;
+    }
+
+    const valorAntes = select.value || "";
+
+    try{
+      select.innerHTML = '<option value="">Carregando profiles do MikroTik...</option>';
+
+      let url = "/api/mikrotik/profiles?servidor=" + encodeURIComponent(servidor);
+      if(force) url += "&force=1";
+
+      const resp = await fetch(url, {cache:"no-store"});
+      const data = await resp.json();
+
+      if(!resp.ok || !data.ok){
+        console.warn("Falha ao buscar profiles:", data);
+        select.innerHTML = '<option value="">Erro ao buscar profiles</option>';
+        return;
+      }
+
+      const profiles = Array.isArray(data.profiles) ? data.profiles : [];
+      setProfileOptions(select, profiles, valorAntes);
+    }catch(e){
+      console.warn("Erro ao carregar profiles:", e);
+      select.innerHTML = '<option value="">Erro ao buscar profiles</option>';
+    }
+  }
+
+  function getClienteLocal(){
+    const keys = ["clienteSelecionadoCompleto","clienteCadastroSelecionado","clienteEditar","clienteOnlineSelecionado"];
+    for(const k of keys){
+      try{
+        const raw = localStorage.getItem(k);
+        if(raw){
+          const obj = JSON.parse(raw);
+          if(obj && typeof obj === "object") return obj;
+        }
+      }catch(e){}
+    }
+    return {};
+  }
+
+  function getCampo(obj, keys){
+    for(const k of keys){
+      if(obj && obj[k] !== undefined && obj[k] !== null && String(obj[k]).trim() !== "") return String(obj[k]).trim();
+    }
+    return "";
+  }
+
+  function moeda(v){
+    const n = Number(String(v || "0").replace(/\./g,"").replace(",",".").replace(/[^\d.-]/g,""));
+    if(!isFinite(n) || n === 0) return "";
+    return n.toLocaleString("pt-BR", {style:"currency", currency:"BRL"});
+  }
+
+  function dataBR(v){
+    if(!v) return "";
+    const s = String(v).trim();
+    let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if(m) return m[3] + "/" + m[2] + "/" + m[1];
+    m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+    if(m) return s.slice(0,10);
+    return s;
+  }
+
+  function atualizarProximaFatura(){
+    const c = getClienteLocal();
+    const login = (val("cadLogin") || txt("resLogin2") || getCampo(c, ["login","loginPppoe","usuario","pppoe"])).toLowerCase().trim();
+    const cpf = (val("cadCpf") || txt("resCpf") || getCampo(c, ["cpf","cpf_cnpj","cpfCnpj","documento"])).replace(/\D/g,"");
+
+    let lista = [];
+    function add(x){ if(Array.isArray(x)) lista = lista.concat(x); }
+
+    add(c.boletos);
+    add(c.faturas);
+    add(c.titulos);
+
+    ["boletos","fibra_boletos","boletosImportados","boletos_cache"].forEach(function(k){
+      try{ add(JSON.parse(localStorage.getItem(k) || "[]")); }catch(e){}
+    });
+
+    function bget(b, ks){ return getCampo(b, ks); }
+
+    const abertas = lista.filter(function(b){
+      const st = bget(b, ["status","situacao","estado"]).toLowerCase();
+      if(st.includes("pago") || st.includes("baixado") || st.includes("cancel")) return false;
+
+      const bl = bget(b, ["cliente_login","login","loginPppoe","usuario","pppoe"]).toLowerCase().trim();
+      const bc = bget(b, ["cpf_cnpj","cpfCnpj","cpf","documento"]).replace(/\D/g,"");
+
+      if(login && bl && bl !== login) return false;
+      if(cpf && bc && bc !== cpf) return false;
+      if(login && !bl && cpf && !bc) return false;
+      return true;
+    }).sort(function(a,b){
+      const av = bget(a, ["vencimento","dataVencimento","dueDate","venc"]);
+      const bv = bget(b, ["vencimento","dataVencimento","dueDate","venc"]);
+      return String(av).localeCompare(String(bv));
+    });
+
+    let texto = "Nenhuma fatura disponível";
+    if(abertas.length){
+      const f = abertas[0];
+      const numero = bget(f, ["numero","id","titulo","nossoNumero"]);
+      const venc = bget(f, ["vencimento","dataVencimento","dueDate","venc"]);
+      const valor = bget(f, ["total","valor","valor_boleto","amount"]);
+      const partes = [];
+      if(numero) partes.push("#" + numero);
+      if(venc) partes.push("Venc. " + dataBR(venc));
+      const mv = moeda(valor);
+      if(mv) partes.push(mv);
+      texto = partes.join(" • ") || "Fatura em aberto";
+    }
+
+    let campo = el("resProximaFatura");
+    if(!campo){
+      const labels = Array.from(document.querySelectorAll(".resumo-label,b,span")).find(x => norm(x.textContent) === "proxima fatura aberta");
+      const pai = labels ? labels.parentElement : null;
+      if(pai){
+        campo = pai.querySelector(".resumo-value,span:last-child");
+        if(campo) campo.id = "resProximaFatura";
+      }
+    }
+    if(campo) campo.textContent = texto;
+  }
+
+  function atualizarTudoAposResumo(){
+    atualizarServidorResumo();
+    atualizarProximaFatura();
+  }
+
+  window.carregarProfilesMikrotik = carregarProfilesMikrotik;
+  window.atualizarResumoServidorEFatura = atualizarTudoAposResumo;
+
+  document.addEventListener("DOMContentLoaded", function(){
+    setTimeout(function(){ carregarProfilesMikrotik(false); atualizarTudoAposResumo(); }, 800);
+    setTimeout(atualizarTudoAposResumo, 1600);
+    setTimeout(atualizarTudoAposResumo, 3500);
+  });
+
+  document.addEventListener("change", function(e){
+    if(e.target && e.target.id === "cadPop"){
+      setTimeout(function(){ carregarProfilesMikrotik(true); atualizarTudoAposResumo(); }, 150);
+      setTimeout(atualizarTudoAposResumo, 700);
+    }
+  });
+
+  document.addEventListener("input", function(e){
+    if(e.target && ["cadLogin","cadCpf","cadPop"].includes(e.target.id)){
+      setTimeout(atualizarTudoAposResumo, 200);
+    }
+  });
 })();
 </script>
 

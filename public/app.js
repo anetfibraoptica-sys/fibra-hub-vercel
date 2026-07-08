@@ -747,6 +747,94 @@ document.addEventListener("DOMContentLoaded", function(){
     return fallback || "";
   }
 
+
+  function moedaBR(v){
+    var n = Number(String(v || "0").replace(/\./g,"").replace(",",".").replace(/[^\d.-]/g,""));
+    if(!isFinite(n)) n = 0;
+    return n.toLocaleString("pt-BR", {style:"currency", currency:"BRL"});
+  }
+
+  function dataBR(v){
+    if(!v) return "";
+    var s = String(v).trim();
+    var m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if(m) return m[3] + "/" + m[2] + "/" + m[1];
+    m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+    if(m) return s.slice(0,10);
+    return s;
+  }
+
+  function proximaFaturaAberta(c, login, cpf){
+    var candidatos = [];
+
+    function addLista(lista){
+      if(Array.isArray(lista)) candidatos = candidatos.concat(lista);
+    }
+
+    addLista(c.boletos);
+    addLista(c.faturas);
+    addLista(c.titulos);
+
+    try{ addLista(JSON.parse(localStorage.getItem("boletos") || "[]")); }catch(e){}
+    try{ addLista(JSON.parse(localStorage.getItem("fibra_boletos") || "[]")); }catch(e){}
+    try{ addLista(JSON.parse(localStorage.getItem("boletosImportados") || "[]")); }catch(e){}
+
+    var loginN = String(login || "").toLowerCase().trim();
+    var cpfN = String(cpf || "").replace(/\D/g,"");
+
+    var hoje = new Date();
+    hoje.setHours(0,0,0,0);
+
+    function get(b, ks){
+      for(var i=0;i<ks.length;i++){
+        if(b && b[ks[i]] !== undefined && b[ks[i]] !== null && String(b[ks[i]]).trim() !== "") return String(b[ks[i]]).trim();
+      }
+      return "";
+    }
+
+    function parseData(v){
+      if(!v) return null;
+      var s = String(v).trim();
+      var m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if(m) return new Date(Number(m[1]), Number(m[2])-1, Number(m[3]));
+      m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+      if(m) return new Date(Number(m[3]), Number(m[2])-1, Number(m[1]));
+      var d = new Date(s);
+      return isNaN(d.getTime()) ? null : d;
+    }
+
+    var abertas = candidatos.filter(function(b){
+      var st = get(b, ["status","situacao","estado"]).toLowerCase();
+      if(st.includes("pago") || st.includes("baixado") || st.includes("cancel")) return false;
+
+      var bLogin = get(b, ["cliente_login","login","loginPppoe","usuario","pppoe"]).toLowerCase().trim();
+      var bCpf = get(b, ["cpf_cnpj","cpfCnpj","cpf","documento"]).replace(/\D/g,"");
+
+      if(loginN && bLogin && bLogin !== loginN) return false;
+      if(cpfN && bCpf && bCpf !== cpfN) return false;
+
+      if(loginN && !bLogin && cpfN && !bCpf) return false;
+      return true;
+    }).sort(function(a,b){
+      var da = parseData(get(a, ["vencimento","dataVencimento","dueDate","venc"]));
+      var db = parseData(get(b, ["vencimento","dataVencimento","dueDate","venc"]));
+      return (da ? da.getTime() : 9999999999999) - (db ? db.getTime() : 9999999999999);
+    });
+
+    if(!abertas.length) return "Nenhuma fatura disponível";
+
+    var f = abertas[0];
+    var venc = get(f, ["vencimento","dataVencimento","dueDate","venc"]);
+    var valor = get(f, ["total","valor","valor_boleto","amount"]);
+    var numero = get(f, ["numero","id","nossoNumero","titulo"]);
+
+    var partes = [];
+    if(numero) partes.push("#" + numero);
+    if(venc) partes.push("Venc. " + dataBR(venc));
+    if(valor) partes.push(moedaBR(valor));
+    return partes.join(" • ") || "Fatura em aberto";
+  }
+
   function montarResumoReceitaNet(){
     var card = document.querySelector(".cadastro-resumo-card");
     if(!card) return;
@@ -758,8 +846,8 @@ document.addEventListener("DOMContentLoaded", function(){
     var nome = val(["input[name='nome']","input[name='cli_nome']","#nome","#cadNome"], pick(c,["nome","name","cliente"], "-"));
     var cpf = val(["input[name='cpf']","input[name='cpfcnpj']","input[name='cli_cgc']","#cpf","#cpfcnpj"], pick(c,["cpf","cpfcnpj","documento"], "-"));
     var dia = val(["select[name='dia_vencimento']","select[name='cli_diatari']","input[name='dia_vencimento']","#diaVencimento"], pick(c,["diaVencimento","vencimento"], "20"));
-    var prox = pick(c,["proximaFatura","proxima_fatura","fatura"], "Nenhuma fatura disponível");
-    var servidor = pick(c,["servidor","server"], val(["select[name='servidor'] option:checked","select[name='ip_mk'] option:checked"], "-"));
+    var prox = proximaFaturaAberta(c, login, cpf);
+    var servidor = val(["#cadServidorReceita option:checked","#cadPop option:checked","#cadServidor option:checked","select[name='servidor'] option:checked","select[name='ip_mk'] option:checked"], pick(c,["servidor","server","popServidor"], "-"));
     var interfaceV = pick(c,["interface","interfaceAtual"], val(["select[name='interface'] option:checked","select[name='interface_id'] option:checked"], "PPPOE"));
     var ip = pick(c,["ip","ipAtual","address"], "100.127.7.218");
     var profile = pick(c,["profile","planoServidor","perfil"], "600-MEGA");
@@ -798,7 +886,7 @@ document.addEventListener("DOMContentLoaded", function(){
 
         <div class="resumo-section-title">Servidor</div>
         <div class="resumo-grid">
-          <div class="resumo-field"><span class="resumo-label">SERVIDOR</span><span class="resumo-value">${servidor}</span></div>
+          <div class="resumo-field"><span class="resumo-label">SERVIDOR</span><span id="resServidor" class="resumo-value">${servidor}</span></div>
           <div class="resumo-field"><span class="resumo-label">INTERFACE</span><span class="resumo-value">${interfaceV}</span></div>
           <div class="resumo-field"><span class="resumo-label">ELEMENTO DE REDE</span><span class="resumo-value">Conexão<br>PPPOE</span></div>
           <div class="resumo-field"><span class="resumo-label">IP ATUAL</span><span class="resumo-value">Profile<br>${profile}</span></div>
