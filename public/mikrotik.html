@@ -1,0 +1,25 @@
+<!DOCTYPE html><html lang="pt-BR"><head>
+<script src="00-fix-definitivo.js"></script><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>MikroTik API - Fibra+</title><link rel="stylesheet" href="style.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+</head><body onload="protegerPagina()"><div class="sidebar-overlay" onclick="fecharMenuLateral()"></div>
+<button id="mobileMenuBtn" class="mobile-menu-btn" type="button" onclick="abrirMenuLateral()">☰ Menu</button>
+<div id="mobileMenuOverlay" class="mobile-menu-overlay" onclick="closeMobileMenu()"></div><div class="mobile-top"><button class="menu-btn" onclick="abrirMenuLateral()">☰</button><div><div class="logo-wrap "><div class="brand"><span class="fibra">Fibra</span><span class="brand-dot"></span><span class="plus">+</span></div><div class="slogan">CONECTANDO VOCÊ SEMPRE</div></div></div></div><div class="layout"><div class="overlay" onclick="fecharMenu()"></div><aside class="sidebar"><div class="logo-wrap "><div class="brand"><span class="fibra">Fibra</span><span class="brand-dot"></span><span class="plus">+</span></div><div class="slogan">CONECTANDO VOCÊ SEMPRE</div></div><nav class="nav"><a href="dashboard.html" class=""><span class="icon">🏠</span>Dashboard</a>
+<a href="clientes.html" class=""><span class="icon">👤</span>Consultar Clientes</a>
+<a href="cadastro.html?novo=1" class=""><span class="icon">👥</span>Cadastrar Cliente</a>
+<a href="importacao.html"><span class="icon">⬆️</span>Importação</a>
+<a href="pppoe.html" class=""><span class="icon">☰</span>PPPoE Real</a>
+<a href="mikrotik.html" class="active"><span class="icon">◔</span>MikroTik API</a>
+<a href="monitoramento.html" class=""><span class="icon">▣</span>Monitoramento</a>
+<a href="financeiro.html" class=""><span class="icon">▤</span>Financeiro</a>
+<a href="relatorios.html" class=""><span class="icon">▥</span>Relatórios</a>
+<a href="planos.html" class=""><span class="icon">▦</span>Planos</a>
+<a href="usuarios.html" class=""><span class="icon">👥</span>Usuários</a>
+<a href="configuracoes.html" class=""><span class="icon"></span>Configurações</a>
+<a href="backup.html" class=""><span class="icon">☁</span>Backup</a><a href="#" onclick="sair()"><span class="icon">↪</span></a></nav></aside><main class="main"><header class="topbar"><h1>MikroTik API</h1><div><b>Administrador</b></div></header><section class="content"><section class="grid-2"><div class="panel"><h3>Teste de Conexão com MikroTik</h3><p>Este botão testa as variáveis do Render:</p><p><b>MIKROTIK_HOST</b>, <b>MIKROTIK_USER</b>, <b>MIKROTIK_PASS</b>, <b>MIKROTIK_PORT</b></p><button onclick="testarMikrotik()">Testar Conexão API</button></div><div class="panel"><h3>Resultado</h3><div id="resultadoApi" class="api-box">Clique em testar conexão.</div></div></section>
+<section class="panel"><h3>Rotas para testar no navegador</h3><p>/api/status</p><p>/api/mikrotik/teste</p><p>/api/mikrotik/recursos</p><p>/api/mikrotik/pppoe</p><p>/api/mikrotik/interfaces</p></section><div class="footer"><span>© 2026 Fibra+</span><span>Painel MikroTik responsivo para PC e celular</span></div></section></main></div><script src="supabase-client.js"></script>
+<script src="auth-painel.js"></script>
+<script src="app.js"></script><script src="bloqueio-configuravel.js"></script>
+</body></html>

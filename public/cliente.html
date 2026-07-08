@@ -1,0 +1,17 @@
+<!DOCTYPE html><html lang="pt-BR"><head>
+<script src="00-fix-definitivo.js"></script><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Dados do Cliente - Fibra+ Hub</title><link rel="stylesheet" href="style.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+</head><body onload="protegerPagina(); iniciarSocket(); carregarClienteDetalhes();"><div class="sidebar-overlay" onclick="fecharMenuLateral()"></div>
+<button id="mobileMenuBtn" class="mobile-menu-btn" type="button" onclick="abrirMenuLateral()">☰ Menu</button>
+<div id="mobileMenuOverlay" class="mobile-menu-overlay" onclick="closeMobileMenu()"></div><div class="mobile-top"><button class="menu-btn" onclick="abrirMenuLateral()">☰</button><div><div class="logo-wrap"><div class="brand"><span class="fibra">Fibra</span><span class="brand-dot"></span><span class="plus">+</span></div><div class="slogan">HUB DE CONTROLE</div></div></div></div><div class="layout"><div class="overlay" onclick="fecharMenu()"></div><aside class="sidebar"><div class="logo-wrap"><div class="brand"><span class="fibra">Fibra</span><span class="brand-dot"></span><span class="plus">+</span></div><div class="slogan">HUB DE CONTROLE</div></div><nav class="nav"><a href="dashboard.html"><span class="icon">🏠</span>Dashboard</a><a href="clientes.html" class="active"><span class="icon">👤</span>Clientes</a><a href="cadastro.html?novo=1"><span class="icon">👥</span>Cadastrar Cliente</a>
+<a href="importacao.html"><span class="icon">⬆️</span>Importação</a>
+<a href="pppoe.html"><span class="icon">☰</span>PPPoE Online</a><a href="monitoramento.html"><span class="icon">▣</span>Monitoramento</a><a href="financeiro.html"><span class="icon">▤</span>Financeiro</a><a href="chamados.html"><span class="icon">🔧</span>Chamados</a><a href="#" onclick="sair()"><span class="icon">↪</span></a></nav></aside><main class="main"><header class="topbar"><h1>Dados do Cliente</h1><div class="topbar-right"><span id="liveStatus" class="badge badge-off">CONECTANDO</span><span class="badge">PostgreSQL</span><span class="badge">Administrador</span></div></header><section class="content"><div id="clienteDetalhes"><section class="panel">Carregando cliente...</section></div><div class="footer"><span>© 2026 Fibra+</span><span>Detalhes do cliente</span></div></section></main></div><script src="supabase-client.js"></script>
+<script src="auth-painel.js"></script>
+<script src="app.js"></script>
+<script src="pppoe-stable.js"></script>
+<script src="pppoe-search.js"></script>
+<script src="bloqueio-configuravel.js"></script>
+</body></html>
