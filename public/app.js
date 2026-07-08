@@ -897,3 +897,147 @@ document.addEventListener("DOMContentLoaded", function(){
   });
 })();
 
+
+
+
+/* ============================================================
+   RESUMO LATERAL DIREITA RECEITANET
+   Mantém o resumo completo. Status Online/Offline é atualizado
+   separadamente pelo cadastro.html via /api/cliente/status.
+============================================================ */
+(function(){
+  function qs(sel){ return document.querySelector(sel); }
+  function val(id){ const el=document.getElementById(id); return el ? (el.value || "").trim() : ""; }
+  function txt(id){ const el=document.getElementById(id); return el ? (el.textContent || "").trim() : ""; }
+
+  function set(id, valor){
+    const el = document.getElementById(id);
+    if(el) el.textContent = valor || "--";
+  }
+
+  function montarResumoReceitaNet(){
+    const box = document.querySelector(".cadastro-resumo-card.resumo-receitanet-completo");
+    if(!box) return;
+
+    const atual = {
+      login: val("cadLogin") || txt("resLogin") || "--",
+      senha: val("cadSenha") || txt("resSenha") || "--",
+      nome: val("cadNome") || txt("resNome") || "--",
+      cpf: val("cadCpf") || txt("resCpf") || "--",
+      venc: val("cadVencimento") || txt("resVenc") || "--",
+      servidor: val("cadServidorReceita") || val("cadPop") || txt("resServidor") || "--",
+      interface: val("cadInterface") || txt("resInterface") || "--",
+      elemento: val("cadElementoRede") || txt("resElemento") || "--",
+      ip: txt("resIp") || "--",
+      conexao: txt("resConexao") || "--",
+      profile: val("cadProfile") || txt("resProfile") || "--",
+      plano: val("cadPlano") || txt("resPlano") || "Nenhum Plano Ativo",
+      valor: val("cadValor") || txt("resValor") || "R$ 0,00",
+      total: txt("resTotal") || val("cadValor") || "R$ 0,00",
+      endereco: val("cadEndereco") || txt("resEndereco") || "--",
+      complemento: val("cadComplemento") || txt("resComplemento") || "--",
+      referencia: val("cadReferencia") || txt("resReferencia") || "--",
+      cidade: val("cadCidade") || txt("resCidade") || "--",
+      bairro: val("cadBairro") || txt("resBairro") || "--",
+      ibge: val("cadIbge") || txt("resIbge") || "--",
+      uf: val("cadUf") || txt("resUf") || "--",
+      tel1: val("cadTelefone1") || txt("resTelefone1") || "--",
+      tel2: val("cadTelefone2") || txt("resTelefone2") || "--",
+      tel3: val("cadTelefone3") || txt("resTelefone3") || "--"
+    };
+
+    box.innerHTML = `
+      <div class="resumo-title">
+        <h3>Resumo</h3>
+        <button type="button">?</button>
+      </div>
+
+      <div class="resumo-top-grid">
+        <div><b>Login</b><span class="check-login">✓</span><span id="resLogin">${atual.login}</span></div>
+        <div><b>Senha</b><span id="resSenha">${atual.senha}</span></div>
+        <div><b>Nome</b><span id="resNome">${atual.nome}</span></div>
+        <div><b>CPF/CNPJ</b><span id="resCpf">${atual.cpf}</span></div>
+        <div><b>Dia do Vencimento</b><span id="resVenc">${atual.venc}</span></div>
+        <div><b>Próxima Fatura Aberta</b><span>Nenhuma fatura disponível</span></div>
+      </div>
+
+      <div class="resumo-section">
+        <h4>Servidor</h4>
+        <div class="resumo-servidor-grid">
+          <div><b>SERVIDOR</b><span id="resServidor">${atual.servidor}</span></div>
+          <div><b>INTERFACE</b><span id="resInterface">${atual.interface}</span></div>
+          <div><b>ELEMENTO DE REDE</b><span id="resElemento">${atual.elemento}</span></div>
+          <div><b>IP ATUAL</b><span id="resIp">${atual.ip}</span></div>
+          <div><b>Conexão</b><span id="resConexao">Offline</span></div>
+          <div><b>Profile</b><span id="resProfile">${atual.profile}</span></div>
+        </div>
+
+        <h4>OLTNET</h4>
+        <span class="nao-identificado">Não Identificado</span>
+      </div>
+
+      <div class="status-login-line">
+        <span>Status <span class="offline-dot status-offline-real">● Offline</span></span>
+        <span>Login: <b id="resLogin2">${atual.login}</b></span>
+      </div>
+
+      <div class="resumo-section">
+        <h4>Plano de Cobrança</h4>
+        <table class="mini-table plano-table">
+          <thead><tr><th>PLANO</th><th>VALOR UN</th><th>QTDADE</th></tr></thead>
+          <tbody><tr><td id="resPlano">${atual.plano}</td><td id="resValor">${atual.valor}</td><td>1</td></tr></tbody>
+        </table>
+        <div class="mini-total">Total: <span id="resTotal">${atual.total}</span></div>
+      </div>
+
+      <div class="resumo-section">
+        <h4>Estoque</h4>
+        <table class="mini-table estoque-table">
+          <thead><tr><th>PRODUTO</th><th>QT.</th><th>UN</th><th>VALOR</th><th>DATA</th></tr></thead>
+          <tbody><tr><td colspan="5">Nenhum Produto</td></tr></tbody>
+        </table>
+      </div>
+
+      <div class="resumo-section dados-contato-resumo">
+        <h4>Dados de Contato</h4>
+        <div class="contato-resumo-grid">
+          <div><b>Endereço</b><span id="resEndereco">${atual.endereco}</span></div>
+          <div><b>Compl.</b><span id="resComplemento">${atual.complemento}</span></div>
+          <div><b>Ponto de Ref.</b><span id="resReferencia">${atual.referencia}</span></div>
+          <div><b>Cidade</b><span id="resCidade">${atual.cidade}</span></div>
+          <div><b>Bairro</b><span id="resBairro">${atual.bairro}</span></div>
+          <div><b>IBGE</b><span id="resIbge">${atual.ibge}</span></div>
+          <div><b>Estado</b><span id="resUf">${atual.uf}</span></div>
+          <div><b>Tel2</b><span id="resTelefone2">${atual.tel2}</span></div>
+          <div><b>Tel1</b><span id="resTelefone1">${atual.tel1}</span></div>
+          <div><b>Tel3</b><span id="resTelefone3">${atual.tel3}</span></div>
+        </div>
+      </div>
+
+      <div class="resumo-section pai-controle-resumo">
+        <h4>Sistema Pai Controle</h4>
+        <span class="pai-desativado">Desativado</span>
+      </div>
+    `;
+
+    if(typeof window.atualizarStatusRealCliente === "function"){
+      setTimeout(window.atualizarStatusRealCliente, 100);
+    }
+  }
+
+  window.montarResumoReceitaNet = montarResumoReceitaNet;
+
+  document.addEventListener("DOMContentLoaded", function(){
+    setTimeout(montarResumoReceitaNet, 300);
+    setTimeout(montarResumoReceitaNet, 1200);
+  });
+
+  document.addEventListener("input", function(e){
+    if(e.target && e.target.closest(".cadastro-form-card")){
+      setTimeout(montarResumoReceitaNet, 80);
+    }
+  });
+
+  window.addEventListener("storage", montarResumoReceitaNet);
+})();
+

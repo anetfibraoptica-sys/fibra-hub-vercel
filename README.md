@@ -1,10 +1,9 @@
 # Fibra+ Hub
 
-## Alteração atual
-- O Resumo do cadastro agora fica conectado ao MikroTik.
-- Consulta dedicada: `/api/cliente/status`.
-- O backend usa `/ppp/active/print` para verificar o login PPPoE.
-- Se o login estiver no PPP Active com IP + MAC + uptime, mostra verde Online.
-- Se não estiver no PPP Active, mostra vermelho Offline.
+## Correção atual
+- Restaurado o Resumo completo no formato anterior.
+- Removido Tempo/MAC da linha junto com Login.
+- A alteração agora mexe somente no Online/Offline, IP, Interface e Profile.
+- O status consulta `/api/cliente/status`, que usa `/ppp/active/print`.
 
-Depois de publicar na Vercel, faça Ctrl+F5 ou teste em aba anônima.
+Depois de publicar, faça Ctrl+F5.

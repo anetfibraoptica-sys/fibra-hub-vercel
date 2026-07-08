@@ -547,8 +547,6 @@ fibraCadastroLimparStoragesSelecao();
       <div class="status-login-line">
         <span>Status<span class="offline-dot status-offline-real">● Offline</span></span>
         <span>Login: <b id="resLogin2">--</b></span>
-        <span>Tempo: <b id="resTempo">-</b></span>
-        <span>MAC: <b id="resMac">-</b></span>
       </div>
 
       <div class="resumo-section">
@@ -2295,40 +2293,24 @@ document.addEventListener("DOMContentLoaded", function(){
 
 
 
+
+
+
+
 <script>
 /* ============================================================
-   RESUMO CONECTADO AO MIKROTIK
-   Verde somente quando /api/cliente/status confirmar sessão PPPoE.
-   Vermelho quando o login não estiver em /ppp/active/print.
+   STATUS ONLINE/OFFLINE DO RESUMO
+   Mexe somente no status visual e campos técnicos.
+   Não altera a estrutura completa do Resumo.
 ============================================================ */
 (function(){
-  function norm(v){
-    return String(v || "")
-      .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
-      .toLowerCase()
-      .trim();
-  }
-
   function getVal(id){ return (document.getElementById(id)?.value || "").trim(); }
   function getTxt(id){ return (document.getElementById(id)?.textContent || "").trim(); }
-  function setTxt(id, valor){
-    const el = document.getElementById(id);
-    if(el) el.textContent = valor || "-";
-  }
+  function setTxt(id, valor){ const el=document.getElementById(id); if(el) el.textContent = valor || "-"; }
 
   function statusEl(){ return document.querySelector(".offline-dot"); }
-
-  function loginAtual(){
-    return getVal("cadLogin") || getTxt("resLogin2") || getTxt("resLogin");
-  }
-
-  function servidorAtual(){
-    return getVal("cadServidorReceita") || getVal("cadPop") || getTxt("resServidor") || "";
-  }
-
-  function macCadastrado(){
-    return getVal("cadMac") || getVal("cadMacOnu") || "";
-  }
+  function loginAtual(){ return getVal("cadLogin") || getTxt("resLogin2") || getTxt("resLogin"); }
+  function servidorAtual(){ return getVal("cadServidorReceita") || getVal("cadPop") || getTxt("resServidor") || ""; }
 
   function aplicarOffline(){
     const el = statusEl();
@@ -2338,11 +2320,8 @@ document.addEventListener("DOMContentLoaded", function(){
       el.classList.add("status-offline-real");
       el.style.color = "#ef4444";
     }
-
+    setTxt("resConexao", "Offline");
     setTxt("resIp", "-");
-    setTxt("resTempo", "-");
-    setTxt("resMac", macCadastrado() || "Não informado");
-    window.__fibraResumoOnline = false;
   }
 
   function aplicarVerificando(){
@@ -2353,14 +2332,10 @@ document.addEventListener("DOMContentLoaded", function(){
       el.classList.add("status-verificando-real");
       el.style.color = "#f59e0b";
     }
+    setTxt("resConexao", "Verificando");
   }
 
   function aplicarOnline(d){
-    if(!(d && d.online === true && d.ip && d.mac && d.uptime)){
-      aplicarOffline();
-      return;
-    }
-
     const el = statusEl();
     if(el){
       el.textContent = "● Online";
@@ -2368,20 +2343,15 @@ document.addEventListener("DOMContentLoaded", function(){
       el.classList.add("status-online-real");
       el.style.color = "#22c55e";
     }
-
+    setTxt("resConexao", "Online");
     setTxt("resIp", d.ip);
-    setTxt("resTempo", d.uptime);
-    setTxt("resMac", d.mac);
     setTxt("resInterface", d.interface || "PPPOE");
     setTxt("resProfile", d.profile || "-");
     if(d.servidor) setTxt("resServidor", d.servidor);
-
-    window.__fibraResumoOnline = true;
   }
 
-  async function consultarResumoMikrotik(){
+  async function consultar(){
     const login = loginAtual();
-
     if(!login){
       aplicarOffline();
       return;
@@ -2406,41 +2376,23 @@ document.addEventListener("DOMContentLoaded", function(){
         aplicarOffline();
       }
     }catch(e){
-      console.warn("Erro ao consultar status no MikroTik:", e);
+      console.warn("Erro ao consultar status do cliente:", e);
       aplicarOffline();
     }
   }
 
-  function travaVisual(){
-    const el = statusEl();
-    if(!el) return;
-
-    const ip = getTxt("resIp");
-    const mac = getTxt("resMac");
-    const tempo = getTxt("resTempo");
-
-    const semSessao = !ip || ip === "-" || ip === '""' ||
-                      !mac || mac === "-" || mac === '""' || norm(mac).includes("nao informado") ||
-                      !tempo || tempo === "-" || tempo === '""';
-
-    if((norm(el.textContent).includes("online") || el.classList.contains("status-online-real")) && semSessao){
-      aplicarOffline();
-    }
-  }
-
-  window.atualizarStatusRealCliente = consultarResumoMikrotik;
+  window.atualizarStatusRealCliente = consultar;
 
   document.addEventListener("DOMContentLoaded", function(){
     aplicarOffline();
-    setTimeout(consultarResumoMikrotik, 600);
-    setTimeout(consultarResumoMikrotik, 1800);
-    setTimeout(consultarResumoMikrotik, 4000);
-    setInterval(travaVisual, 500);
+    setTimeout(consultar, 700);
+    setTimeout(consultar, 2000);
+    setTimeout(consultar, 4200);
   });
 
   document.addEventListener("input", function(e){
     if(e.target && (e.target.id === "cadLogin" || e.target.id === "cadServidorReceita" || e.target.id === "cadPop")){
-      setTimeout(consultarResumoMikrotik, 400);
+      setTimeout(consultar, 400);
     }
   });
 })();

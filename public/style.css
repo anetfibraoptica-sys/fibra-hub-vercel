@@ -5987,3 +5987,10 @@ body{
   min-width:0 !important;
   word-break:break-word !important;
 }
+
+
+/* Status visual do Resumo */
+.offline-dot{color:#ef4444 !important;font-weight:900 !important;}
+.offline-dot.status-offline-real,.status-offline-real{color:#ef4444 !important;font-weight:900 !important;}
+.offline-dot.status-verificando-real,.status-verificando-real{color:#f59e0b !important;font-weight:900 !important;}
+.offline-dot.status-online-real,.status-online-real{color:#22c55e !important;font-weight:900 !important;}
