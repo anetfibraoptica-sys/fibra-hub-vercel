@@ -1,11 +1,11 @@
-Fibra Hub - Status ReceitaNet corrigido
+# Fibra+ Hub
 
-Correção aplicada:
-- Status Pendente do ReceitaNet não vira Pago.
-- Valor Pago 0,00 não marca boleto como Pago.
-- Data de pagamento vazia não marca como Pago.
-- Pendente com vencimento futuro aparece como Pendente.
-- Pendente vencido aparece como Vencido.
-- Pago aparece como Pago somente quando o status do ReceitaNet indicar Pago/Baixado/Recebido.
+## Alteração atual
+- Corrigido o Resumo da tela de cadastro para não usar barra de rolagem interna.
+- O card Resumo agora cresce naturalmente para baixo.
+- A rolagem fica na página inteira, como no ReceitaNet.
+- Mantido o mesmo cadastro.html e o mesmo style.css do projeto.
+- Removidos READMEs separados; agora o projeto usa apenas este README.md.
 
-Após instalar, reimporte o CSV de boletos para limpar os status antigos errados.
+## Observação
+Depois de publicar na Vercel, faça Ctrl+F5 ou teste em aba anônima para evitar cache antigo do CSS.

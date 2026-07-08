@@ -703,7 +703,7 @@ button, .nav a, input, select, textarea{
     grid-template-columns:230px minmax(0,1fr) !important;
     width:100vw !important;
     max-width:100vw !important;
-    overflow-x:hidden !important;
+    overflow-x:visible !important;
   }
 }
 
@@ -1011,7 +1011,7 @@ button,.button-link{
   html, body{
     width:100% !important;
     max-width:100% !important;
-    overflow-x:hidden !important;
+    overflow-x:visible !important;
   }
 
   .layout{
@@ -1020,7 +1020,7 @@ button,.button-link{
     width:100% !important;
     max-width:100% !important;
     min-height:100vh !important;
-    overflow-x:hidden !important;
+    overflow-x:visible !important;
   }
 
   .sidebar{
@@ -1031,8 +1031,8 @@ button,.button-link{
     min-width:230px !important;
     max-width:230px !important;
     height:100vh !important;
-    overflow-y:auto !important;
-    overflow-x:hidden !important;
+    overflow-y:visible !important;
+    overflow-x:visible !important;
     grid-column:1 !important;
   }
 
@@ -1049,7 +1049,7 @@ button,.button-link{
     left:auto !important;
     right:auto !important;
     transform:none !important;
-    overflow-x:hidden !important;
+    overflow-x:visible !important;
   }
 
   .topbar,
@@ -1118,7 +1118,7 @@ button,.button-link{
    ===================================================== */
 
 .cadastro-tabs{
-  overflow-x:hidden !important;
+  overflow-x:visible !important;
   overflow-y:hidden !important;
   scrollbar-width:none !important;
   -ms-overflow-style:none !important;
@@ -1165,7 +1165,7 @@ button,.button-link{
 .cadastro-form-card,
 .tab-content{
   max-width:100% !important;
-  overflow-x:hidden !important;
+  overflow-x:visible !important;
 }
 
 /* Botões superiores mais compactos para não estourar a tela */
@@ -1321,7 +1321,7 @@ button,.button-link{
 
 .cadastro-receita-page,
 .cadastro-layout-receita{
-  overflow-x:hidden !important;
+  overflow-x:visible !important;
   max-width:100% !important;
 }
 
@@ -2436,8 +2436,8 @@ body:not(.dark) .cep-status.erro{
 
 .resumo-receitanet-completo{
   border-top:3px solid #b91c1c !important;
-  max-height:calc(100vh - 105px) !important;
-  overflow-y:auto !important;
+  max-height:none !important;
+  overflow-y:visible !important;
   padding:14px !important;
 }
 
@@ -3036,7 +3036,7 @@ body:not(.light) .resumo-receitanet-completo .status-login-line{
    ===================================================== */
 
 html,body{
-  overflow-x:hidden !important;
+  overflow-x:visible !important;
 }
 
 .clientes-topbar-receita{
@@ -3100,7 +3100,7 @@ html,body{
   color:#1f2937 !important;
   min-height:calc(100vh - 46px) !important;
   padding:10px 12px !important;
-  overflow-x:hidden !important;
+  overflow-x:visible !important;
 }
 
 .clientes-page-title{
@@ -3812,7 +3812,7 @@ body,
 .clientes-lista-receita,
 .clientes-table-card,
 .clientes-table-scroll{
-  overflow-x:hidden !important;
+  overflow-x:visible !important;
 }
 
 /* Centralizado no PC */
@@ -4356,7 +4356,7 @@ tbody tr:hover {
 @media (max-width: 768px) {
   .mobile-top { display:flex !important; }
   .menu-btn { display:inline-block !important; pointer-events:auto !important; position:relative !important; z-index:10050 !important; }
-  .sidebar { position:fixed !important; top:0 !important; left:0 !important; width:285px !important; max-width:85vw !important; height:100vh !important; z-index:10000 !important; overflow-y:auto !important; transform:translateX(-105%) !important; transition:transform .25s ease !important; }
+  .sidebar { position:fixed !important; top:0 !important; left:0 !important; width:285px !important; max-width:85vw !important; height:100vh !important; z-index:10000 !important; overflow-y:visible !important; transform:translateX(-105%) !important; transition:transform .25s ease !important; }
   body.menu-open .sidebar, .sidebar.open, .sidebar.mobile-open, .sidebar.sidebar-aberta { transform:translateX(0) !important; left:0 !important; }
   .overlay, .sidebar-overlay { position:fixed !important; inset:0 !important; background:rgba(0,0,0,.55) !important; z-index:9999 !important; display:none; }
   body.menu-open .overlay, .overlay.show, .overlay.active, .sidebar-overlay.show { display:block !important; }
@@ -4865,7 +4865,7 @@ button,
   /* Área principal continua começando após o menu já ajustado */
   .main,
   main.main{
-    overflow-x:hidden !important;
+    overflow-x:visible !important;
   }
 
   .content{
@@ -5682,12 +5682,6 @@ button,
 
 
 
-/* ============================================================
-   CADASTRO - ajuste exato do Resumo em 100% de zoom
-   Usa apenas as classes reais da tela: cadastro-layout-receita,
-   cadastro-form-card e cadastro-resumo-card.
-============================================================ */
-
 /* permite que o grid encolha corretamente dentro da área principal */
 .cadastro-receita-page,
 .cadastro-layout-receita,
@@ -5713,9 +5707,9 @@ button,
   max-width:330px !important;
   min-width:0 !important;
   padding:10px !important;
-  max-height:calc(100vh - 120px) !important;
-  overflow-y:auto !important;
-  overflow-x:hidden !important;
+  max-height:none !important;
+  overflow-y:visible !important;
+  overflow-x:visible !important;
 }
 
 /* conteúdo interno mais compacto para caber em zoom 100% */
@@ -5764,7 +5758,7 @@ button,
 .cadastro-form-card{
   width:100% !important;
   max-width:100% !important;
-  overflow-x:hidden !important;
+  overflow-x:visible !important;
 }
 .cadastro-tabs{
   min-width:0 !important;
@@ -5787,3 +5781,84 @@ button,
     order:2 !important;
   }
 }
+
+
+/* ============================================================
+   FIBRA+ HUB - Cadastro / Resumo sem barra interna
+   Regra final: o card Resumo cresce normalmente.
+   Quem rola é a página inteira, não o card.
+============================================================ */
+
+.cadastro-layout-receita{
+  display:grid !important;
+  grid-template-columns:minmax(0, 1fr) 360px !important;
+  gap:18px !important;
+  align-items:start !important;
+  width:100% !important;
+  max-width:100% !important;
+  overflow:visible !important;
+}
+
+.cadastro-form-card{
+  min-width:0 !important;
+  max-width:100% !important;
+  overflow:visible !important;
+}
+
+.cadastro-resumo-card,
+.cadastro-resumo-card.resumo-receitanet-completo,
+.resumo-receitanet-completo{
+  width:360px !important;
+  max-width:360px !important;
+  min-width:0 !important;
+  height:auto !important;
+  min-height:auto !important;
+  max-height:none !important;
+  overflow:visible !important;
+  overflow-y:visible !important;
+  overflow-x:visible !important;
+  align-self:start !important;
+}
+
+/* Remove qualquer barra de rolagem interna que o navegador tenha mantido */
+.cadastro-resumo-card::-webkit-scrollbar,
+.resumo-receitanet-completo::-webkit-scrollbar{
+  display:none !important;
+}
+
+.cadastro-resumo-card,
+.resumo-receitanet-completo{
+  scrollbar-width:none !important;
+}
+
+/* Mantém o conteúdo do resumo compacto, mas sem cortar */
+.resumo-receitanet-completo .resumo-title h3{
+  font-size:22px !important;
+}
+
+.resumo-receitanet-completo .resumo-section h4{
+  font-size:18px !important;
+}
+
+.resumo-receitanet-completo b,
+.resumo-receitanet-completo span,
+.resumo-receitanet-completo th,
+.resumo-receitanet-completo td{
+  overflow:visible !important;
+  white-space:normal !important;
+}
+
+/* Em telas estreitas, resumo vai para baixo */
+@media (max-width: 1180px){
+  .cadastro-layout-receita{
+    grid-template-columns:1fr !important;
+  }
+
+  .cadastro-resumo-card,
+  .cadastro-resumo-card.resumo-receitanet-completo,
+  .resumo-receitanet-completo{
+    width:100% !important;
+    max-width:100% !important;
+  }
+}
+
