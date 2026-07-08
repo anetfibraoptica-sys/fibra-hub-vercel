@@ -1512,7 +1512,6 @@ let efiConta1Config = {
   ambiente: process.env.EFI1_AMBIENTE || "producao",
   clientId: process.env.EFI1_CLIENT_ID || "",
   clientSecret: process.env.EFI1_CLIENT_SECRET || "",
-  certificado: process.env.EFI1_CERTIFICADO || "",
   webhook: process.env.EFI1_WEBHOOK || ""
 };
 
@@ -1566,7 +1565,6 @@ app.post("/api/efi/salvar-config", async (req, res) => {
       ambiente: String(body.Ambiente || body.ambiente || "producao").trim(),
       clientId: String(body.ClientId || body.clientId || "").trim(),
       clientSecret: String(body.ClientSecret || body.clientSecret || "").trim(),
-      certificado: String(body.Certificado || body.certificado || "").trim(),
       webhook: String(body.Webhook || body.webhook || "").trim()
     };
 
@@ -1591,7 +1589,6 @@ app.post("/api/efi/testar-conexao", async (req, res) => {
       ambiente: String(body.Ambiente || efiConta1Config.ambiente || "producao").trim(),
       clientId: String(body.ClientId || efiConta1Config.clientId || "").trim(),
       clientSecret: String(body.ClientSecret || efiConta1Config.clientSecret || "").trim(),
-      certificado: String(body.Certificado || efiConta1Config.certificado || "").trim(),
       webhook: String(body.Webhook || efiConta1Config.webhook || "").trim()
     };
 
@@ -1616,7 +1613,7 @@ app.get("/api/efi/boletos/teste", async (req, res) => {
     res.json({
       ok:true,
       mensagem:"OAuth Efí OK para Conta 1.",
-      observacao:"Para consultar/gerar boletos reais, a próxima etapa é configurar o certificado .p12 no backend e escolher o endpoint Efí de cobranças.",
+      observacao:"Para consultar/gerar boletos reais, a próxima etapa é escolher o endpoint Efí de cobranças compatível com OAuth sem certificado.",
       token_type: token.token_type || "Bearer",
       expires_in: token.expires_in || null
     });

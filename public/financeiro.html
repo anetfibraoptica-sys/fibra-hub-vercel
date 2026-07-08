@@ -80,10 +80,6 @@
 
         <div class="form-row two">
           <div>
-            <label>Certificado .p12</label>
-            <input id="efi1Certificado" placeholder="certificado.p12">
-          </div>
-          <div>
             <label>Webhook</label>
             <input id="efi1Webhook" placeholder="https://seupainel.com/api/efi/webhook">
           </div>
@@ -133,10 +129,6 @@
 
         <div class="form-row two">
           <div>
-            <label>Certificado .p12</label>
-            <input id="efi2Certificado" placeholder="certificado.p12">
-          </div>
-          <div>
             <label>Webhook</label>
             <input id="efi2Webhook" placeholder="https://seupainel.com/api/efi/webhook">
           </div>
@@ -152,7 +144,7 @@
 
   <script>
 (function(){
-  const campos = ["NomeConta","Documento","Ambiente","ClientId","ClientSecret","Certificado","Webhook"];
+  const campos = ["NomeConta","Documento","Ambiente","ClientId","ClientSecret","Webhook"];
 
   function key(conta){ return "fibra_efi_conta_" + conta; }
 
