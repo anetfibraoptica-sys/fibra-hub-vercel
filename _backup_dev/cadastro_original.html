@@ -2234,10 +2234,11 @@ document.addEventListener("fibra:supabase-sync", carregarContasEfiNoCadastro);
 
 
 
-
 <script>
 /* ============================================================
-   ABAS DO CADASTRO - FUNÇÃO ÚNICA
+   ABAS DO CADASTRO - função única
+   Corrige Dados / Contato / Cobrança / Servidor sem depender
+   de scripts antigos.
 ============================================================ */
 function abrirTabCadastro(nome){
   document.querySelectorAll(".cadastro-tabs .tab").forEach(function(btn){
@@ -2267,12 +2268,12 @@ function abrirTabCadastro(nome){
 
 document.addEventListener("DOMContentLoaded", function(){
   var ativa = document.querySelector(".tab-content.active");
-  if(ativa){
+  if(!ativa){
+    abrirTabCadastro("dados");
+  }else{
     document.querySelectorAll(".tab-content").forEach(function(tab){
       tab.style.display = tab.classList.contains("active") ? "block" : "none";
     });
-  }else{
-    abrirTabCadastro("dados");
   }
 });
 </script>
@@ -2280,31 +2281,27 @@ document.addEventListener("DOMContentLoaded", function(){
 
 <script>
 /* ============================================================
-   STATUS PPPoE ÚNICO - FIBRA+ HUB
-   Online somente com sessão do login atual contendo:
-   IP + MAC + Tempo/Uptime.
+   STATUS PPPoE FINAL
+   Força Offline quando IP/MAC/Tempo não existem.
+   Só muda para Online com sessão real de /api/online.
 ============================================================ */
 (function(){
+  function txt(id){
+    return (document.getElementById(id)?.textContent || "").trim();
+  }
+  function setTxt(id, v){
+    var el = document.getElementById(id);
+    if(el) el.textContent = v || "-";
+  }
   function norm(v){
     return String(v || "")
       .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
       .toLowerCase()
       .trim();
   }
-
-  function setTxt(id, valor){
-    var el = document.getElementById(id);
-    if(el) el.textContent = valor || "-";
+  function getLoginAtual(){
+    return (document.getElementById("cadLogin")?.value || document.getElementById("resLogin2")?.textContent || "").trim();
   }
-
-  function getTxt(id){
-    return (document.getElementById(id)?.textContent || "").trim();
-  }
-
-  function getVal(id){
-    return (document.getElementById(id)?.value || "").trim();
-  }
-
   function getCampo(obj, nomes){
     for(var i=0;i<nomes.length;i++){
       var n = nomes[i];
@@ -2314,8 +2311,7 @@ document.addEventListener("DOMContentLoaded", function(){
     }
     return "";
   }
-
-  function listaOnline(resp){
+  function lista(resp){
     if(Array.isArray(resp)) return resp;
     if(!resp) return [];
     var chaves = ["clientes","online","pppoe","active","data","rows","sessions"];
@@ -2324,8 +2320,7 @@ document.addEventListener("DOMContentLoaded", function(){
     }
     return [];
   }
-
-  function dadosSessao(s){
+  function sessaoDados(s){
     return {
       login: getCampo(s, ["name","usuario","user","login","loginPppoe","pppoe","cliente"]),
       ip: getCampo(s, ["address","ip","ipAtual","remoteAddress","remote-address","remote_address"]),
@@ -2335,19 +2330,9 @@ document.addEventListener("DOMContentLoaded", function(){
       profile: getCampo(s, ["profile","perfil","plano","rateLimit","rate-limit"])
     };
   }
-
-  function loginAtual(){
-    return getVal("cadLogin") || getTxt("resLogin2") || getTxt("resLogin");
-  }
-
-  function macCadastrado(){
-    return getVal("cadMac") || getVal("cadMacOnu") || "";
-  }
-
   function statusEl(){
     return document.querySelector(".offline-dot");
   }
-
   function marcarOffline(){
     var el = statusEl();
     if(el){
@@ -2355,22 +2340,11 @@ document.addEventListener("DOMContentLoaded", function(){
       el.classList.remove("status-online-real","status-verificando-real");
       el.classList.add("status-offline-real");
     }
-
-    setTxt("resConexao", "Offline");
     setTxt("resIp", "-");
     setTxt("resTempo", "-");
-    setTxt("resMac", macCadastrado() || "Não informado");
+    if(!txt("resMac") || txt("resMac") === '""') setTxt("resMac", "-");
+    setTxt("resConexao", "Offline");
   }
-
-  function marcarVerificando(){
-    var el = statusEl();
-    if(el){
-      el.textContent = "● Verificando";
-      el.classList.remove("status-online-real","status-offline-real");
-      el.classList.add("status-verificando-real");
-    }
-  }
-
   function marcarOnline(d){
     var el = statusEl();
     if(el){
@@ -2378,80 +2352,59 @@ document.addEventListener("DOMContentLoaded", function(){
       el.classList.remove("status-offline-real","status-verificando-real");
       el.classList.add("status-online-real");
     }
-
-    setTxt("resConexao", "Online");
     setTxt("resIp", d.ip);
     setTxt("resTempo", d.tempo);
     setTxt("resMac", d.mac);
     setTxt("resInterface", d.iface || "PPPOE");
     setTxt("resProfile", d.profile || "-");
+    setTxt("resConexao", "Online");
   }
-
-  function dadosValidos(d){
-    return !!(d && d.login && d.ip && d.mac && d.tempo);
-  }
-
-  async function atualizarStatusPPPoE(){
-    var login = loginAtual();
-
+  async function consultar(){
+    var login = getLoginAtual();
     if(!login){
       marcarOffline();
       return;
     }
 
-    setTxt("resLogin2", login);
-    marcarVerificando();
-
     try{
-      var resp = await fetch("/api/online", {cache:"no-store"});
-      var json = await resp.json();
-      var sessao = listaOnline(json)
-        .map(dadosSessao)
-        .find(function(d){ return norm(d.login) === norm(login); });
+      var r = await fetch("/api/online", {cache:"no-store"});
+      var j = await r.json();
+      var achado = lista(j).map(sessaoDados).find(function(s){
+        return norm(s.login) === norm(login);
+      });
 
-      if(dadosValidos(sessao)){
-        marcarOnline(sessao);
+      if(achado && achado.ip && achado.mac && achado.tempo){
+        marcarOnline(achado);
       }else{
         marcarOffline();
       }
     }catch(e){
-      console.warn("Falha em /api/online:", e);
       marcarOffline();
     }
   }
-
-  function travaVisual(){
+  function trava(){
     var el = statusEl();
     if(!el) return;
 
-    var texto = norm(el.textContent);
-    var ip = getTxt("resIp");
-    var mac = getTxt("resMac");
-    var tempo = getTxt("resTempo");
+    var online = norm(el.textContent).includes("online");
+    var ip = txt("resIp");
+    var mac = txt("resMac");
+    var tempo = txt("resTempo");
 
-    var semIp = !ip || ip === "-" || ip === '""';
-    var semMac = !mac || mac === "-" || mac === '""' || norm(mac).includes("não informado");
-    var semTempo = !tempo || tempo === "-" || tempo === '""';
+    var semDados = !ip || ip === "-" || ip === '""' ||
+                   !mac || mac === "-" || mac === '""' ||
+                   !tempo || tempo === "-" || tempo === '""';
 
-    if(texto.includes("online") && (semIp || semMac || semTempo)){
-      marcarOffline();
-    }
+    if(online && semDados) marcarOffline();
   }
 
-  window.atualizarStatusRealCliente = atualizarStatusPPPoE;
+  window.atualizarStatusRealCliente = consultar;
 
   document.addEventListener("DOMContentLoaded", function(){
     marcarOffline();
-    setTimeout(atualizarStatusPPPoE, 600);
-    setTimeout(atualizarStatusPPPoE, 1800);
-    setTimeout(atualizarStatusPPPoE, 4000);
-    setInterval(travaVisual, 500);
-  });
-
-  document.addEventListener("input", function(e){
-    if(e.target && e.target.id === "cadLogin"){
-      setTimeout(atualizarStatusPPPoE, 400);
-    }
+    setTimeout(consultar, 600);
+    setTimeout(consultar, 2000);
+    setInterval(trava, 700);
   });
 })();
 </script>
