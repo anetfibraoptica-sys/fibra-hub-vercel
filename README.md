@@ -1,10 +1,10 @@
 # Fibra+ Hub
 
 ## Alteração atual
-- Ao clicar em `Gravar no Fibra+ Hub + Servidor`, o PPP Secret continua sendo criado ou atualizado no MikroTik.
-- Para cliente existente, sincroniza login, senha, profile, service=pppoe e comentário.
-- Para cliente novo, cria o PPP Secret completo.
-- O comentário do MikroTik agora fica somente com o nome completo do cliente.
-- Removido o comentário composto com CPF, telefone e servidor.
+- Os botões existentes da aba Cobrança agora podem acionar o MikroTik.
+- Confiança: pergunta quantos dias liberar, ativa o PPP Secret e retorna a data final.
+- Bloquear: desativa o PPP Secret e derruba a sessão ativa se o cliente estiver online.
+- Liberar: ativa o PPP Secret.
+- Não foram criados novos botões; a integração usa os botões já existentes da aba Cobrança.
 
 Depois de publicar na Vercel, faça Ctrl+F5.

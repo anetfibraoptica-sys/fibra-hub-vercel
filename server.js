@@ -1318,6 +1318,144 @@ app.post("/api/mikrotik/cliente-profile", async (req, res) => {
 });
 
 
+
+/* ============================================================
+   COBRANÇA MIKROTIK - BLOQUEIO LIBERAÇÃO CONFIANÇA
+   Usa os botões existentes da aba Cobrança.
+============================================================ */
+app.post("/api/mikrotik/cliente-acao", async (req, res) => {
+  const normalizar = (v) => String(v || "")
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+
+  try {
+    const body = req.body || {};
+    const servidor = String(body.servidor || "").trim();
+    const login = String(body.login || "").trim();
+    const acao = String(body.acao || "").trim().toLowerCase();
+    const dias = Number(body.dias || 0);
+
+    if (!servidor || servidor === "-" || servidor === "--" || normalizar(servidor).includes("sem servidor")) {
+      return res.status(400).json({ ok:false, erro:"Servidor não selecionado." });
+    }
+
+    if (!login) {
+      return res.status(400).json({ ok:false, erro:"Login PPPoE não informado." });
+    }
+
+    if (!["bloquear", "liberar", "confianca"].includes(acao)) {
+      return res.status(400).json({ ok:false, erro:"Ação inválida." });
+    }
+
+    const cfg = servidorConfig(servidor);
+
+    if (!cfg.host || !cfg.user || !cfg.pass) {
+      return res.status(500).json({
+        ok:false,
+        erro:"Variáveis do MikroTik não configuradas para " + (cfg.key || servidor)
+      });
+    }
+
+    const secretResp = await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+      "/ppp/secret/print",
+      "?name=" + login
+    ]], 15000);
+
+    const secrets = parseRouterosRows(secretResp);
+    const secret = secrets[0];
+
+    if (!secret || !secret[".id"]) {
+      return res.status(404).json({
+        ok:false,
+        erro:"PPP Secret não encontrado no MikroTik para o login: " + login
+      });
+    }
+
+    let mensagem = "";
+    let confiancaAte = null;
+
+    if (acao === "bloquear") {
+      await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+        "/ppp/secret/set",
+        "=.id=" + secret[".id"],
+        "=disabled=yes"
+      ]], 15000);
+
+      // Se estiver online, derruba a sessão ativa.
+      try {
+        const activeResp = await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+          "/ppp/active/print",
+          "?name=" + login
+        ]], 15000);
+
+        const activeRows = parseRouterosRows(activeResp);
+
+        for (const active of activeRows) {
+          if (active && active[".id"]) {
+            await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+              "/ppp/active/remove",
+              "=.id=" + active[".id"]
+            ]], 15000);
+          }
+        }
+      } catch (e) {
+        console.error("Erro ao derrubar sessão ativa:", e.message);
+      }
+
+      mensagem = "Cliente bloqueado no MikroTik.";
+    }
+
+    if (acao === "liberar") {
+      await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+        "/ppp/secret/set",
+        "=.id=" + secret[".id"],
+        "=disabled=no"
+      ]], 15000);
+
+      mensagem = "Cliente liberado no MikroTik.";
+    }
+
+    if (acao === "confianca") {
+      if (!dias || dias <= 0) {
+        return res.status(400).json({
+          ok:false,
+          erro:"Informe a quantidade de dias para liberar em confiança."
+        });
+      }
+
+      await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+        "/ppp/secret/set",
+        "=.id=" + secret[".id"],
+        "=disabled=no"
+      ]], 15000);
+
+      const dt = new Date();
+      dt.setDate(dt.getDate() + dias);
+      confiancaAte = dt.toISOString().slice(0, 10);
+
+      mensagem = "Cliente liberado em confiança por " + dias + " dia(s).";
+    }
+
+    return res.json({
+      ok:true,
+      acao,
+      login,
+      servidor: cfg.key || servidor,
+      dias: acao === "confianca" ? dias : null,
+      confianca_ate: confiancaAte,
+      mensagem
+    });
+  } catch (err) {
+    console.error("Erro /api/mikrotik/cliente-acao:", err);
+    return res.status(500).json({
+      ok:false,
+      erro:err.message
+    });
+  }
+});
+
+
 io.on("connection",(socket)=>{
   socket.emit("hub-update", geral());
   socket.emit("mikrotik-update", geral());

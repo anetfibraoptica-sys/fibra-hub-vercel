@@ -2946,4 +2946,121 @@ document.addEventListener("DOMContentLoaded", function(){
 })();
 </script>
 
+
+<script>
+/* ============================================================
+   BOTÕES COBRANÇA MIKROTIK
+   Não cria botões. Usa os botões existentes da aba Cobrança.
+============================================================ */
+(function(){
+  function norm(v){
+    return String(v || "")
+      .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+      .toLowerCase()
+      .trim();
+  }
+
+  function el(id){ return document.getElementById(id); }
+  function val(id){ return (el(id)?.value || "").trim(); }
+
+  function servidorAtual(){
+    return val("cadPop") || val("cadServidorReceita") || "";
+  }
+
+  function loginAtual(){
+    return val("cadLogin");
+  }
+
+  async function acaoMikrotikCobranca(acao){
+    const servidor = servidorAtual();
+    const login = loginAtual();
+
+    if(!servidor || norm(servidor).includes("sem servidor")){
+      alert("Selecione o servidor do cliente na aba Servidor.");
+      return false;
+    }
+
+    if(!login){
+      alert("Informe o login PPPoE do cliente.");
+      return false;
+    }
+
+    let dias = null;
+
+    if(acao === "confianca"){
+      const resposta = prompt("Por quantos dias deseja liberar este cliente em confiança?", "1");
+      if(resposta === null) return false;
+
+      dias = Number(String(resposta).replace(",", "."));
+
+      if(!dias || dias <= 0){
+        alert("Informe uma quantidade válida de dias.");
+        return false;
+      }
+    }
+
+    const textoAcao = acao === "bloquear" ? "bloquear" :
+                      acao === "liberar" ? "liberar" :
+                      "liberar em confiança";
+
+    if(!confirm("Deseja " + textoAcao + " o cliente " + login + " no MikroTik?")){
+      return false;
+    }
+
+    const resp = await fetch("/api/mikrotik/cliente-acao", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({servidor, login, acao, dias})
+    });
+
+    const json = await resp.json();
+
+    if(!resp.ok || !json.ok){
+      alert("Erro no MikroTik: " + (json.erro || json.mensagem || "erro desconhecido"));
+      return false;
+    }
+
+    alert(json.mensagem || "Ação realizada no MikroTik.");
+
+    if(typeof window.atualizarStatusRealCliente === "function"){
+      setTimeout(window.atualizarStatusRealCliente, 800);
+    }
+
+    return true;
+  }
+
+  window.acaoMikrotikCobranca = acaoMikrotikCobranca;
+  window.bloquearClienteMikrotik = function(){ return acaoMikrotikCobranca("bloquear"); };
+  window.liberarClienteMikrotik = function(){ return acaoMikrotikCobranca("liberar"); };
+  window.confiancaClienteMikrotik = function(){ return acaoMikrotikCobranca("confianca"); };
+
+  function detectarAcaoBotao(botao){
+    const texto = norm(botao.textContent || botao.value || botao.title || "");
+    const onclick = norm(botao.getAttribute("onclick") || "");
+
+    if(texto.includes("confiança") || texto.includes("confianca") || onclick.includes("confianca")) return "confianca";
+    if(texto.includes("bloquear") || onclick.includes("bloquear")) return "bloquear";
+    if(texto.includes("liberar") || onclick.includes("liberar")) return "liberar";
+
+    return "";
+  }
+
+  document.addEventListener("click", function(e){
+    const botao = e.target && e.target.closest && e.target.closest("button,a,input[type='button'],input[type='submit']");
+    if(!botao) return;
+
+    const dentroCobranca = botao.closest("#tab-cobranca") || botao.closest(".cobranca-receitanet") || botao.closest(".cobranca-form-grid");
+    if(!dentroCobranca) return;
+
+    const acao = detectarAcaoBotao(botao);
+    if(!acao) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    acaoMikrotikCobranca(acao);
+  }, true);
+})();
+</script>
+
 </body></html>
