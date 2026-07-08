@@ -5977,6 +5977,9 @@ body{
 
 
 
+
+
+
 /* Abas cadastro - garantia */
 .tab-content{
   display:none;
@@ -5985,10 +5988,7 @@ body{
   display:block !important;
 }
 
-
-
-
-/* Status PPPoE final */
+/* Status PPPoE definitivo */
 .status-login-line{
   display:grid !important;
   grid-template-columns:1fr 1fr !important;

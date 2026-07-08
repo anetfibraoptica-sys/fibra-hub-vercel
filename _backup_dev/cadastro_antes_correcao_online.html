@@ -2235,7 +2235,6 @@ document.addEventListener("fibra:supabase-sync", carregarContasEfiNoCadastro);
 
 
 
-
 <script>
 /* ============================================================
    ABAS DO CADASTRO - FUNÇÃO ÚNICA
@@ -2279,11 +2278,12 @@ document.addEventListener("DOMContentLoaded", function(){
 </script>
 
 
+
 <script>
 /* ============================================================
-   STATUS PPPoE DEFINITIVO - SEM ONLINE FALSO
-   Online somente se /api/online retornar o login atual com:
-   IP + MAC + Tempo/Uptime.
+   STATUS PPPoE FINAL - SEM ONLINE FALSO
+   Regra: só fica Online com IP + MAC + Tempo/Uptime da sessão.
+   Também corrige o campo "Conexão" do resumo.
 ============================================================ */
 (function(){
   function norm(v){
@@ -2291,10 +2291,6 @@ document.addEventListener("DOMContentLoaded", function(){
       .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
       .toLowerCase()
       .trim();
-  }
-
-  function getVal(id){
-    return (document.getElementById(id)?.value || "").trim();
   }
 
   function getTxt(id){
@@ -2306,8 +2302,12 @@ document.addEventListener("DOMContentLoaded", function(){
     if(el) el.textContent = valor || "-";
   }
 
+  function getVal(id){
+    return (document.getElementById(id)?.value || "").trim();
+  }
+
   function getCampo(obj, nomes){
-    for(var i = 0; i < nomes.length; i++){
+    for(var i=0;i<nomes.length;i++){
       var n = nomes[i];
       if(obj && obj[n] !== undefined && obj[n] !== null && String(obj[n]).trim() !== ""){
         return String(obj[n]).trim();
@@ -2319,9 +2319,8 @@ document.addEventListener("DOMContentLoaded", function(){
   function listaOnline(resp){
     if(Array.isArray(resp)) return resp;
     if(!resp) return [];
-
     var chaves = ["clientes","online","pppoe","active","data","rows","sessions"];
-    for(var i = 0; i < chaves.length; i++){
+    for(var i=0;i<chaves.length;i++){
       if(Array.isArray(resp[chaves[i]])) return resp[chaves[i]];
     }
     return [];
@@ -2350,7 +2349,7 @@ document.addEventListener("DOMContentLoaded", function(){
     return document.querySelector(".offline-dot");
   }
 
-  function aplicarOffline(){
+  function marcarOffline(){
     var el = statusEl();
     if(el){
       el.textContent = "● Offline";
@@ -2362,24 +2361,24 @@ document.addEventListener("DOMContentLoaded", function(){
     setTxt("resIp", "-");
     setTxt("resTempo", "-");
     setTxt("resMac", macCadastrado() || "Não informado");
-    window.__fibraResumoStatus = "offline";
+
+    window.__fibraStatusPPPoE = "offline";
   }
 
-  function aplicarVerificando(){
+  function marcarVerificando(){
     var el = statusEl();
     if(el){
       el.textContent = "● Verificando";
       el.classList.remove("status-online-real","status-offline-real");
       el.classList.add("status-verificando-real");
     }
-
     setTxt("resConexao", "Verificando");
-    window.__fibraResumoStatus = "verificando";
+    window.__fibraStatusPPPoE = "verificando";
   }
 
-  function aplicarOnline(d){
+  function marcarOnline(d){
     if(!(d && d.ip && d.mac && d.tempo)){
-      aplicarOffline();
+      marcarOffline();
       return;
     }
 
@@ -2396,27 +2395,26 @@ document.addEventListener("DOMContentLoaded", function(){
     setTxt("resMac", d.mac);
     setTxt("resInterface", d.iface || "PPPOE");
     setTxt("resProfile", d.profile || "-");
-    window.__fibraResumoStatus = "online";
+
+    window.__fibraStatusPPPoE = "online";
   }
 
-  function telaTemDadosOnline(){
+  function semDadosSessaoNaTela(){
     var ip = getTxt("resIp");
     var mac = getTxt("resMac");
     var tempo = getTxt("resTempo");
 
-    var semIp = !ip || ip === "-" || ip === '""';
-    var semMac = !mac || mac === "-" || mac === '""' || norm(mac).includes("não informado");
-    var semTempo = !tempo || tempo === "-" || tempo === '""';
-
-    return !(semIp || semMac || semTempo);
+    return !ip || ip === "-" || ip === '""' ||
+           !mac || mac === "-" || mac === '""' || norm(mac).includes("não informado") ||
+           !tempo || tempo === "-" || tempo === '""';
   }
 
   function travaVisual(){
-    var conexao = norm(getTxt("resConexao"));
+    var st = norm(getTxt("resConexao"));
     var bolinha = norm(statusEl()?.textContent || "");
 
-    if((conexao.includes("online") || bolinha.includes("online")) && !telaTemDadosOnline()){
-      aplicarOffline();
+    if((st.includes("online") || bolinha.includes("online")) && semDadosSessaoNaTela()){
+      marcarOffline();
     }
   }
 
@@ -2424,43 +2422,42 @@ document.addEventListener("DOMContentLoaded", function(){
     var login = loginAtual();
 
     if(!login){
-      aplicarOffline();
+      marcarOffline();
       return;
     }
 
     setTxt("resLogin2", login);
-    aplicarVerificando();
+    marcarVerificando();
 
     try{
-      var r = await fetch("/api/online", {cache:"no-store"});
-      var j = await r.json();
+      var resp = await fetch("/api/online", {cache:"no-store"});
+      var json = await resp.json();
 
-      var sessao = listaOnline(j)
+      var sessao = listaOnline(json)
         .map(dadosSessao)
-        .find(function(d){
-          return norm(d.login) === norm(login);
-        });
+        .find(function(d){ return norm(d.login) === norm(login); });
 
       if(sessao && sessao.ip && sessao.mac && sessao.tempo){
-        aplicarOnline(sessao);
+        marcarOnline(sessao);
       }else{
-        aplicarOffline();
+        marcarOffline();
       }
     }catch(e){
-      console.warn("Erro ao consultar /api/online:", e);
-      aplicarOffline();
+      console.warn("Falha em /api/online:", e);
+      marcarOffline();
     }
   }
 
   window.atualizarStatusRealCliente = atualizarStatusPPPoE;
 
   document.addEventListener("DOMContentLoaded", function(){
-    aplicarOffline();
+    marcarOffline();
+
     setTimeout(atualizarStatusPPPoE, 600);
     setTimeout(atualizarStatusPPPoE, 1800);
     setTimeout(atualizarStatusPPPoE, 4000);
 
-    // Mantém a tela coerente se alguma rotina antiga preencher depois.
+    // Roda por mais tempo para vencer funções antigas que preenchem o resumo depois.
     setInterval(travaVisual, 300);
   });
 
