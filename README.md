@@ -1,9 +1,8 @@
 # Fibra+ Hub
 
 ## Correção atual
-- Criado endpoint `/api/efi/boleto-importado/consultar`.
-- Ao abrir boleto importado, o sistema consulta a Efí pelo número/charge_id e tenta preencher situação, linha digitável e Pix Copia e Cola.
-- O texto `Aguardando integração` deixa de ser fixo e passa a ser substituído pelo retorno da Efí.
-- Botão Segunda Via abre o link da Efí quando o backend retornar o link.
-
-Observação: se a Efí exigir endpoint/certificado específico para detalhe de boletos, o retorno poderá vir como `Não encontrado na Efí`; neste caso será necessário ajustar o endpoint conforme o produto Efí habilitado na conta.
+- Removido do layout o card visual `Status Efí: Efí integrada`.
+- A integração agora atua somente dentro do boleto importado.
+- O campo `Situação na Efí` deixa de ficar em `Aguardando integração` e passa a consultar o backend.
+- O script tenta preencher diretamente `Linha Digitável` e `Pix Copia e Cola` no modal/card do boleto.
+- Caso o boleto não seja localizado na Efí, mostra `Integrado na Efí - boleto não localizado`, não mais `Aguardando integração`.

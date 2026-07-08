@@ -24,77 +24,36 @@
     return null;
   }
 
-  function marcarIntegrado(conta){
+  async function atualizarStatusEfiGlobal(){
+    const local = temEfiLocal();
+    const backend = await consultarBackend();
+    const integrada = local || Boolean(backend && backend.integrada);
+
+    if(integrada){
+      try{
+        localStorage.setItem("efi_integrado", "true");
+        localStorage.setItem("fibra_efi_integrado", "true");
+        localStorage.setItem("efi_configurado", "true");
+        if(backend && backend.conta) localStorage.setItem("fibra_efi_conta_ativa", JSON.stringify(backend.conta));
+      }catch(e){}
+    }
+
+    window.__EFI_INTEGRADA__ = integrada;
+    return integrada;
+  }
+
+  window.atualizarStatusEfiGlobal = atualizarStatusEfiGlobal;
+  window.marcarEfiIntegradoGlobal = function(conta){
     try{
       localStorage.setItem("efi_integrado", "true");
       localStorage.setItem("fibra_efi_integrado", "true");
       localStorage.setItem("efi_configurado", "true");
       if(conta) localStorage.setItem("fibra_efi_conta_ativa", JSON.stringify(conta));
     }catch(e){}
-
-    const textoOk = "Efí integrada";
-
-    // IDs/classes mais comuns.
-    document.querySelectorAll("#efiStatus,#statusEfi,#statusIntegracaoEfi,[data-efi-status],.efi-status,.status-efi").forEach(function(el){
-      el.textContent = textoOk;
-      el.classList.remove("badge-off","status-off","erro","danger","red");
-      el.classList.add("badge-on","status-on","ok","success");
-      el.style.color = "#22c55e";
-    });
-
-    // Qualquer elemento que esteja dizendo não integrado.
-    Array.from(document.querySelectorAll("span,div,p,strong,b,small,td,th,button")).forEach(function(el){
-      const t = (el.textContent || "").toLowerCase();
-      if((t.includes("efi") || t.includes("efí")) && (t.includes("não integrado") || t.includes("nao integrado") || t.includes("não integrada") || t.includes("nao integrada"))){
-        el.textContent = textoOk;
-        el.classList.remove("badge-off","status-off","erro","danger","red");
-        el.classList.add("badge-on","status-on","ok","success");
-        el.style.color = "#22c55e";
-      }
-    });
-
-    document.querySelectorAll(".efi-nao-integrado,.aviso-efi-nao-integrado,.efi-not-integrated").forEach(function(el){
-      el.style.display = "none";
-    });
-
-    document.querySelectorAll(".efi-integrado-only,.efi-integrated-only").forEach(function(el){
-      el.style.display = "";
-    });
-  }
-
-  function marcarNaoIntegrado(){
-    if(temEfiLocal()){
-      marcarIntegrado(null);
-    }
-  }
-
-  async function atualizarStatusEfiGlobal(){
-    if(temEfiLocal()){
-      marcarIntegrado(null);
-    }
-
-    const backend = await consultarBackend();
-    if(backend && backend.integrada){
-      marcarIntegrado(backend.conta || null);
-    }else{
-      marcarNaoIntegrado();
-    }
-  }
-
-  window.atualizarStatusEfiGlobal = atualizarStatusEfiGlobal;
-  window.marcarEfiIntegradoGlobal = function(conta){
-    marcarIntegrado(conta || null);
+    window.__EFI_INTEGRADA__ = true;
   };
 
   document.addEventListener("DOMContentLoaded", function(){
     atualizarStatusEfiGlobal();
-    setTimeout(atualizarStatusEfiGlobal, 500);
-    setTimeout(atualizarStatusEfiGlobal, 1500);
-    setTimeout(atualizarStatusEfiGlobal, 3500);
   });
-
-  // Se outra função recriar tabela/card depois, revalida.
-  setInterval(function(){
-    if(temEfiLocal()) marcarIntegrado(null);
-  }, 2000);
 })();

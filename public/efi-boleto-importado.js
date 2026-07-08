@@ -1,45 +1,95 @@
 
 (function(){
+  function norm(v){
+    return String(v || "").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
+  }
+
   function texto(el){ return (el && el.textContent || "").trim(); }
 
+  function acharCardPorLabel(labelTexto){
+    const alvo = norm(labelTexto);
+    const candidatos = Array.from(document.querySelectorAll("div,section,article,td,li"));
+    return candidatos.find(function(card){
+      const childrenText = Array.from(card.children || []).map(c => norm(c.textContent));
+      return childrenText.some(t => t === alvo) || norm(card.textContent).startsWith(alvo);
+    });
+  }
+
   function getCampoPorLabel(labelTexto){
-    const alvo = labelTexto.toLowerCase();
-    const candidatos = Array.from(document.querySelectorAll("div,span,p,strong,b,label,td,th"));
+    const alvo = norm(labelTexto);
+    const candidatos = Array.from(document.querySelectorAll("label,strong,b,span,p,div,td,th"));
+
     const label = candidatos.find(function(el){
-      return (el.textContent || "").trim().toLowerCase() === alvo;
+      return norm(el.textContent) === alvo;
     });
 
     if(!label) return null;
 
-    const card = label.closest("div");
+    const card = label.closest("div,section,article,td,li") || label.parentElement;
     if(!card) return null;
 
-    const filhos = Array.from(card.querySelectorAll("span,p,div,strong,b"));
-    const valores = filhos.filter(function(x){
-      const t = (x.textContent || "").trim();
-      return t && t.toLowerCase() !== alvo;
+    // caso tenha elemento marcado como valor
+    const valorMarcado = card.querySelector(".valor,.value,.resumo-value,.boleto-value,span:last-child,p:last-child");
+    if(valorMarcado && norm(valorMarcado.textContent) !== alvo) return valorMarcado;
+
+    // procura irmão depois do label
+    let n = label.nextElementSibling;
+    while(n){
+      if(norm(n.textContent) && norm(n.textContent) !== alvo) return n;
+      n = n.nextElementSibling;
+    }
+
+    // fallback: último filho com texto diferente do label
+    const filhos = Array.from(card.querySelectorAll("span,p,div,strong,b")).filter(function(x){
+      const t = norm(x.textContent);
+      return t && t !== alvo;
     });
 
-    return valores.length ? valores[valores.length - 1] : null;
+    return filhos.length ? filhos[filhos.length - 1] : null;
+  }
+
+  function getValor(label){
+    const campo = getCampoPorLabel(label);
+    return texto(campo);
   }
 
   function setCampo(label, valor){
     const campo = getCampoPorLabel(label);
-    if(campo) campo.textContent = valor || "—";
+    if(campo){
+      campo.textContent = valor || "—";
+      return true;
+    }
+
+    // se não encontrou, tenta localizar card inteiro e substituir último nó textual
+    const card = acharCardPorLabel(label);
+    if(card){
+      const divs = Array.from(card.querySelectorAll("div,span,p")).filter(x => norm(x.textContent) && norm(x.textContent) !== norm(label));
+      if(divs.length){
+        divs[divs.length-1].textContent = valor || "—";
+        return true;
+      }
+    }
+
+    return false;
   }
 
   function dadosBoletoAberto(){
-    const numero = texto(getCampoPorLabel("Número"));
-    const valor = texto(getCampoPorLabel("Valor do boleto")).replace(/[^\d,.-]/g,"");
-    const vencimento = texto(getCampoPorLabel("Vencimento"));
-    const cliente = texto(getCampoPorLabel("Cliente"));
-    return { numero, valor, vencimento, cliente };
+    return {
+      numero: getValor("Número") || getValor("Numero") || getValor("Nº") || "",
+      valor: getValor("Valor do boleto").replace(/[^\d,.-]/g,""),
+      valorPago: getValor("Valor pago").replace(/[^\d,.-]/g,""),
+      vencimento: getValor("Vencimento"),
+      emissao: getValor("Emissão") || getValor("Emissao"),
+      cliente: getValor("Cliente"),
+      status: getValor("Status")
+    };
   }
 
   async function consultarBoletoAbertoNaEfi(){
     const dados = dadosBoletoAberto();
 
-    if(!dados.numero && !dados.vencimento) return;
+    // Não cria status novo no layout. Só altera o campo já existente "Situação na Efí".
+    if(!dados.numero && !dados.vencimento && !dados.cliente) return;
 
     setCampo("Situação na Efí", "Consultando Efí...");
 
@@ -49,6 +99,7 @@
         headers:{"Content-Type":"application/json"},
         body: JSON.stringify(dados)
       });
+
       const json = await resp.json();
 
       if(!resp.ok || !json.ok){
@@ -61,7 +112,7 @@
       setCampo("Pix Copia e Cola", json.pix_copia_cola || "—");
 
       const btn2via = Array.from(document.querySelectorAll("button,a")).find(function(b){
-        return (b.textContent || "").toLowerCase().includes("segunda via");
+        return norm(b.textContent).includes("segunda via");
       });
 
       if(btn2via && json.link_boleto){
@@ -78,22 +129,23 @@
   window.consultarBoletoAbertoNaEfi = consultarBoletoAbertoNaEfi;
 
   document.addEventListener("click", function(e){
-    const txt = (e.target && e.target.textContent || "").toLowerCase();
-    if(txt.includes("boleto") || txt.includes("segunda via") || txt.includes("detalhe")){
-      setTimeout(consultarBoletoAbertoNaEfi, 500);
-      setTimeout(consultarBoletoAbertoNaEfi, 1500);
+    const t = norm(e.target && e.target.textContent || "");
+    if(t.includes("boleto") || t.includes("segunda via") || t.includes("detalhe") || t.includes("cobrança") || t.includes("cobranca")){
+      setTimeout(consultarBoletoAbertoNaEfi, 300);
+      setTimeout(consultarBoletoAbertoNaEfi, 900);
+      setTimeout(consultarBoletoAbertoNaEfi, 1800);
     }
   }, true);
 
   const obs = new MutationObserver(function(){
-    const sit = getCampoPorLabel("Situação na Efí");
-    if(sit && (sit.textContent || "").toLowerCase().includes("aguardando integração")){
+    const sit = getValor("Situação na Efí");
+    if(norm(sit).includes("aguardando integracao") || norm(sit).includes("aguardando integração")){
       consultarBoletoAbertoNaEfi();
     }
   });
 
   document.addEventListener("DOMContentLoaded", function(){
-    obs.observe(document.body, {childList:true, subtree:true});
+    obs.observe(document.body, {childList:true, subtree:true, characterData:true});
     setTimeout(consultarBoletoAbertoNaEfi, 1000);
   });
 })();

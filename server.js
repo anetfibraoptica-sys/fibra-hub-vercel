@@ -1815,7 +1815,7 @@ app.post("/api/efi/boleto-importado/consultar", async (req, res) => {
     return res.json({
       ok:true,
       encontrado:false,
-      situacao_efi:"Não encontrado na Efí",
+      situacao_efi:"Integrado na Efí - boleto não localizado",
       linha_digitavel:"",
       pix_copia_cola:"",
       link_boleto:"",
