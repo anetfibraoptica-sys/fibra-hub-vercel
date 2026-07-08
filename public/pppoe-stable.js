@@ -1,4 +1,5 @@
 
+// PPPoE Online estável - sem piscar nomes
 (function(){
   let timer = null;
   let estruturaHash = "";
@@ -7,6 +8,7 @@
   function paginaPppoe(){
     const page = (location.pathname.split("/").pop() || "").toLowerCase();
     const txt = (document.body.innerText || "").toLowerCase();
+    return page.includes("pppoe") || txt.includes("sessões pppoe online") || txt.includes("clientes pppoe online");
   }
 
   function arrServidores(dados){
@@ -50,6 +52,7 @@
   }
 
   function totalPppoe(dados, clientes){
+    const total = arrServidores(dados).reduce((acc,s)=>acc + Number(s.pppoeOnline || 0), 0);
     return Math.max(total, clientes.length);
   }
 
@@ -72,6 +75,7 @@
   }
 
   function atualizarTotal(total){
+    ["pppoeTotal","totalPppoe","pppoeOnlineTotal","clientesOnline","clientesOnlineTotal"].forEach(id=>{
       const el = document.getElementById(id);
       if(el) el.textContent = total;
     });

@@ -56,6 +56,7 @@ function fibraSetValorCampo(id, valor){
    FIBRA HUB - CORREÇÃO FINAL LIMPA
    - Login reconhece fibra_logado e fibraLogado.
    - Clientes importados continuam na lista.
+   - Clientes PPPoE online aparecem em seção separada.
    - Clique em cliente abre os dados.
 ============================================================ */
 
@@ -913,6 +914,7 @@ document.addEventListener("DOMContentLoaded", function(){
           <a class="resumo-btn btn-remoto" href="#">Configurar Equipamento - Remoto</a>
           <a class="resumo-btn btn-interno" href="#">Configurar Equipamento - Interno&nbsp;&nbsp;&nbsp; HTTPS</a>
           <a class="resumo-btn btn-diagnostico" href="#">Diagnosticar Cliente</a>
+          <a class="resumo-btn btn-monitoramento" href="#">Monitoramento em Tempo Real</a>
         </div>
 
         <hr class="resumo-separador">
