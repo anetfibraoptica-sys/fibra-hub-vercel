@@ -11,155 +11,142 @@
 <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@300;400;600;700&display=swap" rel="stylesheet">
 
 </head>
-<body onload="protegerPagina(); carregarFinanceiroEfi(); iniciarSocket();"><div class="sidebar-overlay" onclick="fecharMenuLateral()"></div>
-<button id="mobileMenuBtn" class="mobile-menu-btn" type="button" onclick="abrirMenuLateral()">☰ Menu</button>
-<div id="mobileMenuOverlay" class="mobile-menu-overlay" onclick="closeMobileMenu()"></div>
-<div class="mobile-top"><button class="menu-btn" onclick="abrirMenuLateral()">☰</button><div><div class="logo-wrap"><div class="brand"><span class="fibra">Fibra</span><span class="brand-dot"></span><span class="plus">+</span></div><div class="slogan">HUB DE CONTROLE</div></div></div></div>
-<div class="layout"><div class="overlay" onclick="fecharMenu()"></div>
-<a href="financeiro.html" class="active"><span class="icon">▤</span>Financeiro Efí</a>
-<a href="chamados.html"><span class="icon">🔧</span>Chamados</a>
-<a href="relatorios.html"><span class="icon">▥</span>Relatórios</a>
-<a href="planos.html"><span class="icon">▦</span>Planos</a>
-<a href="usuarios.html"><span class="icon">👥</span>Usuários</a>
-<a href="configuracoes.html"><span class="icon"></span>Configurações</a>
-<a href="backup.html"><span class="icon">☁</span>Backup</a>
-<a href="#" onclick="sair()"><span class="icon">↪</span></a>
-</nav></aside>
-<body onload="protegerPagina(); carregarFinanceiroEfi(); iniciarSocket();"><div class="sidebar-overlay" onclick="fecharMenuLateral()"></div>
-<button id="mobileMenuBtn" class="mobile-menu-btn" type="button" onclick="abrirMenuLateral()">☰ Menu</button>
-<div id="mobileMenuOverlay" class="mobile-menu-overlay" onclick="closeMobileMenu()"></div>
-<div class="mobile-top"><button class="menu-btn" onclick="abrirMenuLateral()">☰</button><div><div class="logo-wrap"><div class="brand"><span class="fibra">Fibra</span><span class="brand-dot"></span><span class="plus">+</span></div><div class="slogan">HUB DE CONTROLE</div></div></div></div>
-<div class="layout"><div class="overlay" onclick="fecharMenu()"></div>
+<body>
+
+<a href="financeiro.html" class="" class="active"><span class="icon">▤</span>Financeiro</a>
+<a href="chamados.html" class=""><span class="icon">🔧</span>Chamados</a>
+<a href="relatorios.html" class=""><span class="icon">▥</span>Relatórios</a>
+<a href="planos.html" class=""><span class="icon">▦</span>Planos</a>
+<a href="usuarios.html" class=""><span class="icon">👥</span>Usuários</a>
+<a href="configuracoes.html" class=""><span class="icon"></span>Configurações</a>
+<a href="backup.html" class=""><span class="icon">☁</span>Backup</a><a href="#" onclick="sair()"><span class="icon">↪</span></a></nav></aside>
 
 <main class="main">
+  <header class="topbar">
+    <h1>Financeiro Efí</h1>
+  </header>
 
-<header class="topbar">
-  <h1>Financeiro Efí</h1>
-  <div class="topbar-right">
-    <span class="badge">Configuração da Integração Efí</span>
-  </div>
-</header>
+  <section class="content financeiro-efi-config-only">
+    <section class="efi-config-intro card">
+      <h2>Configuração da Integração Efí</h2>
+      <p>Cadastre as contas Efí que serão usadas no sistema. Cada conta pode pertencer a um CPF/CNPJ diferente e depois poderá ser selecionada no cadastro/cobrança do cliente.</p>
+    </section>
 
-<section class="content financeiro-efi-config-only">
-  <section class="efi-config-intro">
-    <h2>Configuração da Integração Efí</h2>
-    <p>Cadastre as contas Efí que serão usadas no sistema. Cada conta pode pertencer a um CPF/CNPJ diferente e depois poderá ser selecionada no cadastro/cobrança do cliente.</p>
+    <section class="efi-contas-grid">
+      <article class="card efi-conta-card" data-efi-conta="1">
+        <h3>Conta Efí 1</h3>
+
+        <div class="form-row two">
+          <div>
+            <label>Nome da Conta</label>
+            <input id="efi1NomeConta" placeholder="Ex: Efí Rafael">
+          </div>
+          <div>
+            <label>CPF/CNPJ da Conta</label>
+            <input id="efi1Documento" placeholder="000.000.000-00">
+          </div>
+        </div>
+
+        <div class="form-row two">
+          <div>
+            <label>Ambiente</label>
+            <select id="efi1Ambiente">
+              <option value="homologacao">Homologação</option>
+              <option value="producao">Produção</option>
+            </select>
+          </div>
+          <div>
+            <label>Client ID</label>
+            <input id="efi1ClientId" placeholder="Client ID Efí">
+          </div>
+        </div>
+
+        <div class="form-row two">
+          <div>
+            <label>Client Secret</label>
+            <input id="efi1ClientSecret" type="password" placeholder="Client Secret Efí">
+          </div>
+          <div>
+            <label>Chave PIX</label>
+            <input id="efi1ChavePix" placeholder="Chave PIX Efí">
+          </div>
+        </div>
+
+        <div class="form-row two">
+          <div>
+            <label>Certificado .p12</label>
+            <input id="efi1Certificado" placeholder="certificado.p12">
+          </div>
+          <div>
+            <label>Webhook</label>
+            <input id="efi1Webhook" placeholder="https://seupainel.com/api/efi/webhook">
+          </div>
+        </div>
+
+        <div class="efi-actions">
+          <button type="button" class="btn-primary" onclick="salvarConfiguracaoEfiConta(1)">Salvar configuração</button>
+          <button type="button" class="btn-secondary" onclick="testarConexaoEfiConta(1)">Testar conexão</button>
+        </div>
+      </article>
+
+      <article class="card efi-conta-card" data-efi-conta="2">
+        <h3>Conta Efí 2</h3>
+
+        <div class="form-row two">
+          <div>
+            <label>Nome da Conta</label>
+            <input id="efi2NomeConta" placeholder="Ex: Efí Adriano">
+          </div>
+          <div>
+            <label>CPF/CNPJ da Conta</label>
+            <input id="efi2Documento" placeholder="000.000.000-00">
+          </div>
+        </div>
+
+        <div class="form-row two">
+          <div>
+            <label>Ambiente</label>
+            <select id="efi2Ambiente">
+              <option value="homologacao">Homologação</option>
+              <option value="producao">Produção</option>
+            </select>
+          </div>
+          <div>
+            <label>Client ID</label>
+            <input id="efi2ClientId" placeholder="Client ID Efí">
+          </div>
+        </div>
+
+        <div class="form-row two">
+          <div>
+            <label>Client Secret</label>
+            <input id="efi2ClientSecret" type="password" placeholder="Client Secret Efí">
+          </div>
+          <div>
+            <label>Chave PIX</label>
+            <input id="efi2ChavePix" placeholder="Chave PIX Efí">
+          </div>
+        </div>
+
+        <div class="form-row two">
+          <div>
+            <label>Certificado .p12</label>
+            <input id="efi2Certificado" placeholder="certificado.p12">
+          </div>
+          <div>
+            <label>Webhook</label>
+            <input id="efi2Webhook" placeholder="https://seupainel.com/api/efi/webhook">
+          </div>
+        </div>
+
+        <div class="efi-actions">
+          <button type="button" class="btn-primary" onclick="salvarConfiguracaoEfiConta(2)">Salvar configuração</button>
+          <button type="button" class="btn-secondary" onclick="testarConexaoEfiConta(2)">Testar conexão</button>
+        </div>
+      </article>
+    </section>
   </section>
-
-  <section class="efi-contas-grid">
-    <article class="card efi-conta-card" data-efi-conta="1">
-      <h3>Conta Efí 1</h3>
-
-      <div class="form-row two">
-        <div>
-          <label>Nome da Conta</label>
-          <input id="efi1NomeConta" placeholder="Ex: Efí Rafael">
-        </div>
-        <div>
-          <label>CPF/CNPJ da Conta</label>
-          <input id="efi1Documento" placeholder="000.000.000-00">
-        </div>
-      </div>
-
-      <div class="form-row two">
-        <div>
-          <label>Ambiente</label>
-          <select id="efi1Ambiente">
-            <option value="homologacao">Homologação</option>
-            <option value="producao">Produção</option>
-          </select>
-        </div>
-        <div>
-          <label>Client ID</label>
-          <input id="efi1ClientId" placeholder="Client ID Efí">
-        </div>
-      </div>
-
-      <div class="form-row two">
-        <div>
-          <label>Client Secret</label>
-          <input id="efi1ClientSecret" type="password" placeholder="Client Secret Efí">
-        </div>
-        <div>
-          <label>Chave PIX</label>
-          <input id="efi1ChavePix" placeholder="Chave PIX Efí">
-        </div>
-      </div>
-
-      <div class="form-row two">
-        <div>
-          <label>Certificado .p12</label>
-          <input id="efi1Certificado" placeholder="certificado.p12">
-        </div>
-        <div>
-          <label>Webhook</label>
-          <input id="efi1Webhook" placeholder="https://seupainel.com/api/efi/webhook">
-        </div>
-      </div>
-
-      <div class="efi-actions">
-        <button type="button" class="btn-primary" onclick="salvarConfiguracaoEfiConta(1)">Salvar configuração</button>
-        <button type="button" class="btn-secondary" onclick="testarConexaoEfiConta(1)">Testar conexão</button>
-      </div>
-    </article>
-
-    <article class="card efi-conta-card" data-efi-conta="2">
-      <h3>Conta Efí 2</h3>
-
-      <div class="form-row two">
-        <div>
-          <label>Nome da Conta</label>
-          <input id="efi2NomeConta" placeholder="Ex: Efí Adriano">
-        </div>
-        <div>
-          <label>CPF/CNPJ da Conta</label>
-          <input id="efi2Documento" placeholder="000.000.000-00">
-        </div>
-      </div>
-
-      <div class="form-row two">
-        <div>
-          <label>Ambiente</label>
-          <select id="efi2Ambiente">
-            <option value="homologacao">Homologação</option>
-            <option value="producao">Produção</option>
-          </select>
-        </div>
-        <div>
-          <label>Client ID</label>
-          <input id="efi2ClientId" placeholder="Client ID Efí">
-        </div>
-      </div>
-
-      <div class="form-row two">
-        <div>
-          <label>Client Secret</label>
-          <input id="efi2ClientSecret" type="password" placeholder="Client Secret Efí">
-        </div>
-        <div>
-          <label>Chave PIX</label>
-          <input id="efi2ChavePix" placeholder="Chave PIX Efí">
-        </div>
-      </div>
-
-      <div class="form-row two">
-        <div>
-          <label>Certificado .p12</label>
-          <input id="efi2Certificado" placeholder="certificado.p12">
-        </div>
-        <div>
-          <label>Webhook</label>
-          <input id="efi2Webhook" placeholder="https://seupainel.com/api/efi/webhook">
-        </div>
-      </div>
-
-      <div class="efi-actions">
-        <button type="button" class="btn-primary" onclick="salvarConfiguracaoEfiConta(2)">Salvar configuração</button>
-        <button type="button" class="btn-secondary" onclick="testarConexaoEfiConta(2)">Testar conexão</button>
-      </div>
-    </article>
-  </section>
-</section>
+</main>
 
 <script>
 (function(){
@@ -170,8 +157,8 @@
   function coletar(conta){
     const obj = { conta };
     campos.forEach(function(c){
-      const el = document.getElementById("efi" + conta + c);
-      obj[c] = el ? el.value.trim() : "";
+      const campo = document.getElementById("efi" + conta + c);
+      obj[c] = campo ? campo.value.trim() : "";
     });
     return obj;
   }
@@ -179,8 +166,8 @@
   function preencher(conta, obj){
     if(!obj) return;
     campos.forEach(function(c){
-      const el = document.getElementById("efi" + conta + c);
-      if(el && obj[c] !== undefined) el.value = obj[c];
+      const campo = document.getElementById("efi" + conta + c);
+      if(campo && obj[c] !== undefined) campo.value = obj[c];
     });
   }
 
@@ -199,11 +186,11 @@
 
     localStorage.setItem(key(conta), JSON.stringify(cfg));
 
-    const todas = [1,2].map(function(n){
+    const contas = [1,2].map(function(n){
       try { return JSON.parse(localStorage.getItem(key(n)) || "null"); } catch(e){ return null; }
     }).filter(Boolean);
 
-    localStorage.setItem("fibra_efi_contas", JSON.stringify(todas));
+    localStorage.setItem("fibra_efi_contas", JSON.stringify(contas));
 
     alert("Configuração da Conta Efí " + conta + " salva.");
   };
@@ -212,7 +199,7 @@
     const cfg = coletar(conta);
 
     if(!cfg.ClientId || !cfg.ClientSecret){
-      alert("Informe Client ID e Client Secret da Conta Efí " + conta + " antes de testar.");
+      alert("Informe Client ID e Client Secret da Conta Efí " + conta + ".");
       return;
     }
 
@@ -223,13 +210,9 @@
         body: JSON.stringify(cfg)
       });
 
-      if(resp.ok){
-        alert("Teste enviado para Conta Efí " + conta + ".");
-      }else{
-        alert("Não foi possível testar a Conta Efí " + conta + ". Verifique a configuração do backend.");
-      }
+      alert(resp.ok ? "Teste enviado para Conta Efí " + conta + "." : "Não foi possível testar. Verifique o backend.");
     }catch(e){
-      alert("Configuração salva localmente. O teste real dependerá da API Efí no backend.");
+      alert("Configuração salva localmente. O teste real depende da API Efí no backend.");
     }
   };
 
@@ -241,6 +224,5 @@
 })();
 </script>
 
-</main>
 </body>
 </html>
