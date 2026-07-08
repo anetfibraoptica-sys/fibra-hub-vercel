@@ -213,7 +213,7 @@
     try{
       await salvarBackend(conta, cfg);
       if(conta === 1) marcarEfiIntegradoGlobal(cfg);
-      alert("Configuração da Conta Efí " + conta + " salva no painel e no backend.");
+      if(window.marcarEfiIntegradoGlobal && conta === 1) window.marcarEfiIntegradoGlobal(cfg); alert("Configuração da Conta Efí " + conta + " salva no painel e no backend.");
     }catch(e){
       alert("Salvou no painel, mas falhou no backend: " + e.message);
     }
@@ -235,7 +235,7 @@
       });
       const json = await resp.json();
       if(resp.ok && json.ok && conta === 1) marcarEfiIntegradoGlobal(cfg);
-      alert(resp.ok && json.ok ? (json.mensagem || "Conexão OK.") : ("Erro Efí: " + (json.erro || json.mensagem || "erro desconhecido")));
+      if(resp.ok && json.ok && window.marcarEfiIntegradoGlobal && conta === 1) window.marcarEfiIntegradoGlobal(cfg); alert(resp.ok && json.ok ? (json.mensagem || "Conexão OK.") : ("Erro Efí: " + (json.erro || json.mensagem || "erro desconhecido")));
     }catch(e){
       alert("Erro ao testar conexão: " + e.message);
     }

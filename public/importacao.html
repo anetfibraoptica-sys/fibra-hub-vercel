@@ -36,6 +36,12 @@
 <main class="main">
 <header class="topbar"><h1>Importação ReceitaNet</h1><div class="topbar-right"><span id="liveStatus" class="badge badge-off">CONECTANDO</span><span class="badge">CSV ReceitaNet</span><span class="badge">ISO-8859-1</span></div></header>
 <section class="content">
+
+<div class="card efi-status-card" style="margin:12px 0;padding:12px;">
+  <strong>Status Efí:</strong>
+  <span id="statusIntegracaoEfi" class="efi-status">Verificando integração Efí...</span>
+</div>
+
 <section class="cards"><div class="card"><div class="card-icon bg-blue">👥</div><small>Encontrados</small><h2 id="impEncontrados">0</h2></div><div class="card"><div class="card-icon bg-green">✅</div><small>Novos</small><h2 id="impNovos">0</h2></div><div class="card"><div class="card-icon bg-orange">🔄</div><small>Atualizados</small><h2 id="impAtualizados">0</h2></div><div class="card"><div class="card-icon bg-blue">📋</div><small>Total em Clientes</small><h2 id="impTotalClientes">0</h2></div></section>
 <section class="panel"><h3>Importar clientes do ReceitaNet</h3><p class="cadastro-note">Use o CSV exportado do ReceitaNet. Esta versão lê o arquivo como <b>ISO-8859-1</b>, salvando todos os campos do cliente.</p><div class="cadastro-actions"><label class="csv-import-btn">Selecionar CSV ReceitaNet<input id="csvReceitaNet" type="file" accept=".csv,text/csv" onchange="importarReceitaNetHub(event)" hidden></label><button onclick="limparBaseClientesHub()">Limpar base local</button></div><div id="resultadoImportacao" class="import-result">Aguardando arquivo CSV.</div></section>
 
