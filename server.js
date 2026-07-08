@@ -1649,6 +1649,185 @@ app.get("/api/efi/status", async (req, res) => {
 });
 
 
+
+/* EFI BOLETO IMPORTADO DIRETO */
+function efiNormalizarStatus(status) {
+  const s = String(status || "").toLowerCase();
+  if (s.includes("paid") || s.includes("pago") || s.includes("settled")) return "Pago";
+  if (s.includes("waiting") || s.includes("pend") || s.includes("unpaid")) return "Aguardando pagamento";
+  if (s.includes("cancel") || s.includes("expired") || s.includes("venc")) return "Cancelado/Vencido";
+  if (s.includes("new") || s.includes("active") || s.includes("link")) return "Registrado na Efí";
+  return status || "Registrado na Efí";
+}
+
+async function efiRequestConta1(path, options = {}) {
+  const token = await efiGerarToken(efiConta1Config);
+  const accessToken = token.access_token;
+
+  if (!accessToken) throw new Error("Token Efí sem access_token.");
+
+  const resp = await fetch(efiBaseUrl(efiConta1Config.ambiente) + path, {
+    method: options.method || "GET",
+    headers: {
+      "Authorization": "Bearer " + accessToken,
+      "Content-Type": "application/json",
+      ...(options.headers || {})
+    },
+    body: options.body ? JSON.stringify(options.body) : undefined
+  });
+
+  const text = await resp.text();
+  let json = {};
+  try { json = JSON.parse(text); } catch(e) { json = { raw:text }; }
+
+  return { ok: resp.ok, status: resp.status, json, raw: text };
+}
+
+function extrairDadosBoletoEfi(json) {
+  const data = json && (json.data || json);
+  const charge = data.charge || data;
+
+  const linhaDigitavel =
+    data.barcode ||
+    data.digitable_line ||
+    data.linha_digitavel ||
+    charge.barcode ||
+    charge.digitable_line ||
+    charge.linha_digitavel ||
+    "";
+
+  const pix =
+    data.pixCopiaECola ||
+    data.pix_copia_e_cola ||
+    data.qrcode ||
+    data.qr_code ||
+    data.pix?.qrcode ||
+    data.pix?.qrcode_image ||
+    charge.pixCopiaECola ||
+    charge.pix_copia_e_cola ||
+    charge.qrcode ||
+    charge.qr_code ||
+    "";
+
+  const link =
+    data.pdf?.charge ||
+    data.pdf?.carnet ||
+    data.link ||
+    data.payment_url ||
+    data.url ||
+    charge.link ||
+    charge.payment_url ||
+    "";
+
+  const status =
+    data.status ||
+    charge.status ||
+    data.situacao ||
+    charge.situacao ||
+    "";
+
+  return {
+    situacao_efi: efiNormalizarStatus(status),
+    linha_digitavel: linhaDigitavel || "",
+    pix_copia_cola: pix || "",
+    link_boleto: link || "",
+    raw: data
+  };
+}
+
+app.post("/api/efi/boleto-importado/consultar", async (req, res) => {
+  try {
+    const body = req.body || {};
+    const numero = String(body.numero || body.id || body.charge_id || body.chargeId || "").trim();
+    const valor = String(body.valor || "").trim();
+    const vencimento = String(body.vencimento || "").trim();
+    const cpf = String(body.cpf || body.cpf_cnpj || "").replace(/\D/g, "");
+
+    if (!efiConta1Config || !String(efiConta1Config.clientId || "").trim() || !String(efiConta1Config.clientSecret || "").trim()) {
+      return res.status(400).json({ ok:false, erro:"Conta Efí 1 não configurada no backend." });
+    }
+
+    if (!numero && !cpf && !vencimento) {
+      return res.status(400).json({ ok:false, erro:"Informe número/charge_id ou dados do boleto para consulta." });
+    }
+
+    // 1) Tentativa direta por charge_id/número.
+    const tentativas = [];
+
+    if (numero) {
+      tentativas.push("/v1/charge/" + encodeURIComponent(numero));
+      tentativas.push("/v1/charge/" + encodeURIComponent(numero) + "/detail");
+    }
+
+    let ultimoErro = null;
+
+    for (const path of tentativas) {
+      try {
+        const r = await efiRequestConta1(path);
+        if (r.ok) {
+          const dados = extrairDadosBoletoEfi(r.json);
+          return res.json({ ok:true, encontrado:true, fonte:path, ...dados });
+        }
+        ultimoErro = r.json;
+      } catch(e) {
+        ultimoErro = e.message;
+      }
+    }
+
+    // 2) Tentativa por lista de cobranças em intervalo, quando disponível.
+    // Mantém compatibilidade: se a conta/API não permitir, retorna não encontrado sem quebrar a tela.
+    try {
+      const params = new URLSearchParams();
+      if (vencimento) {
+        params.set("begin_date", vencimento.slice(0,10));
+        params.set("end_date", vencimento.slice(0,10));
+      }
+      const listPath = "/v1/charges" + (params.toString() ? "?" + params.toString() : "");
+      const r = await efiRequestConta1(listPath);
+
+      if (r.ok) {
+        const arr = Array.isArray(r.json.data) ? r.json.data : Array.isArray(r.json) ? r.json : [];
+        const achado = arr.find((b) => {
+          const id = String(b.charge_id || b.id || b.numero || "").trim();
+          const doc = String(b.customer?.cpf || b.customer?.cnpj || b.cpf || b.cpf_cnpj || "").replace(/\D/g, "");
+          const val = String(b.value || b.total || b.amount || "").trim();
+          return (numero && id === numero) || (cpf && doc === cpf) || (valor && val === valor);
+        });
+
+        if (achado) {
+          const id = achado.charge_id || achado.id;
+          if (id) {
+            const detail = await efiRequestConta1("/v1/charge/" + encodeURIComponent(id));
+            if (detail.ok) {
+              const dados = extrairDadosBoletoEfi(detail.json);
+              return res.json({ ok:true, encontrado:true, fonte:"lista+detalhe", ...dados });
+            }
+          }
+
+          const dados = extrairDadosBoletoEfi(achado);
+          return res.json({ ok:true, encontrado:true, fonte:"lista", ...dados });
+        }
+      }
+    } catch(e) {
+      ultimoErro = e.message;
+    }
+
+    return res.json({
+      ok:true,
+      encontrado:false,
+      situacao_efi:"Não encontrado na Efí",
+      linha_digitavel:"",
+      pix_copia_cola:"",
+      link_boleto:"",
+      detalhe: ultimoErro
+    });
+  } catch (err) {
+    console.error("Erro /api/efi/boleto-importado/consultar:", err);
+    return res.status(500).json({ ok:false, erro:err.message });
+  }
+});
+
+
 io.on("connection",(socket)=>{
   socket.emit("hub-update", geral());
   socket.emit("mikrotik-update", geral());

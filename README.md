@@ -1,10 +1,9 @@
 # Fibra+ Hub
 
 ## Correção atual
-- Refeito o reconhecimento de Efí integrada nas telas de boletos/importação.
-- `efi-status.js` agora verifica localStorage e `/api/efi/status`.
-- Qualquer texto visual de 'Efí não integrada' é trocado para 'Efí integrada' quando houver Client ID/Secret salvos.
-- Adicionado card de status Efí nas telas com boletos para facilitar a conferência.
-- Ao salvar/testar a Conta Efí 1, o status global é marcado como integrado.
+- Criado endpoint `/api/efi/boleto-importado/consultar`.
+- Ao abrir boleto importado, o sistema consulta a Efí pelo número/charge_id e tenta preencher situação, linha digitável e Pix Copia e Cola.
+- O texto `Aguardando integração` deixa de ser fixo e passa a ser substituído pelo retorno da Efí.
+- Botão Segunda Via abre o link da Efí quando o backend retornar o link.
 
-Depois de publicar, entre em Financeiro Efí, clique em Salvar configuração ou Testar conexão, depois volte nos boletos importados e faça Ctrl+F5.
+Observação: se a Efí exigir endpoint/certificado específico para detalhe de boletos, o retorno poderá vir como `Não encontrado na Efí`; neste caso será necessário ajustar o endpoint conforme o produto Efí habilitado na conta.
