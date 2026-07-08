@@ -1270,122 +1270,6 @@ document.addEventListener("DOMContentLoaded", function(){
 
 
 <script>
-/* Seguro: atualiza Status no Resumo sem quebrar a página */
-(function(){
-  function seguro(fn){
-    try { fn(); } catch(e) { console.error("Fibra Hub cadastro:", e); }
-  }
-
-  function campo(c, campos){
-    for(var i=0;i<campos.length;i++){
-      var k = campos[i];
-      if(c && c[k] !== undefined && c[k] !== null && String(c[k]).trim() !== "") return String(c[k]).trim();
-    }
-    return "";
-  }
-
-  function norm(v){
-    return String(v || "").toLowerCase().trim();
-  }
-
-  function clienteSelecionado(){
-    if(typeof fibraCadastroEhNovo === 'function' && fibraCadastroEhNovo()) return null;
-    var chaves = ["clienteSelecionadoCompleto","clienteCadastroSelecionado","clienteEditar"];
-    for(var i=0;i<chaves.length;i++){
-      try{
-        var raw = localStorage.getItem(chaves[i]);
-        if(raw) return JSON.parse(raw);
-      }catch(e){}
-    }
-    return {};
-  }
-
-  function setText(id, valor){
-    var el = document.getElementById(id);
-    if(el) el.textContent = valor || "--";
-  }
-
-  function setStatus(online){
-    // Usa o status já existente na aba Resumo.
-    var el = document.querySelector(".status-login-line .offline-dot") ||
-             document.querySelector(".status-login-line span") ||
-             document.querySelector(".offline-dot");
-
-    if(el){
-      el.textContent = online ? "● Online" : "● Offline";
-      el.classList.remove("offline-dot", "online-dot-resumo", "offline-dot-resumo");
-      el.classList.add(online ? "online-dot-resumo" : "offline-dot-resumo");
-    }
-
-    var ident = document.querySelector(".nao-identificado");
-    if(ident){
-      ident.textContent = online ? "Identificado" : "Não Identificado";
-      ident.classList.remove("identificado-online","identificado-offline");
-      ident.classList.add(online ? "identificado-online" : "identificado-offline");
-    }
-  }
-
-  function aplicar(info, login){
-    setText("resLogin2", login || "--");
-    setText("resLogin", login || "--");
-
-    var online = !!info;
-    setStatus(online);
-
-    setText("resServidor", info ? (info.servidor || "--") : "--");
-    setText("resInterface", info ? (info.service || "pppoe") : "--");
-    setText("resIp", info ? (info.ip || info.address || "--") : "--");
-    setText("resProfile", info ? (info.profile || info.service || "pppoe") : "--");
-
-    var cadIp = document.getElementById("cadIp");
-    if(cadIp && info && (info.ip || info.address)) cadIp.value = info.ip || info.address;
-
-    var cadMac = document.getElementById("cadMac");
-    if(cadMac && info && (info.callerId || info.mac || info["caller-id"])) {
-      cadMac.value = info.callerId || info.mac || info["caller-id"];
-    }
-
-    var cadPop = document.getElementById("cadPop");
-    if(cadPop && info && info.servidor) cadPop.value = info.servidor;
-
-    var cadProfile = document.getElementById("cadProfile");
-    if(cadProfile && info) cadProfile.value = info.profile || info.service || "pppoe";
-  }
-
-  async function consultar(){
-    try{
-      var cliente = clienteSelecionado();
-      var login = campo(cliente, ["loginPppoe","login","usuario","user","name","pppoe"]);
-
-      aplicar(null, login);
-
-      if(!login) return;
-
-      var resp = await fetch("/api/online", { cache: "no-store" });
-      var dados = await resp.json();
-      var lista = dados.clientes || [];
-
-      var encontrado = lista.find(function(c){
-        return norm(c.usuario || c.name || c.login || c.user) === norm(login);
-      });
-
-      aplicar(encontrado || null, login);
-    }catch(e){
-      console.error("Erro ao consultar status MikroTik:", e);
-    }
-  }
-
-  window.addEventListener("DOMContentLoaded", function(){
-    seguro(function(){
-      setTimeout(consultar, 800);
-      setTimeout(consultar, 2000);
-    });
-  });
-})();
-</script>
-
-
-<script>
 /* FIX preencher resumo cadastro seguro */
 (function(){
   function getCliente(){
@@ -2853,11 +2737,12 @@ document.addEventListener("fibra:supabase-sync", carregarContasEfiNoCadastro);
 </script>
 
 
+
 <script>
 /* ============================================================
    STATUS REAL DO CLIENTE - PPPoE / MikroTik
-   Regra:
-   Online somente se existir sessão ativa com login + IP + MAC + uptime.
+   Online só fica verde com sessão PPPoE válida:
+   login + IP + MAC + uptime.
 ============================================================ */
 (function(){
   function norm(v){
@@ -2888,9 +2773,7 @@ document.addEventListener("fibra:supabase-sync", carregarContasEfiNoCadastro);
 
   function clienteAtualCadastro(){
     let c = {};
-    try{
-      c = JSON.parse(localStorage.getItem("clienteSelecionadoCompleto") || "{}");
-    }catch(e){}
+    try{ c = JSON.parse(localStorage.getItem("clienteSelecionadoCompleto") || "{}"); }catch(e){}
 
     return {
       ...c,
@@ -2913,40 +2796,21 @@ document.addEventListener("fibra:supabase-sync", carregarContasEfiNoCadastro);
     return [];
   }
 
-  function getLoginSessao(s){
-    return campo(s, ["name","usuario","user","login","loginPppoe","pppoe","cliente","caller"]);
-  }
+  function getLogin(s){ return campo(s, ["name","usuario","user","login","loginPppoe","pppoe","cliente"]); }
+  function getIp(s){ return campo(s, ["address","ip","ipAtual","remoteAddress","remote-address","remote_address"]); }
+  function getMac(s){ return campo(s, ["callerId","caller-id","caller_id","mac","macAddress","mac_address","callingStationId","calling-station-id"]); }
+  function getUptime(s){ return campo(s, ["uptime","tempo","tempoOnline","onlineTime","sessionTime","session-time"]); }
+  function getInterface(s){ return campo(s, ["service","interface","interfaceName","interface-name","vlan"]); }
+  function getProfile(s){ return campo(s, ["profile","perfil","plano","rateLimit","rate-limit"]); }
 
-  function getIpSessao(s){
-    return campo(s, ["address","ip","ipAtual","remoteAddress","remote-address","remote_address"]);
-  }
-
-  function getMacSessao(s){
-    return campo(s, ["callerId","caller-id","caller_id","mac","macAddress","mac_address","callingStationId","calling-station-id"]);
-  }
-
-  function getUptimeSessao(s){
-    return campo(s, ["uptime","tempo","tempoOnline","onlineTime","sessionTime","session-time"]);
-  }
-
-  function getInterfaceSessao(s){
-    return campo(s, ["service","interface","interfaceName","interface-name","vlan"]);
-  }
-
-  function getProfileSessao(s){
-    return campo(s, ["profile","perfil","plano","rateLimit","rate-limit"]);
-  }
-
-  function temSessaoValida(sessao, loginEsperado){
-    if(!sessao) return false;
-
-    const login = getLoginSessao(sessao);
-    const ip = getIpSessao(sessao);
-    const mac = getMacSessao(sessao);
-    const uptime = getUptimeSessao(sessao);
+  function sessaoValida(s, loginEsperado){
+    if(!s) return false;
+    const login = getLogin(s);
+    const ip = getIp(s);
+    const mac = getMac(s);
+    const uptime = getUptime(s);
 
     if(!login || !ip || !mac || !uptime) return false;
-
     if(loginEsperado && norm(login) !== norm(loginEsperado)) return false;
 
     return true;
@@ -2956,7 +2820,6 @@ document.addEventListener("fibra:supabase-sync", carregarContasEfiNoCadastro);
     raw = String(raw || "").trim();
     if(!raw) return "-";
 
-    // MikroTik: 1w2d03:04:05, 18d04:31:12, 04:31:12
     let semanas = 0, dias = 0, horas = 0, minutos = 0;
 
     const w = raw.match(/(\d+)w/);
@@ -2972,79 +2835,53 @@ document.addEventListener("fibra:supabase-sync", carregarContasEfiNoCadastro);
 
     const totalDias = semanas * 7 + dias;
 
-    if(totalDias > 0){
-      return `${totalDias} dia${totalDias > 1 ? "s" : ""} ${String(horas).padStart(2,"0")}h${String(minutos).padStart(2,"0")}min`;
-    }
-
-    if(horas > 0){
-      return `${horas}h${String(minutos).padStart(2,"0")}min`;
-    }
+    if(totalDias > 0) return `${totalDias} dia${totalDias > 1 ? "s" : ""} ${String(horas).padStart(2,"0")}h${String(minutos).padStart(2,"0")}min`;
+    if(horas > 0) return `${horas}h${String(minutos).padStart(2,"0")}min`;
 
     return raw;
   }
 
-  function aplicarStatusCarregando(){
-    const elStatus = document.querySelector(".offline-dot");
-    if(elStatus){
-      elStatus.textContent = "● Verificando";
-      elStatus.classList.remove("status-online-real","status-offline-real");
-      elStatus.classList.add("status-verificando-real");
+  function statusEl(){
+    return document.querySelector(".offline-dot");
+  }
+
+  function setStatus(tipo){
+    const el = statusEl();
+    if(!el) return;
+
+    el.classList.remove("status-online-real","status-offline-real","status-verificando-real");
+
+    if(tipo === "online"){
+      el.textContent = "● Online";
+      el.classList.add("status-online-real");
+    }else if(tipo === "verificando"){
+      el.textContent = "● Verificando";
+      el.classList.add("status-verificando-real");
+    }else{
+      el.textContent = "● Offline";
+      el.classList.add("status-offline-real");
     }
-    setTxt("resTempo", "Verificando...");
   }
 
   function aplicarOffline(cliente){
-    const macCadastro = cliente.mac || cliente.macOnu || cliente.mac_onu || "";
-
-    const elStatus = document.querySelector(".offline-dot");
-    if(elStatus){
-      elStatus.textContent = "● Offline";
-      elStatus.classList.remove("status-online-real","status-verificando-real");
-      elStatus.classList.add("status-offline-real");
-    }
-
+    setStatus("offline");
     setTxt("resIp", "-");
     setTxt("resTempo", "-");
-    setTxt("resMac", macCadastro || "Não informado");
+    setTxt("resMac", cliente.mac || "Não informado");
     setTxt("resInterface", cliente.interface || "-");
     setTxt("resProfile", cliente.profile || "-");
   }
 
   function aplicarOnline(sessao){
-    const elStatus = document.querySelector(".offline-dot");
-    if(elStatus){
-      elStatus.textContent = "● Online";
-      elStatus.classList.remove("status-offline-real","status-verificando-real");
-      elStatus.classList.add("status-online-real");
-    }
-
-    setTxt("resIp", getIpSessao(sessao));
-    setTxt("resTempo", formatarUptime(getUptimeSessao(sessao)));
-    setTxt("resMac", getMacSessao(sessao));
-    setTxt("resInterface", getInterfaceSessao(sessao) || "PPPOE");
-    setTxt("resProfile", getProfileSessao(sessao));
+    setStatus("online");
+    setTxt("resIp", getIp(sessao));
+    setTxt("resTempo", formatarUptime(getUptime(sessao)));
+    setTxt("resMac", getMac(sessao));
+    setTxt("resInterface", getInterface(sessao) || "PPPOE");
+    setTxt("resProfile", getProfile(sessao));
   }
 
-  function garantirCamposResumo(){
-    const statusLine = document.querySelector(".status-login-line");
-    if(!statusLine) return;
-
-    if(!document.getElementById("resTempo")){
-      const bloco = document.createElement("span");
-      bloco.innerHTML = 'Tempo: <b id="resTempo">-</b>';
-      statusLine.appendChild(bloco);
-    }
-
-    if(!document.getElementById("resMac")){
-      const bloco = document.createElement("span");
-      bloco.innerHTML = 'MAC: <b id="resMac">-</b>';
-      statusLine.appendChild(bloco);
-    }
-  }
-
-  async function consultarStatusRealCliente(){
-    garantirCamposResumo();
-
+  async function atualizarStatusRealCliente(){
     const cliente = clienteAtualCadastro();
     const login = cliente.login || "";
 
@@ -3055,16 +2892,16 @@ document.addEventListener("fibra:supabase-sync", carregarContasEfiNoCadastro);
       return;
     }
 
-    aplicarStatusCarregando();
+    setStatus("verificando");
 
     try{
       const resp = await fetch("/api/online", {cache:"no-store"});
       const json = await resp.json();
       const lista = extrairListaOnline(json);
 
-      const sessao = lista.find(s => norm(getLoginSessao(s)) === norm(login));
+      const sessao = lista.find(s => norm(getLogin(s)) === norm(login));
 
-      if(temSessaoValida(sessao, login)){
+      if(sessaoValida(sessao, login)){
         aplicarOnline(sessao);
       }else{
         aplicarOffline(cliente);
@@ -3075,16 +2912,17 @@ document.addEventListener("fibra:supabase-sync", carregarContasEfiNoCadastro);
     }
   }
 
-  window.atualizarStatusRealCliente = consultarStatusRealCliente;
+  window.atualizarStatusRealCliente = atualizarStatusRealCliente;
 
   document.addEventListener("DOMContentLoaded", function(){
-    setTimeout(consultarStatusRealCliente, 800);
-    setTimeout(consultarStatusRealCliente, 2500);
+    setTimeout(atualizarStatusRealCliente, 800);
+    setTimeout(atualizarStatusRealCliente, 2500);
+    setTimeout(atualizarStatusRealCliente, 5000);
   });
 
   document.addEventListener("input", function(e){
     if(e.target && e.target.id === "cadLogin"){
-      setTimeout(consultarStatusRealCliente, 500);
+      setTimeout(atualizarStatusRealCliente, 500);
     }
   });
 })();

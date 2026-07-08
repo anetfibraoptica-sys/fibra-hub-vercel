@@ -1,11 +1,9 @@
 # Fibra+ Hub
 
-## Alteração atual
-- Status Online agora só fica verde se houver sessão PPPoE válida.
-- Sessão válida exige login, IP, MAC e uptime.
-- Adicionado Tempo Online no Resumo.
-- Adicionado MAC no Resumo.
-- Se não houver sessão válida, mostra Offline.
-- Se offline, mostra MAC cadastrado quando existir.
+## Correção atual
+- Removida a lógica antiga que colocava cliente Online sem sessão PPPoE válida.
+- Status verde agora só aparece com login + IP + MAC + uptime.
+- Adicionado Tempo e MAC no Resumo.
+- Login fixo admin/admin removido; login usa usuários do Supabase.
 
-Depois de publicar na Vercel, use Ctrl+F5.
+Após subir na Vercel, faça Ctrl+F5 e limpe dados antigos do site se ainda aparecer login antigo.
