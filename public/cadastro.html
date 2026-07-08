@@ -2363,7 +2363,7 @@ document.addEventListener("DOMContentLoaded", function(){
 
     var el = statusEl();
     if(el){
-      el.textContent = "● Online";
+      el.textContent = "● Offline";
       el.classList.remove("status-offline-real","status-verificando-real");
       el.classList.add("status-online-real");
     }
@@ -2442,6 +2442,46 @@ document.addEventListener("DOMContentLoaded", function(){
     if(e.target && (e.target.id === "cadLogin" || e.target.id === "cadServidorReceita" || e.target.id === "cadPop")){
       setTimeout(consultar, 400);
     }
+  });
+})();
+</script>
+
+
+<script>
+/* Trava visual final: impede bolinha verde sem dados de sessão */
+(function(){
+  function norm(v){
+    return String(v || "").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
+  }
+  function txt(id){
+    return (document.getElementById(id)?.textContent || "").trim();
+  }
+  function forcarOfflineVisual(){
+    const el = document.querySelector(".offline-dot");
+    if(!el) return;
+
+    const ip = txt("resIp");
+    const mac = txt("resMac");
+    const tempo = txt("resTempo");
+
+    const semDados = !ip || ip === "-" || ip === '""' ||
+                     !mac || mac === "-" || mac === '""' || norm(mac).includes("nao informado") ||
+                     !tempo || tempo === "-" || tempo === '""';
+
+    if(semDados){
+      el.textContent = "● Offline";
+      el.classList.remove("status-online-real","status-verificando-real");
+      el.classList.add("status-offline-real");
+      el.style.color = "#ef4444";
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", function(){
+    forcarOfflineVisual();
+    setTimeout(forcarOfflineVisual, 500);
+    setTimeout(forcarOfflineVisual, 1500);
+    setTimeout(forcarOfflineVisual, 3000);
+    setInterval(forcarOfflineVisual, 700);
   });
 })();
 </script>

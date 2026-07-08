@@ -1,9 +1,9 @@
 # Fibra+ Hub
 
 ## Correção atual
-- Removido do Resumo o campo Conexão que ainda recebia 'Online' de dados cadastrados.
-- Status agora depende somente da bolinha Online/Offline validada por `/api/cliente/status`.
-- Online só aparece com `online=true`, IP, MAC e uptime.
-- Se não houver sessão PPPoE real, fica Offline.
+- Corrigida a cor visual da bolinha do Resumo.
+- `.offline-dot` agora é vermelho por padrão.
+- Verde só aparece com `status-online-real`.
+- Se IP, MAC ou Tempo estiverem vazios, a bolinha é forçada para Offline vermelho.
 
-Após publicar na Vercel, faça Ctrl+F5 ou teste em aba anônima.
+Depois de publicar na Vercel, faça Ctrl+F5.
