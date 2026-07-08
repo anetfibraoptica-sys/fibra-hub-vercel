@@ -1504,6 +1504,129 @@ app.post("/api/mikrotik/cliente-acao", async (req, res) => {
 });
 
 
+
+/* EFI BACKEND CONTA 1 */
+let efiConta1Config = {
+  nomeConta: process.env.EFI1_NOME_CONTA || "",
+  documento: process.env.EFI1_DOCUMENTO || "",
+  ambiente: process.env.EFI1_AMBIENTE || "producao",
+  clientId: process.env.EFI1_CLIENT_ID || "",
+  clientSecret: process.env.EFI1_CLIENT_SECRET || "",
+  certificado: process.env.EFI1_CERTIFICADO || "",
+  webhook: process.env.EFI1_WEBHOOK || ""
+};
+
+function efiBaseUrl(ambiente) {
+  return String(ambiente || "").toLowerCase().includes("homolog")
+    ? "https://cobrancas-h.api.efipay.com.br"
+    : "https://cobrancas.api.efipay.com.br";
+}
+
+async function efiGerarToken(config) {
+  const clientId = String(config.clientId || "").trim();
+  const clientSecret = String(config.clientSecret || "").trim();
+
+  if (!clientId || !clientSecret) {
+    throw new Error("Client ID e Client Secret são obrigatórios.");
+  }
+
+  const basic = Buffer.from(clientId + ":" + clientSecret).toString("base64");
+  const resp = await fetch(efiBaseUrl(config.ambiente) + "/v1/authorize", {
+    method: "POST",
+    headers: {
+      "Authorization": "Basic " + basic,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ grant_type: "client_credentials" })
+  });
+
+  const text = await resp.text();
+  let json = {};
+  try { json = JSON.parse(text); } catch(e) { json = { raw:text }; }
+
+  if (!resp.ok) {
+    throw new Error(json.error_description || json.error || json.mensagem || text || "Falha OAuth Efí");
+  }
+
+  return json;
+}
+
+app.post("/api/efi/salvar-config", async (req, res) => {
+  try {
+    const body = req.body || {};
+    const conta = Number(body.conta || 1);
+
+    if (conta !== 1) {
+      return res.json({ ok:true, mensagem:"Conta Efí " + conta + " mantida para integração futura." });
+    }
+
+    efiConta1Config = {
+      nomeConta: String(body.NomeConta || body.nomeConta || "").trim(),
+      documento: String(body.Documento || body.documento || "").trim(),
+      ambiente: String(body.Ambiente || body.ambiente || "producao").trim(),
+      clientId: String(body.ClientId || body.clientId || "").trim(),
+      clientSecret: String(body.ClientSecret || body.clientSecret || "").trim(),
+      certificado: String(body.Certificado || body.certificado || "").trim(),
+      webhook: String(body.Webhook || body.webhook || "").trim()
+    };
+
+    res.json({ ok:true, mensagem:"Conta Efí 1 salva no backend." });
+  } catch (err) {
+    res.status(500).json({ ok:false, erro:err.message });
+  }
+});
+
+app.post("/api/efi/testar-conexao", async (req, res) => {
+  try {
+    const body = req.body || {};
+    const conta = Number(body.conta || 1);
+
+    if (conta !== 1) {
+      return res.status(400).json({ ok:false, erro:"Conta Efí 2 ainda não integrada." });
+    }
+
+    const cfg = {
+      nomeConta: String(body.NomeConta || efiConta1Config.nomeConta || "").trim(),
+      documento: String(body.Documento || efiConta1Config.documento || "").trim(),
+      ambiente: String(body.Ambiente || efiConta1Config.ambiente || "producao").trim(),
+      clientId: String(body.ClientId || efiConta1Config.clientId || "").trim(),
+      clientSecret: String(body.ClientSecret || efiConta1Config.clientSecret || "").trim(),
+      certificado: String(body.Certificado || efiConta1Config.certificado || "").trim(),
+      webhook: String(body.Webhook || efiConta1Config.webhook || "").trim()
+    };
+
+    const token = await efiGerarToken(cfg);
+    efiConta1Config = cfg;
+
+    res.json({
+      ok:true,
+      mensagem:"Conexão Efí OK. Token OAuth gerado.",
+      token_type: token.token_type || "Bearer",
+      expires_in: token.expires_in || null
+    });
+  } catch (err) {
+    console.error("Erro /api/efi/testar-conexao:", err);
+    res.status(500).json({ ok:false, erro:err.message });
+  }
+});
+
+app.get("/api/efi/boletos/teste", async (req, res) => {
+  try {
+    const token = await efiGerarToken(efiConta1Config);
+    res.json({
+      ok:true,
+      mensagem:"OAuth Efí OK para Conta 1.",
+      observacao:"Para consultar/gerar boletos reais, a próxima etapa é configurar o certificado .p12 no backend e escolher o endpoint Efí de cobranças.",
+      token_type: token.token_type || "Bearer",
+      expires_in: token.expires_in || null
+    });
+  } catch (err) {
+    console.error("Erro /api/efi/boletos/teste:", err);
+    res.status(500).json({ ok:false, erro:err.message });
+  }
+});
+
+
 io.on("connection",(socket)=>{
   socket.emit("hub-update", geral());
   socket.emit("mikrotik-update", geral());

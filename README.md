@@ -1,6 +1,8 @@
 # Fibra+ Hub
 
 ## Alteração atual
-- Removido somente o campo Chave PIX das duas contas Efí na tela Financeiro Efí.
-- Mantidos Nome da Conta, CPF/CNPJ, Ambiente, Client ID, Client Secret, Certificado .p12 e Webhook.
-- Menu, layout global e demais funções não foram alterados.
+- Conta Efí 1 ligada ao backend.
+- Criados endpoints `/api/efi/salvar-config`, `/api/efi/testar-conexao` e `/api/efi/boletos/teste`.
+- A tela Financeiro Efí salva a Conta 1 no backend e testa OAuth com Client ID/Client Secret.
+- Adicionado botão Testar boletos para validar a primeira etapa.
+- Próxima etapa para boletos reais: certificado `.p12` no backend e endpoint de cobranças Efí.

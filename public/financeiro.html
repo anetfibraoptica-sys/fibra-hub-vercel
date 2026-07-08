@@ -92,6 +92,7 @@
         <div class="efi-actions">
           <button type="button" class="btn-primary" onclick="salvarConfiguracaoEfiConta(1)">Salvar configuração</button>
           <button type="button" class="btn-secondary" onclick="testarConexaoEfiConta(1)">Testar conexão</button>
+          <button type="button" class="btn-secondary" onclick="testarBoletosEfiConta1()">Testar boletos</button>
         </div>
       </article>
 
@@ -150,80 +151,106 @@
   </section>
 
   <script>
-  (function(){
-    const campos = ["NomeConta","Documento","Ambiente","ClientId","ClientSecret","Certificado","Webhook"];
+(function(){
+  const campos = ["NomeConta","Documento","Ambiente","ClientId","ClientSecret","Certificado","Webhook"];
 
-    function key(conta){ return "fibra_efi_conta_" + conta; }
+  function key(conta){ return "fibra_efi_conta_" + conta; }
 
-    function coletar(conta){
-      const obj = { conta };
-      campos.forEach(function(c){
-        const campo = document.getElementById("efi" + conta + c);
-        obj[c] = campo ? campo.value.trim() : "";
-      });
-      return obj;
-    }
-
-    function preencher(conta, obj){
-      if(!obj) return;
-      campos.forEach(function(c){
-        const campo = document.getElementById("efi" + conta + c);
-        if(campo && obj[c] !== undefined) campo.value = obj[c];
-      });
-    }
-
-    window.salvarConfiguracaoEfiConta = function(conta){
-      const cfg = coletar(conta);
-
-      if(!cfg.NomeConta){
-        alert("Informe o nome da Conta Efí " + conta + ".");
-        return;
-      }
-
-      if(!cfg.Documento){
-        alert("Informe o CPF/CNPJ da Conta Efí " + conta + ".");
-        return;
-      }
-
-      localStorage.setItem(key(conta), JSON.stringify(cfg));
-
-      const contas = [1,2].map(function(n){
-        try { return JSON.parse(localStorage.getItem(key(n)) || "null"); } catch(e){ return null; }
-      }).filter(Boolean);
-
-      localStorage.setItem("fibra_efi_contas", JSON.stringify(contas));
-
-      alert("Configuração da Conta Efí " + conta + " salva.");
-    };
-
-    window.testarConexaoEfiConta = async function(conta){
-      const cfg = coletar(conta);
-
-      if(!cfg.ClientId || !cfg.ClientSecret){
-        alert("Informe Client ID e Client Secret da Conta Efí " + conta + ".");
-        return;
-      }
-
-      try{
-        const resp = await fetch("/api/efi/testar-conexao", {
-          method: "POST",
-          headers: {"Content-Type":"application/json"},
-          body: JSON.stringify(cfg)
-        });
-
-        alert(resp.ok ? "Teste enviado para Conta Efí " + conta + "." : "Não foi possível testar. Verifique o backend.");
-      }catch(e){
-        alert("Configuração salva localmente. O teste real depende da API Efí no backend.");
-      }
-    };
-
-    document.addEventListener("DOMContentLoaded", function(){
-      [1,2].forEach(function(conta){
-        try { preencher(conta, JSON.parse(localStorage.getItem(key(conta)) || "null")); } catch(e){}
-      });
+  function coletar(conta){
+    const obj = { conta };
+    campos.forEach(function(c){
+      const campo = document.getElementById("efi" + conta + c);
+      obj[c] = campo ? campo.value.trim() : "";
     });
-  })();
-  </script>
+    return obj;
+  }
+
+  function preencher(conta, obj){
+    if(!obj) return;
+    campos.forEach(function(c){
+      const campo = document.getElementById("efi" + conta + c);
+      if(campo && obj[c] !== undefined) campo.value = obj[c];
+    });
+  }
+
+  async function salvarBackend(conta, cfg){
+    const resp = await fetch("/api/efi/salvar-config", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify(cfg)
+    });
+    const json = await resp.json();
+    if(!resp.ok || !json.ok) throw new Error(json.erro || json.mensagem || "Falha ao salvar no backend.");
+    return json;
+  }
+
+  window.salvarConfiguracaoEfiConta = async function(conta){
+    const cfg = coletar(conta);
+
+    if(!cfg.NomeConta){
+      alert("Informe o nome da Conta Efí " + conta + ".");
+      return;
+    }
+
+    if(!cfg.Documento){
+      alert("Informe o CPF/CNPJ da Conta Efí " + conta + ".");
+      return;
+    }
+
+    localStorage.setItem(key(conta), JSON.stringify(cfg));
+    const contas = [1,2].map(function(n){
+      try { return JSON.parse(localStorage.getItem(key(n)) || "null"); } catch(e){ return null; }
+    }).filter(Boolean);
+    localStorage.setItem("fibra_efi_contas", JSON.stringify(contas));
+
+    try{
+      await salvarBackend(conta, cfg);
+      alert("Configuração da Conta Efí " + conta + " salva no painel e no backend.");
+    }catch(e){
+      alert("Salvou no painel, mas falhou no backend: " + e.message);
+    }
+  };
+
+  window.testarConexaoEfiConta = async function(conta){
+    const cfg = coletar(conta);
+
+    if(!cfg.ClientId || !cfg.ClientSecret){
+      alert("Informe Client ID e Client Secret da Conta Efí " + conta + ".");
+      return;
+    }
+
+    try{
+      const resp = await fetch("/api/efi/testar-conexao", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify(cfg)
+      });
+      const json = await resp.json();
+      alert(resp.ok && json.ok ? (json.mensagem || "Conexão OK.") : ("Erro Efí: " + (json.erro || json.mensagem || "erro desconhecido")));
+    }catch(e){
+      alert("Erro ao testar conexão: " + e.message);
+    }
+  };
+
+  window.testarBoletosEfiConta1 = async function(){
+    try{
+      const cfg = coletar(1);
+      await salvarBackend(1, cfg);
+      const resp = await fetch("/api/efi/boletos/teste", {cache:"no-store"});
+      const json = await resp.json();
+      alert(resp.ok && json.ok ? (json.mensagem + "\\n" + (json.observacao || "")) : ("Erro: " + (json.erro || json.mensagem || "erro desconhecido")));
+    }catch(e){
+      alert("Erro ao testar boletos: " + e.message);
+    }
+  };
+
+  document.addEventListener("DOMContentLoaded", function(){
+    [1,2].forEach(function(conta){
+      try { preencher(conta, JSON.parse(localStorage.getItem(key(conta)) || "null")); } catch(e){}
+    });
+  });
+})();
+</script>
 
 </main></div>
 <script src="supabase-client.js"></script>
