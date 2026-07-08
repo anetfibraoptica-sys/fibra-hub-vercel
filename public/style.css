@@ -4681,16 +4681,6 @@ button,
   margin:14px 0 !important;
 }
 
-.cadastro-resumo-card .status-dot{
-  display:inline-block !important;
-  width:12px !important;
-  height:12px !important;
-  border-radius:50% !important;
-  background:#16a34a !important;
-  margin:0 3px 0 0 !important;
-  vertical-align:middle !important;
-}
-
 .cadastro-resumo-card .resumo-btns{
   display:grid !important;
   grid-template-columns:1fr !important;
@@ -5002,11 +4992,6 @@ button,
 }
 
 /* Bloco de status também centralizado */
-.cadastro-resumo-card .status-dot{
-  margin-left:0 !important;
-  margin-right:4px !important;
-}
-
 /* Tabelas */
 .cadastro-resumo-card table,
 .cadastro-resumo-card .resumo-table{
@@ -5998,4 +5983,26 @@ body{
 .status-login-line span{
   min-width:0 !important;
   word-break:break-word !important;
+}
+
+
+/* Correção final do Resumo: sem bolinha verde falsa do app.js */
+.offline-dot{
+  color:#ef4444 !important;
+  font-weight:900 !important;
+}
+.offline-dot.status-offline-real,
+.status-offline-real{
+  color:#ef4444 !important;
+  font-weight:900 !important;
+}
+.offline-dot.status-verificando-real,
+.status-verificando-real{
+  color:#f59e0b !important;
+  font-weight:900 !important;
+}
+.offline-dot.status-online-real,
+.status-online-real{
+  color:#22c55e !important;
+  font-weight:900 !important;
 }
