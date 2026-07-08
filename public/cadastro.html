@@ -2947,10 +2947,12 @@ document.addEventListener("DOMContentLoaded", function(){
 </script>
 
 
+
 <script>
 /* ============================================================
    BOTÕES COBRANÇA MIKROTIK
-   Não cria botões. Usa os botões existentes da aba Cobrança.
+   Bloquear = profile BLOQUEADO, não desativa o PPP Secret.
+   Liberar/Confiança/Pagamento = volta para o profile do cadastro.
 ============================================================ */
 (function(){
   function norm(v){
@@ -2963,17 +2965,14 @@ document.addEventListener("DOMContentLoaded", function(){
   function el(id){ return document.getElementById(id); }
   function val(id){ return (el(id)?.value || "").trim(); }
 
-  function servidorAtual(){
-    return val("cadPop") || val("cadServidorReceita") || "";
-  }
-
-  function loginAtual(){
-    return val("cadLogin");
-  }
+  function servidorAtual(){ return val("cadPop") || val("cadServidorReceita") || ""; }
+  function loginAtual(){ return val("cadLogin"); }
+  function profileAtual(){ return val("cadProfile"); }
 
   async function acaoMikrotikCobranca(acao){
     const servidor = servidorAtual();
     const login = loginAtual();
+    const profile = profileAtual();
 
     if(!servidor || norm(servidor).includes("sem servidor")){
       alert("Selecione o servidor do cliente na aba Servidor.");
@@ -2982,6 +2981,11 @@ document.addEventListener("DOMContentLoaded", function(){
 
     if(!login){
       alert("Informe o login PPPoE do cliente.");
+      return false;
+    }
+
+    if((acao === "liberar" || acao === "confianca" || acao === "pagamento") && !profile){
+      alert("Selecione o PROFILE do cliente na aba Servidor.");
       return false;
     }
 
@@ -2999,18 +3003,19 @@ document.addEventListener("DOMContentLoaded", function(){
       }
     }
 
-    const textoAcao = acao === "bloquear" ? "bloquear" :
-                      acao === "liberar" ? "liberar" :
+    const textoAcao = acao === "bloquear" ? "bloquear usando profile BLOQUEADO" :
+                      acao === "liberar" ? "liberar no profile do cadastro" :
+                      acao === "pagamento" ? "desbloquear por pagamento" :
                       "liberar em confiança";
 
-    if(!confirm("Deseja " + textoAcao + " o cliente " + login + " no MikroTik?")){
+    if(acao !== "pagamento" && !confirm("Deseja " + textoAcao + " o cliente " + login + " no MikroTik?")){
       return false;
     }
 
     const resp = await fetch("/api/mikrotik/cliente-acao", {
       method: "POST",
       headers: {"Content-Type":"application/json"},
-      body: JSON.stringify({servidor, login, acao, dias})
+      body: JSON.stringify({servidor, login, acao, dias, profile})
     });
 
     const json = await resp.json();
@@ -3020,10 +3025,12 @@ document.addEventListener("DOMContentLoaded", function(){
       return false;
     }
 
-    alert(json.mensagem || "Ação realizada no MikroTik.");
+    if(acao !== "pagamento"){
+      alert(json.mensagem || "Ação realizada no MikroTik.");
+    }
 
     if(typeof window.atualizarStatusRealCliente === "function"){
-      setTimeout(window.atualizarStatusRealCliente, 800);
+      setTimeout(window.atualizarStatusRealCliente, 1200);
     }
 
     return true;
@@ -3033,6 +3040,7 @@ document.addEventListener("DOMContentLoaded", function(){
   window.bloquearClienteMikrotik = function(){ return acaoMikrotikCobranca("bloquear"); };
   window.liberarClienteMikrotik = function(){ return acaoMikrotikCobranca("liberar"); };
   window.confiancaClienteMikrotik = function(){ return acaoMikrotikCobranca("confianca"); };
+  window.desbloquearClientePorPagamentoMikrotik = function(){ return acaoMikrotikCobranca("pagamento"); };
 
   function detectarAcaoBotao(botao){
     const texto = norm(botao.textContent || botao.value || botao.title || "");
@@ -3050,16 +3058,127 @@ document.addEventListener("DOMContentLoaded", function(){
     if(!botao) return;
 
     const dentroCobranca = botao.closest("#tab-cobranca") || botao.closest(".cobranca-receitanet") || botao.closest(".cobranca-form-grid");
-    if(!dentroCobranca) return;
-
     const acao = detectarAcaoBotao(botao);
-    if(!acao) return;
 
-    e.preventDefault();
-    e.stopPropagation();
+    if(dentroCobranca && acao){
+      e.preventDefault();
+      e.stopPropagation();
+      acaoMikrotikCobranca(acao);
+      return;
+    }
 
-    acaoMikrotikCobranca(acao);
+    const texto = norm(botao.textContent || botao.value || botao.title || "");
+    const onclick = norm(botao.getAttribute("onclick") || "");
+
+    const parecePagamento =
+      texto.includes("baixa") ||
+      texto.includes("pago") ||
+      texto.includes("pagamento") ||
+      texto.includes("pix") ||
+      onclick.includes("baixa") ||
+      onclick.includes("pago") ||
+      onclick.includes("pagamento") ||
+      onclick.includes("pix");
+
+    if(parecePagamento){
+      setTimeout(function(){
+        acaoMikrotikCobranca("pagamento").catch(function(err){
+          console.warn("Falha ao desbloquear após pagamento:", err);
+        });
+      }, 1200);
+    }
   }, true);
+})();
+</script>
+
+
+<script>
+/* ============================================================
+   COBRANÇA PROPORCIONAL PRIMEIRO CICLO
+   Usa Início da Cobrança + Dia do Vencimento.
+============================================================ */
+(function(){
+  function el(id){ return document.getElementById(id); }
+  function val(id){ return (el(id)?.value || "").trim(); }
+
+  function parseValor(v){
+    const n = Number(String(v || "0").replace(/\./g,"").replace(",",".").replace(/[^\d.-]/g,""));
+    return isFinite(n) ? n : 0;
+  }
+
+  function dinheiro(n){
+    return Number(n || 0).toLocaleString("pt-BR", {style:"currency", currency:"BRL"});
+  }
+
+  function acharInicioCobranca(){
+    return el("cadInicioCobranca") ||
+           el("mensalidadePrimeiroVencimento") ||
+           el("inicioCobranca") ||
+           el("cadDataInicioCobranca");
+  }
+
+  function calcularProporcional(){
+    const campoInicio = acharInicioCobranca();
+    const inicioStr = campoInicio ? campoInicio.value : "";
+    const vencDia = Number(val("cadVencimento") || val("cadDiaVencimento") || 0);
+    const valorPlano = parseValor(val("cadValor") || val("cadValorMensal") || val("cadMensalidade"));
+
+    if(!inicioStr || !vencDia || !valorPlano) return null;
+
+    const inicio = new Date(inicioStr + "T00:00:00");
+    if(isNaN(inicio.getTime())) return null;
+
+    let fim = new Date(inicio.getFullYear(), inicio.getMonth(), vencDia);
+    if(fim < inicio){
+      fim = new Date(inicio.getFullYear(), inicio.getMonth() + 1, vencDia);
+    }
+
+    const diasMes = new Date(inicio.getFullYear(), inicio.getMonth() + 1, 0).getDate();
+    const msDia = 24 * 60 * 60 * 1000;
+    const dias = Math.max(1, Math.ceil((fim - inicio) / msDia) + 1);
+    const valor = (valorPlano / diasMes) * dias;
+
+    return {
+      inicio: inicio.toISOString().slice(0,10),
+      fim: fim.toISOString().slice(0,10),
+      dias,
+      valor
+    };
+  }
+
+  function aplicarProporcionalResumo(){
+    const calc = calcularProporcional();
+    if(!calc) return;
+
+    const texto = "Proporcional " + calc.dias + " dia(s): " + dinheiro(calc.valor);
+    const alvo = el("resProporcional") || el("resValorProporcional") || el("resTotal");
+
+    if(alvo){
+      alvo.textContent = texto;
+    }
+
+    window.__fibraProporcionalPrimeiroCiclo = calc;
+  }
+
+  window.calcularProporcionalPrimeiroCiclo = calcularProporcional;
+  window.aplicarProporcionalResumo = aplicarProporcionalResumo;
+
+  document.addEventListener("DOMContentLoaded", function(){
+    setTimeout(aplicarProporcionalResumo, 800);
+    setTimeout(aplicarProporcionalResumo, 2000);
+  });
+
+  document.addEventListener("input", function(e){
+    if(e.target && ["cadInicioCobranca","mensalidadePrimeiroVencimento","inicioCobranca","cadDataInicioCobranca","cadVencimento","cadValor","cadValorMensal","cadMensalidade"].includes(e.target.id)){
+      setTimeout(aplicarProporcionalResumo, 200);
+    }
+  });
+
+  document.addEventListener("change", function(e){
+    if(e.target && ["cadInicioCobranca","mensalidadePrimeiroVencimento","inicioCobranca","cadDataInicioCobranca","cadVencimento","cadValor","cadValorMensal","cadMensalidade"].includes(e.target.id)){
+      setTimeout(aplicarProporcionalResumo, 200);
+    }
+  });
 })();
 </script>
 

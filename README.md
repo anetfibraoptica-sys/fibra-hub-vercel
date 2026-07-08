@@ -1,10 +1,11 @@
 # Fibra+ Hub
 
 ## Alteração atual
-- Os botões existentes da aba Cobrança agora podem acionar o MikroTik.
-- Confiança: pergunta quantos dias liberar, ativa o PPP Secret e retorna a data final.
-- Bloquear: desativa o PPP Secret e derruba a sessão ativa se o cliente estiver online.
-- Liberar: ativa o PPP Secret.
-- Não foram criados novos botões; a integração usa os botões já existentes da aba Cobrança.
+- Bloqueio agora usa profile `BLOQUEADO` no MikroTik, mantendo `disabled=no`.
+- O cliente bloqueado continua autenticando e pode aparecer online, porém sem acesso conforme o profile BLOQUEADO.
+- Liberar, Confiança e Pagamento retornam o cliente ao profile cadastrado na aba Servidor.
+- Após trocar profile, a sessão ativa é derrubada para reconectar já no novo profile.
+- Baixa manual, boleto pago ou PIX confirmado tentam desbloquear automaticamente no MikroTik.
+- Cobrança proporcional usa o campo Início da Cobrança + Dia do Vencimento para calcular o primeiro ciclo.
 
 Depois de publicar na Vercel, faça Ctrl+F5.
