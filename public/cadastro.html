@@ -2820,12 +2820,13 @@ document.addEventListener("DOMContentLoaded", function(){
 </script>
 
 
+
 <script>
 /* ============================================================
-   GRAVAR PROFILE NO MIKROTIK AO SALVAR NO SERVIDOR
-   Funciona para cliente novo e cliente existente:
-   - se PPP Secret existe, atualiza profile;
-   - se não existe, cria com login/senha/profile.
+   GRAVAR CLIENTE COMPLETO NO MIKROTIK AO SALVAR NO SERVIDOR
+   Ao clicar em "Gravar no Fibra+ Hub + Servidor":
+   - se PPP Secret existe: atualiza login, senha, profile, service e comentário;
+   - se não existe: cria PPP Secret completo.
 ============================================================ */
 (function(){
   function el(id){ return document.getElementById(id); }
@@ -2835,10 +2836,36 @@ document.addEventListener("DOMContentLoaded", function(){
     return val("cadPop") || val("cadServidorReceita") || "";
   }
 
+  function getClienteOriginal(){
+    const keys = ["clienteSelecionadoCompleto","clienteCadastroSelecionado","clienteEditar","clienteOnlineSelecionado"];
+    for(const k of keys){
+      try{
+        const raw = localStorage.getItem(k);
+        if(raw){
+          const obj = JSON.parse(raw);
+          if(obj && typeof obj === "object") return obj;
+        }
+      }catch(e){}
+    }
+    return {};
+  }
+
+  function primeiroValor(obj, keys){
+    for(const k of keys){
+      if(obj && obj[k] !== undefined && obj[k] !== null && String(obj[k]).trim() !== ""){
+        return String(obj[k]).trim();
+      }
+    }
+    return "";
+  }
+
   function dadosClienteMikrotik(){
+    const original = getClienteOriginal();
+
     return {
       servidor: servidorAtual(),
       login: val("cadLogin"),
+      loginAnterior: primeiroValor(original, ["login","loginPppoe","usuario","pppoe","name"]),
       senha: val("cadSenha"),
       profile: val("cadProfile"),
       nome: val("cadNome"),
@@ -2847,7 +2874,7 @@ document.addEventListener("DOMContentLoaded", function(){
     };
   }
 
-  async function gravarProfileNoMikrotik(){
+  async function gravarClienteCompletoNoMikrotik(){
     const dados = dadosClienteMikrotik();
 
     if(!dados.servidor || dados.servidor.toLowerCase().includes("sem servidor")){
@@ -2878,11 +2905,12 @@ document.addEventListener("DOMContentLoaded", function(){
       return false;
     }
 
-    alert(json.mensagem || "Profile gravado no MikroTik.");
+    alert(json.mensagem || "Cliente sincronizado no MikroTik.");
     return true;
   }
 
-  window.gravarProfileNoMikrotik = gravarProfileNoMikrotik;
+  window.gravarClienteCompletoNoMikrotik = gravarClienteCompletoNoMikrotik;
+  window.gravarProfileNoMikrotik = gravarClienteCompletoNoMikrotik;
 
   const originalSalvar = window.salvarCadastroCliente;
 
@@ -2892,10 +2920,10 @@ document.addEventListener("DOMContentLoaded", function(){
 
       if(gravarServidor === true){
         try{
-          await gravarProfileNoMikrotik();
+          await gravarClienteCompletoNoMikrotik();
         }catch(e){
-          console.error("Erro ao gravar profile no MikroTik:", e);
-          alert("Erro ao gravar profile no MikroTik: " + e.message);
+          console.error("Erro ao sincronizar cliente no MikroTik:", e);
+          alert("Erro ao sincronizar cliente no MikroTik: " + e.message);
         }
       }
 
@@ -2908,9 +2936,9 @@ document.addEventListener("DOMContentLoaded", function(){
 
       setTimeout(async function(){
         try{
-          await gravarProfileNoMikrotik();
+          await gravarClienteCompletoNoMikrotik();
         }catch(err){
-          alert("Erro ao gravar profile no MikroTik: " + err.message);
+          alert("Erro ao sincronizar cliente no MikroTik: " + err.message);
         }
       }, 700);
     });

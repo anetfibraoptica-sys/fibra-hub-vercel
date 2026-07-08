@@ -1176,25 +1176,19 @@ app.get("/api/mikrotik/profiles", async (req, res) => {
 
 
 
+
 /* ============================================================
-   GRAVAR CLIENTE NO MIKROTIK COM PROFILE
-   Se PPP Secret existe: atualiza profile.
-   Se não existe: cria PPP Secret com login/senha/profile.
+   GRAVAR CLIENTE NO MIKROTIK - SINCRONIZAÇÃO COMPLETA
+   Se PPP Secret existe: atualiza login, senha, profile, service e comentário.
+   Se não existe: cria PPP Secret completo.
 ============================================================ */
 app.post("/api/mikrotik/cliente-profile", async (req, res) => {
-  const getCampo = (obj, nomes) => {
-    for (const n of nomes) {
-      if (obj && obj[n] !== undefined && obj[n] !== null && String(obj[n]).trim() !== "") {
-        return String(obj[n]).trim();
-      }
-    }
-    return "";
-  };
-
   try {
     const body = req.body || {};
+
     const servidor = String(body.servidor || "").trim();
     const login = String(body.login || "").trim();
+    const loginAnterior = String(body.loginAnterior || body.login_antigo || "").trim();
     const senha = String(body.senha || "").trim();
     const profile = String(body.profile || "").trim();
     const nome = String(body.nome || "").trim();
@@ -1234,37 +1228,58 @@ app.post("/api/mikrotik/cliente-profile", async (req, res) => {
       });
     }
 
-    // Procura o PPP Secret pelo login.
-    const secretResp = await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
-      "/ppp/secret/print",
-      "?name=" + login
-    ]], 15000);
+    async function buscarSecret(nomeLogin) {
+      if (!nomeLogin) return null;
 
-    const secrets = parseRouterosRows(secretResp);
-    const secret = secrets[0];
+      const resp = await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+        "/ppp/secret/print",
+        "?name=" + nomeLogin
+      ]], 15000);
 
-    const comentario = [
-      nome ? "CLIENTE: " + nome : "",
-      cpf ? "CPF/CNPJ: " + cpf : "",
-      telefone ? "TEL: " + telefone : "",
-      servidor ? "SERVIDOR: " + servidor : "",
-      "ATUALIZADO PELO FIBRA+ HUB"
-    ].filter(Boolean).join(" | ");
+      const rows = parseRouterosRows(resp);
+      return rows[0] || null;
+    }
+
+    // Para alteração de login:
+    // 1. procura primeiro pelo login antigo do cadastro;
+    // 2. se não achar, procura pelo login atual.
+    let secret = null;
+    let encontradoPor = "";
+
+    if (loginAnterior && loginAnterior !== login) {
+      secret = await buscarSecret(loginAnterior);
+      if (secret) encontradoPor = loginAnterior;
+    }
+
+    if (!secret) {
+      secret = await buscarSecret(login);
+      if (secret) encontradoPor = login;
+    }
+
+    // Comentário usado no PPP Secret e exibido no PPP Active.
+    // Deve conter somente o nome completo do cliente.
+    const comentario = nome || login;
 
     if (secret && secret[".id"]) {
-      await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+      const words = [
         "/ppp/secret/set",
         "=.id=" + secret[".id"],
+        "=name=" + login,
+        senha ? "=password=" + senha : "",
+        "=service=pppoe",
         "=profile=" + profile,
         comentario ? "=comment=" + comentario : ""
-      ].filter(Boolean)], 15000);
+      ].filter(Boolean);
+
+      await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [words], 15000);
 
       return res.json({
         ok:true,
         acao:"atualizado",
-        mensagem:"Cliente já existia no MikroTik. Profile atualizado para " + profile + ".",
+        mensagem:"Cliente atualizado no MikroTik: login, senha, profile e service PPPoE sincronizados.",
         servidor: cfg.key || servidor,
         login,
+        loginAnterior: encontradoPor || loginAnterior || login,
         profile
       });
     }
@@ -1288,7 +1303,7 @@ app.post("/api/mikrotik/cliente-profile", async (req, res) => {
     return res.json({
       ok:true,
       acao:"criado",
-      mensagem:"Cliente criado no MikroTik com profile " + profile + ".",
+      mensagem:"Cliente criado no MikroTik com login, senha, profile e service PPPoE.",
       servidor: cfg.key || servidor,
       login,
       profile
