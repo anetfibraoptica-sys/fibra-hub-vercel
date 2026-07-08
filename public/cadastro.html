@@ -535,10 +535,6 @@ fibraCadastroLimparStoragesSelecao();
             <span id="resIp">--</span>
           </div>
           <div>
-            <b>Conexão</b>
-            <span id="resConexao">--</span>
-          </div>
-          <div>
             <b>Profile</b>
             <span id="resProfile">--</span>
           </div>
@@ -2283,11 +2279,17 @@ document.addEventListener("DOMContentLoaded", function(){
 
 
 
+
+
+
+
 <script>
 /* ============================================================
-   STATUS DEDICADO DO CLIENTE NO RESUMO
-   Consulta /api/cliente/status, que executa /ppp/active/print.
-   Separado da tela Servidores Online.
+   STATUS DO RESUMO SEM ONLINE FALSO
+   Online somente se /api/cliente/status retornar:
+   online=true + IP + MAC + uptime.
+   O campo "Conexão" foi removido do Resumo para não usar
+   dado cadastrado como se fosse sessão PPPoE.
 ============================================================ */
 (function(){
   function norm(v){
@@ -2329,34 +2331,33 @@ document.addEventListener("DOMContentLoaded", function(){
     return getVal("cadMac") || getVal("cadMacOnu") || "";
   }
 
-  function marcarOffline(){
+  function aplicarOffline(){
     var el = statusEl();
     if(el){
       el.textContent = "● Offline";
       el.classList.remove("status-online-real","status-verificando-real");
       el.classList.add("status-offline-real");
     }
-    setTxt("resConexao", "Offline");
+
     setTxt("resIp", "-");
     setTxt("resTempo", "-");
     setTxt("resMac", macCadastrado() || "Não informado");
     window.__fibraResumoStatus = "offline";
   }
 
-  function marcarVerificando(){
+  function aplicarVerificando(){
     var el = statusEl();
     if(el){
       el.textContent = "● Verificando";
       el.classList.remove("status-online-real","status-offline-real");
       el.classList.add("status-verificando-real");
     }
-    setTxt("resConexao", "Verificando");
     window.__fibraResumoStatus = "verificando";
   }
 
-  function marcarOnline(d){
-    if(!(d && d.online && d.ip && d.mac && d.uptime)){
-      marcarOffline();
+  function aplicarOnline(d){
+    if(!(d && d.online === true && d.ip && d.mac && d.uptime)){
+      aplicarOffline();
       return;
     }
 
@@ -2367,7 +2368,6 @@ document.addEventListener("DOMContentLoaded", function(){
       el.classList.add("status-online-real");
     }
 
-    setTxt("resConexao", "Online");
     setTxt("resIp", d.ip);
     setTxt("resTempo", d.uptime);
     setTxt("resMac", d.mac);
@@ -2378,71 +2378,69 @@ document.addEventListener("DOMContentLoaded", function(){
     window.__fibraResumoStatus = "online";
   }
 
-  function telaTemDadosOnline(){
+  function telaSemDadosOnline(){
     var ip = getTxt("resIp");
     var mac = getTxt("resMac");
     var tempo = getTxt("resTempo");
 
-    var semIp = !ip || ip === "-" || ip === '""';
-    var semMac = !mac || mac === "-" || mac === '""' || norm(mac).includes("não informado");
-    var semTempo = !tempo || tempo === "-" || tempo === '""';
-
-    return !(semIp || semMac || semTempo);
+    return !ip || ip === "-" || ip === '""' ||
+           !mac || mac === "-" || mac === '""' || norm(mac).includes("não informado") ||
+           !tempo || tempo === "-" || tempo === '""';
   }
 
-  function travaVisual(){
-    var conexao = norm(getTxt("resConexao"));
+  function trava(){
     var bolinha = norm(statusEl()?.textContent || "");
-    if((conexao.includes("online") || bolinha.includes("online")) && !telaTemDadosOnline()){
-      marcarOffline();
+    if(bolinha.includes("online") && telaSemDadosOnline()){
+      aplicarOffline();
     }
   }
 
-  async function consultarStatusCliente(){
+  async function consultar(){
     var login = loginAtual();
-    var servidor = servidorAtual();
 
     if(!login){
-      marcarOffline();
+      aplicarOffline();
       return;
     }
 
     setTxt("resLogin2", login);
-    marcarVerificando();
+    aplicarVerificando();
 
     try{
       var url = "/api/cliente/status?login=" + encodeURIComponent(login);
-      if(servidor && servidor !== "--" && servidor !== "-"){
+      var servidor = servidorAtual();
+
+      if(servidor && servidor !== "-" && servidor !== "--"){
         url += "&servidor=" + encodeURIComponent(servidor);
       }
 
       var r = await fetch(url, {cache:"no-store"});
       var d = await r.json();
 
-      if(d && d.online && d.ip && d.mac && d.uptime){
-        marcarOnline(d);
+      if(d && d.online === true && d.ip && d.mac && d.uptime){
+        aplicarOnline(d);
       }else{
-        marcarOffline();
+        aplicarOffline();
       }
     }catch(e){
-      console.warn("Erro ao consultar /api/cliente/status:", e);
-      marcarOffline();
+      console.warn("Erro status cliente:", e);
+      aplicarOffline();
     }
   }
 
-  window.atualizarStatusRealCliente = consultarStatusCliente;
+  window.atualizarStatusRealCliente = consultar;
 
   document.addEventListener("DOMContentLoaded", function(){
-    marcarOffline();
-    setTimeout(consultarStatusCliente, 600);
-    setTimeout(consultarStatusCliente, 1800);
-    setTimeout(consultarStatusCliente, 4000);
-    setInterval(travaVisual, 300);
+    aplicarOffline();
+    setTimeout(consultar, 600);
+    setTimeout(consultar, 1800);
+    setTimeout(consultar, 4000);
+    setInterval(trava, 300);
   });
 
   document.addEventListener("input", function(e){
     if(e.target && (e.target.id === "cadLogin" || e.target.id === "cadServidorReceita" || e.target.id === "cadPop")){
-      setTimeout(consultarStatusCliente, 400);
+      setTimeout(consultar, 400);
     }
   });
 })();

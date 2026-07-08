@@ -1,10 +1,9 @@
 # Fibra+ Hub
 
-## Alteração atual
-- Criado endpoint dedicado `GET /api/cliente/status`.
-- Esse endpoint consulta o MikroTik via `/ppp/active/print` para o login do cliente.
-- O Resumo do cadastro não usa mais a lógica da tela Servidores Online.
-- Online só aparece se o login do cliente estiver ativo com IP + MAC + Uptime.
-- Se não encontrar o login no PPP Active, mostra Offline.
+## Correção atual
+- Removido do Resumo o campo Conexão que ainda recebia 'Online' de dados cadastrados.
+- Status agora depende somente da bolinha Online/Offline validada por `/api/cliente/status`.
+- Online só aparece com `online=true`, IP, MAC e uptime.
+- Se não houver sessão PPPoE real, fica Offline.
 
-Depois de publicar na Vercel, faça Ctrl+F5 ou teste em aba anônima.
+Após publicar na Vercel, faça Ctrl+F5 ou teste em aba anônima.
