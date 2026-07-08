@@ -2279,11 +2279,15 @@ document.addEventListener("DOMContentLoaded", function(){
 </script>
 
 
+
+
+
+
 <script>
 /* ============================================================
-   STATUS PPPoE DEFINITIVO - SEM ONLINE FALSO
-   Online somente se /api/online retornar o login atual com:
-   IP + MAC + Tempo/Uptime.
+   STATUS DEDICADO DO CLIENTE NO RESUMO
+   Consulta /api/cliente/status, que executa /ppp/active/print.
+   Separado da tela Servidores Online.
 ============================================================ */
 (function(){
   function norm(v){
@@ -2306,58 +2310,32 @@ document.addEventListener("DOMContentLoaded", function(){
     if(el) el.textContent = valor || "-";
   }
 
-  function getCampo(obj, nomes){
-    for(var i = 0; i < nomes.length; i++){
-      var n = nomes[i];
-      if(obj && obj[n] !== undefined && obj[n] !== null && String(obj[n]).trim() !== ""){
-        return String(obj[n]).trim();
-      }
-    }
-    return "";
-  }
-
-  function listaOnline(resp){
-    if(Array.isArray(resp)) return resp;
-    if(!resp) return [];
-
-    var chaves = ["clientes","online","pppoe","active","data","rows","sessions"];
-    for(var i = 0; i < chaves.length; i++){
-      if(Array.isArray(resp[chaves[i]])) return resp[chaves[i]];
-    }
-    return [];
-  }
-
-  function dadosSessao(s){
-    return {
-      login: getCampo(s, ["name","usuario","user","login","loginPppoe","pppoe","cliente"]),
-      ip: getCampo(s, ["address","ip","ipAtual","remoteAddress","remote-address","remote_address"]),
-      mac: getCampo(s, ["callerId","caller-id","caller_id","mac","macAddress","mac_address","callingStationId","calling-station-id"]),
-      tempo: getCampo(s, ["uptime","tempo","tempoOnline","onlineTime","sessionTime","session-time"]),
-      iface: getCampo(s, ["service","interface","interfaceName","interface-name","vlan"]),
-      profile: getCampo(s, ["profile","perfil","plano","rateLimit","rate-limit"])
-    };
+  function statusEl(){
+    return document.querySelector(".offline-dot");
   }
 
   function loginAtual(){
     return getVal("cadLogin") || getTxt("resLogin2") || getTxt("resLogin");
   }
 
+  function servidorAtual(){
+    return getVal("cadServidorReceita") ||
+           getVal("cadPop") ||
+           getTxt("resServidor") ||
+           "";
+  }
+
   function macCadastrado(){
     return getVal("cadMac") || getVal("cadMacOnu") || "";
   }
 
-  function statusEl(){
-    return document.querySelector(".offline-dot");
-  }
-
-  function aplicarOffline(){
+  function marcarOffline(){
     var el = statusEl();
     if(el){
       el.textContent = "● Offline";
       el.classList.remove("status-online-real","status-verificando-real");
       el.classList.add("status-offline-real");
     }
-
     setTxt("resConexao", "Offline");
     setTxt("resIp", "-");
     setTxt("resTempo", "-");
@@ -2365,21 +2343,20 @@ document.addEventListener("DOMContentLoaded", function(){
     window.__fibraResumoStatus = "offline";
   }
 
-  function aplicarVerificando(){
+  function marcarVerificando(){
     var el = statusEl();
     if(el){
       el.textContent = "● Verificando";
       el.classList.remove("status-online-real","status-offline-real");
       el.classList.add("status-verificando-real");
     }
-
     setTxt("resConexao", "Verificando");
     window.__fibraResumoStatus = "verificando";
   }
 
-  function aplicarOnline(d){
-    if(!(d && d.ip && d.mac && d.tempo)){
-      aplicarOffline();
+  function marcarOnline(d){
+    if(!(d && d.online && d.ip && d.mac && d.uptime)){
+      marcarOffline();
       return;
     }
 
@@ -2392,10 +2369,12 @@ document.addEventListener("DOMContentLoaded", function(){
 
     setTxt("resConexao", "Online");
     setTxt("resIp", d.ip);
-    setTxt("resTempo", d.tempo);
+    setTxt("resTempo", d.uptime);
     setTxt("resMac", d.mac);
-    setTxt("resInterface", d.iface || "PPPOE");
+    setTxt("resInterface", d.interface || "PPPOE");
     setTxt("resProfile", d.profile || "-");
+    if(d.servidor) setTxt("resServidor", d.servidor);
+
     window.__fibraResumoStatus = "online";
   }
 
@@ -2414,59 +2393,56 @@ document.addEventListener("DOMContentLoaded", function(){
   function travaVisual(){
     var conexao = norm(getTxt("resConexao"));
     var bolinha = norm(statusEl()?.textContent || "");
-
     if((conexao.includes("online") || bolinha.includes("online")) && !telaTemDadosOnline()){
-      aplicarOffline();
+      marcarOffline();
     }
   }
 
-  async function atualizarStatusPPPoE(){
+  async function consultarStatusCliente(){
     var login = loginAtual();
+    var servidor = servidorAtual();
 
     if(!login){
-      aplicarOffline();
+      marcarOffline();
       return;
     }
 
     setTxt("resLogin2", login);
-    aplicarVerificando();
+    marcarVerificando();
 
     try{
-      var r = await fetch("/api/online", {cache:"no-store"});
-      var j = await r.json();
+      var url = "/api/cliente/status?login=" + encodeURIComponent(login);
+      if(servidor && servidor !== "--" && servidor !== "-"){
+        url += "&servidor=" + encodeURIComponent(servidor);
+      }
 
-      var sessao = listaOnline(j)
-        .map(dadosSessao)
-        .find(function(d){
-          return norm(d.login) === norm(login);
-        });
+      var r = await fetch(url, {cache:"no-store"});
+      var d = await r.json();
 
-      if(sessao && sessao.ip && sessao.mac && sessao.tempo){
-        aplicarOnline(sessao);
+      if(d && d.online && d.ip && d.mac && d.uptime){
+        marcarOnline(d);
       }else{
-        aplicarOffline();
+        marcarOffline();
       }
     }catch(e){
-      console.warn("Erro ao consultar /api/online:", e);
-      aplicarOffline();
+      console.warn("Erro ao consultar /api/cliente/status:", e);
+      marcarOffline();
     }
   }
 
-  window.atualizarStatusRealCliente = atualizarStatusPPPoE;
+  window.atualizarStatusRealCliente = consultarStatusCliente;
 
   document.addEventListener("DOMContentLoaded", function(){
-    aplicarOffline();
-    setTimeout(atualizarStatusPPPoE, 600);
-    setTimeout(atualizarStatusPPPoE, 1800);
-    setTimeout(atualizarStatusPPPoE, 4000);
-
-    // Mantém a tela coerente se alguma rotina antiga preencher depois.
+    marcarOffline();
+    setTimeout(consultarStatusCliente, 600);
+    setTimeout(consultarStatusCliente, 1800);
+    setTimeout(consultarStatusCliente, 4000);
     setInterval(travaVisual, 300);
   });
 
   document.addEventListener("input", function(e){
-    if(e.target && e.target.id === "cadLogin"){
-      setTimeout(atualizarStatusPPPoE, 400);
+    if(e.target && (e.target.id === "cadLogin" || e.target.id === "cadServidorReceita" || e.target.id === "cadPop")){
+      setTimeout(consultarStatusCliente, 400);
     }
   });
 })();

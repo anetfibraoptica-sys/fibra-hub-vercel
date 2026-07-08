@@ -1,11 +1,10 @@
 # Fibra+ Hub
 
-## Correção atual
-- Removidos scripts conflitantes do status Online/Offline no cadastro.html.
-- Mantida uma única função para consultar /api/online.
-- Online só aparece se o login atual estiver em /ppp active com IP + MAC + Tempo.
-- Campo Conexão não usa mais valor de cadastro para decidir Online.
-- Abas Dados, Contato, Cobrança e Servidor restauradas com uma função única.
-- Mantido apenas um README.md.
+## Alteração atual
+- Criado endpoint dedicado `GET /api/cliente/status`.
+- Esse endpoint consulta o MikroTik via `/ppp/active/print` para o login do cliente.
+- O Resumo do cadastro não usa mais a lógica da tela Servidores Online.
+- Online só aparece se o login do cliente estiver ativo com IP + MAC + Uptime.
+- Se não encontrar o login no PPP Active, mostra Offline.
 
-Após publicar na Vercel, faça Ctrl+F5 ou teste em aba anônima.
+Depois de publicar na Vercel, faça Ctrl+F5 ou teste em aba anônima.

@@ -5980,6 +5980,9 @@ body{
 
 
 
+
+
+
 /* Abas cadastro - garantia */
 .tab-content{
   display:none;
@@ -5988,7 +5991,7 @@ body{
   display:block !important;
 }
 
-/* Status PPPoE definitivo */
+/* Status dedicado do cliente */
 .status-login-line{
   display:grid !important;
   grid-template-columns:1fr 1fr !important;

@@ -1107,3 +1107,113 @@ if (process.env.VERCEL) {
 } else {
   initDb().finally(() => server.listen(PORT, () => console.log("Fibra+ Hub 2 Servidores rodando na porta " + PORT)));
 }
+
+
+
+/* ============================================================
+   STATUS DEDICADO DO CLIENTE
+   Consulta direta no MikroTik via /ppp/active/print.
+   Não usa a tela Servidores Online.
+   Exemplo:
+   GET /api/cliente/status?login=cliente@pop&servidor=Colônia%20Antônio%20Aleixo
+============================================================ */
+app.get("/api/cliente/status", async (req, res) => {
+  try {
+    const login = String(req.query.login || "").trim();
+    const servidorNome = String(req.query.servidor || "").trim();
+
+    if (!login) {
+      return res.json({
+        online: false,
+        motivo: "login_nao_informado",
+        login: "",
+        ip: "",
+        mac: "",
+        uptime: "",
+        interface: "",
+        profile: "",
+        servidor: servidorNome
+      });
+    }
+
+    let lista = [];
+
+    // Se o projeto já tem função consultarOnlineServidor, usa ela para obter /ppp/active/print.
+    if (typeof consultarOnlineServidor === "function") {
+      try {
+        lista = await consultarOnlineServidor(servidorNome || undefined);
+      } catch (e) {
+        console.error("Erro consultarOnlineServidor no status cliente:", e);
+        lista = [];
+      }
+    }
+
+    if (!Array.isArray(lista)) lista = [];
+
+    const normalizar = (v) => String(v || "")
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
+
+    const getCampo = (obj, nomes) => {
+      for (const n of nomes) {
+        if (obj && obj[n] !== undefined && obj[n] !== null && String(obj[n]).trim() !== "") {
+          return String(obj[n]).trim();
+        }
+      }
+      return "";
+    };
+
+    const sessao = lista.find((s) => {
+      const nome = getCampo(s, ["name", "usuario", "user", "login", "loginPppoe", "pppoe", "cliente"]);
+      const servidorSessao = getCampo(s, ["servidor", "server", "router", "mikrotik"]);
+
+      const loginBate = normalizar(nome) === normalizar(login);
+      const servidorBate = !servidorNome || !servidorSessao || normalizar(servidorSessao) === normalizar(servidorNome);
+
+      return loginBate && servidorBate;
+    });
+
+    if (!sessao) {
+      return res.json({
+        online: false,
+        motivo: "nao_encontrado_ppp_active",
+        login,
+        ip: "",
+        mac: "",
+        uptime: "",
+        interface: "",
+        profile: "",
+        servidor: servidorNome
+      });
+    }
+
+    const ip = getCampo(sessao, ["address", "ip", "ipAtual", "remoteAddress", "remote-address", "remote_address"]);
+    const mac = getCampo(sessao, ["callerId", "caller-id", "caller_id", "mac", "macAddress", "mac_address", "callingStationId", "calling-station-id"]);
+    const uptime = getCampo(sessao, ["uptime", "tempo", "tempoOnline", "onlineTime", "sessionTime", "session-time"]);
+    const iface = getCampo(sessao, ["service", "interface", "interfaceName", "interface-name", "vlan"]);
+    const profile = getCampo(sessao, ["profile", "perfil", "plano", "rateLimit", "rate-limit"]);
+
+    const online = Boolean(ip && mac && uptime);
+
+    return res.json({
+      online,
+      motivo: online ? "encontrado_ppp_active" : "sessao_incompleta",
+      login,
+      ip,
+      mac,
+      uptime,
+      interface: iface,
+      profile,
+      servidor: getCampo(sessao, ["servidor", "server", "router", "mikrotik"]) || servidorNome,
+      bruto: sessao
+    });
+  } catch (err) {
+    console.error("Erro /api/cliente/status:", err);
+    return res.status(500).json({
+      online: false,
+      erro: true,
+      mensagem: err.message
+    });
+  }
+});
