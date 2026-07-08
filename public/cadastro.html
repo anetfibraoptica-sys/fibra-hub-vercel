@@ -535,6 +535,10 @@ fibraCadastroLimparStoragesSelecao();
             <span id="resIp">--</span>
           </div>
           <div>
+            <b>Conexão</b>
+            <span id="resConexao">--</span>
+          </div>
+          <div>
             <b>Profile</b>
             <span id="resProfile">--</span>
           </div>
@@ -547,6 +551,8 @@ fibraCadastroLimparStoragesSelecao();
       <div class="status-login-line">
         <span>Status<span class="offline-dot status-offline-real">● Offline</span></span>
         <span>Login: <b id="resLogin2">--</b></span>
+        <span>Tempo: <b id="resTempo">-</b></span>
+        <span>MAC: <b id="resMac">-</b></span>
       </div>
 
       <div class="resumo-section">
@@ -2229,7 +2235,6 @@ document.addEventListener("fibra:supabase-sync", carregarContasEfiNoCadastro);
 
 
 
-
 <script>
 /* ============================================================
    ABAS DO CADASTRO - FUNÇÃO ÚNICA
@@ -2278,37 +2283,13 @@ document.addEventListener("DOMContentLoaded", function(){
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 <script>
-/* ============================================================
-   STATUS ONLINE/OFFLINE DO RESUMO
-   Mexe somente no status visual e campos técnicos.
-   Não altera a estrutura completa do Resumo.
-============================================================ */
+/* STATUS ONLINE/OFFLINE DO RESUMO - alteração isolada */
 (function(){
   function getVal(id){ return (document.getElementById(id)?.value || "").trim(); }
   function getTxt(id){ return (document.getElementById(id)?.textContent || "").trim(); }
   function setTxt(id, valor){ const el=document.getElementById(id); if(el) el.textContent = valor || "-"; }
-
-  function statusEl(){ return document.querySelector(".offline-dot"); }
+  function statusEl(){ return document.querySelector(".offline-dot, .status-dot"); }
   function loginAtual(){ return getVal("cadLogin") || getTxt("resLogin2") || getTxt("resLogin"); }
   function servidorAtual(){ return getVal("cadServidorReceita") || getVal("cadPop") || getTxt("resServidor") || ""; }
 
@@ -2316,23 +2297,12 @@ document.addEventListener("DOMContentLoaded", function(){
     const el = statusEl();
     if(el){
       el.textContent = "● Offline";
-      el.classList.remove("status-online-real","status-verificando-real");
-      el.classList.add("status-offline-real");
+      el.classList.remove("status-online-real","status-verificando-real","status-dot");
+      el.classList.add("status-offline-real","offline-dot");
       el.style.color = "#ef4444";
     }
     setTxt("resConexao", "Offline");
     setTxt("resIp", "-");
-  }
-
-  function aplicarVerificando(){
-    const el = statusEl();
-    if(el){
-      el.textContent = "● Verificando";
-      el.classList.remove("status-online-real","status-offline-real");
-      el.classList.add("status-verificando-real");
-      el.style.color = "#f59e0b";
-    }
-    setTxt("resConexao", "Verificando");
   }
 
   function aplicarOnline(d){
@@ -2340,25 +2310,18 @@ document.addEventListener("DOMContentLoaded", function(){
     if(el){
       el.textContent = "● Online";
       el.classList.remove("status-offline-real","status-verificando-real");
-      el.classList.add("status-online-real");
+      el.classList.add("status-online-real","offline-dot");
       el.style.color = "#22c55e";
     }
     setTxt("resConexao", "Online");
     setTxt("resIp", d.ip);
     setTxt("resInterface", d.interface || "PPPOE");
     setTxt("resProfile", d.profile || "-");
-    if(d.servidor) setTxt("resServidor", d.servidor);
   }
 
   async function consultar(){
     const login = loginAtual();
-    if(!login){
-      aplicarOffline();
-      return;
-    }
-
-    setTxt("resLogin2", login);
-    aplicarVerificando();
+    if(!login){ aplicarOffline(); return; }
 
     try{
       let url = "/api/cliente/status?login=" + encodeURIComponent(login);
@@ -2384,16 +2347,9 @@ document.addEventListener("DOMContentLoaded", function(){
   window.atualizarStatusRealCliente = consultar;
 
   document.addEventListener("DOMContentLoaded", function(){
-    aplicarOffline();
     setTimeout(consultar, 700);
     setTimeout(consultar, 2000);
     setTimeout(consultar, 4200);
-  });
-
-  document.addEventListener("input", function(e){
-    if(e.target && (e.target.id === "cadLogin" || e.target.id === "cadServidorReceita" || e.target.id === "cadPop")){
-      setTimeout(consultar, 400);
-    }
   });
 })();
 </script>

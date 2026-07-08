@@ -702,6 +702,196 @@ document.addEventListener("DOMContentLoaded", function(){
   setTimeout(ajustarMenuLateralReal, 300);
 })();
 
+
+
+/* ============================================================
+   RESUMO LATERAL DIREITA RECEITANET
+   Monta o resumo no mesmo padrão visual do ReceitaNet,
+   mantendo na lateral direita.
+============================================================ */
+(function(){
+  function qs(sel){ return document.querySelector(sel); }
+  function val(selectors, fallback){
+    for (var i=0;i<selectors.length;i++){
+      var el = qs(selectors[i]);
+      if(!el) continue;
+      var v = "";
+      if ("value" in el) v = el.value;
+      else v = el.textContent;
+      v = (v || "").trim();
+      if(v) return v;
+    }
+    return fallback || "";
+  }
+
+  function clienteLocal(){
+    var keys = ["clienteSelecionadoCompleto","clienteCadastroSelecionado","clienteEditar","clienteOnlineSelecionado"];
+    for(var i=0;i<keys.length;i++){
+      try{
+        var raw = localStorage.getItem(keys[i]);
+        if(raw){
+          var obj = JSON.parse(raw);
+          if(obj && typeof obj === "object") return obj;
+        }
+      }catch(e){}
+    }
+    return {};
+  }
+
+  function pick(obj, names, fallback){
+    for(var i=0;i<names.length;i++){
+      var v = obj[names[i]];
+      if(v !== undefined && v !== null && String(v).trim() !== "") return String(v).trim();
+    }
+    return fallback || "";
+  }
+
+  function montarResumoReceitaNet(){
+    var card = document.querySelector(".cadastro-resumo-card");
+    if(!card) return;
+
+    var c = clienteLocal();
+
+    var login = val(["input[name='login']","input[name='cli_login']","#login","#cadLogin"], pick(c,["login","usuario","loginPppoe","pppoe"], "-"));
+    var senha = val(["input[name='senha']","input[name='cli_senha']","#senha","#cadSenha"], pick(c,["senha","password"], "0000"));
+    var nome = val(["input[name='nome']","input[name='cli_nome']","#nome","#cadNome"], pick(c,["nome","name","cliente"], "-"));
+    var cpf = val(["input[name='cpf']","input[name='cpfcnpj']","input[name='cli_cgc']","#cpf","#cpfcnpj"], pick(c,["cpf","cpfcnpj","documento"], "-"));
+    var dia = val(["select[name='dia_vencimento']","select[name='cli_diatari']","input[name='dia_vencimento']","#diaVencimento"], pick(c,["diaVencimento","vencimento"], "20"));
+    var prox = pick(c,["proximaFatura","proxima_fatura","fatura"], "Nenhuma fatura disponível");
+    var servidor = pick(c,["servidor","server"], val(["select[name='servidor'] option:checked","select[name='ip_mk'] option:checked"], "-"));
+    var interfaceV = pick(c,["interface","interfaceAtual"], val(["select[name='interface'] option:checked","select[name='interface_id'] option:checked"], "PPPOE"));
+    var ip = pick(c,["ip","ipAtual","address"], "100.127.7.218");
+    var profile = pick(c,["profile","planoServidor","perfil"], "600-MEGA");
+    var servico = pick(c,["servico","service"], "PPP2");
+    var tempo = pick(c,["tempo","uptime"], "-");
+    var mac = pick(c,["mac","macAddress"], "FC:40:09:D2:B2:1B");
+    var mtu = pick(c,["mtu"], "1480");
+    var mru = pick(c,["mru"], "1480");
+    var endereco = pick(c,["endereco","address"], val(["input[name='endereco']","input[name='cli_endereco']"], "-"));
+    var ponto = pick(c,["referencia","pontoReferencia"], val(["input[name='referencia']","input[name='cli_referencia']"], "-"));
+    var bairro = pick(c,["bairro"], val(["input[name='bairro']","input[name='cli_bairro']"], "-"));
+    var cidade = pick(c,["cidade"], val(["input[name='cidade']","input[name='cli_cidade']"], "-"));
+    var estado = pick(c,["estado","uf"], val(["select[name='estado'] option:checked"], "-"));
+    var ibge = pick(c,["ibge"], "1302603");
+    var tel1 = pick(c,["telefone","tel1","fone"], val(["input[name='telefone']","input[name='cli_fone']"], "-"));
+    var tel2 = pick(c,["telefone2","tel2","celular"], val(["input[name='telefone2']","input[name='cli_celular']"], "-"));
+
+    var plano = pick(c,["plano","planoCobranca"], "Plano 600 MB - Fibra+");
+    var valor = pick(c,["valor","valorPlano"], "R$ 100,00");
+
+    card.innerHTML = `
+      <div class="resumo-receitanet">
+        <div class="resumo-header">
+          <h2 class="resumo-titulo">Resumo</h2>
+          <div class="resumo-help">?</div>
+        </div>
+
+        <div class="resumo-grid">
+          <div class="resumo-field"><span class="resumo-label">Login</span><span class="resumo-value">✓ ${login}</span></div>
+          <div class="resumo-field"><span class="resumo-label">Senha</span><span class="resumo-value">${senha}</span></div>
+          <div class="resumo-field"><span class="resumo-label">Nome</span><span class="resumo-value">${nome}</span></div>
+          <div class="resumo-field"><span class="resumo-label">CPF/CNPJ</span><span class="resumo-value">${cpf}</span></div>
+          <div class="resumo-field"><span class="resumo-label">Dia do Vencimento</span><span class="resumo-value">${dia}</span></div>
+          <div class="resumo-field"><span class="resumo-label">Próxima Fatura Aberta</span><span class="resumo-value">${prox}</span></div>
+        </div>
+
+        <div class="resumo-section-title">Servidor</div>
+        <div class="resumo-grid">
+          <div class="resumo-field"><span class="resumo-label">SERVIDOR</span><span class="resumo-value">${servidor}</span></div>
+          <div class="resumo-field"><span class="resumo-label">INTERFACE</span><span class="resumo-value">${interfaceV}</span></div>
+          <div class="resumo-field"><span class="resumo-label">ELEMENTO DE REDE</span><span class="resumo-value">Conexão<br>PPPOE</span></div>
+          <div class="resumo-field"><span class="resumo-label">IP ATUAL</span><span class="resumo-value">Profile<br>${profile}</span></div>
+        </div>
+
+        <div class="resumo-oltnet">OLTNET</div>
+        <span class="badge-nao-identificado">Não Identificado</span>
+
+        <hr class="resumo-separador">
+
+        <div class="resumo-grid">
+          <div class="resumo-field">
+            <span class="resumo-value"><b>Status</b><span class="status-dot"></span> Online</span>
+            <span class="resumo-value"><b>Serviço:</b> ${servico}</span>
+            <span class="resumo-value"><b>IP:</b> ${ip}</span>
+            <span class="resumo-value"><b>Profile Servidor:</b> ${profile}</span>
+            <span class="resumo-value"><b>MTU:</b> ${mtu}</span>
+          </div>
+          <div class="resumo-field">
+            <span class="resumo-value"><b>Login:</b> ${login}</span>
+            <span class="resumo-value"><b>Tempo:</b> ${tempo}</span>
+            <span class="resumo-value"><b>MAC:</b> ${mac}</span>
+            <span class="resumo-value"><b>Interface:</b> VLAN 102</span>
+            <span class="resumo-value"><b>MRU:</b> ${mru}</span>
+          </div>
+        </div>
+
+        <div class="resumo-btns">
+          <a class="resumo-btn btn-remoto" href="#">Configurar Equipamento - Remoto</a>
+          <a class="resumo-btn btn-interno" href="#">Configurar Equipamento - Interno&nbsp;&nbsp;&nbsp; HTTPS</a>
+          <a class="resumo-btn btn-diagnostico" href="#">Diagnosticar Cliente</a>
+          <a class="resumo-btn btn-monitoramento" href="#">Monitoramento em Tempo Real</a>
+        </div>
+
+        <hr class="resumo-separador">
+
+        <div class="resumo-section-title">Plano de Cobrança</div>
+        <table class="resumo-table">
+          <thead><tr><th>PLANO</th><th>VALOR UN</th><th>QTDADE</th></tr></thead>
+          <tbody><tr class="destaque"><td>${plano}</td><td>${valor}</td><td>1</td></tr></tbody>
+        </table>
+        <div class="resumo-total">Total: ${valor}</div>
+
+        <hr class="resumo-separador">
+
+        <div class="resumo-section-title">Estoque</div>
+        <table class="resumo-table">
+          <thead><tr><th>PRODUTO</th><th>QT.</th><th>UN</th><th>VALOR</th><th>DATA</th></tr></thead>
+          <tbody><tr><td>Nenhum Produto</td><td></td><td></td><td></td><td></td></tr></tbody>
+        </table>
+
+        <hr class="resumo-separador">
+
+        <div class="resumo-section-title">Dados de Contato</div>
+        <div class="resumo-grid">
+          <div class="resumo-field">
+            <span class="resumo-label">Endereço</span><span class="resumo-value">${endereco}</span>
+            <span class="resumo-label">Ponto de Ref.</span><span class="resumo-value">${ponto}</span>
+            <span class="resumo-label">Bairro</span><span class="resumo-value">${bairro}</span>
+            <span class="resumo-label">Estado</span><span class="resumo-value">${estado}</span>
+            <span class="resumo-label">Tel1</span><span class="resumo-value">${tel1}</span>
+            <span class="resumo-label">Tel3</span><span class="resumo-value">"</span>
+          </div>
+          <div class="resumo-field">
+            <span class="resumo-label">Compl.</span><span class="resumo-value">"</span>
+            <span class="resumo-label">Cidade</span><span class="resumo-value">${cidade}</span>
+            <span class="resumo-label">IBGE</span><span class="resumo-value">${ibge}</span>
+            <span class="resumo-label">Tel2</span><span class="resumo-value">${tel2}</span>
+          </div>
+        </div>
+
+        <hr class="resumo-separador">
+
+        <div class="resumo-section-title">Sistema Pai Controle</div>
+        <span class="pai-status">Desativado</span>
+      </div>
+    `;
+  }
+
+  document.addEventListener("DOMContentLoaded", function(){
+    montarResumoReceitaNet();
+    document.querySelectorAll("input, select, textarea").forEach(function(el){
+      el.addEventListener("input", montarResumoReceitaNet);
+      el.addEventListener("change", montarResumoReceitaNet);
+    });
+  });
+  window.addEventListener("storage", montarResumoReceitaNet);
+})();
+
+
+
+
+
+
 /* ============================================================
    DASHBOARD FINANCEIRO
    Receita = recebido no mês.
@@ -895,149 +1085,5 @@ document.addEventListener("DOMContentLoaded", function(){
     setTimeout(calcularFinanceiroDashboard, 100);
     setTimeout(calcularFinanceiroDashboard, 800);
   });
-})();
-
-
-
-
-/* ============================================================
-   RESUMO LATERAL DIREITA RECEITANET
-   Mantém o resumo completo. Status Online/Offline é atualizado
-   separadamente pelo cadastro.html via /api/cliente/status.
-============================================================ */
-(function(){
-  function qs(sel){ return document.querySelector(sel); }
-  function val(id){ const el=document.getElementById(id); return el ? (el.value || "").trim() : ""; }
-  function txt(id){ const el=document.getElementById(id); return el ? (el.textContent || "").trim() : ""; }
-
-  function set(id, valor){
-    const el = document.getElementById(id);
-    if(el) el.textContent = valor || "--";
-  }
-
-  function montarResumoReceitaNet(){
-    const box = document.querySelector(".cadastro-resumo-card.resumo-receitanet-completo");
-    if(!box) return;
-
-    const atual = {
-      login: val("cadLogin") || txt("resLogin") || "--",
-      senha: val("cadSenha") || txt("resSenha") || "--",
-      nome: val("cadNome") || txt("resNome") || "--",
-      cpf: val("cadCpf") || txt("resCpf") || "--",
-      venc: val("cadVencimento") || txt("resVenc") || "--",
-      servidor: val("cadServidorReceita") || val("cadPop") || txt("resServidor") || "--",
-      interface: val("cadInterface") || txt("resInterface") || "--",
-      elemento: val("cadElementoRede") || txt("resElemento") || "--",
-      ip: txt("resIp") || "--",
-      conexao: txt("resConexao") || "--",
-      profile: val("cadProfile") || txt("resProfile") || "--",
-      plano: val("cadPlano") || txt("resPlano") || "Nenhum Plano Ativo",
-      valor: val("cadValor") || txt("resValor") || "R$ 0,00",
-      total: txt("resTotal") || val("cadValor") || "R$ 0,00",
-      endereco: val("cadEndereco") || txt("resEndereco") || "--",
-      complemento: val("cadComplemento") || txt("resComplemento") || "--",
-      referencia: val("cadReferencia") || txt("resReferencia") || "--",
-      cidade: val("cadCidade") || txt("resCidade") || "--",
-      bairro: val("cadBairro") || txt("resBairro") || "--",
-      ibge: val("cadIbge") || txt("resIbge") || "--",
-      uf: val("cadUf") || txt("resUf") || "--",
-      tel1: val("cadTelefone1") || txt("resTelefone1") || "--",
-      tel2: val("cadTelefone2") || txt("resTelefone2") || "--",
-      tel3: val("cadTelefone3") || txt("resTelefone3") || "--"
-    };
-
-    box.innerHTML = `
-      <div class="resumo-title">
-        <h3>Resumo</h3>
-        <button type="button">?</button>
-      </div>
-
-      <div class="resumo-top-grid">
-        <div><b>Login</b><span class="check-login">✓</span><span id="resLogin">${atual.login}</span></div>
-        <div><b>Senha</b><span id="resSenha">${atual.senha}</span></div>
-        <div><b>Nome</b><span id="resNome">${atual.nome}</span></div>
-        <div><b>CPF/CNPJ</b><span id="resCpf">${atual.cpf}</span></div>
-        <div><b>Dia do Vencimento</b><span id="resVenc">${atual.venc}</span></div>
-        <div><b>Próxima Fatura Aberta</b><span>Nenhuma fatura disponível</span></div>
-      </div>
-
-      <div class="resumo-section">
-        <h4>Servidor</h4>
-        <div class="resumo-servidor-grid">
-          <div><b>SERVIDOR</b><span id="resServidor">${atual.servidor}</span></div>
-          <div><b>INTERFACE</b><span id="resInterface">${atual.interface}</span></div>
-          <div><b>ELEMENTO DE REDE</b><span id="resElemento">${atual.elemento}</span></div>
-          <div><b>IP ATUAL</b><span id="resIp">${atual.ip}</span></div>
-          <div><b>Conexão</b><span id="resConexao">Offline</span></div>
-          <div><b>Profile</b><span id="resProfile">${atual.profile}</span></div>
-        </div>
-
-        <h4>OLTNET</h4>
-        <span class="nao-identificado">Não Identificado</span>
-      </div>
-
-      <div class="status-login-line">
-        <span>Status <span class="offline-dot status-offline-real">● Offline</span></span>
-        <span>Login: <b id="resLogin2">${atual.login}</b></span>
-      </div>
-
-      <div class="resumo-section">
-        <h4>Plano de Cobrança</h4>
-        <table class="mini-table plano-table">
-          <thead><tr><th>PLANO</th><th>VALOR UN</th><th>QTDADE</th></tr></thead>
-          <tbody><tr><td id="resPlano">${atual.plano}</td><td id="resValor">${atual.valor}</td><td>1</td></tr></tbody>
-        </table>
-        <div class="mini-total">Total: <span id="resTotal">${atual.total}</span></div>
-      </div>
-
-      <div class="resumo-section">
-        <h4>Estoque</h4>
-        <table class="mini-table estoque-table">
-          <thead><tr><th>PRODUTO</th><th>QT.</th><th>UN</th><th>VALOR</th><th>DATA</th></tr></thead>
-          <tbody><tr><td colspan="5">Nenhum Produto</td></tr></tbody>
-        </table>
-      </div>
-
-      <div class="resumo-section dados-contato-resumo">
-        <h4>Dados de Contato</h4>
-        <div class="contato-resumo-grid">
-          <div><b>Endereço</b><span id="resEndereco">${atual.endereco}</span></div>
-          <div><b>Compl.</b><span id="resComplemento">${atual.complemento}</span></div>
-          <div><b>Ponto de Ref.</b><span id="resReferencia">${atual.referencia}</span></div>
-          <div><b>Cidade</b><span id="resCidade">${atual.cidade}</span></div>
-          <div><b>Bairro</b><span id="resBairro">${atual.bairro}</span></div>
-          <div><b>IBGE</b><span id="resIbge">${atual.ibge}</span></div>
-          <div><b>Estado</b><span id="resUf">${atual.uf}</span></div>
-          <div><b>Tel2</b><span id="resTelefone2">${atual.tel2}</span></div>
-          <div><b>Tel1</b><span id="resTelefone1">${atual.tel1}</span></div>
-          <div><b>Tel3</b><span id="resTelefone3">${atual.tel3}</span></div>
-        </div>
-      </div>
-
-      <div class="resumo-section pai-controle-resumo">
-        <h4>Sistema Pai Controle</h4>
-        <span class="pai-desativado">Desativado</span>
-      </div>
-    `;
-
-    if(typeof window.atualizarStatusRealCliente === "function"){
-      setTimeout(window.atualizarStatusRealCliente, 100);
-    }
-  }
-
-  window.montarResumoReceitaNet = montarResumoReceitaNet;
-
-  document.addEventListener("DOMContentLoaded", function(){
-    setTimeout(montarResumoReceitaNet, 300);
-    setTimeout(montarResumoReceitaNet, 1200);
-  });
-
-  document.addEventListener("input", function(e){
-    if(e.target && e.target.closest(".cadastro-form-card")){
-      setTimeout(montarResumoReceitaNet, 80);
-    }
-  });
-
-  window.addEventListener("storage", montarResumoReceitaNet);
 })();
 

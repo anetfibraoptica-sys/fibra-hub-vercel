@@ -1110,12 +1110,9 @@ if (process.env.VERCEL) {
 
 
 
-
-
-
 /* ============================================================
    STATUS DEDICADO DO CLIENTE - /ppp/active/print
-   ONLINE SOMENTE SE O LOGIN EXISTIR NO PPP ACTIVE COM IP+MAC+UPTIME.
+   Não altera telas. Apenas informa se o login está ativo.
 ============================================================ */
 app.get("/api/cliente/status", async (req, res) => {
   const normalizar = (v) => String(v || "")
@@ -1137,24 +1134,12 @@ app.get("/api/cliente/status", async (req, res) => {
     const servidorNome = String(req.query.servidor || "").trim();
 
     if (!login) {
-      return res.json({
-        online: false,
-        motivo: "login_nao_informado",
-        login: "",
-        ip: "",
-        mac: "",
-        uptime: "",
-        interface: "",
-        profile: "",
-        servidor: servidorNome
-      });
+      return res.json({ online:false, motivo:"login_nao_informado", login:"", ip:"", mac:"", uptime:"", interface:"", profile:"", servidor:servidorNome });
     }
 
     let ativos = [];
-
     if (typeof consultarOnlineServidor === "function") {
       try {
-        // A função existente já consulta /ppp/active/print.
         ativos = await consultarOnlineServidor(servidorNome || undefined);
       } catch (e) {
         console.error("Erro em consultarOnlineServidor:", e);
@@ -1164,26 +1149,13 @@ app.get("/api/cliente/status", async (req, res) => {
 
     if (!Array.isArray(ativos)) ativos = [];
 
-    const loginAlvo = normalizar(login);
-
     const sessao = ativos.find((s) => {
       const nome = getCampo(s, ["name", "usuario", "user", "login", "loginPppoe", "pppoe", "cliente"]);
-      if (!nome) return false;
-      return normalizar(nome) === loginAlvo;
+      return nome && normalizar(nome) === normalizar(login);
     });
 
     if (!sessao) {
-      return res.json({
-        online: false,
-        motivo: "login_nao_encontrado_no_ppp_active",
-        login,
-        ip: "",
-        mac: "",
-        uptime: "",
-        interface: "",
-        profile: "",
-        servidor: servidorNome
-      });
+      return res.json({ online:false, motivo:"nao_encontrado_ppp_active", login, ip:"", mac:"", uptime:"", interface:"", profile:"", servidor:servidorNome });
     }
 
     const ip = getCampo(sessao, ["address", "ip", "ipAtual", "remoteAddress", "remote-address", "remote_address"]);
@@ -1193,27 +1165,21 @@ app.get("/api/cliente/status", async (req, res) => {
     const profile = getCampo(sessao, ["profile", "perfil", "plano", "rateLimit", "rate-limit"]);
     const servidor = getCampo(sessao, ["servidor", "server", "router", "mikrotik"]) || servidorNome;
 
-    const onlineReal = Boolean(ip && mac && uptime);
+    const online = Boolean(ip && mac && uptime);
 
     return res.json({
-      online: onlineReal,
-      motivo: onlineReal ? "sessao_ppp_active_confirmada" : "sessao_ppp_active_incompleta",
+      online,
+      motivo: online ? "sessao_ppp_active_confirmada" : "sessao_incompleta",
       login,
-      ip: onlineReal ? ip : "",
-      mac: onlineReal ? mac : "",
-      uptime: onlineReal ? uptime : "",
-      interface: onlineReal ? iface : "",
-      profile: onlineReal ? profile : "",
-      servidor,
-      bruto: sessao
+      ip: online ? ip : "",
+      mac: online ? mac : "",
+      uptime: online ? uptime : "",
+      interface: online ? iface : "",
+      profile: online ? profile : "",
+      servidor
     });
   } catch (err) {
     console.error("Erro /api/cliente/status:", err);
-    return res.status(500).json({
-      online: false,
-      erro: true,
-      motivo: "erro_endpoint_status_cliente",
-      mensagem: err.message
-    });
+    return res.status(500).json({ online:false, erro:true, mensagem:err.message });
   }
 });
