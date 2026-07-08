@@ -2278,12 +2278,11 @@ document.addEventListener("DOMContentLoaded", function(){
 </script>
 
 
-
 <script>
 /* ============================================================
-   STATUS PPPoE FINAL - SEM ONLINE FALSO
-   Regra: só fica Online com IP + MAC + Tempo/Uptime da sessão.
-   Também corrige o campo "Conexão" do resumo.
+   STATUS PPPoE ÚNICO - FIBRA+ HUB
+   Online somente com sessão do login atual contendo:
+   IP + MAC + Tempo/Uptime.
 ============================================================ */
 (function(){
   function norm(v){
@@ -2293,13 +2292,13 @@ document.addEventListener("DOMContentLoaded", function(){
       .trim();
   }
 
-  function getTxt(id){
-    return (document.getElementById(id)?.textContent || "").trim();
-  }
-
   function setTxt(id, valor){
     var el = document.getElementById(id);
     if(el) el.textContent = valor || "-";
+  }
+
+  function getTxt(id){
+    return (document.getElementById(id)?.textContent || "").trim();
   }
 
   function getVal(id){
@@ -2361,8 +2360,6 @@ document.addEventListener("DOMContentLoaded", function(){
     setTxt("resIp", "-");
     setTxt("resTempo", "-");
     setTxt("resMac", macCadastrado() || "Não informado");
-
-    window.__fibraStatusPPPoE = "offline";
   }
 
   function marcarVerificando(){
@@ -2372,16 +2369,9 @@ document.addEventListener("DOMContentLoaded", function(){
       el.classList.remove("status-online-real","status-offline-real");
       el.classList.add("status-verificando-real");
     }
-    setTxt("resConexao", "Verificando");
-    window.__fibraStatusPPPoE = "verificando";
   }
 
   function marcarOnline(d){
-    if(!(d && d.ip && d.mac && d.tempo)){
-      marcarOffline();
-      return;
-    }
-
     var el = statusEl();
     if(el){
       el.textContent = "● Online";
@@ -2395,27 +2385,10 @@ document.addEventListener("DOMContentLoaded", function(){
     setTxt("resMac", d.mac);
     setTxt("resInterface", d.iface || "PPPOE");
     setTxt("resProfile", d.profile || "-");
-
-    window.__fibraStatusPPPoE = "online";
   }
 
-  function semDadosSessaoNaTela(){
-    var ip = getTxt("resIp");
-    var mac = getTxt("resMac");
-    var tempo = getTxt("resTempo");
-
-    return !ip || ip === "-" || ip === '""' ||
-           !mac || mac === "-" || mac === '""' || norm(mac).includes("não informado") ||
-           !tempo || tempo === "-" || tempo === '""';
-  }
-
-  function travaVisual(){
-    var st = norm(getTxt("resConexao"));
-    var bolinha = norm(statusEl()?.textContent || "");
-
-    if((st.includes("online") || bolinha.includes("online")) && semDadosSessaoNaTela()){
-      marcarOffline();
-    }
+  function dadosValidos(d){
+    return !!(d && d.login && d.ip && d.mac && d.tempo);
   }
 
   async function atualizarStatusPPPoE(){
@@ -2432,12 +2405,11 @@ document.addEventListener("DOMContentLoaded", function(){
     try{
       var resp = await fetch("/api/online", {cache:"no-store"});
       var json = await resp.json();
-
       var sessao = listaOnline(json)
         .map(dadosSessao)
         .find(function(d){ return norm(d.login) === norm(login); });
 
-      if(sessao && sessao.ip && sessao.mac && sessao.tempo){
+      if(dadosValidos(sessao)){
         marcarOnline(sessao);
       }else{
         marcarOffline();
@@ -2448,17 +2420,32 @@ document.addEventListener("DOMContentLoaded", function(){
     }
   }
 
+  function travaVisual(){
+    var el = statusEl();
+    if(!el) return;
+
+    var texto = norm(el.textContent);
+    var ip = getTxt("resIp");
+    var mac = getTxt("resMac");
+    var tempo = getTxt("resTempo");
+
+    var semIp = !ip || ip === "-" || ip === '""';
+    var semMac = !mac || mac === "-" || mac === '""' || norm(mac).includes("não informado");
+    var semTempo = !tempo || tempo === "-" || tempo === '""';
+
+    if(texto.includes("online") && (semIp || semMac || semTempo)){
+      marcarOffline();
+    }
+  }
+
   window.atualizarStatusRealCliente = atualizarStatusPPPoE;
 
   document.addEventListener("DOMContentLoaded", function(){
     marcarOffline();
-
     setTimeout(atualizarStatusPPPoE, 600);
     setTimeout(atualizarStatusPPPoE, 1800);
     setTimeout(atualizarStatusPPPoE, 4000);
-
-    // Roda por mais tempo para vencer funções antigas que preenchem o resumo depois.
-    setInterval(travaVisual, 300);
+    setInterval(travaVisual, 500);
   });
 
   document.addEventListener("input", function(e){

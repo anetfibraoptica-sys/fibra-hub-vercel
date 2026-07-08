@@ -1,10 +1,9 @@
 # Fibra+ Hub
 
 ## Correção atual
-- Limpeza dos scripts antigos que controlavam Online/Offline.
-- Restaurada função única das abas Dados, Contato, Cobrança e Servidor.
-- Status PPPoE agora só fica Online com IP + MAC + Tempo do login atual.
-- Se IP, MAC ou Tempo estiver vazio, força Offline.
-- Mantido apenas um README.md.
+- Corrigido campo Conexão do Resumo que ainda mostrava Online.
+- Neutralizada chamada antiga setTxt('resConexao', ...).
+- Online só aparece com IP + MAC + Tempo da sessão PPPoE.
+- Sem dados de sessão, o resumo força Offline.
 
 Após publicar na Vercel, faça Ctrl+F5 ou teste em aba anônima.
