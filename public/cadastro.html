@@ -2723,12 +2723,7 @@ document.addEventListener("DOMContentLoaded", function(){
       const numero = bget(f, ["numero","id","titulo","nossoNumero"]);
       const venc = bget(f, ["vencimento","dataVencimento","dueDate","venc"]);
       const valor = bget(f, ["total","valor","valor_boleto","amount"]);
-      const partes = [];
-      if(numero) partes.push("#" + numero);
-      if(venc) partes.push("Venc. " + dataBR(venc));
-      const mv = moeda(valor);
-      if(mv) partes.push(mv);
-      texto = partes.join(" • ") || "Fatura em aberto";
+      texto = venc ? dataBR(venc) : "Fatura em aberto";
     }
 
     let campo = el("resProximaFatura");

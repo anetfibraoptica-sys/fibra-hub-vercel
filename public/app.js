@@ -828,11 +828,7 @@ document.addEventListener("DOMContentLoaded", function(){
     var valor = get(f, ["total","valor","valor_boleto","amount"]);
     var numero = get(f, ["numero","id","nossoNumero","titulo"]);
 
-    var partes = [];
-    if(numero) partes.push("#" + numero);
-    if(venc) partes.push("Venc. " + dataBR(venc));
-    if(valor) partes.push(moedaBR(valor));
-    return partes.join(" • ") || "Fatura em aberto";
+    return venc ? dataBR(venc) : "Fatura em aberto";
   }
 
   function montarResumoReceitaNet(){
