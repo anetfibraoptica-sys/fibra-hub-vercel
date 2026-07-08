@@ -1175,6 +1175,134 @@ app.get("/api/mikrotik/profiles", async (req, res) => {
 });
 
 
+
+/* ============================================================
+   GRAVAR CLIENTE NO MIKROTIK COM PROFILE
+   Se PPP Secret existe: atualiza profile.
+   Se não existe: cria PPP Secret com login/senha/profile.
+============================================================ */
+app.post("/api/mikrotik/cliente-profile", async (req, res) => {
+  const getCampo = (obj, nomes) => {
+    for (const n of nomes) {
+      if (obj && obj[n] !== undefined && obj[n] !== null && String(obj[n]).trim() !== "") {
+        return String(obj[n]).trim();
+      }
+    }
+    return "";
+  };
+
+  try {
+    const body = req.body || {};
+    const servidor = String(body.servidor || "").trim();
+    const login = String(body.login || "").trim();
+    const senha = String(body.senha || "").trim();
+    const profile = String(body.profile || "").trim();
+    const nome = String(body.nome || "").trim();
+    const telefone = String(body.telefone || "").trim();
+    const cpf = String(body.cpf || "").trim();
+
+    if (!servidor || servidor === "-" || servidor === "--" || servidor.toLowerCase().includes("sem servidor")) {
+      return res.status(400).json({ ok:false, erro:"Servidor não selecionado." });
+    }
+
+    if (!login) {
+      return res.status(400).json({ ok:false, erro:"Login PPPoE não informado." });
+    }
+
+    if (!profile) {
+      return res.status(400).json({ ok:false, erro:"PROFILE não selecionado." });
+    }
+
+    const cfg = servidorConfig(servidor);
+
+    if (!cfg.host || !cfg.user || !cfg.pass) {
+      return res.status(500).json({
+        ok:false,
+        erro:"Variáveis do MikroTik não configuradas para " + (cfg.key || servidor)
+      });
+    }
+
+    // Confere se o profile existe no MikroTik.
+    const profilesResp = await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [["/ppp/profile/print"]], 15000);
+    const profiles = parseRouterosRows(profilesResp);
+    const profileExiste = profiles.some((p) => String(p.name || "").trim() === profile);
+
+    if (!profileExiste) {
+      return res.status(400).json({
+        ok:false,
+        erro:"PROFILE não existe nesse MikroTik: " + profile
+      });
+    }
+
+    // Procura o PPP Secret pelo login.
+    const secretResp = await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+      "/ppp/secret/print",
+      "?name=" + login
+    ]], 15000);
+
+    const secrets = parseRouterosRows(secretResp);
+    const secret = secrets[0];
+
+    const comentario = [
+      nome ? "CLIENTE: " + nome : "",
+      cpf ? "CPF/CNPJ: " + cpf : "",
+      telefone ? "TEL: " + telefone : "",
+      servidor ? "SERVIDOR: " + servidor : "",
+      "ATUALIZADO PELO FIBRA+ HUB"
+    ].filter(Boolean).join(" | ");
+
+    if (secret && secret[".id"]) {
+      await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+        "/ppp/secret/set",
+        "=.id=" + secret[".id"],
+        "=profile=" + profile,
+        comentario ? "=comment=" + comentario : ""
+      ].filter(Boolean)], 15000);
+
+      return res.json({
+        ok:true,
+        acao:"atualizado",
+        mensagem:"Cliente já existia no MikroTik. Profile atualizado para " + profile + ".",
+        servidor: cfg.key || servidor,
+        login,
+        profile
+      });
+    }
+
+    if (!senha) {
+      return res.status(400).json({
+        ok:false,
+        erro:"Cliente não existe no MikroTik. Informe a senha para criar o PPP Secret."
+      });
+    }
+
+    await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+      "/ppp/secret/add",
+      "=name=" + login,
+      "=password=" + senha,
+      "=service=pppoe",
+      "=profile=" + profile,
+      comentario ? "=comment=" + comentario : ""
+    ].filter(Boolean)], 15000);
+
+    return res.json({
+      ok:true,
+      acao:"criado",
+      mensagem:"Cliente criado no MikroTik com profile " + profile + ".",
+      servidor: cfg.key || servidor,
+      login,
+      profile
+    });
+  } catch (err) {
+    console.error("Erro /api/mikrotik/cliente-profile:", err);
+    return res.status(500).json({
+      ok:false,
+      erro:err.message
+    });
+  }
+});
+
+
 io.on("connection",(socket)=>{
   socket.emit("hub-update", geral());
   socket.emit("mikrotik-update", geral());

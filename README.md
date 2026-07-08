@@ -1,8 +1,10 @@
 # Fibra+ Hub
 
 ## Alteração atual
-- O campo `Profile Servidor` do Resumo agora segue o PROFILE selecionado na aba Servidor.
-- Ao trocar o PROFILE, o Resumo atualiza automaticamente.
-- O `IP ATUAL` não foi alterado; continua sendo atualizado pelo status real do MikroTik quando houver cliente online.
+- Ao clicar em `Gravar no Fibra+ Hub + Servidor`, o sistema envia o PROFILE selecionado ao MikroTik.
+- Se o PPP Secret do login já existir, atualiza o `profile`.
+- Se o PPP Secret não existir, cria o cliente PPPoE com login, senha, service=pppoe e profile selecionado.
+- Valida se o profile existe no MikroTik antes de aplicar.
+- Não altera o profile apenas ao selecionar; só grava ao clicar no botão vermelho.
 
-Depois de publicar, faça Ctrl+F5.
+Depois de publicar na Vercel, faça Ctrl+F5.

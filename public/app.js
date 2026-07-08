@@ -965,8 +965,14 @@ document.addEventListener("DOMContentLoaded", function(){
   document.addEventListener("DOMContentLoaded", function(){
     montarResumoReceitaNet();
     document.querySelectorAll("input, select, textarea").forEach(function(el){
-      el.addEventListener("input", montarResumoReceitaNet);
-      el.addEventListener("change", montarResumoReceitaNet);
+      el.addEventListener("input", function(ev){
+        if(ev && ev.target && ev.target.id === "cadProfile") return;
+        montarResumoReceitaNet();
+      });
+      el.addEventListener("change", function(ev){
+        if(ev && ev.target && ev.target.id === "cadProfile") return;
+        montarResumoReceitaNet();
+      });
     });
   });
   window.addEventListener("storage", montarResumoReceitaNet);

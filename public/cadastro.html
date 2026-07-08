@@ -2768,11 +2768,12 @@ document.addEventListener("DOMContentLoaded", function(){
 </script>
 
 
+
 <script>
 /* ============================================================
    PROFILE DO RESUMO SINCRONIZADO
-   O campo "Profile Servidor" no Resumo segue exatamente
-   o PROFILE selecionado na aba Servidor.
+   Trocar o PROFILE atualiza somente o Profile Servidor no Resumo.
+   Não muda Online/Offline.
 ============================================================ */
 (function(){
   function el(id){ return document.getElementById(id); }
@@ -2792,10 +2793,7 @@ document.addEventListener("DOMContentLoaded", function(){
   function sincronizarProfileResumo(){
     const profile = valorProfileSelecionado();
     const destino = el("resProfile");
-
-    if(destino){
-      destino.textContent = profile || "--";
-    }
+    if(destino) destino.textContent = profile || "--";
   }
 
   window.sincronizarProfileResumo = sincronizarProfileResumo;
@@ -2803,30 +2801,119 @@ document.addEventListener("DOMContentLoaded", function(){
   document.addEventListener("DOMContentLoaded", function(){
     setTimeout(sincronizarProfileResumo, 500);
     setTimeout(sincronizarProfileResumo, 1500);
-    setTimeout(sincronizarProfileResumo, 3000);
   });
 
   document.addEventListener("change", function(e){
     if(e.target && e.target.id === "cadProfile"){
-      setTimeout(sincronizarProfileResumo, 50);
-      setTimeout(sincronizarProfileResumo, 300);
+      e.stopPropagation();
+      sincronizarProfileResumo();
     }
-  });
+  }, true);
 
   document.addEventListener("input", function(e){
     if(e.target && e.target.id === "cadProfile"){
-      setTimeout(sincronizarProfileResumo, 50);
+      e.stopPropagation();
+      sincronizarProfileResumo();
     }
-  });
+  }, true);
+})();
+</script>
 
-  // Como o app.js recria o Resumo, garante a sincronização depois.
-  const originalMontar = window.montarResumoReceitaNet;
-  if(typeof originalMontar === "function"){
-    window.montarResumoReceitaNet = function(){
-      const r = originalMontar.apply(this, arguments);
-      setTimeout(sincronizarProfileResumo, 50);
+
+<script>
+/* ============================================================
+   GRAVAR PROFILE NO MIKROTIK AO SALVAR NO SERVIDOR
+   Funciona para cliente novo e cliente existente:
+   - se PPP Secret existe, atualiza profile;
+   - se não existe, cria com login/senha/profile.
+============================================================ */
+(function(){
+  function el(id){ return document.getElementById(id); }
+  function val(id){ return (el(id)?.value || "").trim(); }
+
+  function servidorAtual(){
+    return val("cadPop") || val("cadServidorReceita") || "";
+  }
+
+  function dadosClienteMikrotik(){
+    return {
+      servidor: servidorAtual(),
+      login: val("cadLogin"),
+      senha: val("cadSenha"),
+      profile: val("cadProfile"),
+      nome: val("cadNome"),
+      cpf: val("cadCpf"),
+      telefone: val("cadTelefone1") || val("cadTelefone2") || val("cadTelefone3")
+    };
+  }
+
+  async function gravarProfileNoMikrotik(){
+    const dados = dadosClienteMikrotik();
+
+    if(!dados.servidor || dados.servidor.toLowerCase().includes("sem servidor")){
+      alert("Selecione um servidor antes de gravar no MikroTik.");
+      return false;
+    }
+
+    if(!dados.login){
+      alert("Informe o login PPPoE do cliente.");
+      return false;
+    }
+
+    if(!dados.profile){
+      alert("Selecione o PROFILE do cliente.");
+      return false;
+    }
+
+    const resp = await fetch("/api/mikrotik/cliente-profile", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify(dados)
+    });
+
+    const json = await resp.json();
+
+    if(!resp.ok || !json.ok){
+      alert("Erro ao gravar no MikroTik: " + (json.erro || json.mensagem || "erro desconhecido"));
+      return false;
+    }
+
+    alert(json.mensagem || "Profile gravado no MikroTik.");
+    return true;
+  }
+
+  window.gravarProfileNoMikrotik = gravarProfileNoMikrotik;
+
+  const originalSalvar = window.salvarCadastroCliente;
+
+  if(typeof originalSalvar === "function"){
+    window.salvarCadastroCliente = async function(gravarServidor){
+      const r = await originalSalvar.apply(this, arguments);
+
+      if(gravarServidor === true){
+        try{
+          await gravarProfileNoMikrotik();
+        }catch(e){
+          console.error("Erro ao gravar profile no MikroTik:", e);
+          alert("Erro ao gravar profile no MikroTik: " + e.message);
+        }
+      }
+
       return r;
     };
+  }else{
+    document.addEventListener("click", async function(e){
+      const btn = e.target && e.target.closest && e.target.closest(".save-red");
+      if(!btn) return;
+
+      setTimeout(async function(){
+        try{
+          await gravarProfileNoMikrotik();
+        }catch(err){
+          alert("Erro ao gravar profile no MikroTik: " + err.message);
+        }
+      }, 700);
+    });
   }
 })();
 </script>
