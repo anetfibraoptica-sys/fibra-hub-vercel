@@ -1,7 +1,9 @@
 # Fibra+ Hub
 
-## Alteração atual
-- Removido o campo Certificado .p12 das duas contas Efí.
-- Backend ajustado para trabalhar com Client ID + Client Secret, sem exigir .p12.
-- Mantidos Nome da Conta, CPF/CNPJ, Ambiente, Client ID, Client Secret e Webhook.
-- Mantidos os endpoints de salvar configuração, testar conexão e testar boletos.
+## Correção atual
+- Criado endpoint `/api/efi/status` para informar se a Conta Efí 1 está integrada.
+- Ao salvar/testar a Conta Efí 1, agora também são gravadas flags globais de integração no painel.
+- Adicionado `efi-status.js` para que telas de boletos/importação reconheçam a Efí integrada.
+- Os boletos importados passam a consultar o status real da integração, em vez de depender apenas de mensagem antiga.
+
+Depois de publicar, faça Ctrl+F5.

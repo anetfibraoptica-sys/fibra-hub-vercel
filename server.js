@@ -1624,6 +1624,31 @@ app.get("/api/efi/boletos/teste", async (req, res) => {
 });
 
 
+
+/* EFI STATUS INTEGRACAO */
+app.get("/api/efi/status", async (req, res) => {
+  try {
+    const integrada = Boolean(
+      efiConta1Config &&
+      String(efiConta1Config.clientId || "").trim() &&
+      String(efiConta1Config.clientSecret || "").trim()
+    );
+
+    return res.json({
+      ok: true,
+      integrada,
+      conta: integrada ? {
+        nomeConta: efiConta1Config.nomeConta || "Conta Efí 1",
+        documento: efiConta1Config.documento || "",
+        ambiente: efiConta1Config.ambiente || "producao"
+      } : null
+    });
+  } catch (err) {
+    return res.status(500).json({ ok:false, integrada:false, erro:err.message });
+  }
+});
+
+
 io.on("connection",(socket)=>{
   socket.emit("hub-update", geral());
   socket.emit("mikrotik-update", geral());
