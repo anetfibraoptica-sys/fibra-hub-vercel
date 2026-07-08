@@ -1,10 +1,9 @@
 # Fibra+ Hub
 
 ## Correção atual
-- Removidos scripts antigos que marcavam Online sem sessão real.
-- Status PPPoE agora só fica Online com login + IP + MAC + uptime.
-- Resultado incompleto de /api/online fica Offline.
-- Adicionado watchdog para impedir que script antigo reative Online falso.
-- Login admin/admin removido do login padrão.
+- Restaurada a função das abas do cadastro: Dados, Contato, Cobrança e Servidor.
+- Corrigido status inicial do resumo para Offline.
+- Status Online só aparece com sessão real contendo IP, MAC e Tempo.
+- Se IP/MAC/Tempo estiverem vazios, o sistema força Offline.
 
-Após publicar, use Ctrl+F5 e teste em aba anônima.
+Após publicar na Vercel, use Ctrl+F5 ou teste em aba anônima.

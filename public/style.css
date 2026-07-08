@@ -5971,29 +5971,35 @@ body{
 
 
 
-/* Status PPPoE definitivo no Resumo */
+
+
+
+
+
+
+/* Abas cadastro - garantia */
+.tab-content{display:none;}
+.tab-content.active{display:block !important;}
+
+/* Status PPPoE final */
 .status-login-line{
   display:grid !important;
   grid-template-columns:1fr 1fr !important;
   gap:8px 12px !important;
   align-items:start !important;
 }
-
 .status-login-line span{
   min-width:0 !important;
   word-break:break-word !important;
 }
-
 .status-online-real{
   color:#22c55e !important;
   font-weight:900 !important;
 }
-
 .status-offline-real{
   color:#ef4444 !important;
   font-weight:900 !important;
 }
-
 .status-verificando-real{
   color:#f59e0b !important;
   font-weight:900 !important;

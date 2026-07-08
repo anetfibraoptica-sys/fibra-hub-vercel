@@ -2230,208 +2230,181 @@ document.addEventListener("fibra:supabase-sync", carregarContasEfiNoCadastro);
 
 
 
+
+
+
+
 <script>
 /* ============================================================
-   STATUS PPPoE DEFINITIVO
-   Online só se a sessão do login atual tiver IP + MAC + uptime.
-   Qualquer resultado incompleto fica Offline.
+   ABAS DO CADASTRO - função única
+   Corrige Dados / Contato / Cobrança / Servidor sem depender
+   de scripts antigos.
+============================================================ */
+function abrirTabCadastro(nome){
+  document.querySelectorAll(".cadastro-tabs .tab").forEach(function(btn){
+    btn.classList.remove("active");
+    btn.classList.remove("tab-active");
+  });
+
+  document.querySelectorAll(".tab-content").forEach(function(tab){
+    tab.classList.remove("active");
+    tab.style.display = "none";
+  });
+
+  var tab = document.getElementById("tab-" + nome);
+  if(tab){
+    tab.classList.add("active");
+    tab.style.display = "block";
+  }
+
+  var botao = document.querySelector('.cadastro-tabs .tab[data-tab="' + nome + '"]') ||
+              document.querySelector('.cadastro-tabs .tab[onclick*="' + nome + '"]');
+
+  if(botao){
+    botao.classList.add("active");
+    botao.classList.add("tab-active");
+  }
+}
+
+document.addEventListener("DOMContentLoaded", function(){
+  var ativa = document.querySelector(".tab-content.active");
+  if(!ativa){
+    abrirTabCadastro("dados");
+  }else{
+    document.querySelectorAll(".tab-content").forEach(function(tab){
+      tab.style.display = tab.classList.contains("active") ? "block" : "none";
+    });
+  }
+});
+</script>
+
+
+<script>
+/* ============================================================
+   STATUS PPPoE FINAL
+   Força Offline quando IP/MAC/Tempo não existem.
+   Só muda para Online com sessão real de /api/online.
 ============================================================ */
 (function(){
-  let ultimoStatusAplicado = "offline";
-
+  function txt(id){
+    return (document.getElementById(id)?.textContent || "").trim();
+  }
+  function setTxt(id, v){
+    var el = document.getElementById(id);
+    if(el) el.textContent = v || "-";
+  }
   function norm(v){
     return String(v || "")
       .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
       .toLowerCase()
       .trim();
   }
-
-  function campo(obj, nomes){
-    for(const n of nomes){
+  function getLoginAtual(){
+    return (document.getElementById("cadLogin")?.value || document.getElementById("resLogin2")?.textContent || "").trim();
+  }
+  function getCampo(obj, nomes){
+    for(var i=0;i<nomes.length;i++){
+      var n = nomes[i];
       if(obj && obj[n] !== undefined && obj[n] !== null && String(obj[n]).trim() !== ""){
         return String(obj[n]).trim();
       }
     }
     return "";
   }
-
-  function setTxt(id, valor){
-    const el = document.getElementById(id);
-    if(el) el.textContent = valor || "-";
-  }
-
-  function valorInput(id){
-    const el = document.getElementById(id);
-    return el ? String(el.value || "").trim() : "";
-  }
-
-  function clienteAtual(){
-    let c = {};
-    try{ c = JSON.parse(localStorage.getItem("clienteSelecionadoCompleto") || "{}"); }catch(e){}
-    try{ c = {...c, ...JSON.parse(localStorage.getItem("clienteCadastroSelecionado") || "{}")}; }catch(e){}
-
-    return {
-      ...c,
-      login: valorInput("cadLogin") || c.loginPppoe || c.login || c.usuario || c.name || "",
-      mac: valorInput("cadMac") || valorInput("cadMacOnu") || c.mac || c.macOnu || c.mac_onu || c.callerId || c.caller_id || "",
-      profile: valorInput("cadProfile") || c.profile || c.plano || "",
-      interface: valorInput("cadInterface") || c.interface || c.service || ""
-    };
-  }
-
-  function listaOnline(resp){
-    if(!resp) return [];
+  function lista(resp){
     if(Array.isArray(resp)) return resp;
-    for(const k of ["clientes","online","pppoe","active","data","rows","sessions"]){
-      if(Array.isArray(resp[k])) return resp[k];
+    if(!resp) return [];
+    var chaves = ["clientes","online","pppoe","active","data","rows","sessions"];
+    for(var i=0;i<chaves.length;i++){
+      if(Array.isArray(resp[chaves[i]])) return resp[chaves[i]];
     }
     return [];
   }
-
-  function getLogin(s){ return campo(s, ["name","usuario","user","login","loginPppoe","pppoe","cliente"]); }
-  function getIp(s){ return campo(s, ["address","ip","ipAtual","remoteAddress","remote-address","remote_address"]); }
-  function getMac(s){ return campo(s, ["callerId","caller-id","caller_id","mac","macAddress","mac_address","callingStationId","calling-station-id"]); }
-  function getUptime(s){ return campo(s, ["uptime","tempo","tempoOnline","onlineTime","sessionTime","session-time"]); }
-  function getInterface(s){ return campo(s, ["service","interface","interfaceName","interface-name","vlan"]); }
-  function getProfile(s){ return campo(s, ["profile","perfil","plano","rateLimit","rate-limit"]); }
-
-  function sessaoValida(s, loginEsperado){
-    if(!s) return false;
-    const login = getLogin(s);
-    const ip = getIp(s);
-    const mac = getMac(s);
-    const uptime = getUptime(s);
-
-    if(!login || !ip || !mac || !uptime) return false;
-    if(loginEsperado && norm(login) !== norm(loginEsperado)) return false;
-
-    return true;
+  function sessaoDados(s){
+    return {
+      login: getCampo(s, ["name","usuario","user","login","loginPppoe","pppoe","cliente"]),
+      ip: getCampo(s, ["address","ip","ipAtual","remoteAddress","remote-address","remote_address"]),
+      mac: getCampo(s, ["callerId","caller-id","caller_id","mac","macAddress","mac_address","callingStationId","calling-station-id"]),
+      tempo: getCampo(s, ["uptime","tempo","tempoOnline","onlineTime","sessionTime","session-time"]),
+      iface: getCampo(s, ["service","interface","interfaceName","interface-name","vlan"]),
+      profile: getCampo(s, ["profile","perfil","plano","rateLimit","rate-limit"])
+    };
   }
-
-  function formatarUptime(raw){
-    raw = String(raw || "").trim();
-    if(!raw) return "-";
-
-    let semanas = 0, dias = 0, horas = 0, minutos = 0;
-    const w = raw.match(/(\d+)w/);
-    const d = raw.match(/(\d+)d/);
-    if(w) semanas = Number(w[1]) || 0;
-    if(d) dias = Number(d[1]) || 0;
-
-    const hm = raw.match(/(\d{1,2}):(\d{2})(?::\d{2})?$/);
-    if(hm){
-      horas = Number(hm[1]) || 0;
-      minutos = Number(hm[2]) || 0;
-    }
-
-    const totalDias = semanas * 7 + dias;
-    if(totalDias > 0) return `${totalDias} dia${totalDias > 1 ? "s" : ""} ${String(horas).padStart(2,"0")}h${String(minutos).padStart(2,"0")}min`;
-    if(horas > 0) return `${horas}h${String(minutos).padStart(2,"0")}min`;
-    return raw;
-  }
-
-  function statusElement(){
+  function statusEl(){
     return document.querySelector(".offline-dot");
   }
-
-  function aplicarStatus(tipo){
-    const el = statusElement();
-    if(!el) return;
-
-    el.classList.remove("status-online-real","status-offline-real","status-verificando-real");
-
-    if(tipo === "online"){
-      el.textContent = "● Online";
-      el.classList.add("status-online-real");
-      ultimoStatusAplicado = "online";
-    }else if(tipo === "verificando"){
-      el.textContent = "● Verificando";
-      el.classList.add("status-verificando-real");
-      ultimoStatusAplicado = "verificando";
-    }else{
+  function marcarOffline(){
+    var el = statusEl();
+    if(el){
       el.textContent = "● Offline";
+      el.classList.remove("status-online-real","status-verificando-real");
       el.classList.add("status-offline-real");
-      ultimoStatusAplicado = "offline";
     }
-  }
-
-  function aplicarOffline(c){
-    aplicarStatus("offline");
     setTxt("resIp", "-");
     setTxt("resTempo", "-");
-    setTxt("resMac", c.mac || "Não informado");
-    setTxt("resInterface", c.interface || "-");
-    setTxt("resProfile", c.profile || "-");
+    if(!txt("resMac") || txt("resMac") === '""') setTxt("resMac", "-");
     setTxt("resConexao", "Offline");
   }
-
-  function aplicarOnline(s){
-    aplicarStatus("online");
-    setTxt("resIp", getIp(s));
-    setTxt("resTempo", formatarUptime(getUptime(s)));
-    setTxt("resMac", getMac(s));
-    setTxt("resInterface", getInterface(s) || "PPPOE");
-    setTxt("resProfile", getProfile(s));
+  function marcarOnline(d){
+    var el = statusEl();
+    if(el){
+      el.textContent = "● Online";
+      el.classList.remove("status-offline-real","status-verificando-real");
+      el.classList.add("status-online-real");
+    }
+    setTxt("resIp", d.ip);
+    setTxt("resTempo", d.tempo);
+    setTxt("resMac", d.mac);
+    setTxt("resInterface", d.iface || "PPPOE");
+    setTxt("resProfile", d.profile || "-");
     setTxt("resConexao", "Online");
   }
-
-  async function consultarStatusPPPoE(){
-    const c = clienteAtual();
-    const login = c.login;
-
-    setTxt("resLogin2", login || "-");
-
+  async function consultar(){
+    var login = getLoginAtual();
     if(!login){
-      aplicarOffline(c);
+      marcarOffline();
       return;
     }
 
-    aplicarStatus("verificando");
-
     try{
-      const resp = await fetch("/api/online", {cache:"no-store"});
-      const json = await resp.json();
-      const lista = listaOnline(json);
+      var r = await fetch("/api/online", {cache:"no-store"});
+      var j = await r.json();
+      var achado = lista(j).map(sessaoDados).find(function(s){
+        return norm(s.login) === norm(login);
+      });
 
-      const sessao = lista.find(s => norm(getLogin(s)) === norm(login));
-
-      if(sessaoValida(sessao, login)){
-        aplicarOnline(sessao);
+      if(achado && achado.ip && achado.mac && achado.tempo){
+        marcarOnline(achado);
       }else{
-        aplicarOffline(c);
+        marcarOffline();
       }
     }catch(e){
-      console.warn("Erro ao consultar /api/online:", e);
-      aplicarOffline(c);
+      marcarOffline();
     }
   }
-
-  // Trava: se algum script antigo tentar colocar Online sem dados válidos, a próxima checagem corrige.
-  function watchdog(){
-    const el = statusElement();
-    const c = clienteAtual();
-
+  function trava(){
+    var el = statusEl();
     if(!el) return;
 
-    if(el.textContent && el.textContent.toLowerCase().includes("online") && ultimoStatusAplicado !== "online"){
-      aplicarOffline(c);
-    }
+    var online = norm(el.textContent).includes("online");
+    var ip = txt("resIp");
+    var mac = txt("resMac");
+    var tempo = txt("resTempo");
+
+    var semDados = !ip || ip === "-" || ip === '""' ||
+                   !mac || mac === "-" || mac === '""' ||
+                   !tempo || tempo === "-" || tempo === '""';
+
+    if(online && semDados) marcarOffline();
   }
 
-  window.atualizarStatusRealCliente = consultarStatusPPPoE;
+  window.atualizarStatusRealCliente = consultar;
 
   document.addEventListener("DOMContentLoaded", function(){
-    aplicarOffline(clienteAtual());
-    setTimeout(consultarStatusPPPoE, 600);
-    setTimeout(consultarStatusPPPoE, 2000);
-    setTimeout(consultarStatusPPPoE, 5000);
-    setInterval(watchdog, 1000);
-  });
-
-  document.addEventListener("input", function(e){
-    if(e.target && e.target.id === "cadLogin"){
-      setTimeout(consultarStatusPPPoE, 500);
-    }
+    marcarOffline();
+    setTimeout(consultar, 600);
+    setTimeout(consultar, 2000);
+    setInterval(trava, 700);
   });
 })();
 </script>
