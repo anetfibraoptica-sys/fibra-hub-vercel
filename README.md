@@ -1,10 +1,10 @@
 # Fibra+ Hub
 
-## Correção atual
-- Encontrada a origem real do Online falso no Resumo.
-- O arquivo `public/app.js` reconstruía o card Resumo e colocava `Online` fixo com `.status-dot` verde.
-- Removido o bloco `RESUMO LATERAL DIREITA RECEITANET` do `app.js`.
-- Removido o CSS `.cadastro-resumo-card .status-dot` que deixava a bolinha verde fixa.
-- O Resumo volta a usar o HTML original de `cadastro.html` e a consulta dedicada `/api/cliente/status`.
+## Alteração atual
+- O Resumo do cadastro agora fica conectado ao MikroTik.
+- Consulta dedicada: `/api/cliente/status`.
+- O backend usa `/ppp/active/print` para verificar o login PPPoE.
+- Se o login estiver no PPP Active com IP + MAC + uptime, mostra verde Online.
+- Se não estiver no PPP Active, mostra vermelho Offline.
 
 Depois de publicar na Vercel, faça Ctrl+F5 ou teste em aba anônima.

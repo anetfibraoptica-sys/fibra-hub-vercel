@@ -2291,11 +2291,15 @@ document.addEventListener("DOMContentLoaded", function(){
 
 
 
+
+
+
+
 <script>
 /* ============================================================
-   RESUMO - STATUS REAL DO CLIENTE
-   Usa /api/cliente/status, que consulta /ppp/active/print.
-   Verde só com online=true + IP + MAC + Uptime.
+   RESUMO CONECTADO AO MIKROTIK
+   Verde somente quando /api/cliente/status confirmar sessão PPPoE.
+   Vermelho quando o login não estiver em /ppp/active/print.
 ============================================================ */
 (function(){
   function norm(v){
@@ -2305,22 +2309,14 @@ document.addEventListener("DOMContentLoaded", function(){
       .trim();
   }
 
-  function getVal(id){
-    return (document.getElementById(id)?.value || "").trim();
-  }
-
-  function getTxt(id){
-    return (document.getElementById(id)?.textContent || "").trim();
-  }
-
+  function getVal(id){ return (document.getElementById(id)?.value || "").trim(); }
+  function getTxt(id){ return (document.getElementById(id)?.textContent || "").trim(); }
   function setTxt(id, valor){
-    var el = document.getElementById(id);
+    const el = document.getElementById(id);
     if(el) el.textContent = valor || "-";
   }
 
-  function elStatus(){
-    return document.querySelector(".offline-dot");
-  }
+  function statusEl(){ return document.querySelector(".offline-dot"); }
 
   function loginAtual(){
     return getVal("cadLogin") || getTxt("resLogin2") || getTxt("resLogin");
@@ -2334,8 +2330,8 @@ document.addEventListener("DOMContentLoaded", function(){
     return getVal("cadMac") || getVal("cadMacOnu") || "";
   }
 
-  function offline(){
-    var el = elStatus();
+  function aplicarOffline(){
+    const el = statusEl();
     if(el){
       el.textContent = "● Offline";
       el.classList.remove("status-online-real","status-verificando-real");
@@ -2349,8 +2345,8 @@ document.addEventListener("DOMContentLoaded", function(){
     window.__fibraResumoOnline = false;
   }
 
-  function verificando(){
-    var el = elStatus();
+  function aplicarVerificando(){
+    const el = statusEl();
     if(el){
       el.textContent = "● Verificando";
       el.classList.remove("status-online-real","status-offline-real");
@@ -2359,13 +2355,13 @@ document.addEventListener("DOMContentLoaded", function(){
     }
   }
 
-  function online(d){
+  function aplicarOnline(d){
     if(!(d && d.online === true && d.ip && d.mac && d.uptime)){
-      offline();
+      aplicarOffline();
       return;
     }
 
-    var el = elStatus();
+    const el = statusEl();
     if(el){
       el.textContent = "● Online";
       el.classList.remove("status-offline-real","status-verificando-real");
@@ -2379,72 +2375,72 @@ document.addEventListener("DOMContentLoaded", function(){
     setTxt("resInterface", d.interface || "PPPOE");
     setTxt("resProfile", d.profile || "-");
     if(d.servidor) setTxt("resServidor", d.servidor);
+
     window.__fibraResumoOnline = true;
   }
 
-  function telaSemSessao(){
-    var ip = getTxt("resIp");
-    var mac = getTxt("resMac");
-    var tempo = getTxt("resTempo");
+  async function consultarResumoMikrotik(){
+    const login = loginAtual();
 
-    return !ip || ip === "-" || ip === '""' ||
-           !mac || mac === "-" || mac === '""' || norm(mac).includes("nao informado") ||
-           !tempo || tempo === "-" || tempo === '""';
-  }
-
-  function trava(){
-    var el = elStatus();
-    if(!el) return;
-
-    if((norm(el.textContent).includes("online") || el.classList.contains("status-online-real")) && telaSemSessao()){
-      offline();
-    }
-  }
-
-  async function consultar(){
-    var login = loginAtual();
     if(!login){
-      offline();
+      aplicarOffline();
       return;
     }
 
     setTxt("resLogin2", login);
-    verificando();
+    aplicarVerificando();
 
     try{
-      var url = "/api/cliente/status?login=" + encodeURIComponent(login);
-      var servidor = servidorAtual();
+      let url = "/api/cliente/status?login=" + encodeURIComponent(login);
+      const servidor = servidorAtual();
       if(servidor && servidor !== "-" && servidor !== "--"){
         url += "&servidor=" + encodeURIComponent(servidor);
       }
 
-      var resp = await fetch(url, {cache:"no-store"});
-      var data = await resp.json();
+      const resp = await fetch(url, {cache:"no-store"});
+      const data = await resp.json();
 
       if(data && data.online === true && data.ip && data.mac && data.uptime){
-        online(data);
+        aplicarOnline(data);
       }else{
-        offline();
+        aplicarOffline();
       }
     }catch(e){
-      console.warn("Erro ao consultar status do cliente:", e);
-      offline();
+      console.warn("Erro ao consultar status no MikroTik:", e);
+      aplicarOffline();
     }
   }
 
-  window.atualizarStatusRealCliente = consultar;
+  function travaVisual(){
+    const el = statusEl();
+    if(!el) return;
+
+    const ip = getTxt("resIp");
+    const mac = getTxt("resMac");
+    const tempo = getTxt("resTempo");
+
+    const semSessao = !ip || ip === "-" || ip === '""' ||
+                      !mac || mac === "-" || mac === '""' || norm(mac).includes("nao informado") ||
+                      !tempo || tempo === "-" || tempo === '""';
+
+    if((norm(el.textContent).includes("online") || el.classList.contains("status-online-real")) && semSessao){
+      aplicarOffline();
+    }
+  }
+
+  window.atualizarStatusRealCliente = consultarResumoMikrotik;
 
   document.addEventListener("DOMContentLoaded", function(){
-    offline();
-    setTimeout(consultar, 600);
-    setTimeout(consultar, 1800);
-    setTimeout(consultar, 4000);
-    setInterval(trava, 300);
+    aplicarOffline();
+    setTimeout(consultarResumoMikrotik, 600);
+    setTimeout(consultarResumoMikrotik, 1800);
+    setTimeout(consultarResumoMikrotik, 4000);
+    setInterval(travaVisual, 500);
   });
 
   document.addEventListener("input", function(e){
     if(e.target && (e.target.id === "cadLogin" || e.target.id === "cadServidorReceita" || e.target.id === "cadPop")){
-      setTimeout(consultar, 400);
+      setTimeout(consultarResumoMikrotik, 400);
     }
   });
 })();
