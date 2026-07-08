@@ -2283,15 +2283,42 @@ document.addEventListener("DOMContentLoaded", function(){
 
 
 
+
+
+
+
 <script>
-/* STATUS ONLINE/OFFLINE DO RESUMO - alteração isolada */
+/* STATUS DO RESUMO - consulta apenas o servidor selecionado */
 (function(){
+  function norm(v){
+    return String(v || "").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
+  }
   function getVal(id){ return (document.getElementById(id)?.value || "").trim(); }
   function getTxt(id){ return (document.getElementById(id)?.textContent || "").trim(); }
   function setTxt(id, valor){ const el=document.getElementById(id); if(el) el.textContent = valor || "-"; }
-  function statusEl(){ return document.querySelector(".offline-dot, .status-dot"); }
-  function loginAtual(){ return getVal("cadLogin") || getTxt("resLogin2") || getTxt("resLogin"); }
-  function servidorAtual(){ return getVal("cadServidorReceita") || getVal("cadPop") || getTxt("resServidor") || ""; }
+
+  function statusEl(){
+    return document.getElementById("resStatusOnline") || document.querySelector(".offline-dot, .status-dot");
+  }
+
+  function loginAtual(){
+    return getVal("cadLogin") || getTxt("resLogin2") || getTxt("resLogin");
+  }
+
+  function servidorAtual(){
+    return getVal("cadServidorReceita") ||
+           getVal("cadPop") ||
+           getTxt("resServidor") ||
+           "";
+  }
+
+  function servidorValido(s){
+    const x = norm(s);
+    if(!x || x === "-" || x === "--") return false;
+    if(x.includes("sem servidor")) return false;
+    if(x.includes("selecione")) return false;
+    return true;
+  }
 
   function aplicarOffline(){
     const el = statusEl();
@@ -2301,35 +2328,50 @@ document.addEventListener("DOMContentLoaded", function(){
       el.classList.add("status-offline-real","offline-dot");
       el.style.color = "#ef4444";
     }
-    setTxt("resConexao", "Offline");
     setTxt("resIp", "-");
+    setTxt("resTempo", "-");
+    setTxt("resMac", "-");
+  }
+
+  function aplicarVerificando(){
+    const el = statusEl();
+    if(el){
+      el.textContent = "● Verificando";
+      el.classList.remove("status-online-real","status-offline-real","status-dot");
+      el.classList.add("status-verificando-real","offline-dot");
+      el.style.color = "#f59e0b";
+    }
   }
 
   function aplicarOnline(d){
     const el = statusEl();
     if(el){
       el.textContent = "● Online";
-      el.classList.remove("status-offline-real","status-verificando-real");
+      el.classList.remove("status-offline-real","status-verificando-real","status-dot");
       el.classList.add("status-online-real","offline-dot");
       el.style.color = "#22c55e";
     }
-    setTxt("resConexao", "Online");
     setTxt("resIp", d.ip);
+    setTxt("resTempo", d.uptime);
+    setTxt("resMac", d.mac);
     setTxt("resInterface", d.interface || "PPPOE");
     setTxt("resProfile", d.profile || "-");
+    if(d.servidor) setTxt("resServidor", d.servidor);
   }
 
   async function consultar(){
     const login = loginAtual();
-    if(!login){ aplicarOffline(); return; }
+    const servidor = servidorAtual();
+
+    if(!login || !servidorValido(servidor)){
+      aplicarOffline();
+      return;
+    }
+
+    aplicarVerificando();
 
     try{
-      let url = "/api/cliente/status?login=" + encodeURIComponent(login);
-      const servidor = servidorAtual();
-      if(servidor && servidor !== "-" && servidor !== "--"){
-        url += "&servidor=" + encodeURIComponent(servidor);
-      }
-
+      const url = "/api/cliente/status?login=" + encodeURIComponent(login) + "&servidor=" + encodeURIComponent(servidor);
       const resp = await fetch(url, {cache:"no-store"});
       const data = await resp.json();
 
@@ -2339,7 +2381,7 @@ document.addEventListener("DOMContentLoaded", function(){
         aplicarOffline();
       }
     }catch(e){
-      console.warn("Erro ao consultar status do cliente:", e);
+      console.warn("Erro status cliente:", e);
       aplicarOffline();
     }
   }
@@ -2351,6 +2393,158 @@ document.addEventListener("DOMContentLoaded", function(){
     setTimeout(consultar, 2000);
     setTimeout(consultar, 4200);
   });
+
+  document.addEventListener("change", function(e){
+    if(e.target && (e.target.id === "cadServidorReceita" || e.target.id === "cadPop" || e.target.id === "cadLogin")){
+      setTimeout(consultar, 200);
+    }
+  });
+})();
+</script>
+
+
+<script>
+/* ============================================================
+   FIX ABA SERVIDOR
+   Ao selecionar servidor, volta a preencher automaticamente:
+   INTERFACE = PPPOE
+   CONEXÃO = PPPOE
+   Sem mexer no restante do cadastro/resumo.
+============================================================ */
+(function(){
+  function norm(v){
+    return String(v || "")
+      .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+      .toLowerCase()
+      .trim();
+  }
+
+  function byId(id){ return document.getElementById(id); }
+
+  function servidorSelecionado(){
+    const ids = ["cadServidorReceita", "cadPop", "cadServidor", "servidor", "servidorCliente"];
+    for(const id of ids){
+      const el = byId(id);
+      if(el && String(el.value || "").trim()) return String(el.value || "").trim();
+    }
+
+    const labelServidor = Array.from(document.querySelectorAll("label,b,strong")).find(el => norm(el.textContent) === "servidor");
+    const box = labelServidor ? labelServidor.parentElement : null;
+    const campo = box ? box.querySelector("select,input") : null;
+    return campo ? String(campo.value || "").trim() : "";
+  }
+
+  function servidorValido(v){
+    const s = norm(v);
+    if(!s || s === "-" || s === "--") return false;
+    if(s.includes("sem servidor")) return false;
+    if(s.includes("selecione")) return false;
+    return true;
+  }
+
+  function acharCampoPorLabel(texto){
+    const alvo = norm(texto);
+    const labels = Array.from(document.querySelectorAll("label,b,strong,span,div"));
+    const label = labels.find(el => norm(el.textContent) === alvo);
+    if(!label) return null;
+
+    const container = label.closest(".form-group,.campo,.field,.input-group,div") || label.parentElement;
+    if(container){
+      const el = container.querySelector("select,input");
+      if(el) return el;
+    }
+
+    // fallback: primeiro input/select depois do label
+    let n = label.nextElementSibling;
+    while(n){
+      if(n.matches && n.matches("select,input")) return n;
+      const interno = n.querySelector && n.querySelector("select,input");
+      if(interno) return interno;
+      n = n.nextElementSibling;
+    }
+    return null;
+  }
+
+  function campoInterface(){
+    return byId("cadInterface") ||
+           byId("interface") ||
+           byId("interfaceCliente") ||
+           acharCampoPorLabel("interface");
+  }
+
+  function campoConexao(){
+    return byId("cadConexao") ||
+           byId("conexao") ||
+           byId("conexaoCliente") ||
+           byId("cadTecnologiaConexao") ||
+           acharCampoPorLabel("conexão") ||
+           acharCampoPorLabel("conexao");
+  }
+
+  function setCampo(el, valor){
+    if(!el) return;
+
+    const atual = String(el.value || "").trim();
+    const vazioOuInvalido = !atual || norm(atual).includes("sem servidor") || norm(atual).includes("selecione");
+
+    if(el.tagName && el.tagName.toLowerCase() === "select"){
+      let opt = Array.from(el.options || []).find(o => norm(o.value) === norm(valor) || norm(o.textContent) === norm(valor));
+
+      if(!opt){
+        opt = document.createElement("option");
+        opt.value = valor;
+        opt.textContent = valor;
+        el.appendChild(opt);
+      }
+
+      if(vazioOuInvalido || norm(atual) !== norm(valor)){
+        el.value = opt.value;
+      }
+    }else{
+      if(vazioOuInvalido || norm(atual) !== norm(valor)){
+        el.value = valor;
+      }
+    }
+
+    el.dispatchEvent(new Event("input", {bubbles:true}));
+    el.dispatchEvent(new Event("change", {bubbles:true}));
+  }
+
+  function aplicarPPPoE(){
+    const servidor = servidorSelecionado();
+    if(!servidorValido(servidor)) return;
+
+    setCampo(campoInterface(), "PPPOE");
+    setCampo(campoConexao(), "PPPOE");
+
+    // Mantém o resumo coerente sem mexer no restante.
+    const resInterface = byId("resInterface");
+    if(resInterface && (!resInterface.textContent.trim() || resInterface.textContent.trim() === "-" || resInterface.textContent.trim() === "--")){
+      resInterface.textContent = "PPPOE";
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", function(){
+    setTimeout(aplicarPPPoE, 300);
+    setTimeout(aplicarPPPoE, 1200);
+  });
+
+  document.addEventListener("change", function(e){
+    const id = e.target && e.target.id;
+    if(id && ["cadServidorReceita","cadPop","cadServidor","servidor","servidorCliente"].includes(id)){
+      setTimeout(aplicarPPPoE, 100);
+      setTimeout(aplicarPPPoE, 500);
+    }
+  });
+
+  document.addEventListener("input", function(e){
+    const id = e.target && e.target.id;
+    if(id && ["cadServidorReceita","cadPop","cadServidor","servidor","servidorCliente"].includes(id)){
+      setTimeout(aplicarPPPoE, 100);
+    }
+  });
+
+  window.aplicarPPPoEServidorCadastro = aplicarPPPoE;
 })();
 </script>
 

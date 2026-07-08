@@ -392,9 +392,10 @@ function closeMobileMenu(){
   if(overlay){
     overlay.classList.remove("show");
   }
-}
+    if (typeof window.atualizarStatusRealCliente === "function") { setTimeout(window.atualizarStatusRealCliente, 100); }
+  }
 
-document.addEventListener("DOMContentLoaded", function(){
+  document.addEventListener("DOMContentLoaded", function(){
   const sidebar = document.querySelector(".sidebar, aside, nav.sidebar, .menu-lateral");
   if(sidebar){
     sidebar.querySelectorAll("a, button").forEach(function(el){
@@ -810,17 +811,17 @@ document.addEventListener("DOMContentLoaded", function(){
 
         <div class="resumo-grid">
           <div class="resumo-field">
-            <span class="resumo-value"><b>Status</b><span class="status-dot"></span> Online</span>
-            <span class="resumo-value"><b>Serviço:</b> ${servico}</span>
-            <span class="resumo-value"><b>IP:</b> ${ip}</span>
-            <span class="resumo-value"><b>Profile Servidor:</b> ${profile}</span>
+            <span class="resumo-value"><b>Status</b><span id="resStatusOnline" class="offline-dot status-offline-real">● Offline</span></span>
+            <span class="resumo-value"><b>Serviço:</b> <span id="resServico">${servico}</span></span>
+            <span class="resumo-value"><b>IP:</b> <span id="resIp">-</span></span>
+            <span class="resumo-value"><b>Profile Servidor:</b> <span id="resProfile">${profile}</span></span>
             <span class="resumo-value"><b>MTU:</b> ${mtu}</span>
           </div>
           <div class="resumo-field">
-            <span class="resumo-value"><b>Login:</b> ${login}</span>
-            <span class="resumo-value"><b>Tempo:</b> ${tempo}</span>
-            <span class="resumo-value"><b>MAC:</b> ${mac}</span>
-            <span class="resumo-value"><b>Interface:</b> VLAN 102</span>
+            <span class="resumo-value"><b>Login:</b> <span id="resLogin2">${login}</span></span>
+            <span class="resumo-value"><b>Tempo:</b> <span id="resTempo">-</span></span>
+            <span class="resumo-value"><b>MAC:</b> <span id="resMac">-</span></span>
+            <span class="resumo-value"><b>Interface:</b> <span id="resInterface">${interfaceV}</span></span>
             <span class="resumo-value"><b>MRU:</b> ${mru}</span>
           </div>
         </div>

@@ -1110,9 +1110,12 @@ if (process.env.VERCEL) {
 
 
 
+
+
+
 /* ============================================================
    STATUS DEDICADO DO CLIENTE - /ppp/active/print
-   Não altera telas. Apenas informa se o login está ativo.
+   Online somente no servidor selecionado e com IP+MAC+UPTIME.
 ============================================================ */
 app.get("/api/cliente/status", async (req, res) => {
   const normalizar = (v) => String(v || "")
@@ -1129,6 +1132,14 @@ app.get("/api/cliente/status", async (req, res) => {
     return "";
   };
 
+  const servidorValido = (servidor) => {
+    const s = normalizar(servidor);
+    if (!s || s === "-" || s === "--") return false;
+    if (s.includes("sem servidor")) return false;
+    if (s.includes("selecione")) return false;
+    return true;
+  };
+
   try {
     const login = String(req.query.login || "").trim();
     const servidorNome = String(req.query.servidor || "").trim();
@@ -1137,25 +1148,30 @@ app.get("/api/cliente/status", async (req, res) => {
       return res.json({ online:false, motivo:"login_nao_informado", login:"", ip:"", mac:"", uptime:"", interface:"", profile:"", servidor:servidorNome });
     }
 
-    let ativos = [];
-    if (typeof consultarOnlineServidor === "function") {
-      try {
-        ativos = await consultarOnlineServidor(servidorNome || undefined);
-      } catch (e) {
-        console.error("Erro em consultarOnlineServidor:", e);
-        ativos = [];
-      }
+    if (!servidorValido(servidorNome)) {
+      return res.json({ online:false, motivo:"servidor_nao_selecionado", login, ip:"", mac:"", uptime:"", interface:"", profile:"", servidor:servidorNome });
     }
 
-    if (!Array.isArray(ativos)) ativos = [];
+    let retorno = null;
+    if (typeof consultarOnlineServidor === "function") {
+      retorno = await consultarOnlineServidor(servidorNome);
+    }
+
+    const ativos = Array.isArray(retorno)
+      ? retorno
+      : Array.isArray(retorno?.clientes)
+        ? retorno.clientes
+        : [];
+
+    const loginAlvo = normalizar(login);
 
     const sessao = ativos.find((s) => {
       const nome = getCampo(s, ["name", "usuario", "user", "login", "loginPppoe", "pppoe", "cliente"]);
-      return nome && normalizar(nome) === normalizar(login);
+      return nome && normalizar(nome) === loginAlvo;
     });
 
     if (!sessao) {
-      return res.json({ online:false, motivo:"nao_encontrado_ppp_active", login, ip:"", mac:"", uptime:"", interface:"", profile:"", servidor:servidorNome });
+      return res.json({ online:false, motivo:"login_nao_encontrado_no_ppp_active", login, ip:"", mac:"", uptime:"", interface:"", profile:"", servidor:servidorNome });
     }
 
     const ip = getCampo(sessao, ["address", "ip", "ipAtual", "remoteAddress", "remote-address", "remote_address"]);
@@ -1180,6 +1196,6 @@ app.get("/api/cliente/status", async (req, res) => {
     });
   } catch (err) {
     console.error("Erro /api/cliente/status:", err);
-    return res.status(500).json({ online:false, erro:true, mensagem:err.message });
+    return res.status(500).json({ online:false, erro:true, motivo:"erro_endpoint_status_cliente", mensagem:err.message });
   }
 });
