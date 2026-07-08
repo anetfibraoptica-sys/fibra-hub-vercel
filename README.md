@@ -1,10 +1,10 @@
 # Fibra+ Hub
 
-## Correção atual
-- Corrigida a aba Servidor.
-- Ao selecionar um servidor válido, INTERFACE volta a preencher automaticamente como PPPOE.
-- CONEXÃO também volta a preencher automaticamente como PPPOE.
-- Não foi alterada a estrutura do Resumo.
-- Mantido o ajuste do status Online/Offline pelo servidor selecionado.
+## Alteração atual
+- Criado endpoint `GET /api/mikrotik/profiles`.
+- O endpoint consulta `/ppp/profile/print` no MikroTik selecionado.
+- A aba Servidor agora preenche o campo PROFILE com os profiles reais do MikroTik.
+- Ao trocar o servidor, o campo PROFILE é recarregado com os profiles daquele servidor.
+- Não foi alterado Resumo, Online/Offline, Interface, Conexão, layout ou provisionamento.
 
-Depois de publicar, faça Ctrl+F5.
+Depois de publicar na Vercel, faça Ctrl+F5.

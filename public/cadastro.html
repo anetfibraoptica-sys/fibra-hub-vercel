@@ -2548,4 +2548,136 @@ document.addEventListener("DOMContentLoaded", function(){
 })();
 </script>
 
+
+<script>
+/* ============================================================
+   PROFILE DO MIKROTIK NA ABA SERVIDOR
+   Busca /ppp/profile/print no servidor selecionado e preenche
+   somente o campo PROFILE.
+============================================================ */
+(function(){
+  function norm(v){
+    return String(v || "")
+      .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+      .toLowerCase()
+      .trim();
+  }
+
+  function byId(id){ return document.getElementById(id); }
+
+  function servidorSelecionado(){
+    const ids = ["cadServidorReceita", "cadPop", "cadServidor", "servidor", "servidorCliente"];
+    for(const id of ids){
+      const el = byId(id);
+      if(el && String(el.value || "").trim()) return String(el.value || "").trim();
+    }
+
+    const res = byId("resServidor");
+    if(res && String(res.textContent || "").trim()) return String(res.textContent || "").trim();
+
+    return "";
+  }
+
+  function servidorValido(v){
+    const s = norm(v);
+    if(!s || s === "-" || s === "--") return false;
+    if(s.includes("sem servidor")) return false;
+    if(s.includes("selecione")) return false;
+    return true;
+  }
+
+  function campoProfile(){
+    return byId("cadProfile") ||
+           byId("profile") ||
+           byId("profileCliente") ||
+           byId("cadPerfil") ||
+           byId("perfil");
+  }
+
+  function setCarregando(select){
+    if(!select) return;
+
+    const valorAtual = select.value || "";
+    select.innerHTML = "";
+    const opt = document.createElement("option");
+    opt.value = valorAtual;
+    opt.textContent = valorAtual ? valorAtual : "Carregando profiles...";
+    select.appendChild(opt);
+    select.value = valorAtual;
+  }
+
+  function preencherProfiles(select, profiles, manterValor){
+    if(!select) return;
+
+    const atual = manterValor || select.value || "";
+    select.innerHTML = "";
+
+    const inicial = document.createElement("option");
+    inicial.value = "";
+    inicial.textContent = profiles.length ? "Selecione o Profile" : "Nenhum profile encontrado";
+    select.appendChild(inicial);
+
+    profiles.forEach(function(nome){
+      const opt = document.createElement("option");
+      opt.value = nome;
+      opt.textContent = nome;
+      select.appendChild(opt);
+    });
+
+    if(atual && profiles.some(p => norm(p) === norm(atual))){
+      select.value = profiles.find(p => norm(p) === norm(atual));
+    }else if(profiles.length === 1){
+      select.value = profiles[0];
+    }else{
+      select.value = "";
+    }
+
+    select.dispatchEvent(new Event("input", {bubbles:true}));
+    select.dispatchEvent(new Event("change", {bubbles:true}));
+  }
+
+  async function carregarProfilesMikrotik(force){
+    const servidor = servidorSelecionado();
+    const select = campoProfile();
+
+    if(!select) return;
+
+    if(!servidorValido(servidor)){
+      preencherProfiles(select, [], select.value);
+      return;
+    }
+
+    const valorAntes = select.value || "";
+    setCarregando(select);
+
+    try{
+      let url = "/api/mikrotik/profiles?servidor=" + encodeURIComponent(servidor);
+      if(force) url += "&force=1";
+
+      const resp = await fetch(url, {cache:"no-store"});
+      const data = await resp.json();
+
+      const profiles = Array.isArray(data.profiles) ? data.profiles : [];
+      preencherProfiles(select, profiles, valorAntes);
+    }catch(e){
+      console.warn("Erro ao carregar profiles do MikroTik:", e);
+      preencherProfiles(select, [], valorAntes);
+    }
+  }
+
+  window.carregarProfilesMikrotik = carregarProfilesMikrotik;
+
+  document.addEventListener("DOMContentLoaded", function(){
+    setTimeout(function(){ carregarProfilesMikrotik(false); }, 700);
+  });
+
+  document.addEventListener("change", function(e){
+    const id = e.target && e.target.id;
+    if(id && ["cadServidorReceita","cadPop","cadServidor","servidor","servidorCliente"].includes(id)){
+      setTimeout(function(){ carregarProfilesMikrotik(false); }, 200);
+    }
+  });
+})();
+</script>
+
 </body></html>
