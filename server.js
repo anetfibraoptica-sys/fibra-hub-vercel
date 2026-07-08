@@ -186,7 +186,6 @@ let servidores = {
     identity: "COLÔNIA ANTÔNIO ALEIXO",
     cpu: "0",
     uptime: "--",
-    pppoeOnline: 0,
     download: "0 Mbps",
     upload: "0 Mbps",
     interfaces: [],
@@ -200,7 +199,6 @@ let servidores = {
     identity: "ARMANDO MENDES",
     cpu: "0",
     uptime: "--",
-    pppoeOnline: 0,
     download: "0 Mbps",
     upload: "0 Mbps",
     interfaces: [],
@@ -221,7 +219,6 @@ function geral() {
     servidores,
     totalServidores: lista.length,
     servidoresOnline: lista.filter(s => s.online).length,
-    pppoeOnline: lista.reduce((a,s)=>a+Number(s.pppoeOnline || 0),0),
     download: lista.reduce((a,s)=>a+n(s.download),0).toFixed(1) + " Mbps",
     upload: lista.reduce((a,s)=>a+n(s.upload),0).toFixed(1) + " Mbps",
     cpuMedia: Math.round(lista.reduce((a,s)=>a+Number(s.cpu || 0),0) / lista.length),
@@ -525,7 +522,6 @@ app.post("/api/update",(req,res)=>{
     cpu: req.body.cpu || "0",
     uptime: req.body.uptime || "--",
     memoriaLivre: req.body.memoriaLivre || "--",
-    pppoeOnline: Number(req.body.pppoeOnline || 0),
     download: req.body.download || "0 Mbps",
     upload: req.body.upload || "0 Mbps",
     interfaces: Array.isArray(req.body.interfaces) ? req.body.interfaces : [],
@@ -1084,8 +1080,6 @@ app.get("/api/status-mikrotik", async (req, res) => {
       consultarStatusServidor("COLONIA"),
       Promise.all([consultarOnlineServidor("ARMANDO"), consultarOnlineServidor("COLONIA")])
     ]);
-    armando.pppoeOnline = online[0].total || 0;
-    colonia.pppoeOnline = online[1].total || 0;
     res.json({ ok: armando.ok || colonia.ok, atualizadoEm: new Date().toISOString(), servidores: { armando, colonia } });
   } catch (error) {
     res.status(500).json({ ok: false, erro: error.message });
