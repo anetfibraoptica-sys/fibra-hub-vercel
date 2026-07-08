@@ -2283,13 +2283,19 @@ document.addEventListener("DOMContentLoaded", function(){
 
 
 
+
+
+
+
+
+
+
+
 <script>
 /* ============================================================
-   STATUS DO RESUMO SEM ONLINE FALSO
-   Online somente se /api/cliente/status retornar:
-   online=true + IP + MAC + uptime.
-   O campo "Conexão" foi removido do Resumo para não usar
-   dado cadastrado como se fosse sessão PPPoE.
+   RESUMO - STATUS REAL DO CLIENTE
+   Usa /api/cliente/status, que consulta /ppp/active/print.
+   Verde só com online=true + IP + MAC + Uptime.
 ============================================================ */
 (function(){
   function norm(v){
@@ -2312,7 +2318,7 @@ document.addEventListener("DOMContentLoaded", function(){
     if(el) el.textContent = valor || "-";
   }
 
-  function statusEl(){
+  function elStatus(){
     return document.querySelector(".offline-dot");
   }
 
@@ -2321,51 +2327,50 @@ document.addEventListener("DOMContentLoaded", function(){
   }
 
   function servidorAtual(){
-    return getVal("cadServidorReceita") ||
-           getVal("cadPop") ||
-           getTxt("resServidor") ||
-           "";
+    return getVal("cadServidorReceita") || getVal("cadPop") || getTxt("resServidor") || "";
   }
 
   function macCadastrado(){
     return getVal("cadMac") || getVal("cadMacOnu") || "";
   }
 
-  function aplicarOffline(){
-    var el = statusEl();
+  function offline(){
+    var el = elStatus();
     if(el){
       el.textContent = "● Offline";
       el.classList.remove("status-online-real","status-verificando-real");
       el.classList.add("status-offline-real");
+      el.style.color = "#ef4444";
     }
 
     setTxt("resIp", "-");
     setTxt("resTempo", "-");
     setTxt("resMac", macCadastrado() || "Não informado");
-    window.__fibraResumoStatus = "offline";
+    window.__fibraResumoOnline = false;
   }
 
-  function aplicarVerificando(){
-    var el = statusEl();
+  function verificando(){
+    var el = elStatus();
     if(el){
       el.textContent = "● Verificando";
       el.classList.remove("status-online-real","status-offline-real");
       el.classList.add("status-verificando-real");
+      el.style.color = "#f59e0b";
     }
-    window.__fibraResumoStatus = "verificando";
   }
 
-  function aplicarOnline(d){
+  function online(d){
     if(!(d && d.online === true && d.ip && d.mac && d.uptime)){
-      aplicarOffline();
+      offline();
       return;
     }
 
-    var el = statusEl();
+    var el = elStatus();
     if(el){
-      el.textContent = "● Offline";
+      el.textContent = "● Online";
       el.classList.remove("status-offline-real","status-verificando-real");
       el.classList.add("status-online-real");
+      el.style.color = "#22c55e";
     }
 
     setTxt("resIp", d.ip);
@@ -2374,64 +2379,63 @@ document.addEventListener("DOMContentLoaded", function(){
     setTxt("resInterface", d.interface || "PPPOE");
     setTxt("resProfile", d.profile || "-");
     if(d.servidor) setTxt("resServidor", d.servidor);
-
-    window.__fibraResumoStatus = "online";
+    window.__fibraResumoOnline = true;
   }
 
-  function telaSemDadosOnline(){
+  function telaSemSessao(){
     var ip = getTxt("resIp");
     var mac = getTxt("resMac");
     var tempo = getTxt("resTempo");
 
     return !ip || ip === "-" || ip === '""' ||
-           !mac || mac === "-" || mac === '""' || norm(mac).includes("não informado") ||
+           !mac || mac === "-" || mac === '""' || norm(mac).includes("nao informado") ||
            !tempo || tempo === "-" || tempo === '""';
   }
 
   function trava(){
-    var bolinha = norm(statusEl()?.textContent || "");
-    if(bolinha.includes("online") && telaSemDadosOnline()){
-      aplicarOffline();
+    var el = elStatus();
+    if(!el) return;
+
+    if((norm(el.textContent).includes("online") || el.classList.contains("status-online-real")) && telaSemSessao()){
+      offline();
     }
   }
 
   async function consultar(){
     var login = loginAtual();
-
     if(!login){
-      aplicarOffline();
+      offline();
       return;
     }
 
     setTxt("resLogin2", login);
-    aplicarVerificando();
+    verificando();
 
     try{
       var url = "/api/cliente/status?login=" + encodeURIComponent(login);
       var servidor = servidorAtual();
-
       if(servidor && servidor !== "-" && servidor !== "--"){
         url += "&servidor=" + encodeURIComponent(servidor);
       }
 
-      var r = await fetch(url, {cache:"no-store"});
-      var d = await r.json();
+      var resp = await fetch(url, {cache:"no-store"});
+      var data = await resp.json();
 
-      if(d && d.online === true && d.ip && d.mac && d.uptime){
-        aplicarOnline(d);
+      if(data && data.online === true && data.ip && data.mac && data.uptime){
+        online(data);
       }else{
-        aplicarOffline();
+        offline();
       }
     }catch(e){
-      console.warn("Erro status cliente:", e);
-      aplicarOffline();
+      console.warn("Erro ao consultar status do cliente:", e);
+      offline();
     }
   }
 
   window.atualizarStatusRealCliente = consultar;
 
   document.addEventListener("DOMContentLoaded", function(){
-    aplicarOffline();
+    offline();
     setTimeout(consultar, 600);
     setTimeout(consultar, 1800);
     setTimeout(consultar, 4000);
@@ -2442,46 +2446,6 @@ document.addEventListener("DOMContentLoaded", function(){
     if(e.target && (e.target.id === "cadLogin" || e.target.id === "cadServidorReceita" || e.target.id === "cadPop")){
       setTimeout(consultar, 400);
     }
-  });
-})();
-</script>
-
-
-<script>
-/* Trava visual final: impede bolinha verde sem dados de sessão */
-(function(){
-  function norm(v){
-    return String(v || "").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
-  }
-  function txt(id){
-    return (document.getElementById(id)?.textContent || "").trim();
-  }
-  function forcarOfflineVisual(){
-    const el = document.querySelector(".offline-dot");
-    if(!el) return;
-
-    const ip = txt("resIp");
-    const mac = txt("resMac");
-    const tempo = txt("resTempo");
-
-    const semDados = !ip || ip === "-" || ip === '""' ||
-                     !mac || mac === "-" || mac === '""' || norm(mac).includes("nao informado") ||
-                     !tempo || tempo === "-" || tempo === '""';
-
-    if(semDados){
-      el.textContent = "● Offline";
-      el.classList.remove("status-online-real","status-verificando-real");
-      el.classList.add("status-offline-real");
-      el.style.color = "#ef4444";
-    }
-  }
-
-  document.addEventListener("DOMContentLoaded", function(){
-    forcarOfflineVisual();
-    setTimeout(forcarOfflineVisual, 500);
-    setTimeout(forcarOfflineVisual, 1500);
-    setTimeout(forcarOfflineVisual, 3000);
-    setInterval(forcarOfflineVisual, 700);
   });
 })();
 </script>

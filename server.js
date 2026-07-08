@@ -1110,14 +1110,28 @@ if (process.env.VERCEL) {
 
 
 
+
+
+
 /* ============================================================
-   STATUS DEDICADO DO CLIENTE
-   Consulta direta no MikroTik via /ppp/active/print.
-   Não usa a tela Servidores Online.
-   Exemplo:
-   GET /api/cliente/status?login=cliente@pop&servidor=Colônia%20Antônio%20Aleixo
+   STATUS DEDICADO DO CLIENTE - /ppp/active/print
+   ONLINE SOMENTE SE O LOGIN EXISTIR NO PPP ACTIVE COM IP+MAC+UPTIME.
 ============================================================ */
 app.get("/api/cliente/status", async (req, res) => {
+  const normalizar = (v) => String(v || "")
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+
+  const getCampo = (obj, nomes) => {
+    for (const n of nomes) {
+      if (obj && obj[n] !== undefined && obj[n] !== null && String(obj[n]).trim() !== "") {
+        return String(obj[n]).trim();
+      }
+    }
+    return "";
+  };
+
   try {
     const login = String(req.query.login || "").trim();
     const servidorNome = String(req.query.servidor || "").trim();
@@ -1136,48 +1150,32 @@ app.get("/api/cliente/status", async (req, res) => {
       });
     }
 
-    let lista = [];
+    let ativos = [];
 
-    // Se o projeto já tem função consultarOnlineServidor, usa ela para obter /ppp/active/print.
     if (typeof consultarOnlineServidor === "function") {
       try {
-        lista = await consultarOnlineServidor(servidorNome || undefined);
+        // A função existente já consulta /ppp/active/print.
+        ativos = await consultarOnlineServidor(servidorNome || undefined);
       } catch (e) {
-        console.error("Erro consultarOnlineServidor no status cliente:", e);
-        lista = [];
+        console.error("Erro em consultarOnlineServidor:", e);
+        ativos = [];
       }
     }
 
-    if (!Array.isArray(lista)) lista = [];
+    if (!Array.isArray(ativos)) ativos = [];
 
-    const normalizar = (v) => String(v || "")
-      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-      .toLowerCase()
-      .trim();
+    const loginAlvo = normalizar(login);
 
-    const getCampo = (obj, nomes) => {
-      for (const n of nomes) {
-        if (obj && obj[n] !== undefined && obj[n] !== null && String(obj[n]).trim() !== "") {
-          return String(obj[n]).trim();
-        }
-      }
-      return "";
-    };
-
-    const sessao = lista.find((s) => {
+    const sessao = ativos.find((s) => {
       const nome = getCampo(s, ["name", "usuario", "user", "login", "loginPppoe", "pppoe", "cliente"]);
-      const servidorSessao = getCampo(s, ["servidor", "server", "router", "mikrotik"]);
-
-      const loginBate = normalizar(nome) === normalizar(login);
-      const servidorBate = !servidorNome || !servidorSessao || normalizar(servidorSessao) === normalizar(servidorNome);
-
-      return loginBate && servidorBate;
+      if (!nome) return false;
+      return normalizar(nome) === loginAlvo;
     });
 
     if (!sessao) {
       return res.json({
         online: false,
-        motivo: "nao_encontrado_ppp_active",
+        motivo: "login_nao_encontrado_no_ppp_active",
         login,
         ip: "",
         mac: "",
@@ -1193,19 +1191,20 @@ app.get("/api/cliente/status", async (req, res) => {
     const uptime = getCampo(sessao, ["uptime", "tempo", "tempoOnline", "onlineTime", "sessionTime", "session-time"]);
     const iface = getCampo(sessao, ["service", "interface", "interfaceName", "interface-name", "vlan"]);
     const profile = getCampo(sessao, ["profile", "perfil", "plano", "rateLimit", "rate-limit"]);
+    const servidor = getCampo(sessao, ["servidor", "server", "router", "mikrotik"]) || servidorNome;
 
-    const online = Boolean(ip && mac && uptime);
+    const onlineReal = Boolean(ip && mac && uptime);
 
     return res.json({
-      online,
-      motivo: online ? "encontrado_ppp_active" : "sessao_incompleta",
+      online: onlineReal,
+      motivo: onlineReal ? "sessao_ppp_active_confirmada" : "sessao_ppp_active_incompleta",
       login,
-      ip,
-      mac,
-      uptime,
-      interface: iface,
-      profile,
-      servidor: getCampo(sessao, ["servidor", "server", "router", "mikrotik"]) || servidorNome,
+      ip: onlineReal ? ip : "",
+      mac: onlineReal ? mac : "",
+      uptime: onlineReal ? uptime : "",
+      interface: onlineReal ? iface : "",
+      profile: onlineReal ? profile : "",
+      servidor,
       bruto: sessao
     });
   } catch (err) {
@@ -1213,6 +1212,7 @@ app.get("/api/cliente/status", async (req, res) => {
     return res.status(500).json({
       online: false,
       erro: true,
+      motivo: "erro_endpoint_status_cliente",
       mensagem: err.message
     });
   }

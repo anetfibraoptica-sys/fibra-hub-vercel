@@ -1,9 +1,10 @@
 # Fibra+ Hub
 
 ## Correção atual
-- Corrigida a cor visual da bolinha do Resumo.
-- `.offline-dot` agora é vermelho por padrão.
-- Verde só aparece com `status-online-real`.
-- Se IP, MAC ou Tempo estiverem vazios, a bolinha é forçada para Offline vermelho.
+- Corrigido endpoint `/api/cliente/status` para retornar `online:false` por padrão.
+- Online agora só é verdadeiro se o login existir no `/ppp/active/print` com IP, MAC e uptime.
+- Corrigido frontend do Resumo para ficar vermelho por padrão.
+- Verde só aparece com `online=true` + IP + MAC + uptime.
+- Campo Conexão removido do Resumo para evitar falso Online vindo de cadastro.
 
-Depois de publicar na Vercel, faça Ctrl+F5.
+Após publicar na Vercel, faça Ctrl+F5 ou teste em aba anônima.

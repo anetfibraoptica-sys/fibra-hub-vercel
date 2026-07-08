@@ -3984,63 +3984,6 @@ tbody tr:hover {
 }
 
 
-/* Status correto no resumo */
-.online-text {
-  color: #22c55e !important;
-  font-weight: 800;
-}
-.offline-text {
-  color: #ef4444 !important;
-  font-weight: 800;
-}
-.identificado-online {
-  background: #16a34a !important;
-  color: #fff !important;
-}
-.identificado-offline {
-  background: #e11d48 !important;
-  color: #fff !important;
-}
-
-
-/* Status exato na aba Resumo */
-.online-dot-resumo {
-  color: #22c55e !important;
-  font-weight: 900;
-}
-.offline-dot-resumo {
-  color: #ef4444 !important;
-  font-weight: 900;
-}
-.identificado-online {
-  background: #16a34a !important;
-  color: #fff !important;
-}
-.identificado-offline {
-  background: #e11d48 !important;
-  color: #fff !important;
-}
-
-
-/* Status seguro na aba Resumo */
-.online-dot-resumo {
-  color: #22c55e !important;
-  font-weight: 900;
-}
-.offline-dot-resumo {
-  color: #ef4444 !important;
-  font-weight: 900;
-}
-.identificado-online {
-  background: #16a34a !important;
-  color: #fff !important;
-}
-.identificado-offline {
-  background: #e11d48 !important;
-  color: #fff !important;
-}
-
-
 /* Fibra Hub Responsivo PC + Celular */
 
 @media (max-width: 1024px) {
@@ -6024,3 +5967,35 @@ body{
   font-weight:900 !important;
 }
 
+
+
+/* STATUS VISUAL FINAL DO RESUMO */
+.offline-dot{
+  color:#ef4444 !important;
+  font-weight:900 !important;
+}
+.offline-dot.status-offline-real,
+.status-offline-real{
+  color:#ef4444 !important;
+  font-weight:900 !important;
+}
+.offline-dot.status-verificando-real,
+.status-verificando-real{
+  color:#f59e0b !important;
+  font-weight:900 !important;
+}
+.offline-dot.status-online-real,
+.status-online-real{
+  color:#22c55e !important;
+  font-weight:900 !important;
+}
+.status-login-line{
+  display:grid !important;
+  grid-template-columns:1fr 1fr !important;
+  gap:8px 12px !important;
+  align-items:start !important;
+}
+.status-login-line span{
+  min-width:0 !important;
+  word-break:break-word !important;
+}
