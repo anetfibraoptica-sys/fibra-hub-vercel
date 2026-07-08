@@ -1,7 +1,8 @@
 # Fibra+ Hub
 
 ## Correção atual
-- Refeito o arquivo financeiro.html com estrutura HTML correta.
-- Removida a duplicação/quebra do menu.
-- Mantida a tela Financeiro Efí somente com configuração das 2 contas Efí.
-- Removidos PPPoE Online e Monitoramento do menu lateral.
+- Restaurada a estrutura do menu a partir da base funcional anterior.
+- Removidos PPPoE Online e Monitoramento sem quebrar o layout.
+- Alterado somente o conteúdo interno do main da tela Financeiro Efí.
+- Financeiro Efí fica somente com configuração de 2 contas Efí.
+- Não foi reconstruída a estrutura global do painel.

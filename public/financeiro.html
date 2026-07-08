@@ -11,29 +11,39 @@
 <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@300;400;600;700&display=swap" rel="stylesheet">
 
 </head>
-<body>
-
-<a href="financeiro.html" class="" class="active"><span class="icon">▤</span>Financeiro</a>
-<a href="chamados.html" class=""><span class="icon">🔧</span>Chamados</a>
-<a href="relatorios.html" class=""><span class="icon">▥</span>Relatórios</a>
-<a href="planos.html" class=""><span class="icon">▦</span>Planos</a>
-<a href="usuarios.html" class=""><span class="icon">👥</span>Usuários</a>
-<a href="configuracoes.html" class=""><span class="icon"></span>Configurações</a>
-<a href="backup.html" class=""><span class="icon">☁</span>Backup</a><a href="#" onclick="sair()"><span class="icon">↪</span></a></nav></aside>
-
+<body onload="protegerPagina(); carregarFinanceiroEfi(); iniciarSocket();"><div class="sidebar-overlay" onclick="fecharMenuLateral()"></div>
+<button id="mobileMenuBtn" class="mobile-menu-btn" type="button" onclick="abrirMenuLateral()">☰ Menu</button>
+<div id="mobileMenuOverlay" class="mobile-menu-overlay" onclick="closeMobileMenu()"></div>
+<div class="mobile-top"><button class="menu-btn" onclick="abrirMenuLateral()">☰</button><div><div class="logo-wrap"><div class="brand"><span class="fibra">Fibra</span><span class="brand-dot"></span><span class="plus">+</span></div><div class="slogan">HUB DE CONTROLE</div></div></div></div>
+<div class="layout"><div class="overlay" onclick="fecharMenu()"></div><aside class="sidebar"><div class="logo-wrap"><div class="brand"><span class="fibra">Fibra</span><span class="brand-dot"></span><span class="plus">+</span></div><div class="slogan">HUB DE CONTROLE</div></div>
+<nav class="nav">
+<a href="dashboard.html"><span class="icon">🏠</span>Dashboard</a>
+<a href="clientes.html"><span class="icon">👤</span>Clientes</a>
+<a href="cadastro.html?novo=1"><span class="icon">👥</span>Cadastrar Cliente</a>
+<a href="importacao.html"><span class="icon">⬆️</span>Importação</a>
+<a href="financeiro.html" class="active"><span class="icon">▤</span>Financeiro Efí</a>
+<a href="chamados.html"><span class="icon">🔧</span>Chamados</a>
+<a href="relatorios.html"><span class="icon">▥</span>Relatórios</a>
+<a href="planos.html"><span class="icon">▦</span>Planos</a>
+<a href="usuarios.html"><span class="icon">👥</span>Usuários</a>
+<a href="configuracoes.html"><span class="icon"></span>Configurações</a>
+<a href="backup.html"><span class="icon">☁</span>Backup</a>
+<a href="#" onclick="sair()"><span class="icon">↪</span></a>
+</nav></aside>
 <main class="main">
+
   <header class="topbar">
     <h1>Financeiro Efí</h1>
   </header>
 
   <section class="content financeiro-efi-config-only">
-    <section class="efi-config-intro card">
+    <section class="card efi-config-intro">
       <h2>Configuração da Integração Efí</h2>
       <p>Cadastre as contas Efí que serão usadas no sistema. Cada conta pode pertencer a um CPF/CNPJ diferente e depois poderá ser selecionada no cadastro/cobrança do cliente.</p>
     </section>
 
     <section class="efi-contas-grid">
-      <article class="card efi-conta-card" data-efi-conta="1">
+      <article class="card efi-conta-card">
         <h3>Conta Efí 1</h3>
 
         <div class="form-row two">
@@ -89,7 +99,7 @@
         </div>
       </article>
 
-      <article class="card efi-conta-card" data-efi-conta="2">
+      <article class="card efi-conta-card">
         <h3>Conta Efí 2</h3>
 
         <div class="form-row two">
@@ -146,83 +156,86 @@
       </article>
     </section>
   </section>
-</main>
 
-<script>
-(function(){
-  const campos = ["NomeConta","Documento","Ambiente","ClientId","ClientSecret","ChavePix","Certificado","Webhook"];
+  <script>
+  (function(){
+    const campos = ["NomeConta","Documento","Ambiente","ClientId","ClientSecret","ChavePix","Certificado","Webhook"];
 
-  function key(conta){ return "fibra_efi_conta_" + conta; }
+    function key(conta){ return "fibra_efi_conta_" + conta; }
 
-  function coletar(conta){
-    const obj = { conta };
-    campos.forEach(function(c){
-      const campo = document.getElementById("efi" + conta + c);
-      obj[c] = campo ? campo.value.trim() : "";
-    });
-    return obj;
-  }
-
-  function preencher(conta, obj){
-    if(!obj) return;
-    campos.forEach(function(c){
-      const campo = document.getElementById("efi" + conta + c);
-      if(campo && obj[c] !== undefined) campo.value = obj[c];
-    });
-  }
-
-  window.salvarConfiguracaoEfiConta = function(conta){
-    const cfg = coletar(conta);
-
-    if(!cfg.NomeConta){
-      alert("Informe o nome da Conta Efí " + conta + ".");
-      return;
-    }
-
-    if(!cfg.Documento){
-      alert("Informe o CPF/CNPJ da Conta Efí " + conta + ".");
-      return;
-    }
-
-    localStorage.setItem(key(conta), JSON.stringify(cfg));
-
-    const contas = [1,2].map(function(n){
-      try { return JSON.parse(localStorage.getItem(key(n)) || "null"); } catch(e){ return null; }
-    }).filter(Boolean);
-
-    localStorage.setItem("fibra_efi_contas", JSON.stringify(contas));
-
-    alert("Configuração da Conta Efí " + conta + " salva.");
-  };
-
-  window.testarConexaoEfiConta = async function(conta){
-    const cfg = coletar(conta);
-
-    if(!cfg.ClientId || !cfg.ClientSecret){
-      alert("Informe Client ID e Client Secret da Conta Efí " + conta + ".");
-      return;
-    }
-
-    try{
-      const resp = await fetch("/api/efi/testar-conexao", {
-        method: "POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify(cfg)
+    function coletar(conta){
+      const obj = { conta };
+      campos.forEach(function(c){
+        const campo = document.getElementById("efi" + conta + c);
+        obj[c] = campo ? campo.value.trim() : "";
       });
-
-      alert(resp.ok ? "Teste enviado para Conta Efí " + conta + "." : "Não foi possível testar. Verifique o backend.");
-    }catch(e){
-      alert("Configuração salva localmente. O teste real depende da API Efí no backend.");
+      return obj;
     }
-  };
 
-  document.addEventListener("DOMContentLoaded", function(){
-    [1,2].forEach(function(conta){
-      try { preencher(conta, JSON.parse(localStorage.getItem(key(conta)) || "null")); } catch(e){}
+    function preencher(conta, obj){
+      if(!obj) return;
+      campos.forEach(function(c){
+        const campo = document.getElementById("efi" + conta + c);
+        if(campo && obj[c] !== undefined) campo.value = obj[c];
+      });
+    }
+
+    window.salvarConfiguracaoEfiConta = function(conta){
+      const cfg = coletar(conta);
+
+      if(!cfg.NomeConta){
+        alert("Informe o nome da Conta Efí " + conta + ".");
+        return;
+      }
+
+      if(!cfg.Documento){
+        alert("Informe o CPF/CNPJ da Conta Efí " + conta + ".");
+        return;
+      }
+
+      localStorage.setItem(key(conta), JSON.stringify(cfg));
+
+      const contas = [1,2].map(function(n){
+        try { return JSON.parse(localStorage.getItem(key(n)) || "null"); } catch(e){ return null; }
+      }).filter(Boolean);
+
+      localStorage.setItem("fibra_efi_contas", JSON.stringify(contas));
+
+      alert("Configuração da Conta Efí " + conta + " salva.");
+    };
+
+    window.testarConexaoEfiConta = async function(conta){
+      const cfg = coletar(conta);
+
+      if(!cfg.ClientId || !cfg.ClientSecret){
+        alert("Informe Client ID e Client Secret da Conta Efí " + conta + ".");
+        return;
+      }
+
+      try{
+        const resp = await fetch("/api/efi/testar-conexao", {
+          method: "POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify(cfg)
+        });
+
+        alert(resp.ok ? "Teste enviado para Conta Efí " + conta + "." : "Não foi possível testar. Verifique o backend.");
+      }catch(e){
+        alert("Configuração salva localmente. O teste real depende da API Efí no backend.");
+      }
+    };
+
+    document.addEventListener("DOMContentLoaded", function(){
+      [1,2].forEach(function(conta){
+        try { preencher(conta, JSON.parse(localStorage.getItem(key(conta)) || "null")); } catch(e){}
+      });
     });
-  });
-})();
-</script>
+  })();
+  </script>
 
-</body>
-</html>
+</main></div>
+<script src="supabase-client.js"></script>
+<script src="auth-painel.js"></script>
+<script src="app.js"></script><script src="financeiro-efi.js"></script>
+<script src="bloqueio-configuravel.js"></script>
+</body></html>

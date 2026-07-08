@@ -6015,68 +6015,7 @@ body{
 .status-online-real{color:#22c55e !important;font-weight:900 !important;}
 
 
-/* Financeiro Efí - somente configuração */
-.financeiro-efi-config-only{
-  padding-bottom:40px;
-}
-.efi-config-intro{
-  background:rgba(15,31,58,.72);
-  border:1px solid rgba(255,255,255,.08);
-  border-radius:18px;
-  padding:22px;
-  margin-bottom:22px;
-}
-.efi-config-intro h2{
-  margin:0 0 8px;
-}
-.efi-config-intro p{
-  margin:0;
-  opacity:.9;
-}
-.efi-contas-grid{
-  display:grid;
-  grid-template-columns:1fr;
-  gap:22px;
-}
-.efi-conta-card{
-  padding:24px;
-  border-radius:18px;
-}
-.efi-conta-card h3{
-  margin:0 0 18px;
-}
-.efi-conta-card .form-row.two{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:18px;
-  margin-bottom:16px;
-}
-.efi-conta-card label{
-  display:block;
-  font-weight:700;
-  margin-bottom:8px;
-}
-.efi-conta-card input,
-.efi-conta-card select{
-  width:100%;
-}
-.efi-actions{
-  display:grid;
-  grid-template-columns:1fr;
-  gap:12px;
-  margin-top:14px;
-}
-.efi-actions button{
-  width:100%;
-}
-@media(max-width:800px){
-  .efi-conta-card .form-row.two{
-    grid-template-columns:1fr;
-  }
-}
-
-
-/* Financeiro Efí corrigido - somente configuração */
+/* Financeiro Efí - somente configuração, sem alterar menu global */
 .financeiro-efi-config-only{
   padding-bottom:40px;
 }
