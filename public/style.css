@@ -5968,7 +5968,10 @@ body{
 }
 
 
-/* Status real PPPoE no Resumo */
+
+
+
+/* Status PPPoE definitivo no Resumo */
 .status-login-line{
   display:grid !important;
   grid-template-columns:1fr 1fr !important;
@@ -5995,4 +5998,3 @@ body{
   color:#f59e0b !important;
   font-weight:900 !important;
 }
-

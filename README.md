@@ -1,9 +1,10 @@
 # Fibra+ Hub
 
 ## Correção atual
-- Removida a lógica antiga que colocava cliente Online sem sessão PPPoE válida.
-- Status verde agora só aparece com login + IP + MAC + uptime.
-- Adicionado Tempo e MAC no Resumo.
-- Login fixo admin/admin removido; login usa usuários do Supabase.
+- Removidos scripts antigos que marcavam Online sem sessão real.
+- Status PPPoE agora só fica Online com login + IP + MAC + uptime.
+- Resultado incompleto de /api/online fica Offline.
+- Adicionado watchdog para impedir que script antigo reative Online falso.
+- Login admin/admin removido do login padrão.
 
-Após subir na Vercel, faça Ctrl+F5 e limpe dados antigos do site se ainda aparecer login antigo.
+Após publicar, use Ctrl+F5 e teste em aba anônima.

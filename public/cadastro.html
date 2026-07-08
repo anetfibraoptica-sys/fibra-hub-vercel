@@ -549,7 +549,7 @@ fibraCadastroLimparStoragesSelecao();
       </div>
 
       <div class="status-login-line">
-        <span>Status<span class="offline-dot">● Offline</span></span>
+        <span>Status<span class="offline-dot status-offline-real">● Offline</span></span>
         <span>Login: <b id="resLogin2">--</b></span>
         <span>Tempo: <b id="resTempo">-</b></span>
         <span>MAC: <b id="resMac">-</b></span>
@@ -660,520 +660,8 @@ function consultarCepContato(){ buscarCepAutomatico(); }
 </script><script src="supabase-client.js"></script>
 <script src="auth-painel.js"></script>
 <script src="app.js"></script>
-<script>
-function abrirTabCadastro(nome){
-  document.querySelectorAll(".cadastro-tabs .tab").forEach(btn=>{
-    btn.classList.remove("active");
-    btn.classList.remove("tab-active");
-  });
 
-  document.querySelectorAll(".tab-content").forEach(tab=>{
-    tab.classList.remove("active");
-    tab.style.display = "none";
-  });
 
-  const tab = document.getElementById("tab-" + nome);
-  if(tab){
-    tab.classList.add("active");
-    tab.style.display = "block";
-  }
-
-  const botao = document.querySelector('.cadastro-tabs .tab[data-tab="' + nome + '"]') ||
-                document.querySelector('.cadastro-tabs .tab[onclick*="' + nome + '"]');
-
-  if(botao){
-    botao.classList.add("active");
-    botao.classList.add("tab-active");
-  }
-}
-function dinheiro(v){return Number(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});}
-function valor(id){let el=document.getElementById(id);return el?el.value.trim():"";}
-function setTxt(id,v){let el=document.getElementById(id);if(el)el.textContent=v||"--";}
-function atualizarResumoCadastro(){
-  setTxt("resLogin",valor("cadLogin"));
-  setTxt("resLogin2",valor("cadLogin"));
-  setTxt("resSenha",valor("cadSenha"));
-  setTxt("resNome",valor("cadNome"));
-  setTxt("resCpf",valor("cadCpf"));
-  setTxt("resVenc",valor("cadVencimento"));
-
-  setTxt("resServidor",valor("cadServidorReceita")||valor("cadPop"));
-  setTxt("resInterface",valor("cadInterface"));
-  setTxt("resElemento",valor("cadElementoRede"));
-  setTxt("resIp",valor("cadIp"));
-  setTxt("resConexao",valor("cadTecnologia")||"--");
-  setTxt("resProfile",valor("cadProfile"));
-
-  setTxt("resPlano",valor("cadPlano")||"Nenhum Plano Ativo");
-  let val=Number(valor("cadValor")||0);
-  setTxt("resValor",dinheiro(val));
-  setTxt("resTotal",dinheiro(val));
-
-  setTxt("resEndereco",valor("cadEndereco"));
-  setTxt("resComplemento",valor("cadComplemento"));
-  setTxt("resReferencia",valor("cadReferencia"));
-  setTxt("resBairro",valor("cadBairro"));
-  setTxt("resCidade",valor("cadCidade"));
-  setTxt("resUf",valor("cadUf"));
-  setTxt("resTelefone1",valor("cadTelefone1"));
-  setTxt("resTelefone2",valor("cadTelefone2"));
-  setTxt("resTelefone3",valor("cadTelefone3"));
-  setTxt("resIbge",valor("cadIbge")||"--");
-
-  const ident = document.getElementById("cadIdentificador");
-  if(ident) ident.textContent="Identificador: "+(valor("cadLogin")||"--");
-}
-function gerarSenha(){document.getElementById("cadSenha").value=Math.random().toString(36).slice(2,8);atualizarResumoCadastro();}
-function consultarDocumento(){alert("Consulta de CPF/CNPJ será integrada depois.");}
-
-function dataHojeISO(){
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth()+1).padStart(2,"0");
-  const dia = String(d.getDate()).padStart(2,"0");
-  return `${y}-${m}-${dia}`;
-}
-
-function parseDataCadastro(v){
-  if(!v) return null;
-  v = String(v).trim();
-  if(!v || v === "0000-00-00") return null;
-  let m = v.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if(m) return new Date(Number(m[1]), Number(m[2])-1, Number(m[3]), 23, 59, 59);
-  m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
-  if(m) return new Date(Number(m[3]), Number(m[2])-1, Number(m[1]), 23, 59, 59);
-  const d = new Date(v);
-  return isNaN(d.getTime()) ? null : d;
-}
-
-function dataConfiancaValidaCadastro(v){
-  const d = parseDataCadastro(v);
-  if(!d) return false;
-  const hoje = new Date();
-  hoje.setHours(0,0,0,0);
-  return d >= hoje;
-}
-
-function determinarStatusCadastro(){
-  const cancelamento = valor("cadCancelamento");
-  const statusCob = String(valor("cadStatusCobranca") || "").toLowerCase();
-  const confianca = valor("cadLiberacaoConfianca");
-  const bloqueio = valor("cadBloqueio");
-
-  if(cancelamento) return "cancelado";
-  if(statusCob.includes("isento") || statusCob === "n") return "isento";
-  if(dataConfiancaValidaCadastro(confianca)) return "ativo";
-  if(bloqueio) return "bloqueado";
-  return "ativo";
-}
-
-function atualizarStatusCadastroCampos(status){
-  const s = String(status || "").toLowerCase();
-  const statusEl = document.getElementById("cadStatusCobranca");
-
-  if(s === "isento"){
-    if(statusEl) statusEl.value = "ISENTO";
-  }else if(s === "bloqueado"){
-    // mantém Status de Cobrança como estava, apenas marca bloqueio
-  }else if(s === "ativo"){
-    if(statusEl && String(statusEl.value || "").toLowerCase().includes("isento")){
-      statusEl.value = "ATIVADO";
-    }
-  }
-}
-
-function clienteDoCadastro(){
-  return {
-    loginPppoe:valor("cadLogin"), login:valor("cadLogin"), senhaPppoe:valor("cadSenha"), senha:valor("cadSenha"),
-    nome:valor("cadNome"), cpfCnpj:valor("cadCpf"), cpf:valor("cadCpf"), rgIe:valor("cadRg"),
-    dataNascimento:valor("cadNascimento"), email:valor("cadEmail"), telefone1:valor("cadTelefone1"), telefone2:valor("cadTelefone2"), telefone3:valor("cadTelefone3"),
-    endereco:valor("cadEndereco"), referencia:valor("cadReferencia"), bairro:valor("cadBairro"), cidade:valor("cadCidade"), uf:valor("cadUf"), cep:valor("cadCep"), complemento:valor("cadComplemento"), classe:valor("cadClasse"), setor:valor("cadSetor"), setorResponsavel:valor("cadSetorResponsavel"), setor:valor("cadSetor"),
-    diaVencimento:valor("cadVencimento"), vencimento:valor("cadVencimento"), plano:valor("cadPlano"), valorMensal:Number(valor("cadValor")||0), valor:Number(valor("cadValor")||0),
-    contaBancaria:valor("cadContaBancaria"), inicioCobranca:valor("cadInicioCobranca"), liberacaoConfianca:valor("cadLiberacaoConfianca"), bloqueio:valor("cadBloqueio"), cancelamento:valor("cadCancelamento"), statusCobranca:valor("cadStatusCobranca"), contrato:valor("cadContrato"), numeroContrato:valor("cadNumeroContrato"), situacao:valor("cadSituacao"), desconto:valor("cadDesconto"), baseReferencia:valor("cadBaseReferencia"), popServidor:valor("cadPop"), servidor:valor("cadPop"), servidorReceita:valor("cadServidorReceita"), sinal:valor("cadSinal"), conexao:valor("cadConexao"), ipTipo:valor("cadIpTipo"), portaAcesso:valor("cadPortaAcesso"), dhcp:document.getElementById("cadDhcp")?.checked||false, naoAmarrarMac:document.getElementById("cadNaoAmarrarMac")?.checked||false,
-    interface:valor("cadInterface"), elementoRede:valor("cadElementoRede"), ip:valor("cadIp"), profile:valor("cadProfile"), mac:valor("cadMac"), macOnu:valor("cadMacOnu"), serialOnu:valor("cadSerialOnu"),
-    cfop:valor("cadCfop"), observacao:valor("cadObservacao"), observacaoAdmin:valor("cadObsAdmin"), status:determinarStatusCadastro(), origem:"Cadastro manual", atualizadoEm:new Date().toISOString()
-  };
-}
-function chaveCliente(c){return String(c.loginPppoe||c.cpfCnpj||c.email||c.telefone1||c.nome||"").toLowerCase().replace(/\s+/g,"");}
-function salvarCadastroCliente(enviarServidor){
-  let c = clienteDoCadastro();
-  if(typeof fibraNormalizarStatusClienteCadastro === "function"){
-    c = fibraNormalizarStatusClienteCadastro(c);
-  }
-
-  if(!c.loginPppoe && !c.nome){
-    alert("Informe pelo menos Login ou Nome.");
-    return;
-  }
-
-  let clientes = [];
-  try{ clientes = JSON.parse(localStorage.getItem("clientes") || "[]"); }catch(e){ clientes = []; }
-  if(!Array.isArray(clientes)) clientes = [];
-
-  let k = chaveCliente(c);
-  let idx = clientes.findIndex(x => chaveCliente(x) === k);
-
-  if(idx >= 0){
-    clientes[idx] = {...clientes[idx], ...c, atualizadoEm:new Date().toISOString()};
-  }else{
-    clientes.push(c);
-  }
-
-  localStorage.setItem("clientes", JSON.stringify(clientes));
-
-  if(enviarServidor){
-    alert("Cliente salvo no Fibra+ Hub + Servidor.");
-  }else{
-    alert("Cliente salvo no Fibra+ Hub.");
-  }
-
-  location.href = "clientes.html";
-}
-
-function encontrarIndiceClienteCadastro(){
-  const atual = clienteDoCadastro();
-  const kAtual = chaveCliente(atual);
-
-  let clientes = [];
-  try{ clientes = JSON.parse(localStorage.getItem("clientes") || "[]"); }catch(e){ clientes = []; }
-  if(!Array.isArray(clientes)) clientes = [];
-
-  let idx = -1;
-
-  if(kAtual){
-    idx = clientes.findIndex(c => chaveCliente(c) === kAtual);
-  }
-
-  if(idx < 0){
-    try{
-      const possiveis = ["clienteSelecionadoCompleto","clienteCadastroSelecionado","clienteEditar"];
-      for(const chave of possiveis){
-        const raw = localStorage.getItem(chave);
-        if(!raw) continue;
-        const c = JSON.parse(raw);
-        const k = chaveCliente(c);
-        if(k){
-          idx = clientes.findIndex(x => chaveCliente(x) === k);
-          if(idx >= 0) break;
-        }
-      }
-    }catch(e){}
-  }
-
-  return {clientes, idx, atual};
-}
-
-function salvarStatusClienteAtual(status, extra){
-  let dados = encontrarIndiceClienteCadastro();
-  let clientes = dados.clientes;
-  let idx = dados.idx;
-  let atual = dados.atual;
-
-  if(!atual.loginPppoe && !atual.nome){
-    alert("Selecione ou informe um cliente antes.");
-    return false;
-  }
-
-  const novo = {...(idx >= 0 ? clientes[idx] : {}), ...atual, ...(extra || {}), status:status, atualizadoEm:new Date().toISOString()};
-
-  if(typeof fibraNormalizarStatusClienteCadastro === "function"){
-    fibraNormalizarStatusClienteCadastro(novo);
-  }
-
-  if(idx >= 0){
-    clientes[idx] = novo;
-  }else{
-    clientes.push(novo);
-  }
-
-  localStorage.setItem("clientes", JSON.stringify(clientes));
-  try{ localStorage.setItem("clienteSelecionadoCompleto", JSON.stringify(novo)); }catch(e){}
-  return true;
-}
-
-function bloquearClienteCadastro(){
-  const hoje = dataHojeISO();
-  const elBloqueio = document.getElementById("cadBloqueio");
-  const elConf = document.getElementById("cadLiberacaoConfianca");
-
-  if(elBloqueio && !elBloqueio.value) elBloqueio.value = hoje;
-  if(elConf) elConf.value = "";
-
-  atualizarStatusCadastroCampos("bloqueado");
-
-  if(salvarStatusClienteAtual("bloqueado", {
-    bloqueio: elBloqueio ? elBloqueio.value : hoje,
-    cli_bloqueado: elBloqueio ? elBloqueio.value : hoje,
-    liberacaoConfianca: "",
-    cli_liberado: ""
-  })){
-    alert("Cliente marcado como bloqueado.");
-    atualizarResumoCadastro();
-  }
-}
-
-function liberarClienteCadastro(){
-  const elBloqueio = document.getElementById("cadBloqueio");
-  const elConf = document.getElementById("cadLiberacaoConfianca");
-  const elCancel = document.getElementById("cadCancelamento");
-
-  if(elBloqueio) elBloqueio.value = "";
-  if(elConf) elConf.value = "";
-  if(elCancel) elCancel.value = "";
-
-  atualizarStatusCadastroCampos("ativo");
-
-  if(salvarStatusClienteAtual("ativo", {
-    bloqueio: "",
-    cli_bloqueado: "",
-    liberacaoConfianca: "",
-    cli_liberado: "",
-    cancelamento: "",
-    cli_dtcancelamento: ""
-  })){
-    alert("Cliente liberado e marcado como ativo.");
-    atualizarResumoCadastro();
-  }
-}
-
-function liberarClienteConfianca(){
-  const elConf = document.getElementById("cadLiberacaoConfianca");
-  const elBloqueio = document.getElementById("cadBloqueio");
-
-  let data = elConf ? elConf.value : "";
-  if(!data){
-    data = prompt("Liberar em confiança até qual data? Use o formato AAAA-MM-DD:", dataHojeISO());
-    if(!data) return;
-    if(elConf) elConf.value = data;
-  }
-
-  if(!dataConfiancaValidaCadastro(data)){
-    alert("Informe uma data de confiança igual ou maior que hoje.");
-    return;
-  }
-
-  // Mantém a data de bloqueio, se existir. A confiança apenas suspende temporariamente o bloqueio.
-  if(!elBloqueio || !elBloqueio.value){
-    if(elBloqueio) elBloqueio.value = dataHojeISO();
-  }
-
-  atualizarStatusCadastroCampos("ativo");
-
-  if(salvarStatusClienteAtual("ativo", {
-    liberacaoConfianca: data,
-    cli_liberado: data,
-    bloqueio: elBloqueio ? elBloqueio.value : dataHojeISO(),
-    cli_bloqueado: elBloqueio ? elBloqueio.value : dataHojeISO()
-  })){
-    alert("Cliente liberado em confiança até " + data + ".");
-    atualizarResumoCadastro();
-  }
-}
-
-function excluirClienteCadastro(){
-  const dados = encontrarIndiceClienteCadastro();
-  let clientes = dados.clientes;
-  let idx = dados.idx;
-  const atual = dados.atual;
-
-  if(idx < 0){
-    alert("Cliente não encontrado na base local para excluir.");
-    return;
-  }
-
-  const nome = clientes[idx].nome || atual.nome || clientes[idx].loginPppoe || atual.loginPppoe || "este cliente";
-
-  if(!confirm("Tem certeza que deseja excluir " + nome + "? Esta ação não pode ser desfeita.")){
-    return;
-  }
-
-  clientes.splice(idx, 1);
-  localStorage.setItem("clientes", JSON.stringify(clientes));
-
-  [
-    "clienteSelecionadoCompleto",
-    "clienteCadastroSelecionado",
-    "clienteEditar",
-    "clienteOnlineSelecionado",
-    "clienteSelecionado",
-    "clienteAtual",
-    "fibraClienteAtual"
-  ].forEach(k => {
-    try{ localStorage.removeItem(k); }catch(e){}
-    try{ sessionStorage.removeItem(k); }catch(e){}
-  });
-
-  alert("Cliente excluído com sucesso.");
-  location.href = "clientes.html";
-}
-
-function limparCadastroCliente(){document.querySelectorAll("input, textarea").forEach(i=>{if(i.id!=="cadCidade"&&i.id!=="cadUf")i.value=""});atualizarResumoCadastro();}
-function buscarClienteCadastro(){}
-function carregarCadastroClienteHub(){atualizarResumoCadastro();}
-document.addEventListener("input",atualizarResumoCadastro);
-
-
-/* ===== Consulta automática de CEP ViaCEP ===== */
-function somenteNumerosCep(v){
-  return String(v || "").replace(/\D/g, "");
-}
-
-function mascaraCepAutomatico(){
-  const input = document.getElementById("cadCep");
-  if(!input) return;
-
-  let v = somenteNumerosCep(input.value).slice(0, 8);
-
-  if(v.length > 5){
-    v = v.slice(0,5) + "-" + v.slice(5);
-  }
-
-  input.value = v;
-
-  if(somenteNumerosCep(v).length === 8){
-    clearTimeout(window.__cepTimer);
-    window.__cepTimer = setTimeout(buscarCepAutomatico, 600);
-  }
-}
-
-async function buscarCepAutomatico(){
-  const cepInput = document.getElementById("cadCep");
-  if(!cepInput) return;
-
-  const cep = somenteNumerosCep(cepInput.value);
-
-  if(cep.length !== 8){
-    return;
-  }
-
-  const resultado = document.getElementById("resultadoCepAutomatico");
-  if(resultado){
-    resultado.textContent = "Consultando CEP...";
-    resultado.className = "cep-status buscando";
-  }
-
-  try{
-    const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
-    const data = await response.json();
-
-    if(data.erro){
-      if(resultado){
-        resultado.textContent = "CEP não encontrado.";
-        resultado.className = "cep-status erro";
-      }else{
-        alert("CEP não encontrado.");
-      }
-      return;
-    }
-
-    const set = (id, valor) => {
-      const el = document.getElementById(id);
-      if(el && valor !== undefined && valor !== null){
-        el.value = valor || "";
-        el.dispatchEvent(new Event("input", {bubbles:true}));
-      }
-    };
-
-    set("cadEndereco", data.logradouro || "");
-    set("cadBairro", data.bairro || "");
-    set("cadCidade", data.localidade || "");
-    set("cadUf", data.uf || "");
-    set("cadComplemento", data.complemento || "");
-
-    if(resultado){
-      resultado.textContent = "Endereço preenchido automaticamente.";
-      resultado.className = "cep-status ok";
-    }
-
-    if(typeof atualizarResumoCadastro === "function"){
-      atualizarResumoCadastro();
-    }
-
-  }catch(e){
-    console.error("Erro ao consultar CEP:", e);
-    if(resultado){
-      resultado.textContent = "Erro ao consultar CEP. Verifique a internet.";
-      resultado.className = "cep-status erro";
-    }else{
-      alert("Erro ao consultar CEP. Verifique a internet.");
-    }
-  }
-}
-
-function consultarCepContato(){
-  buscarCepAutomatico();
-}
-
-
-
-document.addEventListener("DOMContentLoaded", function(){
-  const ativa = document.querySelector(".cadastro-tabs .tab.active");
-  const tabAtiva = document.querySelector(".tab-content.active");
-  if(ativa){
-    ativa.classList.add("tab-active");
-  }
-  if(!tabAtiva){
-    abrirTabCadastro("dados");
-  }else{
-    tabAtiva.style.display = "block";
-  }
-});
-
-
-
-/* ===== Servidor: Interface somente PPPOE ===== */
-function atualizarInterfaceServidor(){
-  const servidor = document.getElementById("cadPop");
-  const iface = document.getElementById("cadInterface");
-  if(!servidor || !iface) return;
-
-  if(!servidor.value){
-    iface.innerHTML = '<option value=""></option>';
-    iface.value = "";
-    iface.disabled = true;
-  }else{
-    iface.disabled = false;
-    iface.innerHTML = '<option value="PPPOE">PPPOE</option>';
-    iface.value = "PPPOE";
-  }
-
-  if(typeof atualizarResumoCadastro === "function"){
-    atualizarResumoCadastro();
-  }
-}
-
-document.addEventListener("DOMContentLoaded", function(){
-  atualizarInterfaceServidor();
-});
-
-
-
-/* ===== Servidor/Conexão somente PPPOE ===== */
-function atualizarConexaoServidor(){
-  const servidor = document.getElementById("cadPop");
-  const conexao = document.getElementById("cadConexao");
-  if(!servidor || !conexao) return;
-
-  if(!servidor.value){
-    conexao.innerHTML = '<option value=""></option>';
-    conexao.value = "";
-    conexao.disabled = true;
-  }else{
-    conexao.disabled = false;
-    conexao.innerHTML = '<option value="PPPOE">PPPOE</option>';
-    conexao.value = "PPPOE";
-  }
-
-  if(typeof atualizarResumoCadastro === "function"){
-    atualizarResumoCadastro();
-  }
-}
-
-document.addEventListener("DOMContentLoaded", function(){
-  if(typeof atualizarConexaoServidor === "function") atualizarConexaoServidor();
-});
-
-</script>
 
 <script>
 document.addEventListener("DOMContentLoaded", function(){
@@ -2738,13 +2226,19 @@ document.addEventListener("fibra:supabase-sync", carregarContasEfiNoCadastro);
 
 
 
+
+
+
+
 <script>
 /* ============================================================
-   STATUS REAL DO CLIENTE - PPPoE / MikroTik
-   Online só fica verde com sessão PPPoE válida:
-   login + IP + MAC + uptime.
+   STATUS PPPoE DEFINITIVO
+   Online só se a sessão do login atual tiver IP + MAC + uptime.
+   Qualquer resultado incompleto fica Offline.
 ============================================================ */
 (function(){
+  let ultimoStatusAplicado = "offline";
+
   function norm(v){
     return String(v || "")
       .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
@@ -2771,28 +2265,26 @@ document.addEventListener("fibra:supabase-sync", carregarContasEfiNoCadastro);
     return el ? String(el.value || "").trim() : "";
   }
 
-  function clienteAtualCadastro(){
+  function clienteAtual(){
     let c = {};
     try{ c = JSON.parse(localStorage.getItem("clienteSelecionadoCompleto") || "{}"); }catch(e){}
+    try{ c = {...c, ...JSON.parse(localStorage.getItem("clienteCadastroSelecionado") || "{}")}; }catch(e){}
 
     return {
       ...c,
-      login: valorInput("cadLogin") || c.login || c.loginPppoe || c.usuario || c.name || "",
+      login: valorInput("cadLogin") || c.loginPppoe || c.login || c.usuario || c.name || "",
       mac: valorInput("cadMac") || valorInput("cadMacOnu") || c.mac || c.macOnu || c.mac_onu || c.callerId || c.caller_id || "",
       profile: valorInput("cadProfile") || c.profile || c.plano || "",
-      interface: valorInput("cadInterface") || c.interface || c.service || "",
-      ip: valorInput("cadIp") || c.ip || c.address || ""
+      interface: valorInput("cadInterface") || c.interface || c.service || ""
     };
   }
 
-  function extrairListaOnline(resp){
+  function listaOnline(resp){
     if(!resp) return [];
     if(Array.isArray(resp)) return resp;
-    if(Array.isArray(resp.clientes)) return resp.clientes;
-    if(Array.isArray(resp.online)) return resp.online;
-    if(Array.isArray(resp.pppoe)) return resp.pppoe;
-    if(Array.isArray(resp.active)) return resp.active;
-    if(Array.isArray(resp.data)) return resp.data;
+    for(const k of ["clientes","online","pppoe","active","data","rows","sessions"]){
+      if(Array.isArray(resp[k])) return resp[k];
+    }
     return [];
   }
 
@@ -2821,7 +2313,6 @@ document.addEventListener("fibra:supabase-sync", carregarContasEfiNoCadastro);
     if(!raw) return "-";
 
     let semanas = 0, dias = 0, horas = 0, minutos = 0;
-
     const w = raw.match(/(\d+)w/);
     const d = raw.match(/(\d+)d/);
     if(w) semanas = Number(w[1]) || 0;
@@ -2834,19 +2325,17 @@ document.addEventListener("fibra:supabase-sync", carregarContasEfiNoCadastro);
     }
 
     const totalDias = semanas * 7 + dias;
-
     if(totalDias > 0) return `${totalDias} dia${totalDias > 1 ? "s" : ""} ${String(horas).padStart(2,"0")}h${String(minutos).padStart(2,"0")}min`;
     if(horas > 0) return `${horas}h${String(minutos).padStart(2,"0")}min`;
-
     return raw;
   }
 
-  function statusEl(){
+  function statusElement(){
     return document.querySelector(".offline-dot");
   }
 
-  function setStatus(tipo){
-    const el = statusEl();
+  function aplicarStatus(tipo){
+    const el = statusElement();
     if(!el) return;
 
     el.classList.remove("status-online-real","status-offline-real","status-verificando-real");
@@ -2854,75 +2343,94 @@ document.addEventListener("fibra:supabase-sync", carregarContasEfiNoCadastro);
     if(tipo === "online"){
       el.textContent = "● Online";
       el.classList.add("status-online-real");
+      ultimoStatusAplicado = "online";
     }else if(tipo === "verificando"){
       el.textContent = "● Verificando";
       el.classList.add("status-verificando-real");
+      ultimoStatusAplicado = "verificando";
     }else{
       el.textContent = "● Offline";
       el.classList.add("status-offline-real");
+      ultimoStatusAplicado = "offline";
     }
   }
 
-  function aplicarOffline(cliente){
-    setStatus("offline");
+  function aplicarOffline(c){
+    aplicarStatus("offline");
     setTxt("resIp", "-");
     setTxt("resTempo", "-");
-    setTxt("resMac", cliente.mac || "Não informado");
-    setTxt("resInterface", cliente.interface || "-");
-    setTxt("resProfile", cliente.profile || "-");
+    setTxt("resMac", c.mac || "Não informado");
+    setTxt("resInterface", c.interface || "-");
+    setTxt("resProfile", c.profile || "-");
+    setTxt("resConexao", "Offline");
   }
 
-  function aplicarOnline(sessao){
-    setStatus("online");
-    setTxt("resIp", getIp(sessao));
-    setTxt("resTempo", formatarUptime(getUptime(sessao)));
-    setTxt("resMac", getMac(sessao));
-    setTxt("resInterface", getInterface(sessao) || "PPPOE");
-    setTxt("resProfile", getProfile(sessao));
+  function aplicarOnline(s){
+    aplicarStatus("online");
+    setTxt("resIp", getIp(s));
+    setTxt("resTempo", formatarUptime(getUptime(s)));
+    setTxt("resMac", getMac(s));
+    setTxt("resInterface", getInterface(s) || "PPPOE");
+    setTxt("resProfile", getProfile(s));
+    setTxt("resConexao", "Online");
   }
 
-  async function atualizarStatusRealCliente(){
-    const cliente = clienteAtualCadastro();
-    const login = cliente.login || "";
+  async function consultarStatusPPPoE(){
+    const c = clienteAtual();
+    const login = c.login;
 
     setTxt("resLogin2", login || "-");
 
     if(!login){
-      aplicarOffline(cliente);
+      aplicarOffline(c);
       return;
     }
 
-    setStatus("verificando");
+    aplicarStatus("verificando");
 
     try{
       const resp = await fetch("/api/online", {cache:"no-store"});
       const json = await resp.json();
-      const lista = extrairListaOnline(json);
+      const lista = listaOnline(json);
 
       const sessao = lista.find(s => norm(getLogin(s)) === norm(login));
 
       if(sessaoValida(sessao, login)){
         aplicarOnline(sessao);
       }else{
-        aplicarOffline(cliente);
+        aplicarOffline(c);
       }
     }catch(e){
-      console.warn("Erro ao consultar PPPoE online:", e);
-      aplicarOffline(cliente);
+      console.warn("Erro ao consultar /api/online:", e);
+      aplicarOffline(c);
     }
   }
 
-  window.atualizarStatusRealCliente = atualizarStatusRealCliente;
+  // Trava: se algum script antigo tentar colocar Online sem dados válidos, a próxima checagem corrige.
+  function watchdog(){
+    const el = statusElement();
+    const c = clienteAtual();
+
+    if(!el) return;
+
+    if(el.textContent && el.textContent.toLowerCase().includes("online") && ultimoStatusAplicado !== "online"){
+      aplicarOffline(c);
+    }
+  }
+
+  window.atualizarStatusRealCliente = consultarStatusPPPoE;
 
   document.addEventListener("DOMContentLoaded", function(){
-    setTimeout(atualizarStatusRealCliente, 800);
-    setTimeout(atualizarStatusRealCliente, 2500);
-    setTimeout(atualizarStatusRealCliente, 5000);
+    aplicarOffline(clienteAtual());
+    setTimeout(consultarStatusPPPoE, 600);
+    setTimeout(consultarStatusPPPoE, 2000);
+    setTimeout(consultarStatusPPPoE, 5000);
+    setInterval(watchdog, 1000);
   });
 
   document.addEventListener("input", function(e){
     if(e.target && e.target.id === "cadLogin"){
-      setTimeout(atualizarStatusRealCliente, 500);
+      setTimeout(consultarStatusPPPoE, 500);
     }
   });
 })();
