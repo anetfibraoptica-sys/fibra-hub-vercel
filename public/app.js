@@ -846,7 +846,7 @@ document.addEventListener("DOMContentLoaded", function(){
     var servidor = val(["#cadServidorReceita option:checked","#cadPop option:checked","#cadServidor option:checked","select[name='servidor'] option:checked","select[name='ip_mk'] option:checked"], pick(c,["servidor","server","popServidor"], "-"));
     var interfaceV = pick(c,["interface","interfaceAtual"], val(["select[name='interface'] option:checked","select[name='interface_id'] option:checked"], "PPPOE"));
     var ip = pick(c,["ip","ipAtual","address"], "100.127.7.218");
-    var profile = pick(c,["profile","planoServidor","perfil"], "600-MEGA");
+    var profile = val(["#cadProfile option:checked","#cadProfile"], pick(c,["profile","planoServidor","perfil"], "--"));
     var servico = pick(c,["servico","service"], "PPP2");
     var tempo = pick(c,["tempo","uptime"], "-");
     var mac = pick(c,["mac","macAddress"], "FC:40:09:D2:B2:1B");

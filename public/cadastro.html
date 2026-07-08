@@ -2767,4 +2767,68 @@ document.addEventListener("DOMContentLoaded", function(){
 })();
 </script>
 
+
+<script>
+/* ============================================================
+   PROFILE DO RESUMO SINCRONIZADO
+   O campo "Profile Servidor" no Resumo segue exatamente
+   o PROFILE selecionado na aba Servidor.
+============================================================ */
+(function(){
+  function el(id){ return document.getElementById(id); }
+
+  function valorProfileSelecionado(){
+    const campo = el("cadProfile");
+    if(!campo) return "";
+
+    if(campo.tagName && campo.tagName.toLowerCase() === "select"){
+      const opt = campo.options[campo.selectedIndex];
+      return String((opt && (opt.value || opt.textContent)) || campo.value || "").trim();
+    }
+
+    return String(campo.value || "").trim();
+  }
+
+  function sincronizarProfileResumo(){
+    const profile = valorProfileSelecionado();
+    const destino = el("resProfile");
+
+    if(destino){
+      destino.textContent = profile || "--";
+    }
+  }
+
+  window.sincronizarProfileResumo = sincronizarProfileResumo;
+
+  document.addEventListener("DOMContentLoaded", function(){
+    setTimeout(sincronizarProfileResumo, 500);
+    setTimeout(sincronizarProfileResumo, 1500);
+    setTimeout(sincronizarProfileResumo, 3000);
+  });
+
+  document.addEventListener("change", function(e){
+    if(e.target && e.target.id === "cadProfile"){
+      setTimeout(sincronizarProfileResumo, 50);
+      setTimeout(sincronizarProfileResumo, 300);
+    }
+  });
+
+  document.addEventListener("input", function(e){
+    if(e.target && e.target.id === "cadProfile"){
+      setTimeout(sincronizarProfileResumo, 50);
+    }
+  });
+
+  // Como o app.js recria o Resumo, garante a sincronização depois.
+  const originalMontar = window.montarResumoReceitaNet;
+  if(typeof originalMontar === "function"){
+    window.montarResumoReceitaNet = function(){
+      const r = originalMontar.apply(this, arguments);
+      setTimeout(sincronizarProfileResumo, 50);
+      return r;
+    };
+  }
+})();
+</script>
+
 </body></html>
