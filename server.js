@@ -2753,51 +2753,70 @@ function efiBuildBilletPayload(body) {
   };
 }
 
+
 async function efiCriarBoletoOneStep(body, conta = 1) {
   const cfg = await efiCarregarConfig(conta);
-  if (!cfg || !cfg.ClientId || !cfg.ClientSecret) throw new Error("Conta Efí não configurada.");
+  if (!cfg || !cfg.ClientId || !cfg.ClientSecret) {
+    throw new Error("Conta Efí não configurada.");
+  }
 
   const payload = efiBuildBilletPayload(body);
   if (!payload.metadata.notification_url) delete payload.metadata.notification_url;
 
-  const tentativas = [
-    { path: "/v1/charge/one-step", body: payload },
-    { path: "/v1/charge", body: { items: payload.items, metadata: payload.metadata } }
-  ];
-
-  let ultimo = null;
-
-  for (const t of tentativas) {
-    const r = await efiRequest(t.path, cfg, { method: "POST", body: t.body });
-    if (r.ok) {
-      let detalhes = efiExtractChargeDetails(r.json);
-      const id = detalhes.charge_id || efiGet(r.json, ["data.charge_id", "charge_id", "data.id", "id"]);
-      detalhes.charge_id = String(id || detalhes.charge_id || "");
-
-      // Se criou via /v1/charge sem one-step, tenta definir boleto como pagamento.
-      if (t.path === "/v1/charge" && detalhes.charge_id) {
-        try {
-          const pay = await efiRequest("/v1/charge/" + encodeURIComponent(detalhes.charge_id) + "/pay", cfg, {
-            method: "POST",
-            body: { payment: payload.payment }
-          });
-          if (pay.ok) detalhes = { ...detalhes, ...efiExtractChargeDetails(pay.json), charge_id: detalhes.charge_id };
-        } catch(e) {}
-      }
-
-      // Busca detalhe para pegar linha digitável/link se não veio completo.
-      if (detalhes.charge_id) {
-        const det = await efiDetalharPorId(cfg, detalhes.charge_id);
-        if (det.ok) detalhes = { ...detalhes, ...det.detalhes, charge_id: detalhes.charge_id };
-      }
-
-      return { cfg, detalhes, raw: r.json };
+  // Fluxo correto da API Cobranças:
+  // 1) cria a cobrança em /v1/charge
+  // 2) registra/paga como boleto em /v1/charge/:id/pay
+  // 3) consulta detalhes para buscar linha digitável, link e status
+  const criar = await efiRequest("/v1/charge", cfg, {
+    method: "POST",
+    body: {
+      items: payload.items,
+      metadata: payload.metadata
     }
-    ultimo = r.json || r.raw;
+  });
+
+  if (!criar.ok) {
+    throw new Error("Efí não criou a cobrança: " + JSON.stringify(criar.json || criar.raw).slice(0, 700));
   }
 
-  throw new Error("Efí não criou o boleto: " + JSON.stringify(ultimo).slice(0, 500));
+  const chargeId = String(efiGet(criar.json, ["data.charge_id", "charge_id", "data.id", "id"]) || "");
+  if (!chargeId) {
+    throw new Error("Efí criou a cobrança, mas não retornou charge_id: " + JSON.stringify(criar.json).slice(0, 700));
+  }
+
+  const pagar = await efiRequest("/v1/charge/" + encodeURIComponent(chargeId) + "/pay", cfg, {
+    method: "POST",
+    body: {
+      payment: payload.payment
+    }
+  });
+
+  if (!pagar.ok) {
+    throw new Error("Efí não registrou o boleto: " + JSON.stringify(pagar.json || pagar.raw).slice(0, 700));
+  }
+
+  let detalhes = efiExtractChargeDetails(pagar.json);
+  detalhes.charge_id = detalhes.charge_id || chargeId;
+
+  const det = await efiDetalharPorId(cfg, chargeId);
+  if (det.ok) {
+    detalhes = {
+      ...detalhes,
+      ...det.detalhes,
+      charge_id: chargeId
+    };
+  }
+
+  return {
+    cfg,
+    detalhes,
+    raw: {
+      criar: criar.json,
+      pagar: pagar.json
+    }
+  };
 }
+
 
 async function salvarBoletoGeradoSupabase(body, detalhes, conta, nomeConta) {
   await efiGarantirTabela();
@@ -2887,7 +2906,7 @@ app.post("/api/efi/boleto/criar", async (req, res) => {
 
     return res.json({
       ok: true,
-      mensagem: "Boleto criado na Efí.",
+      mensagem: "Boleto criado e registrado na Efí.",
       boleto: row,
       efi: criado.detalhes
     });

@@ -1,6 +1,7 @@
 # Fibra+ Hub
 
 ## Correção atual
-- Corrigida a coleta do CPF/CNPJ ao gerar boleto Efí.
-- Agora aceita vários nomes de campo do cadastro e também lê direto dos inputs do formulário.
-- Layout não foi alterado.
+- Corrigido o fluxo de criação de boleto Efí.
+- O sistema agora cria a cobrança em `/v1/charge` e depois registra o boleto em `/v1/charge/:id/pay`.
+- Removida a tentativa principal via `one-step`, que estava retornando `Unauthorized`.
+- Layout, menu, clientes, servidores e MikroTik não foram alterados.
