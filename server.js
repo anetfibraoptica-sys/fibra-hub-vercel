@@ -3064,6 +3064,191 @@ app.get("/api/efi/debug-criar-boleto", async (req, res) => {
   }
 });
 
+
+
+/* SUPABASE CLIENTES E BOLETOS SEM LOCALSTORAGE */
+function fibraDocOnly(v) {
+  return String(v || "").replace(/\D/g, "");
+}
+function fibraClienteKeyFromBody(body) {
+  return {
+    login: String(body.loginPppoe || body.login_pppoe || body.login || body.usuario || body.pppoe || "").trim(),
+    nome: String(body.nome || body.cliente || body.nomeCliente || body.razaoSocial || "").trim(),
+    cpf: fibraDocOnly(body.cpfCnpj || body.cpf_cnpj || body.cpf || body.cnpj || body.documento || "")
+  };
+}
+
+app.post("/api/clientes/salvar", async (req, res) => {
+  try {
+    if (!process.env.DATABASE_URL) return res.status(500).json({ ok:false, erro:"DATABASE_URL não configurada." });
+
+    const body = req.body || {};
+    const key = fibraClienteKeyFromBody(body);
+    if (!key.login && !key.cpf && !key.nome) return res.status(400).json({ ok:false, erro:"Cliente sem login, CPF/CNPJ ou nome." });
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS clientes (
+        id SERIAL PRIMARY KEY,
+        login_pppoe TEXT,
+        nome TEXT,
+        cpf_cnpj TEXT,
+        telefone TEXT,
+        plano TEXT,
+        servidor TEXT,
+        profile TEXT,
+        dados JSONB,
+        atualizado_em TIMESTAMP DEFAULT NOW(),
+        criado_em TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
+    const row = {
+      login_pppoe: key.login,
+      nome: key.nome,
+      cpf_cnpj: key.cpf,
+      telefone: body.telefone1 || body.telefone2 || body.telefone || body.celular || "",
+      plano: body.plano || body.valorPlano || body.planoNome || "",
+      servidor: body.servidor || body.popServidor || body.pop || "",
+      profile: body.profile || body.perfil || body.planoVelocidade || body.velocidade || body.plano || "",
+      dados: body
+    };
+
+    const existente = await pool.query(`
+      SELECT id FROM clientes
+      WHERE ($1 <> '' AND login_pppoe = $1)
+         OR ($2 <> '' AND regexp_replace(COALESCE(cpf_cnpj,''), '\\D', '', 'g') = $2)
+      ORDER BY id DESC
+      LIMIT 1
+    `, [row.login_pppoe, row.cpf_cnpj]);
+
+    let salvo;
+    if (existente.rows[0]) {
+      const r = await pool.query(`
+        UPDATE clientes SET
+          login_pppoe=$1,nome=$2,cpf_cnpj=$3,telefone=$4,plano=$5,servidor=$6,profile=$7,
+          dados=COALESCE(dados, '{}'::jsonb) || $8::jsonb, atualizado_em=NOW()
+        WHERE id=$9 RETURNING *
+      `, [row.login_pppoe,row.nome,row.cpf_cnpj,row.telefone,row.plano,row.servidor,row.profile,JSON.stringify(row.dados),existente.rows[0].id]);
+      salvo = r.rows[0];
+    } else {
+      const r = await pool.query(`
+        INSERT INTO clientes (login_pppoe,nome,cpf_cnpj,telefone,plano,servidor,profile,dados,atualizado_em)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW()) RETURNING *
+      `, [row.login_pppoe,row.nome,row.cpf_cnpj,row.telefone,row.plano,row.servidor,row.profile,JSON.stringify(row.dados)]);
+      salvo = r.rows[0];
+    }
+
+    return res.json({ ok:true, mensagem:"Cliente salvo no Supabase.", cliente:salvo });
+  } catch (err) {
+    console.error("Erro /api/clientes/salvar:", err);
+    return res.status(500).json({ ok:false, erro:err.message });
+  }
+});
+
+app.get("/api/boletos/cliente", async (req, res) => {
+  try {
+    if (!process.env.DATABASE_URL) return res.status(500).json({ ok:false, erro:"DATABASE_URL não configurada." });
+
+    const login = String(req.query.login || req.query.loginPppoe || "").trim();
+    const cpf = fibraDocOnly(req.query.cpf || req.query.cpfCnpj || req.query.documento || "");
+    const nome = String(req.query.nome || "").trim().toLowerCase();
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS boletos (
+        id SERIAL PRIMARY KEY,
+        numero TEXT UNIQUE,
+        cliente_login TEXT,
+        cliente_nome TEXT,
+        cpf_cnpj TEXT,
+        categoria TEXT,
+        descricao TEXT,
+        emissao DATE,
+        vencimento DATE,
+        pagamento DATE,
+        desconto NUMERIC DEFAULT 0,
+        valor NUMERIC DEFAULT 0,
+        total NUMERIC DEFAULT 0,
+        valor_pago NUMERIC DEFAULT 0,
+        status TEXT DEFAULT 'pendente',
+        linha_digitavel TEXT,
+        pix TEXT,
+        link_pdf TEXT,
+        efi_charge_id TEXT,
+        efi_status TEXT,
+        efi_conta_nome TEXT,
+        observacao TEXT,
+        dados JSONB,
+        origem TEXT,
+        atualizado_em TIMESTAMP DEFAULT NOW(),
+        criado_em TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
+    await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS linha_digitavel TEXT;");
+    await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS pix TEXT;");
+    await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS link_pdf TEXT;");
+    await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS efi_charge_id TEXT;");
+    await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS efi_status TEXT;");
+    await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS efi_conta_nome TEXT;");
+
+    const r = await pool.query(`
+      SELECT * FROM boletos
+      WHERE
+        ($1 <> '' AND cliente_login = $1)
+        OR ($2 <> '' AND regexp_replace(COALESCE(cpf_cnpj,''), '\\D', '', 'g') = $2)
+        OR ($3 <> '' AND lower(COALESCE(cliente_nome,'')) = $3)
+        OR (
+          dados IS NOT NULL AND (
+            ($1 <> '' AND (dados->>'login' = $1 OR dados->>'loginPppoe' = $1 OR dados->>'clienteLogin' = $1))
+            OR ($2 <> '' AND regexp_replace(COALESCE(dados->>'cpfCnpj', dados->>'cpf', dados->>'documento', ''), '\\D', '', 'g') = $2)
+          )
+        )
+      ORDER BY vencimento ASC NULLS LAST, id DESC
+    `, [login, cpf, nome]);
+
+    const boletos = (r.rows || []).map(row => {
+      const d = row.dados || {};
+      return {
+        ...d,
+        id: row.id,
+        numero: row.numero,
+        login: row.cliente_login || d.login || d.loginPppoe || d.clienteLogin || "",
+        loginPppoe: row.cliente_login || d.loginPppoe || d.login || "",
+        clienteLogin: row.cliente_login || d.clienteLogin || d.login || "",
+        nome: row.cliente_nome || d.nome || d.cliente || "",
+        cliente: row.cliente_nome || d.cliente || d.nome || "",
+        cpfCnpj: row.cpf_cnpj || d.cpfCnpj || d.cpf || "",
+        cpf: row.cpf_cnpj || d.cpf || d.cpfCnpj || "",
+        categoria: row.categoria || d.categoria || "",
+        descricao: row.descricao || d.descricao || "",
+        emissao: row.emissao || d.emissao || "",
+        vencimento: row.vencimento || d.vencimento || "",
+        pagamento: row.pagamento || d.pagamento || d.dataPagamento || "",
+        valor: Number(row.valor || d.valor || 0),
+        total: Number(row.total || d.total || row.valor || 0),
+        valorPago: Number(row.valor_pago || d.valorPago || 0),
+        status: row.status || d.status || "pendente",
+        linhaDigitavel: row.linha_digitavel || d.linhaDigitavel || "",
+        pix: row.pix || d.pix || d.codigoPix || "",
+        codigoPix: row.pix || d.codigoPix || d.pix || "",
+        linkPdf: row.link_pdf || d.linkPdf || d.pdf || "",
+        pdf: row.link_pdf || d.pdf || d.linkPdf || "",
+        segundaVia: row.link_pdf || d.segundaVia || d.linkPdf || "",
+        efiChargeId: row.efi_charge_id || d.efiChargeId || "",
+        efiStatus: row.efi_status || d.efiStatus || "",
+        efiContaNome: row.efi_conta_nome || d.efiContaNome || "",
+        observacao: row.observacao || d.observacao || "",
+        origem: row.origem || d.origem || ""
+      };
+    });
+
+    return res.json({ ok:true, total:boletos.length, boletos });
+  } catch (err) {
+    console.error("Erro /api/boletos/cliente:", err);
+    return res.status(500).json({ ok:false, erro:err.message });
+  }
+});
+
 io.on("connection",(socket)=>{
   socket.emit("hub-update", geral());
   socket.emit("mikrotik-update", geral());

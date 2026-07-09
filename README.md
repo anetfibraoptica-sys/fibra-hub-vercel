@@ -1,6 +1,7 @@
 # Fibra+ Hub
 
 ## Correção atual
-- Boleto criado na Efí agora fica vinculado ao cliente por login, loginPppoe, clienteLogin, CPF/CNPJ e nome.
-- A lista de boletos do cliente agora filtra usando múltiplos identificadores.
-- Corrige caso o boleto tenha sido criado, mas não apareça no modal do cliente.
+- Boletos do cliente carregam somente do Supabase.
+- localStorage não é mais fonte persistente dos boletos.
+- Ao gerar boleto Efí, a lista é recarregada direto do Supabase.
+- Cliente salvo no cadastro é enviado para `/api/clientes/salvar`.
