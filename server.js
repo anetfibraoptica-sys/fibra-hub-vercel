@@ -1742,27 +1742,6 @@ app.get("/api/efi/boletos/teste", async (req, res) => {
 });
 
 
-io.on("connection",(socket)=>{
-  socket.emit("hub-update", geral());
-  socket.emit("mikrotik-update", geral());
-});
-
-const PORT=process.env.PORT || 3000;
-
-// Na Vercel, o Express precisa ser exportado como função serverless.
-// Fora da Vercel, continua rodando normal com npm start.
-if (process.env.VERCEL) {
-  initDb().catch(err => console.error("Erro ao iniciar banco:", err.message));
-  module.exports = app;
-} else {
-  initDb().finally(() => server.listen(PORT, () => console.log("Fibra+ Hub 2 Servidores rodando na porta " + PORT)));
-}
-
-
-
-
-
-
 /* ============================================================
    STATUS DEDICADO DO CLIENTE - /ppp/active/print
    Online somente no servidor selecionado e com IP+MAC+UPTIME.
@@ -1850,5 +1829,18 @@ app.get("/api/cliente/status", async (req, res) => {
   }
 });
 
+io.on("connection",(socket)=>{
+  socket.emit("hub-update", geral());
+  socket.emit("mikrotik-update", geral());
+});
 
+const PORT=process.env.PORT || 3000;
 
+// Na Vercel, o Express precisa ser exportado como função serverless.
+// Fora da Vercel, continua rodando normal com npm start.
+if (process.env.VERCEL) {
+  initDb().catch(err => console.error("Erro ao iniciar banco:", err.message));
+  module.exports = app;
+} else {
+  initDb().finally(() => server.listen(PORT, () => console.log("Fibra+ Hub 2 Servidores rodando na porta " + PORT)));
+}
