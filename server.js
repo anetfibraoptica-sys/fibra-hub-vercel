@@ -265,7 +265,7 @@ async function initDb() {
   await pool.query("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS servidor TEXT;");
   await pool.query("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS acesso_remoto TEXT;");
   await pool.query("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS confianca_ate TEXT;");
-  console.log("PostgreSQL conectado.");
+console.log("PostgreSQL conectado.");
 }
 
 
@@ -1178,25 +1178,19 @@ app.get("/api/mikrotik/profiles", async (req, res) => {
 
 
 
+
 /* ============================================================
-   GRAVAR CLIENTE NO MIKROTIK COM PROFILE
-   Se PPP Secret existe: atualiza profile.
-   Se não existe: cria PPP Secret com login/senha/profile.
+   GRAVAR CLIENTE NO MIKROTIK - SINCRONIZAÇÃO COMPLETA
+   Se PPP Secret existe: atualiza login, senha, profile, service e comentário.
+   Se não existe: cria PPP Secret completo.
 ============================================================ */
 app.post("/api/mikrotik/cliente-profile", async (req, res) => {
-  const getCampo = (obj, nomes) => {
-    for (const n of nomes) {
-      if (obj && obj[n] !== undefined && obj[n] !== null && String(obj[n]).trim() !== "") {
-        return String(obj[n]).trim();
-      }
-    }
-    return "";
-  };
-
   try {
     const body = req.body || {};
+
     const servidor = String(body.servidor || "").trim();
     const login = String(body.login || "").trim();
+    const loginAnterior = String(body.loginAnterior || body.login_antigo || "").trim();
     const senha = String(body.senha || "").trim();
     const profile = String(body.profile || "").trim();
     const nome = String(body.nome || "").trim();
@@ -1236,37 +1230,58 @@ app.post("/api/mikrotik/cliente-profile", async (req, res) => {
       });
     }
 
-    // Procura o PPP Secret pelo login.
-    const secretResp = await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
-      "/ppp/secret/print",
-      "?name=" + login
-    ]], 15000);
+    async function buscarSecret(nomeLogin) {
+      if (!nomeLogin) return null;
 
-    const secrets = parseRouterosRows(secretResp);
-    const secret = secrets[0];
+      const resp = await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+        "/ppp/secret/print",
+        "?name=" + nomeLogin
+      ]], 15000);
 
-    const comentario = [
-      nome ? "CLIENTE: " + nome : "",
-      cpf ? "CPF/CNPJ: " + cpf : "",
-      telefone ? "TEL: " + telefone : "",
-      servidor ? "SERVIDOR: " + servidor : "",
-      "ATUALIZADO PELO FIBRA+ HUB"
-    ].filter(Boolean).join(" | ");
+      const rows = parseRouterosRows(resp);
+      return rows[0] || null;
+    }
+
+    // Para alteração de login:
+    // 1. procura primeiro pelo login antigo do cadastro;
+    // 2. se não achar, procura pelo login atual.
+    let secret = null;
+    let encontradoPor = "";
+
+    if (loginAnterior && loginAnterior !== login) {
+      secret = await buscarSecret(loginAnterior);
+      if (secret) encontradoPor = loginAnterior;
+    }
+
+    if (!secret) {
+      secret = await buscarSecret(login);
+      if (secret) encontradoPor = login;
+    }
+
+    // Comentário usado no PPP Secret e exibido no PPP Active.
+    // Deve conter somente o nome completo do cliente.
+    const comentario = nome || login;
 
     if (secret && secret[".id"]) {
-      await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+      const words = [
         "/ppp/secret/set",
         "=.id=" + secret[".id"],
+        "=name=" + login,
+        senha ? "=password=" + senha : "",
+        "=service=pppoe",
         "=profile=" + profile,
         comentario ? "=comment=" + comentario : ""
-      ].filter(Boolean)], 15000);
+      ].filter(Boolean);
+
+      await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [words], 15000);
 
       return res.json({
         ok:true,
         acao:"atualizado",
-        mensagem:"Cliente já existia no MikroTik. Profile atualizado para " + profile + ".",
+        mensagem:"Cliente atualizado no MikroTik: login, senha, profile e service PPPoE sincronizados.",
         servidor: cfg.key || servidor,
         login,
+        loginAnterior: encontradoPor || loginAnterior || login,
         profile
       });
     }
@@ -1290,7 +1305,7 @@ app.post("/api/mikrotik/cliente-profile", async (req, res) => {
     return res.json({
       ok:true,
       acao:"criado",
-      mensagem:"Cliente criado no MikroTik com profile " + profile + ".",
+      mensagem:"Cliente criado no MikroTik com login, senha, profile e service PPPoE.",
       servidor: cfg.key || servidor,
       login,
       profile
@@ -1303,6 +1318,449 @@ app.post("/api/mikrotik/cliente-profile", async (req, res) => {
     });
   }
 });
+
+
+
+
+/* ============================================================
+   COBRANÇA MIKROTIK - BLOQUEIO POR PROFILE
+   Bloquear = profile BLOQUEADO, disabled=no.
+   Liberar/Confiança/Pagamento = profile do cadastro, disabled=no.
+============================================================ */
+app.post("/api/mikrotik/cliente-acao", async (req, res) => {
+  const normalizar = (v) => String(v || "")
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+
+  async function derrubarSessao(cfg, login) {
+    try {
+      const activeResp = await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+        "/ppp/active/print",
+        "?name=" + login
+      ]], 15000);
+
+      const activeRows = parseRouterosRows(activeResp);
+
+      for (const active of activeRows) {
+        if (active && active[".id"]) {
+          await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+            "/ppp/active/remove",
+            "=.id=" + active[".id"]
+          ]], 15000);
+        }
+      }
+    } catch (e) {
+      console.error("Erro ao derrubar sessão ativa:", e.message);
+    }
+  }
+
+  async function garantirProfileBloqueado(cfg) {
+    const profilesResp = await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [["/ppp/profile/print"]], 15000);
+    const profiles = parseRouterosRows(profilesResp);
+    const existe = profiles.some((p) => normalizar(p.name) === "bloqueado");
+
+    if (existe) return;
+
+    await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+      "/ppp/profile/add",
+      "=name=BLOQUEADO",
+      "=comment=CRIADO PELO FIBRA+ HUB"
+    ]], 15000);
+  }
+
+  async function profileExiste(cfg, profile) {
+    const profilesResp = await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [["/ppp/profile/print"]], 15000);
+    const profiles = parseRouterosRows(profilesResp);
+    return profiles.some((p) => String(p.name || "").trim() === profile);
+  }
+
+  try {
+    const body = req.body || {};
+    const servidor = String(body.servidor || "").trim();
+    const login = String(body.login || "").trim();
+    const acao = String(body.acao || "").trim().toLowerCase();
+    const dias = Number(body.dias || 0);
+    const profileCadastro = String(body.profile || body.profileCadastro || "").trim();
+
+    if (!servidor || servidor === "-" || servidor === "--" || normalizar(servidor).includes("sem servidor")) {
+      return res.status(400).json({ ok:false, erro:"Servidor não selecionado." });
+    }
+
+    if (!login) {
+      return res.status(400).json({ ok:false, erro:"Login PPPoE não informado." });
+    }
+
+    if (!["bloquear", "liberar", "confianca", "pagamento"].includes(acao)) {
+      return res.status(400).json({ ok:false, erro:"Ação inválida." });
+    }
+
+    const cfg = servidorConfig(servidor);
+
+    if (!cfg.host || !cfg.user || !cfg.pass) {
+      return res.status(500).json({
+        ok:false,
+        erro:"Variáveis do MikroTik não configuradas para " + (cfg.key || servidor)
+      });
+    }
+
+    const secretResp = await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+      "/ppp/secret/print",
+      "?name=" + login
+    ]], 15000);
+
+    const secrets = parseRouterosRows(secretResp);
+    const secret = secrets[0];
+
+    if (!secret || !secret[".id"]) {
+      return res.status(404).json({
+        ok:false,
+        erro:"PPP Secret não encontrado no MikroTik para o login: " + login
+      });
+    }
+
+    let mensagem = "";
+    let confiancaAte = null;
+
+    if (acao === "bloquear") {
+      await garantirProfileBloqueado(cfg);
+
+      await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+        "/ppp/secret/set",
+        "=.id=" + secret[".id"],
+        "=disabled=no",
+        "=profile=BLOQUEADO"
+      ]], 15000);
+
+      await derrubarSessao(cfg, login);
+      mensagem = "Cliente bloqueado no MikroTik usando profile BLOQUEADO.";
+    }
+
+    if (acao === "liberar" || acao === "pagamento") {
+      if (!profileCadastro) {
+        return res.status(400).json({ ok:false, erro:"PROFILE do cadastro não informado para liberar o cliente." });
+      }
+
+      const existe = await profileExiste(cfg, profileCadastro);
+      if (!existe) {
+        return res.status(400).json({ ok:false, erro:"PROFILE do cadastro não existe nesse MikroTik: " + profileCadastro });
+      }
+
+      await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+        "/ppp/secret/set",
+        "=.id=" + secret[".id"],
+        "=disabled=no",
+        "=profile=" + profileCadastro
+      ]], 15000);
+
+      await derrubarSessao(cfg, login);
+      mensagem = acao === "pagamento"
+        ? "Pagamento confirmado. Cliente desbloqueado e voltou para o profile " + profileCadastro + "."
+        : "Cliente liberado no MikroTik com profile " + profileCadastro + ".";
+    }
+
+    if (acao === "confianca") {
+      if (!dias || dias <= 0) {
+        return res.status(400).json({ ok:false, erro:"Informe a quantidade de dias para liberar em confiança." });
+      }
+
+      if (!profileCadastro) {
+        return res.status(400).json({ ok:false, erro:"PROFILE do cadastro não informado para confiança." });
+      }
+
+      const existe = await profileExiste(cfg, profileCadastro);
+      if (!existe) {
+        return res.status(400).json({ ok:false, erro:"PROFILE do cadastro não existe nesse MikroTik: " + profileCadastro });
+      }
+
+      await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+        "/ppp/secret/set",
+        "=.id=" + secret[".id"],
+        "=disabled=no",
+        "=profile=" + profileCadastro
+      ]], 15000);
+
+      await derrubarSessao(cfg, login);
+
+      const dt = new Date();
+      dt.setDate(dt.getDate() + dias);
+      confiancaAte = dt.toISOString().slice(0, 10);
+
+      mensagem = "Cliente liberado em confiança por " + dias + " dia(s), até " + confiancaAte + ".";
+    }
+
+    return res.json({
+      ok:true,
+      acao,
+      login,
+      servidor: cfg.key || servidor,
+      profile: acao === "bloquear" ? "BLOQUEADO" : profileCadastro,
+      dias: acao === "confianca" ? dias : null,
+      confianca_ate: confiancaAte,
+      mensagem
+    });
+  } catch (err) {
+    console.error("Erro /api/mikrotik/cliente-acao:", err);
+    return res.status(500).json({ ok:false, erro:err.message });
+  }
+});
+
+
+
+
+
+
+
+/* EFI BACKEND LOCAL - SEM SUPABASE */
+const efiConfigDir = path.join(__dirname, "data");
+const efiConfigFile = path.join(efiConfigDir, "efi-config.json");
+
+let efiConfigMemoria = {
+  contas: {
+    "1": {
+      conta: 1,
+      NomeConta: process.env.EFI1_NOME_CONTA || "",
+      Documento: process.env.EFI1_DOCUMENTO || "",
+      Ambiente: process.env.EFI1_AMBIENTE || "producao",
+      ClientId: process.env.EFI1_CLIENT_ID || "",
+      ClientSecret: process.env.EFI1_CLIENT_SECRET || "",
+      Webhook: process.env.EFI1_WEBHOOK || ""
+    },
+    "2": {
+      conta: 2,
+      NomeConta: "",
+      Documento: "",
+      Ambiente: "producao",
+      ClientId: "",
+      ClientSecret: "",
+      Webhook: ""
+    }
+  }
+};
+
+function garantirDirEfi() {
+  try {
+    if (!fs.existsSync(efiConfigDir)) fs.mkdirSync(efiConfigDir, { recursive: true });
+  } catch (e) {}
+}
+
+function carregarEfiArquivo() {
+  try {
+    if (fs.existsSync(efiConfigFile)) {
+      const raw = fs.readFileSync(efiConfigFile, "utf8");
+      const json = JSON.parse(raw);
+      if (json && json.contas) {
+        efiConfigMemoria = json;
+      }
+    }
+  } catch (e) {
+    console.error("Erro ao carregar efi-config.json:", e.message);
+  }
+  return efiConfigMemoria;
+}
+
+function salvarEfiArquivo() {
+  try {
+    garantirDirEfi();
+    fs.writeFileSync(efiConfigFile, JSON.stringify(efiConfigMemoria, null, 2), "utf8");
+    return true;
+  } catch (e) {
+    console.error("Erro ao salvar efi-config.json:", e.message);
+    return false;
+  }
+}
+
+function limparEfiPublico(cfg) {
+  if (!cfg) return null;
+  return {
+    conta: Number(cfg.conta || 1),
+    NomeConta: cfg.NomeConta || "",
+    Documento: cfg.Documento || "",
+    Ambiente: cfg.Ambiente || "producao",
+    ClientId: cfg.ClientId || "",
+    ClientSecret: cfg.ClientSecret || "",
+    Webhook: cfg.Webhook || ""
+  };
+}
+
+function efiConta(conta = 1) {
+  carregarEfiArquivo();
+  return efiConfigMemoria.contas[String(conta)] || null;
+}
+
+function efiBaseUrl(ambiente) {
+  return String(ambiente || "").toLowerCase().includes("homolog")
+    ? "https://cobrancas-h.api.efipay.com.br"
+    : "https://cobrancas.api.efipay.com.br";
+}
+
+async function efiGerarToken(config) {
+  const cfg = config || efiConta(1);
+
+  const clientId = String(cfg?.ClientId || cfg?.clientId || "").trim();
+  const clientSecret = String(cfg?.ClientSecret || cfg?.clientSecret || "").trim();
+
+  if (!clientId || !clientSecret) {
+    throw new Error("Client ID e Client Secret são obrigatórios.");
+  }
+
+  const basic = Buffer.from(clientId + ":" + clientSecret).toString("base64");
+
+  const resp = await fetch(efiBaseUrl(cfg.Ambiente || cfg.ambiente || "producao") + "/v1/authorize", {
+    method: "POST",
+    headers: {
+      "Authorization": "Basic " + basic,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ grant_type: "client_credentials" })
+  });
+
+  const text = await resp.text();
+  let json = {};
+  try { json = JSON.parse(text); } catch(e) { json = { raw:text }; }
+
+  if (!resp.ok) {
+    throw new Error(json.error_description || json.error || json.mensagem || text || "Falha OAuth Efí");
+  }
+
+  return json;
+}
+
+app.get("/api/efi/config", async (req, res) => {
+  try {
+    const conta = Number(req.query.conta || 1);
+    const cfg = efiConta(conta);
+    return res.json({ ok:true, conta, config: limparEfiPublico(cfg) });
+  } catch (err) {
+    return res.status(500).json({ ok:false, erro:err.message });
+  }
+});
+
+app.post("/api/efi/salvar-config", async (req, res) => {
+  try {
+    const body = req.body || {};
+    const conta = Number(body.conta || 1);
+
+    carregarEfiArquivo();
+
+    const cfg = {
+      conta,
+      NomeConta: String(body.NomeConta || "").trim(),
+      Documento: String(body.Documento || "").trim(),
+      Ambiente: String(body.Ambiente || "producao").trim(),
+      ClientId: String(body.ClientId || "").trim(),
+      ClientSecret: String(body.ClientSecret || "").trim(),
+      Webhook: String(body.Webhook || "").trim()
+    };
+
+    efiConfigMemoria.contas[String(conta)] = cfg;
+    const gravouArquivo = salvarEfiArquivo();
+
+    return res.json({
+      ok:true,
+      conta,
+      gravouArquivo,
+      mensagem: gravouArquivo
+        ? "Configuração Efí salva no backend."
+        : "Configuração Efí salva em memória. O ambiente pode não permitir gravação em arquivo.",
+      config: limparEfiPublico(cfg)
+    });
+  } catch (err) {
+    return res.status(500).json({ ok:false, erro:err.message });
+  }
+});
+
+app.post("/api/efi/testar-conexao", async (req, res) => {
+  try {
+    const body = req.body || {};
+    const conta = Number(body.conta || 1);
+
+    const cfg = {
+      conta,
+      NomeConta: String(body.NomeConta || "").trim(),
+      Documento: String(body.Documento || "").trim(),
+      Ambiente: String(body.Ambiente || "producao").trim(),
+      ClientId: String(body.ClientId || "").trim(),
+      ClientSecret: String(body.ClientSecret || "").trim(),
+      Webhook: String(body.Webhook || "").trim()
+    };
+
+    const token = await efiGerarToken(cfg);
+
+    carregarEfiArquivo();
+    efiConfigMemoria.contas[String(conta)] = cfg;
+    const gravouArquivo = salvarEfiArquivo();
+
+    return res.json({
+      ok:true,
+      conta,
+      gravouArquivo,
+      mensagem:"Conexão Efí OK. Token OAuth gerado.",
+      token_type: token.token_type || "Bearer",
+      expires_in: token.expires_in || null
+    });
+  } catch (err) {
+    console.error("Erro /api/efi/testar-conexao:", err);
+    return res.status(500).json({ ok:false, erro:err.message });
+  }
+});
+
+app.get("/api/efi/status", async (req, res) => {
+  try {
+    const cfg = efiConta(1);
+    const integrada = Boolean(cfg && cfg.ClientId && cfg.ClientSecret);
+    return res.json({
+      ok:true,
+      integrada,
+      conta: integrada ? {
+        nomeConta: cfg.NomeConta || "Conta Efí 1",
+        documento: cfg.Documento || "",
+        ambiente: cfg.Ambiente || "producao"
+      } : null
+    });
+  } catch (err) {
+    return res.status(500).json({ ok:false, integrada:false, erro:err.message });
+  }
+});
+
+app.get("/api/efi/boletos/teste", async (req, res) => {
+  try {
+    const cfg = efiConta(1);
+    const token = await efiGerarToken(cfg);
+
+    return res.json({
+      ok:true,
+      mensagem:"OAuth Efí OK para Conta 1.",
+      observacao:"Configuração carregada do backend local.",
+      token_type: token.token_type || "Bearer",
+      expires_in: token.expires_in || null
+    });
+  } catch (err) {
+    console.error("Erro /api/efi/boletos/teste:", err);
+    return res.status(500).json({ ok:false, erro:err.message });
+  }
+});
+
+
+io.on("connection",(socket)=>{
+  socket.emit("hub-update", geral());
+  socket.emit("mikrotik-update", geral());
+});
+
+const PORT=process.env.PORT || 3000;
+
+// Na Vercel, o Express precisa ser exportado como função serverless.
+// Fora da Vercel, continua rodando normal com npm start.
+if (process.env.VERCEL) {
+  initDb().catch(err => console.error("Erro ao iniciar banco:", err.message));
+  module.exports = app;
+} else {
+  initDb().finally(() => server.listen(PORT, () => console.log("Fibra+ Hub 2 Servidores rodando na porta " + PORT)));
+}
+
+
+
+
 
 
 /* ============================================================
@@ -1393,474 +1851,4 @@ app.get("/api/cliente/status", async (req, res) => {
 });
 
 
-/* EFI BACKEND LIMPO BASE VALIDADA */
-const efiConfigDir = path.join(__dirname, "data");
-const efiConfigFile = path.join(efiConfigDir, "efi-config.json");
 
-let efiConfigMemoria = {
-  contas: {
-    "1": {
-      conta: 1,
-      NomeConta: process.env.EFI1_NOME_CONTA || "",
-      Documento: process.env.EFI1_DOCUMENTO || "",
-      Ambiente: process.env.EFI1_AMBIENTE || "producao",
-      ClientId: process.env.EFI1_CLIENT_ID || "",
-      ClientSecret: process.env.EFI1_CLIENT_SECRET || "",
-      Webhook: process.env.EFI1_WEBHOOK || ""
-    },
-    "2": {
-      conta: 2,
-      NomeConta: "",
-      Documento: "",
-      Ambiente: "producao",
-      ClientId: "",
-      ClientSecret: "",
-      Webhook: ""
-    }
-  }
-};
-
-function efiGarantirDir() {
-  try {
-    if (!fs.existsSync(efiConfigDir)) fs.mkdirSync(efiConfigDir, { recursive: true });
-  } catch (e) {}
-}
-
-function efiCarregarArquivo() {
-  try {
-    if (fs.existsSync(efiConfigFile)) {
-      const raw = fs.readFileSync(efiConfigFile, "utf8");
-      const json = JSON.parse(raw);
-      if (json && json.contas) efiConfigMemoria = json;
-    }
-  } catch (e) {
-    console.error("Erro ao carregar efi-config.json:", e.message);
-  }
-  return efiConfigMemoria;
-}
-
-function efiSalvarArquivo() {
-  try {
-    efiGarantirDir();
-    fs.writeFileSync(efiConfigFile, JSON.stringify(efiConfigMemoria, null, 2), "utf8");
-    return true;
-  } catch (e) {
-    console.error("Erro ao salvar efi-config.json:", e.message);
-    return false;
-  }
-}
-
-function efiConta(conta = 1) {
-  efiCarregarArquivo();
-  return efiConfigMemoria.contas[String(conta)] || null;
-}
-
-function efiSanitizarConfig(cfg) {
-  if (!cfg) return null;
-  return {
-    conta: Number(cfg.conta || 1),
-    NomeConta: cfg.NomeConta || "",
-    Documento: cfg.Documento || "",
-    Ambiente: cfg.Ambiente || "producao",
-    ClientId: cfg.ClientId || "",
-    ClientSecret: cfg.ClientSecret || "",
-    Webhook: cfg.Webhook || ""
-  };
-}
-
-function efiBaseUrl(ambiente) {
-  return String(ambiente || "").toLowerCase().includes("homolog")
-    ? "https://cobrancas-h.api.efipay.com.br"
-    : "https://cobrancas.api.efipay.com.br";
-}
-
-async function efiGerarToken(cfgParam = null) {
-  const cfg = cfgParam || efiConta(1);
-  const clientId = String(cfg?.ClientId || "").trim();
-  const clientSecret = String(cfg?.ClientSecret || "").trim();
-
-  if (!clientId || !clientSecret) {
-    throw new Error("Client ID e Client Secret são obrigatórios.");
-  }
-
-  const basic = Buffer.from(clientId + ":" + clientSecret).toString("base64");
-  const resp = await fetch(efiBaseUrl(cfg.Ambiente || "producao") + "/v1/authorize", {
-    method: "POST",
-    headers: {
-      "Authorization": "Basic " + basic,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ grant_type: "client_credentials" })
-  });
-
-  const text = await resp.text();
-  let json = {};
-  try { json = JSON.parse(text); } catch(e) { json = { raw:text }; }
-
-  if (!resp.ok) {
-    throw new Error(json.error_description || json.error || json.mensagem || text || "Falha OAuth Efí");
-  }
-
-  return json;
-}
-
-function efiConfigFromBody(body) {
-  return {
-    conta: Number(body.conta || 1),
-    NomeConta: String(body.NomeConta || "").trim(),
-    Documento: String(body.Documento || "").trim(),
-    Ambiente: String(body.Ambiente || "producao").trim(),
-    ClientId: String(body.ClientId || "").trim(),
-    ClientSecret: String(body.ClientSecret || "").trim(),
-    Webhook: String(body.Webhook || "").trim()
-  };
-}
-
-app.get("/api/efi/config", async (req, res) => {
-  try {
-    const conta = Number(req.query.conta || 1);
-    return res.json({ ok:true, conta, config: efiSanitizarConfig(efiConta(conta)) });
-  } catch (err) {
-    return res.status(500).json({ ok:false, erro:err.message });
-  }
-});
-
-app.post("/api/efi/salvar-config", async (req, res) => {
-  try {
-    const cfg = efiConfigFromBody(req.body || {});
-    efiCarregarArquivo();
-    efiConfigMemoria.contas[String(cfg.conta)] = cfg;
-    const gravouArquivo = efiSalvarArquivo();
-
-    return res.json({
-      ok:true,
-      conta: cfg.conta,
-      gravouArquivo,
-      mensagem: gravouArquivo
-        ? "Configuração Efí salva no backend local."
-        : "Configuração Efí salva em memória. Ambiente pode não permitir gravação em arquivo.",
-      config: efiSanitizarConfig(cfg)
-    });
-  } catch (err) {
-    return res.status(500).json({ ok:false, erro:err.message });
-  }
-});
-
-app.post("/api/efi/testar-conexao", async (req, res) => {
-  try {
-    const cfg = efiConfigFromBody(req.body || {});
-    const token = await efiGerarToken(cfg);
-
-    efiCarregarArquivo();
-    efiConfigMemoria.contas[String(cfg.conta)] = cfg;
-    const gravouArquivo = efiSalvarArquivo();
-
-    return res.json({
-      ok:true,
-      conta: cfg.conta,
-      gravouArquivo,
-      mensagem:"Conexão Efí OK. Token OAuth gerado.",
-      token_type: token.token_type || "Bearer",
-      expires_in: token.expires_in || null
-    });
-  } catch (err) {
-    console.error("Erro /api/efi/testar-conexao:", err);
-    return res.status(500).json({ ok:false, erro:err.message });
-  }
-});
-
-app.get("/api/efi/status", async (req, res) => {
-  try {
-    const cfg = efiConta(1);
-    const integrada = Boolean(cfg && cfg.ClientId && cfg.ClientSecret);
-
-    return res.json({
-      ok:true,
-      integrada,
-      conta: integrada ? {
-        nomeConta: cfg.NomeConta || "Conta Efí 1",
-        documento: cfg.Documento || "",
-        ambiente: cfg.Ambiente || "producao"
-      } : null
-    });
-  } catch (err) {
-    return res.status(500).json({ ok:false, integrada:false, erro:err.message });
-  }
-});
-
-app.get("/api/efi/boletos/teste", async (req, res) => {
-  try {
-    const cfg = efiConta(1);
-    const token = await efiGerarToken(cfg);
-
-    return res.json({
-      ok:true,
-      mensagem:"OAuth Efí OK para Conta 1.",
-      observacao:"Configuração carregada do backend local.",
-      token_type: token.token_type || "Bearer",
-      expires_in: token.expires_in || null
-    });
-  } catch (err) {
-    console.error("Erro /api/efi/boletos/teste:", err);
-    return res.status(500).json({ ok:false, erro:err.message });
-  }
-});
-
-function efiSomenteNumeros(v) {
-  return String(v || "").replace(/\D/g, "");
-}
-
-function efiDataISO(v) {
-  const s = String(v || "").trim();
-  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
-  m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
-  if (m) return `${m[3]}-${m[2]}-${m[1]}`;
-  return "";
-}
-
-function efiAddDias(iso, dias) {
-  const d = new Date((iso || new Date().toISOString().slice(0,10)) + "T00:00:00");
-  if (isNaN(d.getTime())) return "";
-  d.setDate(d.getDate() + dias);
-  return d.toISOString().slice(0,10);
-}
-
-function efiCentavos(v) {
-  const s = String(v || "0").replace(/\./g, "").replace(",", ".").replace(/[^\d.-]/g, "");
-  const n = Number(s);
-  if (!isFinite(n)) return 0;
-  return Math.round(n * 100);
-}
-
-async function efiRequest(pathReq, cfg = null) {
-  const config = cfg || efiConta(1);
-  const token = await efiGerarToken(config);
-
-  const resp = await fetch(efiBaseUrl(config.Ambiente || "producao") + pathReq, {
-    method: "GET",
-    headers: {
-      "Authorization": "Bearer " + token.access_token,
-      "Content-Type": "application/json"
-    }
-  });
-
-  const text = await resp.text();
-  let json = {};
-  try { json = JSON.parse(text); } catch(e) { json = { raw:text }; }
-
-  return { ok: resp.ok, status: resp.status, json };
-}
-
-function efiGet(obj, paths) {
-  for (const path of paths) {
-    const parts = path.split(".");
-    let cur = obj;
-    for (const p of parts) cur = cur && cur[p] !== undefined ? cur[p] : undefined;
-    if (cur !== undefined && cur !== null && String(cur).trim() !== "") return cur;
-  }
-  return "";
-}
-
-function efiExtrairArray(json) {
-  if (Array.isArray(json)) return json;
-  if (Array.isArray(json.data)) return json.data;
-  if (Array.isArray(json.items)) return json.items;
-  if (Array.isArray(json.charges)) return json.charges;
-  if (Array.isArray(json.transactions)) return json.transactions;
-  if (json.data && Array.isArray(json.data.items)) return json.data.items;
-  if (json.data && Array.isArray(json.data.charges)) return json.data.charges;
-  if (json.data && Array.isArray(json.data.transactions)) return json.data.transactions;
-  return [];
-}
-
-function efiStatusLegivel(s) {
-  const status = String(s || "").toLowerCase();
-  if (status.includes("paid") || status.includes("pago")) return "Pago";
-  if (status.includes("wait") || status.includes("pend") || status.includes("new")) return "Aguardando pagamento";
-  if (status.includes("cancel")) return "Cancelado";
-  if (status.includes("expire") || status.includes("venc")) return "Vencido";
-  return s || "Registrado na Efí";
-}
-
-function efiExtrairDetalhe(json) {
-  const data = json && (json.data || json);
-  const linha = efiGet(data, [
-    "barcode", "digitable_line", "linha_digitavel",
-    "payment.banking_billet.barcode",
-    "payment.banking_billet.digitable_line",
-    "banking_billet.barcode",
-    "banking_billet.digitable_line"
-  ]);
-
-  const pix = efiGet(data, [
-    "pixCopiaECola", "pix_copia_e_cola",
-    "pix.qrcode", "pix.qr_code", "pix.copy_paste",
-    "payment.pix.qrcode", "payment.pix.copy_paste",
-    "qrcode", "qr_code"
-  ]);
-
-  const link = efiGet(data, [
-    "pdf.charge", "pdf.carnet", "payment_url", "link", "url",
-    "payment.banking_billet.link", "banking_billet.link"
-  ]);
-
-  const status = efiGet(data, ["status", "situacao"]);
-
-  return {
-    situacao_efi: efiStatusLegivel(status),
-    linha_digitavel: String(linha || ""),
-    pix_copia_cola: String(pix || ""),
-    link_boleto: String(link || ""),
-    raw: data
-  };
-}
-
-function efiPontuar(item, alvo) {
-  let pontos = 0;
-  const id = String(efiGet(item, ["charge_id", "id", "transaction_id", "custom_id", "numero"]) || "").trim();
-  const nome = String(efiGet(item, ["customer.name", "customer", "payer.name", "name", "cliente"]) || "").toLowerCase();
-  const doc = efiSomenteNumeros(efiGet(item, ["customer.cpf", "customer.cnpj", "cpf", "cnpj", "cpf_cnpj"]));
-  const venc = efiDataISO(efiGet(item, ["expire_at", "due_date", "vencimento", "payment.banking_billet.expire_at", "banking_billet.expire_at"]));
-  const valor = Number(efiGet(item, ["total", "value", "amount", "payment.banking_billet.value", "banking_billet.value"]) || 0);
-
-  const alvoId = String(alvo.numero || alvo.charge_id || "").trim();
-  const alvoNome = String(alvo.cliente || "").toLowerCase();
-  const alvoDoc = efiSomenteNumeros(alvo.cpf || alvo.cpf_cnpj || "");
-  const alvoVenc = efiDataISO(alvo.vencimento || "");
-  const alvoValor = efiCentavos(alvo.valor || alvo.valorPago || "");
-
-  if (alvoId && id === alvoId) pontos += 100;
-  if (alvoDoc && doc && doc === alvoDoc) pontos += 60;
-  if (alvoNome && nome && (nome.includes(alvoNome) || alvoNome.includes(nome))) pontos += 45;
-  if (alvoVenc && venc && venc === alvoVenc) pontos += 35;
-  if (alvoValor && valor) {
-    const cent = valor > 100000 ? Math.round(valor) : Math.round(valor * 100);
-    if (Math.abs(cent - alvoValor) <= 2) pontos += 35;
-  }
-  return pontos;
-}
-
-app.post("/api/efi/boleto-importado/consultar", async (req, res) => {
-  try {
-    const body = req.body || {};
-    const cfg = efiConta(1);
-
-    if (!cfg || !cfg.ClientId || !cfg.ClientSecret) {
-      return res.status(400).json({ ok:false, erro:"Conta Efí 1 não configurada." });
-    }
-
-    const numero = String(body.numero || body.id || body.charge_id || "").trim();
-    const emissao = efiDataISO(body.emissao || "");
-    const vencimento = efiDataISO(body.vencimento || "");
-
-    if (numero) {
-      const tentativas = [
-        "/v1/charge/" + encodeURIComponent(numero),
-        "/v1/charge/" + encodeURIComponent(numero) + "/detail",
-        "/v1/transaction/" + encodeURIComponent(numero),
-        "/v1/transactions/" + encodeURIComponent(numero)
-      ];
-
-      for (const pathReq of tentativas) {
-        try {
-          const r = await efiRequest(pathReq, cfg);
-          if (r.ok) {
-            return res.json({ ok:true, encontrado:true, fonte:pathReq, ...efiExtrairDetalhe(r.json) });
-          }
-        } catch(e) {}
-      }
-    }
-
-    const datas = [];
-    if (emissao) datas.push(emissao);
-    if (vencimento) datas.push(vencimento);
-    if (!datas.length) datas.push(new Date().toISOString().slice(0,10));
-
-    let melhor = null;
-    let melhorScore = 0;
-    let ultimoErro = null;
-
-    for (const d of datas) {
-      const begin = efiAddDias(d, -180);
-      const end = efiAddDias(d, 180);
-      const paths = [
-        `/v1/charges?begin_date=${begin}&end_date=${end}`,
-        `/v1/charges?begin_date=${begin}&end_date=${end}&status=all`,
-        `/v1/transactions?begin_date=${begin}&end_date=${end}`,
-        `/v1/transactions?begin_date=${begin}&end_date=${end}&status=all`
-      ];
-
-      for (const pth of paths) {
-        try {
-          const r = await efiRequest(pth, cfg);
-          if (!r.ok) {
-            ultimoErro = r.json;
-            continue;
-          }
-
-          const lista = efiExtrairArray(r.json);
-          for (const item of lista) {
-            const score = efiPontuar(item, body);
-            if (score > melhorScore) {
-              melhorScore = score;
-              melhor = item;
-            }
-          }
-        } catch(e) {
-          ultimoErro = e.message;
-        }
-      }
-    }
-
-    if (melhor && melhorScore >= 25) {
-      const id = efiGet(melhor, ["charge_id", "id", "transaction_id"]);
-      if (id) {
-        const detalhePaths = [
-          "/v1/charge/" + encodeURIComponent(id),
-          "/v1/charge/" + encodeURIComponent(id) + "/detail",
-          "/v1/transaction/" + encodeURIComponent(id),
-          "/v1/transactions/" + encodeURIComponent(id)
-        ];
-
-        for (const pth of detalhePaths) {
-          try {
-            const d = await efiRequest(pth, cfg);
-            if (d.ok) return res.json({ ok:true, encontrado:true, fonte:"busca+detalhe", score:melhorScore, ...efiExtrairDetalhe(d.json) });
-          } catch(e) {}
-        }
-      }
-      return res.json({ ok:true, encontrado:true, fonte:"busca", score:melhorScore, ...efiExtrairDetalhe(melhor) });
-    }
-
-    return res.json({
-      ok:true,
-      encontrado:false,
-      situacao_efi:"Integrado na Efí - boleto não localizado",
-      linha_digitavel:"",
-      pix_copia_cola:"",
-      link_boleto:"",
-      debug:{ numero, emissao, vencimento, cliente: body.cliente || "", valor: body.valor || body.valorPago || "", ultimoErro }
-    });
-  } catch (err) {
-    console.error("Erro /api/efi/boleto-importado/consultar:", err);
-    return res.status(500).json({ ok:false, erro:err.message });
-  }
-});
-
-
-io.on("connection",(socket)=>{
-  socket.emit("hub-update", geral());
-  socket.emit("mikrotik-update", geral());
-});
-
-const PORT=process.env.PORT || 3000;
-
-// Na Vercel, o Express precisa ser exportado como função serverless.
-// Fora da Vercel, continua rodando normal com npm start.
-if (process.env.VERCEL) {
-  initDb().catch(err => console.error("Erro ao iniciar banco:", err.message));
-  module.exports = app;
-} else {
-  initDb().finally(() => server.listen(PORT, () => console.log("Fibra+ Hub 2 Servidores rodando na porta " + PORT)));
-}
