@@ -1650,23 +1650,66 @@ app.get("/api/efi/status", async (req, res) => {
 
 
 
+
+
 /* EFI BOLETO IMPORTADO DIRETO */
 function efiNormalizarStatus(status) {
   const s = String(status || "").toLowerCase();
-  if (s.includes("paid") || s.includes("pago") || s.includes("settled")) return "Pago";
-  if (s.includes("waiting") || s.includes("pend") || s.includes("unpaid")) return "Aguardando pagamento";
-  if (s.includes("cancel") || s.includes("expired") || s.includes("venc")) return "Cancelado/Vencido";
-  if (s.includes("new") || s.includes("active") || s.includes("link")) return "Registrado na Efí";
+  if (s.includes("paid") || s.includes("pago") || s.includes("settled") || s.includes("settlement")) return "Pago";
+  if (s.includes("waiting") || s.includes("pend") || s.includes("unpaid") || s.includes("new")) return "Aguardando pagamento";
+  if (s.includes("cancel")) return "Cancelado";
+  if (s.includes("expired") || s.includes("venc")) return "Vencido";
+  if (s.includes("link") || s.includes("active")) return "Registrado na Efí";
   return status || "Registrado na Efí";
 }
 
-async function efiRequestConta1(path, options = {}) {
-  const token = await efiGerarToken(efiConta1Config);
+function somenteNumeros(v) {
+  return String(v || "").replace(/\D/g, "");
+}
+
+function dinheiroCentavos(v) {
+  const s = String(v || "0").replace(/\./g, "").replace(",", ".").replace(/[^\d.-]/g, "");
+  const n = Number(s);
+  if (!isFinite(n)) return 0;
+  return Math.round(n * 100);
+}
+
+function dataISO(v) {
+  const s = String(v || "").trim();
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+  return "";
+}
+
+function addDias(iso, dias) {
+  const d = new Date(iso + "T00:00:00");
+  if (isNaN(d.getTime())) return "";
+  d.setDate(d.getDate() + dias);
+  return d.toISOString().slice(0,10);
+}
+
+function efiConfigFromBody(body) {
+  const cfg = body.efiConfig || body.config || {};
+  return {
+    nomeConta: String(cfg.NomeConta || cfg.nomeConta || efiConta1Config.nomeConta || "").trim(),
+    documento: String(cfg.Documento || cfg.documento || efiConta1Config.documento || "").trim(),
+    ambiente: String(cfg.Ambiente || cfg.ambiente || efiConta1Config.ambiente || "producao").trim(),
+    clientId: String(cfg.ClientId || cfg.clientId || efiConta1Config.clientId || "").trim(),
+    clientSecret: String(cfg.ClientSecret || cfg.clientSecret || efiConta1Config.clientSecret || "").trim(),
+    webhook: String(cfg.Webhook || cfg.webhook || efiConta1Config.webhook || "").trim()
+  };
+}
+
+async function efiRequestConta1(path, options = {}, cfgOverride = null) {
+  const cfg = cfgOverride || efiConta1Config;
+  const token = await efiGerarToken(cfg);
   const accessToken = token.access_token;
 
   if (!accessToken) throw new Error("Token Efí sem access_token.");
 
-  const resp = await fetch(efiBaseUrl(efiConta1Config.ambiente) + path, {
+  const resp = await fetch(efiBaseUrl(cfg.ambiente) + path, {
     method: options.method || "GET",
     headers: {
       "Authorization": "Bearer " + accessToken,
@@ -1683,133 +1726,180 @@ async function efiRequestConta1(path, options = {}) {
   return { ok: resp.ok, status: resp.status, json, raw: text };
 }
 
+function extrairArrayCobrancas(json) {
+  if (Array.isArray(json)) return json;
+  if (Array.isArray(json.data)) return json.data;
+  if (Array.isArray(json.charges)) return json.charges;
+  if (Array.isArray(json.items)) return json.items;
+  return [];
+}
+
+function getDeep(obj, paths) {
+  for (const path of paths) {
+    const parts = path.split(".");
+    let cur = obj;
+    for (const p of parts) cur = cur && cur[p] !== undefined ? cur[p] : undefined;
+    if (cur !== undefined && cur !== null && String(cur).trim() !== "") return cur;
+  }
+  return "";
+}
+
 function extrairDadosBoletoEfi(json) {
   const data = json && (json.data || json);
   const charge = data.charge || data;
 
-  const linhaDigitavel =
-    data.barcode ||
-    data.digitable_line ||
-    data.linha_digitavel ||
-    charge.barcode ||
-    charge.digitable_line ||
-    charge.linha_digitavel ||
-    "";
+  const linhaDigitavel = getDeep(data, [
+    "barcode", "digitable_line", "linha_digitavel", "banking_billet.barcode",
+    "banking_billet.digitable_line", "payment.banking_billet.barcode",
+    "payment.banking_billet.digitable_line", "billet_link"
+  ]) || getDeep(charge, ["barcode", "digitable_line", "linha_digitavel"]);
 
-  const pix =
-    data.pixCopiaECola ||
-    data.pix_copia_e_cola ||
-    data.qrcode ||
-    data.qr_code ||
-    data.pix?.qrcode ||
-    data.pix?.qrcode_image ||
-    charge.pixCopiaECola ||
-    charge.pix_copia_e_cola ||
-    charge.qrcode ||
-    charge.qr_code ||
-    "";
+  const pix = getDeep(data, [
+    "pixCopiaECola", "pix_copia_e_cola", "qrcode", "qr_code",
+    "pix.qrcode", "pix.qr_code", "pix.copy_paste",
+    "payment.pix.qrcode", "payment.pix.copy_paste"
+  ]) || getDeep(charge, ["pixCopiaECola", "pix_copia_e_cola", "qrcode", "qr_code"]);
 
-  const link =
-    data.pdf?.charge ||
-    data.pdf?.carnet ||
-    data.link ||
-    data.payment_url ||
-    data.url ||
-    charge.link ||
-    charge.payment_url ||
-    "";
+  const link = getDeep(data, [
+    "pdf.charge", "pdf.carnet", "link", "payment_url", "url",
+    "payment.banking_billet.link", "banking_billet.link", "billet_link"
+  ]) || getDeep(charge, ["link", "payment_url", "url"]);
 
-  const status =
-    data.status ||
-    charge.status ||
-    data.situacao ||
-    charge.situacao ||
-    "";
+  const status = getDeep(data, ["status", "situacao"]) || getDeep(charge, ["status", "situacao"]);
 
   return {
     situacao_efi: efiNormalizarStatus(status),
-    linha_digitavel: linhaDigitavel || "",
-    pix_copia_cola: pix || "",
-    link_boleto: link || "",
+    linha_digitavel: String(linhaDigitavel || ""),
+    pix_copia_cola: String(pix || ""),
+    link_boleto: String(link || ""),
     raw: data
   };
+}
+
+function pontuarCobranca(item, alvo) {
+  let pontos = 0;
+
+  const id = String(getDeep(item, ["charge_id", "id", "custom_id", "metadata.custom_id", "numero"]) || "").trim();
+  const cliente = String(getDeep(item, ["customer.name", "name", "cliente", "client.name"]) || "").toLowerCase();
+  const doc = somenteNumeros(getDeep(item, ["customer.cpf", "customer.cnpj", "cpf", "cnpj", "cpf_cnpj"]));
+  const venc = dataISO(getDeep(item, ["expire_at", "due_date", "vencimento", "payment.banking_billet.expire_at"]));
+  const valor = Number(getDeep(item, ["total", "value", "amount", "payment.banking_billet.value"]) || 0);
+
+  const idAlvo = String(alvo.numero || "").trim();
+  const nomeAlvo = String(alvo.cliente || "").toLowerCase();
+  const docAlvo = somenteNumeros(alvo.cpf || alvo.cpf_cnpj || "");
+  const vencAlvo = dataISO(alvo.vencimento || "");
+  const valorAlvo = dinheiroCentavos(alvo.valor || alvo.valorPago || "");
+
+  if (idAlvo && id === idAlvo) pontos += 100;
+  if (docAlvo && doc && doc === docAlvo) pontos += 60;
+  if (nomeAlvo && cliente && (cliente.includes(nomeAlvo) || nomeAlvo.includes(cliente))) pontos += 45;
+  if (vencAlvo && venc && venc === vencAlvo) pontos += 35;
+  if (valorAlvo && valor) {
+    const itemCentavos = valor > 100000 ? Math.round(valor) : Math.round(Number(valor) * 100);
+    if (Math.abs(itemCentavos - valorAlvo) <= 2) pontos += 35;
+  }
+
+  return pontos;
 }
 
 app.post("/api/efi/boleto-importado/consultar", async (req, res) => {
   try {
     const body = req.body || {};
+    const cfg = efiConfigFromBody(body);
+
+    if (!cfg.clientId || !cfg.clientSecret) {
+      return res.status(400).json({ ok:false, erro:"Conta Efí 1 não configurada. Informe Client ID e Client Secret." });
+    }
+
+    efiConta1Config = cfg;
+
     const numero = String(body.numero || body.id || body.charge_id || body.chargeId || "").trim();
-    const valor = String(body.valor || "").trim();
-    const vencimento = String(body.vencimento || "").trim();
-    const cpf = String(body.cpf || body.cpf_cnpj || "").replace(/\D/g, "");
+    const emissao = dataISO(body.emissao || body.dataEmissao || "");
+    const vencimento = dataISO(body.vencimento || "");
+    const cpf = somenteNumeros(body.cpf || body.cpf_cnpj || "");
 
-    if (!efiConta1Config || !String(efiConta1Config.clientId || "").trim() || !String(efiConta1Config.clientSecret || "").trim()) {
-      return res.status(400).json({ ok:false, erro:"Conta Efí 1 não configurada no backend." });
-    }
-
-    if (!numero && !cpf && !vencimento) {
-      return res.status(400).json({ ok:false, erro:"Informe número/charge_id ou dados do boleto para consulta." });
-    }
-
-    // 1) Tentativa direta por charge_id/número.
-    const tentativas = [];
-
+    // 1) Se o número importado for charge_id real, pega direto.
     if (numero) {
-      tentativas.push("/v1/charge/" + encodeURIComponent(numero));
-      tentativas.push("/v1/charge/" + encodeURIComponent(numero) + "/detail");
-    }
+      const tentativas = [
+        "/v1/charge/" + encodeURIComponent(numero),
+        "/v1/charge/" + encodeURIComponent(numero) + "/detail"
+      ];
 
-    let ultimoErro = null;
-
-    for (const path of tentativas) {
-      try {
-        const r = await efiRequestConta1(path);
-        if (r.ok) {
-          const dados = extrairDadosBoletoEfi(r.json);
-          return res.json({ ok:true, encontrado:true, fonte:path, ...dados });
-        }
-        ultimoErro = r.json;
-      } catch(e) {
-        ultimoErro = e.message;
+      for (const path of tentativas) {
+        try {
+          const r = await efiRequestConta1(path, {}, cfg);
+          if (r.ok) {
+            const dados = extrairDadosBoletoEfi(r.json);
+            return res.json({ ok:true, encontrado:true, fonte:path, ...dados });
+          }
+        } catch(e) {}
       }
     }
 
-    // 2) Tentativa por lista de cobranças em intervalo, quando disponível.
-    // Mantém compatibilidade: se a conta/API não permitir, retorna não encontrado sem quebrar a tela.
-    try {
-      const params = new URLSearchParams();
-      if (vencimento) {
-        params.set("begin_date", vencimento.slice(0,10));
-        params.set("end_date", vencimento.slice(0,10));
-      }
-      const listPath = "/v1/charges" + (params.toString() ? "?" + params.toString() : "");
-      const r = await efiRequestConta1(listPath);
+    // 2) Busca em lista por emissão e vencimento. ReceitaNet muitas vezes não importa o charge_id.
+    const datasBase = [];
+    if (emissao) datasBase.push(emissao);
+    if (vencimento) datasBase.push(vencimento);
+    if (!datasBase.length) datasBase.push(new Date().toISOString().slice(0,10));
 
-      if (r.ok) {
-        const arr = Array.isArray(r.json.data) ? r.json.data : Array.isArray(r.json) ? r.json : [];
-        const achado = arr.find((b) => {
-          const id = String(b.charge_id || b.id || b.numero || "").trim();
-          const doc = String(b.customer?.cpf || b.customer?.cnpj || b.cpf || b.cpf_cnpj || "").replace(/\D/g, "");
-          const val = String(b.value || b.total || b.amount || "").trim();
-          return (numero && id === numero) || (cpf && doc === cpf) || (valor && val === valor);
-        });
+    let melhor = null;
+    let melhorScore = 0;
+    let detalheErro = null;
 
-        if (achado) {
-          const id = achado.charge_id || achado.id;
-          if (id) {
-            const detail = await efiRequestConta1("/v1/charge/" + encodeURIComponent(id));
-            if (detail.ok) {
-              const dados = extrairDadosBoletoEfi(detail.json);
-              return res.json({ ok:true, encontrado:true, fonte:"lista+detalhe", ...dados });
-            }
+    for (const dataBase of datasBase) {
+      const begin = addDias(dataBase, -45);
+      const end = addDias(dataBase, 45);
+
+      const caminhos = [
+        `/v1/charges?begin_date=${begin}&end_date=${end}`,
+        `/v1/charge?begin_date=${begin}&end_date=${end}`,
+        `/v1/charges?begin_date=${begin}&end_date=${end}&status=all`
+      ];
+
+      for (const path of caminhos) {
+        try {
+          const r = await efiRequestConta1(path, {}, cfg);
+          if (!r.ok) {
+            detalheErro = r.json;
+            continue;
           }
 
-          const dados = extrairDadosBoletoEfi(achado);
-          return res.json({ ok:true, encontrado:true, fonte:"lista", ...dados });
+          const lista = extrairArrayCobrancas(r.json);
+          for (const item of lista) {
+            const score = pontuarCobranca(item, body);
+            if (score > melhorScore) {
+              melhorScore = score;
+              melhor = item;
+            }
+          }
+        } catch(e) {
+          detalheErro = e.message;
         }
       }
-    } catch(e) {
-      ultimoErro = e.message;
+    }
+
+    if (melhor && melhorScore >= 35) {
+      const id = getDeep(melhor, ["charge_id", "id"]);
+      if (id) {
+        const detalhePaths = [
+          "/v1/charge/" + encodeURIComponent(id),
+          "/v1/charge/" + encodeURIComponent(id) + "/detail"
+        ];
+
+        for (const path of detalhePaths) {
+          try {
+            const d = await efiRequestConta1(path, {}, cfg);
+            if (d.ok) {
+              const dados = extrairDadosBoletoEfi(d.json);
+              return res.json({ ok:true, encontrado:true, fonte:"busca-lista+detalhe", score:melhorScore, ...dados });
+            }
+          } catch(e) {}
+        }
+      }
+
+      const dados = extrairDadosBoletoEfi(melhor);
+      return res.json({ ok:true, encontrado:true, fonte:"busca-lista", score:melhorScore, ...dados });
     }
 
     return res.json({
@@ -1819,7 +1909,7 @@ app.post("/api/efi/boleto-importado/consultar", async (req, res) => {
       linha_digitavel:"",
       pix_copia_cola:"",
       link_boleto:"",
-      detalhe: ultimoErro
+      detalhe: detalheErro
     });
   } catch (err) {
     console.error("Erro /api/efi/boleto-importado/consultar:", err);

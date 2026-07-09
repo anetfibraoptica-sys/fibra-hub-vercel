@@ -6,46 +6,58 @@
 
   function texto(el){ return (el && el.textContent || "").trim(); }
 
-  function acharCardPorLabel(labelTexto){
-    const alvo = norm(labelTexto);
-    const candidatos = Array.from(document.querySelectorAll("div,section,article,td,li"));
-    return candidatos.find(function(card){
-      const childrenText = Array.from(card.children || []).map(c => norm(c.textContent));
-      return childrenText.some(t => t === alvo) || norm(card.textContent).startsWith(alvo);
-    });
+  function lerConfigEfi(){
+    try{
+      const c1 = JSON.parse(localStorage.getItem("fibra_efi_conta_1") || "null");
+      if(c1 && (c1.ClientId || c1.clientId) && (c1.ClientSecret || c1.clientSecret)) return c1;
+    }catch(e){}
+
+    try{
+      const contas = JSON.parse(localStorage.getItem("fibra_efi_contas") || "[]");
+      if(Array.isArray(contas)){
+        const c = contas.find(x => x && (x.ClientId || x.clientId) && (x.ClientSecret || x.clientSecret));
+        if(c) return c;
+      }
+    }catch(e){}
+
+    return null;
   }
 
   function getCampoPorLabel(labelTexto){
     const alvo = norm(labelTexto);
-    const candidatos = Array.from(document.querySelectorAll("label,strong,b,span,p,div,td,th"));
 
-    const label = candidatos.find(function(el){
-      return norm(el.textContent) === alvo;
-    });
+    const cards = Array.from(document.querySelectorAll("div,section,article,td,li"));
+    for(const card of cards){
+      const filhos = Array.from(card.children || []);
+      if(filhos.length < 2) continue;
 
+      const label = filhos.find(f => norm(f.textContent) === alvo);
+      if(label){
+        const vals = filhos.filter(f => f !== label && norm(f.textContent));
+        if(vals.length) return vals[vals.length - 1];
+      }
+    }
+
+    const all = Array.from(document.querySelectorAll("label,strong,b,span,p,div,td,th"));
+    const label = all.find(el => norm(el.textContent) === alvo);
     if(!label) return null;
 
-    const card = label.closest("div,section,article,td,li") || label.parentElement;
-    if(!card) return null;
-
-    // caso tenha elemento marcado como valor
-    const valorMarcado = card.querySelector(".valor,.value,.resumo-value,.boleto-value,span:last-child,p:last-child");
-    if(valorMarcado && norm(valorMarcado.textContent) !== alvo) return valorMarcado;
-
-    // procura irmão depois do label
     let n = label.nextElementSibling;
     while(n){
       if(norm(n.textContent) && norm(n.textContent) !== alvo) return n;
       n = n.nextElementSibling;
     }
 
-    // fallback: último filho com texto diferente do label
-    const filhos = Array.from(card.querySelectorAll("span,p,div,strong,b")).filter(function(x){
-      const t = norm(x.textContent);
-      return t && t !== alvo;
-    });
+    const card = label.closest("div,section,article,td,li") || label.parentElement;
+    if(card){
+      const vals = Array.from(card.querySelectorAll("span,p,div,strong,b")).filter(x => {
+        const t = norm(x.textContent);
+        return t && t !== alvo;
+      });
+      if(vals.length) return vals[vals.length-1];
+    }
 
-    return filhos.length ? filhos[filhos.length - 1] : null;
+    return null;
   }
 
   function getValor(label){
@@ -59,37 +71,33 @@
       campo.textContent = valor || "—";
       return true;
     }
-
-    // se não encontrou, tenta localizar card inteiro e substituir último nó textual
-    const card = acharCardPorLabel(label);
-    if(card){
-      const divs = Array.from(card.querySelectorAll("div,span,p")).filter(x => norm(x.textContent) && norm(x.textContent) !== norm(label));
-      if(divs.length){
-        divs[divs.length-1].textContent = valor || "—";
-        return true;
-      }
-    }
-
     return false;
   }
 
   function dadosBoletoAberto(){
     return {
       numero: getValor("Número") || getValor("Numero") || getValor("Nº") || "",
+      cliente: getValor("Cliente"),
+      categoria: getValor("Categoria"),
+      descricao: getValor("Descrição") || getValor("Descricao"),
       valor: getValor("Valor do boleto").replace(/[^\d,.-]/g,""),
       valorPago: getValor("Valor pago").replace(/[^\d,.-]/g,""),
-      vencimento: getValor("Vencimento"),
       emissao: getValor("Emissão") || getValor("Emissao"),
-      cliente: getValor("Cliente"),
-      status: getValor("Status")
+      vencimento: getValor("Vencimento"),
+      status: getValor("Status"),
+      efiConfig: lerConfigEfi()
     };
   }
 
   async function consultarBoletoAbertoNaEfi(){
     const dados = dadosBoletoAberto();
 
-    // Não cria status novo no layout. Só altera o campo já existente "Situação na Efí".
     if(!dados.numero && !dados.vencimento && !dados.cliente) return;
+
+    if(!dados.efiConfig){
+      setCampo("Situação na Efí", "Efí sem credenciais salvas");
+      return;
+    }
 
     setCampo("Situação na Efí", "Consultando Efí...");
 
@@ -107,14 +115,11 @@
         return;
       }
 
-      setCampo("Situação na Efí", json.situacao_efi || (json.encontrado ? "Registrado na Efí" : "Não encontrado na Efí"));
+      setCampo("Situação na Efí", json.situacao_efi || (json.encontrado ? "Registrado na Efí" : "Integrado na Efí - boleto não localizado"));
       setCampo("Linha Digitável", json.linha_digitavel || "—");
       setCampo("Pix Copia e Cola", json.pix_copia_cola || "—");
 
-      const btn2via = Array.from(document.querySelectorAll("button,a")).find(function(b){
-        return norm(b.textContent).includes("segunda via");
-      });
-
+      const btn2via = Array.from(document.querySelectorAll("button,a")).find(b => norm(b.textContent).includes("segunda via"));
       if(btn2via && json.link_boleto){
         btn2via.onclick = function(e){
           e.preventDefault();
@@ -130,16 +135,16 @@
 
   document.addEventListener("click", function(e){
     const t = norm(e.target && e.target.textContent || "");
-    if(t.includes("boleto") || t.includes("segunda via") || t.includes("detalhe") || t.includes("cobrança") || t.includes("cobranca")){
+    if(t.includes("boleto") || t.includes("segunda via") || t.includes("detalhe") || t.includes("cobranca") || t.includes("cobrança")){
       setTimeout(consultarBoletoAbertoNaEfi, 300);
-      setTimeout(consultarBoletoAbertoNaEfi, 900);
-      setTimeout(consultarBoletoAbertoNaEfi, 1800);
+      setTimeout(consultarBoletoAbertoNaEfi, 1000);
+      setTimeout(consultarBoletoAbertoNaEfi, 2000);
     }
   }, true);
 
   const obs = new MutationObserver(function(){
     const sit = getValor("Situação na Efí");
-    if(norm(sit).includes("aguardando integracao") || norm(sit).includes("aguardando integração")){
+    if(norm(sit).includes("aguardando integracao") || norm(sit).includes("aguardando integração") || norm(sit) === "—"){
       consultarBoletoAbertoNaEfi();
     }
   });
