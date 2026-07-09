@@ -42,6 +42,15 @@
       <p>Cadastre as contas Efí que serão usadas no sistema. Cada conta pode pertencer a um CPF/CNPJ diferente e depois poderá ser selecionada no cadastro/cobrança do cliente.</p>
     </section>
 
+    
+    <section id="efiOnlineStatusBox" class="card efi-online-status-box">
+      <div>
+        <h3>Status da Efí</h3>
+        <p id="efiOnlineTexto">Verificando conexão Efí...</p>
+      </div>
+      <button type="button" class="btn-secondary" onclick="verificarStatusEfiOnline()">Atualizar status</button>
+    </section>
+
     <section class="efi-contas-grid">
       <article class="card efi-conta-card">
         <h3>Conta Efí 1</h3>
@@ -167,36 +176,22 @@
     try{
       const resp = await fetch("/api/efi/config?conta=" + conta, {cache:"no-store"});
       const json = await resp.json();
-      if(resp.ok && json.ok && json.config){
-        preencher(conta, json.config);
-      }
-    }catch(e){}
+      if(resp.ok && json.ok && json.config) preencher(conta, json.config);
+    }catch(e){
+      console.warn("Erro ao carregar Conta Efí " + conta, e);
+    }
   }
 
   window.salvarConfiguracaoEfiConta = async function(conta){
     const cfg = coletar(conta);
-
-    if(!cfg.NomeConta){
-      alert("Informe o nome da Conta Efí " + conta + ".");
-      return;
-    }
-
-    if(!cfg.Documento){
-      alert("Informe o CPF/CNPJ da Conta Efí " + conta + ".");
-      return;
-    }
+    if(!cfg.NomeConta){ alert("Informe o nome da Conta Efí " + conta + "."); return; }
+    if(!cfg.Documento){ alert("Informe o CPF/CNPJ da Conta Efí " + conta + "."); return; }
 
     try{
-      const resp = await fetch("/api/efi/salvar-config", {
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body: JSON.stringify(cfg)
-      });
-
+      const resp = await fetch("/api/efi/salvar-config", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(cfg) });
       const json = await resp.json();
       if(!resp.ok || !json.ok) throw new Error(json.erro || json.mensagem || "Erro ao salvar.");
-
-      alert(json.mensagem || "Configuração salva.");
+      alert(json.mensagem || "Configuração Efí salva no Supabase.");
     }catch(e){
       alert("Erro ao salvar configuração Efí: " + e.message);
     }
@@ -204,25 +199,12 @@
 
   window.testarConexaoEfiConta = async function(conta){
     const cfg = coletar(conta);
-
-    if(!cfg.ClientId || !cfg.ClientSecret){
-      alert("Informe Client ID e Client Secret da Conta Efí " + conta + ".");
-      return;
-    }
+    if(!cfg.ClientId || !cfg.ClientSecret){ alert("Informe Client ID e Client Secret da Conta Efí " + conta + "."); return; }
 
     try{
-      const resp = await fetch("/api/efi/testar-conexao", {
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body: JSON.stringify(cfg)
-      });
-
+      const resp = await fetch("/api/efi/testar-conexao", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(cfg) });
       const json = await resp.json();
-      if(resp.ok && json.ok){
-        alert(json.mensagem || "Conexão Efí OK.");
-      }else{
-        alert("Erro Efí: " + (json.erro || json.mensagem || "erro desconhecido"));
-      }
+      alert(resp.ok && json.ok ? (json.mensagem || "Conexão Efí OK.") : ("Erro Efí: " + (json.erro || json.mensagem || "erro desconhecido")));
     }catch(e){
       alert("Erro ao testar conexão: " + e.message);
     }
@@ -238,9 +220,55 @@
     }
   };
 
+
+  window.verificarStatusEfiOnline = async function(conta = 1){
+    const box = document.getElementById("efiOnlineStatusBox");
+    const texto = document.getElementById("efiOnlineTexto");
+
+    if(texto){
+      texto.textContent = "Verificando conexão Efí...";
+      texto.style.color = "";
+    }
+
+    try{
+      const resp = await fetch("/api/efi/status-online?conta=" + conta, {cache:"no-store"});
+      const json = await resp.json();
+
+      if(json && json.online){
+        if(texto){
+          texto.textContent = "🟢 Efí Online — " + (json.nomeConta || ("Conta Efí " + conta));
+          texto.style.color = "#22c55e";
+        }
+        if(box){
+          box.classList.remove("efi-offline");
+          box.classList.add("efi-online");
+        }
+      }else{
+        if(texto){
+          texto.textContent = "🔴 Efí Offline — " + (json.motivo || "Não foi possível conectar.");
+          texto.style.color = "#ef4444";
+        }
+        if(box){
+          box.classList.remove("efi-online");
+          box.classList.add("efi-offline");
+        }
+      }
+    }catch(e){
+      if(texto){
+        texto.textContent = "🔴 Efí Offline — " + e.message;
+        texto.style.color = "#ef4444";
+      }
+      if(box){
+        box.classList.remove("efi-online");
+        box.classList.add("efi-offline");
+      }
+    }
+  };
+
   document.addEventListener("DOMContentLoaded", function(){
     carregarConta(1);
     carregarConta(2);
+    setTimeout(function(){ verificarStatusEfiOnline(1); }, 700);
   });
 })();
 </script>

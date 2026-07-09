@@ -1,5 +1,3 @@
-
-const fs = require('fs');
 const path = require('path');
 const express = require("express");
 const cors = require("cors");
@@ -288,7 +286,22 @@ async function initDb() {
   await pool.query("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS servidor TEXT;");
   await pool.query("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS acesso_remoto TEXT;");
   await pool.query("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS confianca_ate TEXT;");
-console.log("PostgreSQL conectado.");
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS efi_configuracoes (
+      conta INTEGER PRIMARY KEY,
+      nome_conta TEXT,
+      documento TEXT,
+      ambiente TEXT DEFAULT 'producao',
+      client_id TEXT,
+      client_secret TEXT,
+      webhook TEXT,
+      ativo BOOLEAN DEFAULT TRUE,
+      atualizado_em TIMESTAMP DEFAULT NOW()
+    );
+  `);
+
+  console.log("PostgreSQL conectado.");
 }
 
 
@@ -1577,236 +1590,6 @@ app.post("/api/mikrotik/cliente-acao", async (req, res) => {
 
 
 
-/* EFI BACKEND LOCAL - SEM SUPABASE */
-const efiConfigDir = path.join(__dirname, "data");
-const efiConfigFile = path.join(efiConfigDir, "efi-config.json");
-
-let efiConfigMemoria = {
-  contas: {
-    "1": {
-      conta: 1,
-      NomeConta: process.env.EFI1_NOME_CONTA || "",
-      Documento: process.env.EFI1_DOCUMENTO || "",
-      Ambiente: process.env.EFI1_AMBIENTE || "producao",
-      ClientId: process.env.EFI1_CLIENT_ID || "",
-      ClientSecret: process.env.EFI1_CLIENT_SECRET || "",
-      Webhook: process.env.EFI1_WEBHOOK || ""
-    },
-    "2": {
-      conta: 2,
-      NomeConta: "",
-      Documento: "",
-      Ambiente: "producao",
-      ClientId: "",
-      ClientSecret: "",
-      Webhook: ""
-    }
-  }
-};
-
-function garantirDirEfi() {
-  try {
-    if (!fs.existsSync(efiConfigDir)) fs.mkdirSync(efiConfigDir, { recursive: true });
-  } catch (e) {}
-}
-
-function carregarEfiArquivo() {
-  try {
-    if (fs.existsSync(efiConfigFile)) {
-      const raw = fs.readFileSync(efiConfigFile, "utf8");
-      const json = JSON.parse(raw);
-      if (json && json.contas) {
-        efiConfigMemoria = json;
-      }
-    }
-  } catch (e) {
-    console.error("Erro ao carregar efi-config.json:", e.message);
-  }
-  return efiConfigMemoria;
-}
-
-function salvarEfiArquivo() {
-  try {
-    garantirDirEfi();
-    fs.writeFileSync(efiConfigFile, JSON.stringify(efiConfigMemoria, null, 2), "utf8");
-    return true;
-  } catch (e) {
-    console.error("Erro ao salvar efi-config.json:", e.message);
-    return false;
-  }
-}
-
-function limparEfiPublico(cfg) {
-  if (!cfg) return null;
-  return {
-    conta: Number(cfg.conta || 1),
-    NomeConta: cfg.NomeConta || "",
-    Documento: cfg.Documento || "",
-    Ambiente: cfg.Ambiente || "producao",
-    ClientId: cfg.ClientId || "",
-    ClientSecret: cfg.ClientSecret || "",
-    Webhook: cfg.Webhook || ""
-  };
-}
-
-function efiConta(conta = 1) {
-  carregarEfiArquivo();
-  return efiConfigMemoria.contas[String(conta)] || null;
-}
-
-function efiBaseUrl(ambiente) {
-  return String(ambiente || "").toLowerCase().includes("homolog")
-    ? "https://cobrancas-h.api.efipay.com.br"
-    : "https://cobrancas.api.efipay.com.br";
-}
-
-async function efiGerarToken(config) {
-  const cfg = config || efiConta(1);
-
-  const clientId = String(cfg?.ClientId || cfg?.clientId || "").trim();
-  const clientSecret = String(cfg?.ClientSecret || cfg?.clientSecret || "").trim();
-
-  if (!clientId || !clientSecret) {
-    throw new Error("Client ID e Client Secret são obrigatórios.");
-  }
-
-  const basic = Buffer.from(clientId + ":" + clientSecret).toString("base64");
-
-  const resp = await fetch(efiBaseUrl(cfg.Ambiente || cfg.ambiente || "producao") + "/v1/authorize", {
-    method: "POST",
-    headers: {
-      "Authorization": "Basic " + basic,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ grant_type: "client_credentials" })
-  });
-
-  const text = await resp.text();
-  let json = {};
-  try { json = JSON.parse(text); } catch(e) { json = { raw:text }; }
-
-  if (!resp.ok) {
-    throw new Error(json.error_description || json.error || json.mensagem || text || "Falha OAuth Efí");
-  }
-
-  return json;
-}
-
-app.get("/api/efi/config", async (req, res) => {
-  try {
-    const conta = Number(req.query.conta || 1);
-    const cfg = efiConta(conta);
-    return res.json({ ok:true, conta, config: limparEfiPublico(cfg) });
-  } catch (err) {
-    return res.status(500).json({ ok:false, erro:err.message });
-  }
-});
-
-app.post("/api/efi/salvar-config", async (req, res) => {
-  try {
-    const body = req.body || {};
-    const conta = Number(body.conta || 1);
-
-    carregarEfiArquivo();
-
-    const cfg = {
-      conta,
-      NomeConta: String(body.NomeConta || "").trim(),
-      Documento: String(body.Documento || "").trim(),
-      Ambiente: String(body.Ambiente || "producao").trim(),
-      ClientId: String(body.ClientId || "").trim(),
-      ClientSecret: String(body.ClientSecret || "").trim(),
-      Webhook: String(body.Webhook || "").trim()
-    };
-
-    efiConfigMemoria.contas[String(conta)] = cfg;
-    const gravouArquivo = salvarEfiArquivo();
-
-    return res.json({
-      ok:true,
-      conta,
-      gravouArquivo,
-      mensagem: gravouArquivo
-        ? "Configuração Efí salva no backend."
-        : "Configuração Efí salva em memória. O ambiente pode não permitir gravação em arquivo.",
-      config: limparEfiPublico(cfg)
-    });
-  } catch (err) {
-    return res.status(500).json({ ok:false, erro:err.message });
-  }
-});
-
-app.post("/api/efi/testar-conexao", async (req, res) => {
-  try {
-    const body = req.body || {};
-    const conta = Number(body.conta || 1);
-
-    const cfg = {
-      conta,
-      NomeConta: String(body.NomeConta || "").trim(),
-      Documento: String(body.Documento || "").trim(),
-      Ambiente: String(body.Ambiente || "producao").trim(),
-      ClientId: String(body.ClientId || "").trim(),
-      ClientSecret: String(body.ClientSecret || "").trim(),
-      Webhook: String(body.Webhook || "").trim()
-    };
-
-    const token = await efiGerarToken(cfg);
-
-    carregarEfiArquivo();
-    efiConfigMemoria.contas[String(conta)] = cfg;
-    const gravouArquivo = salvarEfiArquivo();
-
-    return res.json({
-      ok:true,
-      conta,
-      gravouArquivo,
-      mensagem:"Conexão Efí OK. Token OAuth gerado.",
-      token_type: token.token_type || "Bearer",
-      expires_in: token.expires_in || null
-    });
-  } catch (err) {
-    console.error("Erro /api/efi/testar-conexao:", err);
-    return res.status(500).json({ ok:false, erro:err.message });
-  }
-});
-
-app.get("/api/efi/status", async (req, res) => {
-  try {
-    const cfg = efiConta(1);
-    const integrada = Boolean(cfg && cfg.ClientId && cfg.ClientSecret);
-    return res.json({
-      ok:true,
-      integrada,
-      conta: integrada ? {
-        nomeConta: cfg.NomeConta || "Conta Efí 1",
-        documento: cfg.Documento || "",
-        ambiente: cfg.Ambiente || "producao"
-      } : null
-    });
-  } catch (err) {
-    return res.status(500).json({ ok:false, integrada:false, erro:err.message });
-  }
-});
-
-app.get("/api/efi/boletos/teste", async (req, res) => {
-  try {
-    const cfg = efiConta(1);
-    const token = await efiGerarToken(cfg);
-
-    return res.json({
-      ok:true,
-      mensagem:"OAuth Efí OK para Conta 1.",
-      observacao:"Configuração carregada do backend local.",
-      token_type: token.token_type || "Bearer",
-      expires_in: token.expires_in || null
-    });
-  } catch (err) {
-    console.error("Erro /api/efi/boletos/teste:", err);
-    return res.status(500).json({ ok:false, erro:err.message });
-  }
-});
-
 
 /* ============================================================
    STATUS DEDICADO DO CLIENTE - /ppp/active/print
@@ -1988,6 +1771,212 @@ app.get("/api/servidores-debug", async (req, res) => {
     return res.status(500).json({ ok:false, erro:err.message });
   }
 });
+
+
+
+/* EFI BACKEND SUPABASE */
+function efiBaseUrl(ambiente) {
+  return String(ambiente || "").toLowerCase().includes("homolog")
+    ? "https://cobrancas-h.api.efipay.com.br"
+    : "https://cobrancas.api.efipay.com.br";
+}
+
+async function efiGarantirTabela() {
+  if (!process.env.DATABASE_URL) {
+    throw new Error("DATABASE_URL não configurada. Configure o Supabase no deploy.");
+  }
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS efi_configuracoes (
+      conta INTEGER PRIMARY KEY,
+      nome_conta TEXT,
+      documento TEXT,
+      ambiente TEXT DEFAULT 'producao',
+      client_id TEXT,
+      client_secret TEXT,
+      webhook TEXT,
+      ativo BOOLEAN DEFAULT TRUE,
+      atualizado_em TIMESTAMP DEFAULT NOW()
+    );
+  `);
+}
+
+function efiRowToConfig(row) {
+  if (!row) return null;
+  return {
+    conta: Number(row.conta || 1),
+    NomeConta: row.nome_conta || "",
+    Documento: row.documento || "",
+    Ambiente: row.ambiente || "producao",
+    ClientId: row.client_id || "",
+    ClientSecret: row.client_secret || "",
+    Webhook: row.webhook || ""
+  };
+}
+
+function efiConfigFromBody(body) {
+  return {
+    conta: Number(body.conta || 1),
+    NomeConta: String(body.NomeConta || body.nomeConta || "").trim(),
+    Documento: String(body.Documento || body.documento || "").trim(),
+    Ambiente: String(body.Ambiente || body.ambiente || "producao").trim(),
+    ClientId: String(body.ClientId || body.clientId || "").trim(),
+    ClientSecret: String(body.ClientSecret || body.clientSecret || "").trim(),
+    Webhook: String(body.Webhook || body.webhook || "").trim()
+  };
+}
+
+async function efiCarregarConfig(conta = 1) {
+  await efiGarantirTabela();
+  const r = await pool.query("SELECT * FROM efi_configuracoes WHERE conta=$1 AND ativo=true LIMIT 1", [Number(conta)]);
+  return efiRowToConfig(r.rows[0]);
+}
+
+async function efiSalvarConfig(cfg) {
+  await efiGarantirTabela();
+  const r = await pool.query(`
+    INSERT INTO efi_configuracoes
+      (conta, nome_conta, documento, ambiente, client_id, client_secret, webhook, ativo, atualizado_em)
+    VALUES
+      ($1,$2,$3,$4,$5,$6,$7,true,NOW())
+    ON CONFLICT (conta) DO UPDATE SET
+      nome_conta = EXCLUDED.nome_conta,
+      documento = EXCLUDED.documento,
+      ambiente = EXCLUDED.ambiente,
+      client_id = EXCLUDED.client_id,
+      client_secret = EXCLUDED.client_secret,
+      webhook = EXCLUDED.webhook,
+      ativo = true,
+      atualizado_em = NOW()
+    RETURNING *;
+  `, [
+    Number(cfg.conta || 1),
+    cfg.NomeConta || "",
+    cfg.Documento || "",
+    cfg.Ambiente || "producao",
+    cfg.ClientId || "",
+    cfg.ClientSecret || "",
+    cfg.Webhook || ""
+  ]);
+  return efiRowToConfig(r.rows[0]);
+}
+
+async function efiGerarToken(cfgParam = null) {
+  const cfg = cfgParam || await efiCarregarConfig(1);
+  const clientId = String(cfg?.ClientId || "").trim();
+  const clientSecret = String(cfg?.ClientSecret || "").trim();
+
+  if (!clientId || !clientSecret) {
+    throw new Error("Client ID e Client Secret são obrigatórios.");
+  }
+
+  const basic = Buffer.from(clientId + ":" + clientSecret).toString("base64");
+  const resp = await fetch(efiBaseUrl(cfg.Ambiente || "producao") + "/v1/authorize", {
+    method: "POST",
+    headers: { "Authorization": "Basic " + basic, "Content-Type": "application/json" },
+    body: JSON.stringify({ grant_type: "client_credentials" })
+  });
+
+  const text = await resp.text();
+  let json = {};
+  try { json = JSON.parse(text); } catch(e) { json = { raw:text }; }
+  if (!resp.ok) throw new Error(json.error_description || json.error || json.mensagem || text || "Falha OAuth Efí");
+  return json;
+}
+
+app.get("/api/efi/config", async (req, res) => {
+  try {
+    const conta = Number(req.query.conta || 1);
+    const cfg = await efiCarregarConfig(conta);
+    return res.json({ ok:true, conta, config: cfg || { conta, NomeConta:"", Documento:"", Ambiente:"producao", ClientId:"", ClientSecret:"", Webhook:"" } });
+  } catch (err) {
+    return res.status(500).json({ ok:false, erro:err.message });
+  }
+});
+
+app.post("/api/efi/salvar-config", async (req, res) => {
+  try {
+    const cfg = efiConfigFromBody(req.body || {});
+    if (!cfg.NomeConta) return res.status(400).json({ ok:false, erro:"Nome da conta Efí é obrigatório." });
+    if (!cfg.Documento) return res.status(400).json({ ok:false, erro:"CPF/CNPJ da conta Efí é obrigatório." });
+    const salvo = await efiSalvarConfig(cfg);
+    return res.json({ ok:true, conta:salvo.conta, mensagem:"Configuração Efí salva no Supabase.", config:salvo });
+  } catch (err) {
+    return res.status(500).json({ ok:false, erro:err.message });
+  }
+});
+
+app.post("/api/efi/testar-conexao", async (req, res) => {
+  try {
+    const cfg = efiConfigFromBody(req.body || {});
+    if (!cfg.ClientId || !cfg.ClientSecret) return res.status(400).json({ ok:false, erro:"Client ID e Client Secret são obrigatórios." });
+    const token = await efiGerarToken(cfg);
+    const salvo = await efiSalvarConfig(cfg);
+    return res.json({ ok:true, conta:salvo.conta, mensagem:"Conexão Efí OK. Configuração salva no Supabase.", token_type:token.token_type || "Bearer", expires_in:token.expires_in || null, config:salvo });
+  } catch (err) {
+    console.error("Erro /api/efi/testar-conexao:", err);
+    return res.status(500).json({ ok:false, erro:err.message });
+  }
+});
+
+app.get("/api/efi/status", async (req, res) => {
+  try {
+    const cfg = await efiCarregarConfig(1);
+    const integrada = Boolean(cfg && cfg.ClientId && cfg.ClientSecret);
+    return res.json({ ok:true, integrada, conta: integrada ? { conta:cfg.conta, nomeConta:cfg.NomeConta || "Conta Efí 1", documento:cfg.Documento || "", ambiente:cfg.Ambiente || "producao" } : null });
+  } catch (err) {
+    return res.status(500).json({ ok:false, integrada:false, erro:err.message });
+  }
+});
+
+
+
+app.get("/api/efi/status-online", async (req, res) => {
+  try {
+    const conta = Number(req.query.conta || 1);
+    const cfg = await efiCarregarConfig(conta);
+
+    if (!cfg || !cfg.ClientId || !cfg.ClientSecret) {
+      return res.json({
+        ok: true,
+        online: false,
+        conta,
+        motivo: "Conta Efí não configurada."
+      });
+    }
+
+    const token = await efiGerarToken(cfg);
+
+    return res.json({
+      ok: true,
+      online: true,
+      conta,
+      mensagem: "Efí Online",
+      ambiente: cfg.Ambiente || "producao",
+      nomeConta: cfg.NomeConta || ("Conta Efí " + conta),
+      expires_in: token.expires_in || null,
+      token_type: token.token_type || "Bearer"
+    });
+  } catch (err) {
+    return res.json({
+      ok: true,
+      online: false,
+      conta: Number(req.query.conta || 1),
+      motivo: err.message
+    });
+  }
+});
+
+app.get("/api/efi/boletos/teste", async (req, res) => {
+  try {
+    const cfg = await efiCarregarConfig(1);
+    const token = await efiGerarToken(cfg);
+    return res.json({ ok:true, mensagem:"OAuth Efí OK para Conta 1.", observacao:"Configuração carregada do Supabase.", token_type:token.token_type || "Bearer", expires_in:token.expires_in || null });
+  } catch (err) {
+    console.error("Erro /api/efi/boletos/teste:", err);
+    return res.status(500).json({ ok:false, erro:err.message });
+  }
+});
+
 
 io.on("connection",(socket)=>{
   socket.emit("hub-update", geral());
