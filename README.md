@@ -1,11 +1,8 @@
 # Fibra+ Hub
 
-## Alteração atual
-- Removida a dependência da Efí com Supabase.
-- Apagada a migração `supabase_migracao_efi_configuracoes.sql`.
-- Removidos scripts auxiliares que apenas mascaravam status visual.
-- Configuração Efí agora salva no backend local em `data/efi-config.json`.
-- Financeiro Efí carrega/salva direto pelo backend local.
-- Mantidos endpoints `/api/efi/config`, `/api/efi/salvar-config`, `/api/efi/testar-conexao`, `/api/efi/status` e `/api/efi/boletos/teste`.
-
-Observação: em hospedagens serverless como Vercel, gravação em arquivo pode não persistir após redeploy/reinício. Para produção estável, use variáveis de ambiente ou banco. Nesta versão não envia nada ao Supabase.
+## Correção atual
+- Corrigido servidor OFF: `/api/servidores` agora consulta MikroTik em tempo real.
+- Confirmado que clientes ON/OFF usam `/ppp/active/print` via `/api/cliente/status`.
+- Mantida Efí local em `data/efi-config.json`.
+- Adicionados diagnósticos `/api/diagnostico/mikrotik` e `/api/diagnostico/rotas`.
+- Layout/HTML/menu não foram alterados.

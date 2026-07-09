@@ -555,7 +555,50 @@ app.get("/api/status-atual", (req, res) => {
   }
 });
 
-app.get("/api/servidores",(req,res)=>res.json(servidores));
+
+app.get("/api/servidores", async (req, res) => {
+  try {
+    const [armandoOnline, coloniaOnline, armandoStatus, coloniaStatus] = await Promise.all([
+      consultarOnlineServidor("ARMANDO"),
+      consultarOnlineServidor("COLONIA"),
+      consultarStatusServidor("ARMANDO"),
+      consultarStatusServidor("COLONIA")
+    ]);
+
+    servidores.armando = {
+      ...servidores.armando,
+      servidor: "armando",
+      nome: "ARMANDO MENDES",
+      online: Boolean(armandoOnline.ok || armandoStatus.ok),
+      atualizadoEm: new Date().toISOString(),
+      identity: armandoStatus.identity || servidores.armando.identity || "ARMANDO MENDES",
+      cpu: armandoStatus.cpu || "0",
+      uptime: armandoStatus.uptime || "--",
+      pppoeOnline: armandoOnline.total || 0,
+      clientes: armandoOnline.clientes || [],
+      erro: (armandoOnline.ok || armandoStatus.ok) ? "" : (armandoOnline.erro || armandoStatus.erro || "")
+    };
+
+    servidores.colonia = {
+      ...servidores.colonia,
+      servidor: "colonia",
+      nome: "COLÔNIA ANTÔNIO ALEIXO",
+      online: Boolean(coloniaOnline.ok || coloniaStatus.ok),
+      atualizadoEm: new Date().toISOString(),
+      identity: coloniaStatus.identity || servidores.colonia.identity || "COLÔNIA ANTÔNIO ALEIXO",
+      cpu: coloniaStatus.cpu || "0",
+      uptime: coloniaStatus.uptime || "--",
+      pppoeOnline: coloniaOnline.total || 0,
+      clientes: coloniaOnline.clientes || [],
+      erro: (coloniaOnline.ok || coloniaStatus.ok) ? "" : (coloniaOnline.erro || coloniaStatus.erro || "")
+    };
+
+    return res.json(servidores);
+  } catch (error) {
+    return res.status(500).json({ ok:false, erro:error.message, servidores });
+  }
+});
+
 
 app.get("/api/clientes", async (req,res)=>{
   try {
@@ -1742,27 +1785,6 @@ app.get("/api/efi/boletos/teste", async (req, res) => {
 });
 
 
-io.on("connection",(socket)=>{
-  socket.emit("hub-update", geral());
-  socket.emit("mikrotik-update", geral());
-});
-
-const PORT=process.env.PORT || 3000;
-
-// Na Vercel, o Express precisa ser exportado como função serverless.
-// Fora da Vercel, continua rodando normal com npm start.
-if (process.env.VERCEL) {
-  initDb().catch(err => console.error("Erro ao iniciar banco:", err.message));
-  module.exports = app;
-} else {
-  initDb().finally(() => server.listen(PORT, () => console.log("Fibra+ Hub 2 Servidores rodando na porta " + PORT)));
-}
-
-
-
-
-
-
 /* ============================================================
    STATUS DEDICADO DO CLIENTE - /ppp/active/print
    Online somente no servidor selecionado e com IP+MAC+UPTIME.
@@ -1851,4 +1873,85 @@ app.get("/api/cliente/status", async (req, res) => {
 });
 
 
+/* ============================================================
+   DIAGNÓSTICO API / MIKROTIK
+============================================================ */
+app.get("/api/diagnostico/mikrotik", async (req, res) => {
+  try {
+    const [armandoOnline, coloniaOnline, armandoStatus, coloniaStatus] = await Promise.all([
+      consultarOnlineServidor("ARMANDO"),
+      consultarOnlineServidor("COLONIA"),
+      consultarStatusServidor("ARMANDO"),
+      consultarStatusServidor("COLONIA")
+    ]);
 
+    return res.json({
+      ok: true,
+      atualizadoEm: new Date().toISOString(),
+      armando: {
+        online: armandoOnline.ok,
+        totalClientes: armandoOnline.total || 0,
+        erroOnline: armandoOnline.erro || "",
+        statusOk: armandoStatus.ok,
+        identity: armandoStatus.identity || "",
+        erroStatus: armandoStatus.erro || ""
+      },
+      colonia: {
+        online: coloniaOnline.ok,
+        totalClientes: coloniaOnline.total || 0,
+        erroOnline: coloniaOnline.erro || "",
+        statusOk: coloniaStatus.ok,
+        identity: coloniaStatus.identity || "",
+        erroStatus: coloniaStatus.erro || ""
+      },
+      envNecessarias: [
+        "MIKROTIK_ARMANDO_HOST",
+        "MIKROTIK_ARMANDO_USER",
+        "MIKROTIK_ARMANDO_PASS",
+        "MIKROTIK_COLONIA_HOST",
+        "MIKROTIK_COLONIA_USER",
+        "MIKROTIK_COLONIA_PASS"
+      ]
+    });
+  } catch (err) {
+    return res.status(500).json({ ok:false, erro:err.message });
+  }
+});
+
+app.get("/api/diagnostico/rotas", (req, res) => {
+  return res.json({
+    ok: true,
+    rotasPrincipais: [
+      "/api/servidores",
+      "/api/online",
+      "/api/status-mikrotik",
+      "/api/cliente/status",
+      "/api/mikrotik/profiles",
+      "/api/mikrotik/cliente-profile",
+      "/api/mikrotik/cliente-acao",
+      "/api/efi/config",
+      "/api/efi/status",
+      "/api/efi/testar-conexao",
+      "/api/efi/boletos/teste"
+    ],
+    apiPrincipal: "server.js",
+    observacao: "Neste projeto as rotas /api ficam no server.js; o vercel.json aponta /api/* para server.js."
+  });
+});
+
+
+io.on("connection",(socket)=>{
+  socket.emit("hub-update", geral());
+  socket.emit("mikrotik-update", geral());
+});
+
+const PORT=process.env.PORT || 3000;
+
+// Na Vercel, o Express precisa ser exportado como função serverless.
+// Fora da Vercel, continua rodando normal com npm start.
+if (process.env.VERCEL) {
+  initDb().catch(err => console.error("Erro ao iniciar banco:", err.message));
+  module.exports = app;
+} else {
+  initDb().finally(() => server.listen(PORT, () => console.log("Fibra+ Hub 2 Servidores rodando na porta " + PORT)));
+}
