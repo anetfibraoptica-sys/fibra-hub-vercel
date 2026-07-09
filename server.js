@@ -301,6 +301,28 @@ async function initDb() {
     );
   `);
 
+  
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS efi_boletos_vinculos (
+      id SERIAL PRIMARY KEY,
+      boleto_origem TEXT,
+      cliente_nome TEXT,
+      cliente_documento TEXT,
+      valor TEXT,
+      vencimento TEXT,
+      conta INTEGER DEFAULT 1,
+      charge_id TEXT,
+      txid TEXT,
+      situacao_efi TEXT,
+      linha_digitavel TEXT,
+      pix_copia_cola TEXT,
+      link_boleto TEXT,
+      raw JSONB,
+      atualizado_em TIMESTAMP DEFAULT NOW(),
+      criado_em TIMESTAMP DEFAULT NOW()
+    );
+  `);
+
   console.log("PostgreSQL conectado.");
 }
 
@@ -1774,6 +1796,9 @@ app.get("/api/servidores-debug", async (req, res) => {
 
 
 
+
+
+
 /* EFI BACKEND SUPABASE */
 function efiBaseUrl(ambiente) {
   return String(ambiente || "").toLowerCase().includes("homolog")
@@ -1785,6 +1810,7 @@ async function efiGarantirTabela() {
   if (!process.env.DATABASE_URL) {
     throw new Error("DATABASE_URL não configurada. Configure o Supabase no deploy.");
   }
+
   await pool.query(`
     CREATE TABLE IF NOT EXISTS efi_configuracoes (
       conta INTEGER PRIMARY KEY,
@@ -1795,7 +1821,29 @@ async function efiGarantirTabela() {
       client_secret TEXT,
       webhook TEXT,
       ativo BOOLEAN DEFAULT TRUE,
-      atualizado_em TIMESTAMP DEFAULT NOW()
+      atualizado_em TIMESTAMP DEFAULT NOW(),
+      criado_em TIMESTAMP DEFAULT NOW()
+    );
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS efi_boletos_vinculos (
+      id SERIAL PRIMARY KEY,
+      boleto_origem TEXT,
+      cliente_nome TEXT,
+      cliente_documento TEXT,
+      valor TEXT,
+      vencimento TEXT,
+      conta INTEGER DEFAULT 1,
+      charge_id TEXT,
+      txid TEXT,
+      situacao_efi TEXT,
+      linha_digitavel TEXT,
+      pix_copia_cola TEXT,
+      link_boleto TEXT,
+      raw JSONB,
+      atualizado_em TIMESTAMP DEFAULT NOW(),
+      criado_em TIMESTAMP DEFAULT NOW()
     );
   `);
 }
@@ -1827,12 +1875,16 @@ function efiConfigFromBody(body) {
 
 async function efiCarregarConfig(conta = 1) {
   await efiGarantirTabela();
-  const r = await pool.query("SELECT * FROM efi_configuracoes WHERE conta=$1 AND ativo=true LIMIT 1", [Number(conta)]);
+  const r = await pool.query(
+    "SELECT * FROM efi_configuracoes WHERE conta=$1 AND ativo=true LIMIT 1",
+    [Number(conta)]
+  );
   return efiRowToConfig(r.rows[0]);
 }
 
 async function efiSalvarConfig(cfg) {
   await efiGarantirTabela();
+
   const r = await pool.query(`
     INSERT INTO efi_configuracoes
       (conta, nome_conta, documento, ambiente, client_id, client_secret, webhook, ativo, atualizado_em)
@@ -1857,6 +1909,7 @@ async function efiSalvarConfig(cfg) {
     cfg.ClientSecret || "",
     cfg.Webhook || ""
   ]);
+
   return efiRowToConfig(r.rows[0]);
 }
 
@@ -1870,24 +1923,202 @@ async function efiGerarToken(cfgParam = null) {
   }
 
   const basic = Buffer.from(clientId + ":" + clientSecret).toString("base64");
+
   const resp = await fetch(efiBaseUrl(cfg.Ambiente || "producao") + "/v1/authorize", {
     method: "POST",
-    headers: { "Authorization": "Basic " + basic, "Content-Type": "application/json" },
+    headers: {
+      "Authorization": "Basic " + basic,
+      "Content-Type": "application/json"
+    },
     body: JSON.stringify({ grant_type: "client_credentials" })
   });
 
   const text = await resp.text();
   let json = {};
   try { json = JSON.parse(text); } catch(e) { json = { raw:text }; }
-  if (!resp.ok) throw new Error(json.error_description || json.error || json.mensagem || text || "Falha OAuth Efí");
+
+  if (!resp.ok) {
+    throw new Error(json.error_description || json.error || json.mensagem || text || "Falha OAuth Efí");
+  }
+
   return json;
+}
+
+async function efiRequest(pathReq, cfg = null, options = {}) {
+  const config = cfg || await efiCarregarConfig(1);
+  const token = await efiGerarToken(config);
+
+  const resp = await fetch(efiBaseUrl(config.Ambiente || "producao") + pathReq, {
+    method: options.method || "GET",
+    headers: {
+      "Authorization": "Bearer " + token.access_token,
+      "Content-Type": "application/json",
+      ...(options.headers || {})
+    },
+    body: options.body ? JSON.stringify(options.body) : undefined
+  });
+
+  const text = await resp.text();
+  let json = {};
+  try { json = JSON.parse(text); } catch(e) { json = { raw:text }; }
+
+  return { ok: resp.ok, status: resp.status, json, raw: text };
+}
+
+function efiOnlyNumbers(v) {
+  return String(v || "").replace(/\D/g, "");
+}
+
+function efiDateISO(v) {
+  const s = String(v || "").trim();
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+  return "";
+}
+
+function efiAddDays(iso, days) {
+  const base = iso || new Date().toISOString().slice(0, 10);
+  const d = new Date(base + "T00:00:00");
+  if (isNaN(d.getTime())) return "";
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+function efiMoneyCents(v) {
+  const s = String(v || "0").replace(/\./g, "").replace(",", ".").replace(/[^\d.-]/g, "");
+  const n = Number(s);
+  if (!isFinite(n)) return 0;
+  return Math.round(n * 100);
+}
+
+function efiGet(obj, paths) {
+  for (const pth of paths) {
+    const parts = pth.split(".");
+    let cur = obj;
+    for (const p of parts) cur = cur && cur[p] !== undefined ? cur[p] : undefined;
+    if (cur !== undefined && cur !== null && String(cur).trim() !== "") return cur;
+  }
+  return "";
+}
+
+function efiExtractArray(json) {
+  if (Array.isArray(json)) return json;
+  if (Array.isArray(json.data)) return json.data;
+  if (Array.isArray(json.items)) return json.items;
+  if (Array.isArray(json.charges)) return json.charges;
+  if (Array.isArray(json.transactions)) return json.transactions;
+  if (json.data && Array.isArray(json.data.items)) return json.data.items;
+  if (json.data && Array.isArray(json.data.charges)) return json.data.charges;
+  if (json.data && Array.isArray(json.data.transactions)) return json.data.transactions;
+  return [];
+}
+
+function efiStatusLabel(s) {
+  const status = String(s || "").toLowerCase();
+  if (status.includes("paid") || status.includes("pago") || status.includes("settled")) return "Pago";
+  if (status.includes("wait") || status.includes("pend") || status.includes("new") || status.includes("unpaid")) return "Aguardando pagamento";
+  if (status.includes("cancel")) return "Cancelado";
+  if (status.includes("expire") || status.includes("venc")) return "Vencido";
+  return s || "Registrado na Efí";
+}
+
+function efiExtractChargeDetails(json) {
+  const data = json && (json.data || json);
+  const linha = efiGet(data, [
+    "barcode", "digitable_line", "linha_digitavel",
+    "payment.banking_billet.barcode",
+    "payment.banking_billet.digitable_line",
+    "banking_billet.barcode",
+    "banking_billet.digitable_line"
+  ]);
+
+  const pix = efiGet(data, [
+    "pixCopiaECola", "pix_copia_e_cola",
+    "pix.qrcode", "pix.qr_code", "pix.copy_paste",
+    "payment.pix.qrcode", "payment.pix.copy_paste",
+    "qrcode", "qr_code"
+  ]);
+
+  const link = efiGet(data, [
+    "pdf.charge", "pdf.carnet", "payment_url", "link", "url",
+    "payment.banking_billet.link", "banking_billet.link"
+  ]);
+
+  const status = efiGet(data, ["status", "situacao"]);
+
+  return {
+    situacao_efi: efiStatusLabel(status),
+    linha_digitavel: String(linha || ""),
+    pix_copia_cola: String(pix || ""),
+    link_boleto: String(link || ""),
+    charge_id: String(efiGet(data, ["charge_id", "id"]) || ""),
+    txid: String(efiGet(data, ["txid", "pix.txid"]) || ""),
+    raw: data
+  };
+}
+
+function efiScoreCharge(item, alvo) {
+  let pontos = 0;
+
+  const id = String(efiGet(item, ["charge_id", "id", "transaction_id", "custom_id", "numero"]) || "").trim();
+  const nome = String(efiGet(item, ["customer.name", "customer", "payer.name", "name", "cliente"]) || "").toLowerCase();
+  const doc = efiOnlyNumbers(efiGet(item, ["customer.cpf", "customer.cnpj", "cpf", "cnpj", "cpf_cnpj"]));
+  const venc = efiDateISO(efiGet(item, ["expire_at", "due_date", "vencimento", "payment.banking_billet.expire_at", "banking_billet.expire_at"]));
+  const valor = Number(efiGet(item, ["total", "value", "amount", "payment.banking_billet.value", "banking_billet.value"]) || 0);
+
+  const alvoId = String(alvo.numero || alvo.charge_id || alvo.chargeId || "").trim();
+  const alvoNome = String(alvo.cliente || alvo.cliente_nome || "").toLowerCase();
+  const alvoDoc = efiOnlyNumbers(alvo.cpf || alvo.cpf_cnpj || alvo.documento || "");
+  const alvoVenc = efiDateISO(alvo.vencimento || "");
+  const alvoValor = efiMoneyCents(alvo.valor || alvo.valorPago || "");
+
+  if (alvoId && id === alvoId) pontos += 100;
+  if (alvoDoc && doc && doc === alvoDoc) pontos += 60;
+  if (alvoNome && nome && (nome.includes(alvoNome) || alvoNome.includes(nome))) pontos += 45;
+  if (alvoVenc && venc && venc === alvoVenc) pontos += 35;
+  if (alvoValor && valor) {
+    const cent = valor > 100000 ? Math.round(valor) : Math.round(valor * 100);
+    if (Math.abs(cent - alvoValor) <= 2) pontos += 35;
+  }
+  return pontos;
+}
+
+async function efiSalvarVinculoBoleto(dados, retorno) {
+  await efiGarantirTabela();
+
+  await pool.query(`
+    INSERT INTO efi_boletos_vinculos
+      (boleto_origem, cliente_nome, cliente_documento, valor, vencimento, conta, charge_id, txid, situacao_efi, linha_digitavel, pix_copia_cola, link_boleto, raw, atualizado_em)
+    VALUES
+      ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,NOW())
+  `, [
+    String(dados.numero || dados.boleto_origem || dados.id || ""),
+    String(dados.cliente || dados.cliente_nome || ""),
+    efiOnlyNumbers(dados.cpf || dados.cpf_cnpj || dados.documento || ""),
+    String(dados.valor || dados.valorPago || ""),
+    String(dados.vencimento || ""),
+    Number(dados.conta || 1),
+    String(retorno.charge_id || ""),
+    String(retorno.txid || ""),
+    String(retorno.situacao_efi || ""),
+    String(retorno.linha_digitavel || ""),
+    String(retorno.pix_copia_cola || ""),
+    String(retorno.link_boleto || ""),
+    retorno.raw ? JSON.stringify(retorno.raw) : null
+  ]);
 }
 
 app.get("/api/efi/config", async (req, res) => {
   try {
     const conta = Number(req.query.conta || 1);
     const cfg = await efiCarregarConfig(conta);
-    return res.json({ ok:true, conta, config: cfg || { conta, NomeConta:"", Documento:"", Ambiente:"producao", ClientId:"", ClientSecret:"", Webhook:"" } });
+    return res.json({
+      ok: true,
+      conta,
+      config: cfg || { conta, NomeConta:"", Documento:"", Ambiente:"producao", ClientId:"", ClientSecret:"", Webhook:"" }
+    });
   } catch (err) {
     return res.status(500).json({ ok:false, erro:err.message });
   }
@@ -1898,6 +2129,7 @@ app.post("/api/efi/salvar-config", async (req, res) => {
     const cfg = efiConfigFromBody(req.body || {});
     if (!cfg.NomeConta) return res.status(400).json({ ok:false, erro:"Nome da conta Efí é obrigatório." });
     if (!cfg.Documento) return res.status(400).json({ ok:false, erro:"CPF/CNPJ da conta Efí é obrigatório." });
+
     const salvo = await efiSalvarConfig(cfg);
     return res.json({ ok:true, conta:salvo.conta, mensagem:"Configuração Efí salva no Supabase.", config:salvo });
   } catch (err) {
@@ -1909,9 +2141,18 @@ app.post("/api/efi/testar-conexao", async (req, res) => {
   try {
     const cfg = efiConfigFromBody(req.body || {});
     if (!cfg.ClientId || !cfg.ClientSecret) return res.status(400).json({ ok:false, erro:"Client ID e Client Secret são obrigatórios." });
+
     const token = await efiGerarToken(cfg);
     const salvo = await efiSalvarConfig(cfg);
-    return res.json({ ok:true, conta:salvo.conta, mensagem:"Conexão Efí OK. Configuração salva no Supabase.", token_type:token.token_type || "Bearer", expires_in:token.expires_in || null, config:salvo });
+
+    return res.json({
+      ok:true,
+      conta:salvo.conta,
+      mensagem:"Conexão Efí OK. Configuração salva no Supabase.",
+      token_type:token.token_type || "Bearer",
+      expires_in:token.expires_in || null,
+      config:salvo
+    });
   } catch (err) {
     console.error("Erro /api/efi/testar-conexao:", err);
     return res.status(500).json({ ok:false, erro:err.message });
@@ -1922,13 +2163,15 @@ app.get("/api/efi/status", async (req, res) => {
   try {
     const cfg = await efiCarregarConfig(1);
     const integrada = Boolean(cfg && cfg.ClientId && cfg.ClientSecret);
-    return res.json({ ok:true, integrada, conta: integrada ? { conta:cfg.conta, nomeConta:cfg.NomeConta || "Conta Efí 1", documento:cfg.Documento || "", ambiente:cfg.Ambiente || "producao" } : null });
+    return res.json({
+      ok:true,
+      integrada,
+      conta: integrada ? { conta:cfg.conta, nomeConta:cfg.NomeConta || "Conta Efí 1", documento:cfg.Documento || "", ambiente:cfg.Ambiente || "producao" } : null
+    });
   } catch (err) {
     return res.status(500).json({ ok:false, integrada:false, erro:err.message });
   }
 });
-
-
 
 app.get("/api/efi/status-online", async (req, res) => {
   try {
@@ -1936,33 +2179,23 @@ app.get("/api/efi/status-online", async (req, res) => {
     const cfg = await efiCarregarConfig(conta);
 
     if (!cfg || !cfg.ClientId || !cfg.ClientSecret) {
-      return res.json({
-        ok: true,
-        online: false,
-        conta,
-        motivo: "Conta Efí não configurada."
-      });
+      return res.json({ ok:true, online:false, conta, motivo:"Conta Efí não configurada." });
     }
 
     const token = await efiGerarToken(cfg);
 
     return res.json({
-      ok: true,
-      online: true,
+      ok:true,
+      online:true,
       conta,
-      mensagem: "Efí Online",
-      ambiente: cfg.Ambiente || "producao",
-      nomeConta: cfg.NomeConta || ("Conta Efí " + conta),
-      expires_in: token.expires_in || null,
-      token_type: token.token_type || "Bearer"
+      mensagem:"Efí Online",
+      ambiente:cfg.Ambiente || "producao",
+      nomeConta:cfg.NomeConta || ("Conta Efí " + conta),
+      expires_in:token.expires_in || null,
+      token_type:token.token_type || "Bearer"
     });
   } catch (err) {
-    return res.json({
-      ok: true,
-      online: false,
-      conta: Number(req.query.conta || 1),
-      motivo: err.message
-    });
+    return res.json({ ok:true, online:false, conta:Number(req.query.conta || 1), motivo:err.message });
   }
 });
 
@@ -1970,9 +2203,132 @@ app.get("/api/efi/boletos/teste", async (req, res) => {
   try {
     const cfg = await efiCarregarConfig(1);
     const token = await efiGerarToken(cfg);
-    return res.json({ ok:true, mensagem:"OAuth Efí OK para Conta 1.", observacao:"Configuração carregada do Supabase.", token_type:token.token_type || "Bearer", expires_in:token.expires_in || null });
+    return res.json({
+      ok:true,
+      mensagem:"OAuth Efí OK para Conta 1.",
+      observacao:"Configuração carregada do Supabase.",
+      token_type:token.token_type || "Bearer",
+      expires_in:token.expires_in || null
+    });
   } catch (err) {
     console.error("Erro /api/efi/boletos/teste:", err);
+    return res.status(500).json({ ok:false, erro:err.message });
+  }
+});
+
+app.post("/api/efi/boleto-importado/consultar", async (req, res) => {
+  try {
+    const body = req.body || {};
+    const conta = Number(body.conta || 1);
+    const cfg = await efiCarregarConfig(conta);
+
+    if (!cfg || !cfg.ClientId || !cfg.ClientSecret) {
+      return res.status(400).json({ ok:false, erro:"Conta Efí não configurada." });
+    }
+
+    const numero = String(body.numero || body.id || body.charge_id || body.chargeId || "").trim();
+    const emissao = efiDateISO(body.emissao || "");
+    const vencimento = efiDateISO(body.vencimento || "");
+
+    if (numero) {
+      const tentativas = [
+        "/v1/charge/" + encodeURIComponent(numero),
+        "/v1/charge/" + encodeURIComponent(numero) + "/detail",
+        "/v1/transaction/" + encodeURIComponent(numero),
+        "/v1/transactions/" + encodeURIComponent(numero)
+      ];
+
+      for (const pathReq of tentativas) {
+        try {
+          const r = await efiRequest(pathReq, cfg);
+          if (r.ok) {
+            const detalhes = efiExtractChargeDetails(r.json);
+            await efiSalvarVinculoBoleto(body, detalhes);
+            return res.json({ ok:true, encontrado:true, fonte:pathReq, ...detalhes });
+          }
+        } catch(e) {}
+      }
+    }
+
+    const datas = [];
+    if (emissao) datas.push(emissao);
+    if (vencimento) datas.push(vencimento);
+    if (!datas.length) datas.push(new Date().toISOString().slice(0,10));
+
+    let melhor = null;
+    let melhorScore = 0;
+    let ultimoErro = null;
+
+    for (const d of datas) {
+      const begin = efiAddDays(d, -180);
+      const end = efiAddDays(d, 180);
+      const paths = [
+        `/v1/charges?begin_date=${begin}&end_date=${end}`,
+        `/v1/charges?begin_date=${begin}&end_date=${end}&status=all`,
+        `/v1/transactions?begin_date=${begin}&end_date=${end}`,
+        `/v1/transactions?begin_date=${begin}&end_date=${end}&status=all`
+      ];
+
+      for (const pth of paths) {
+        try {
+          const r = await efiRequest(pth, cfg);
+          if (!r.ok) {
+            ultimoErro = r.json;
+            continue;
+          }
+
+          const lista = efiExtractArray(r.json);
+          for (const item of lista) {
+            const score = efiScoreCharge(item, body);
+            if (score > melhorScore) {
+              melhorScore = score;
+              melhor = item;
+            }
+          }
+        } catch(e) {
+          ultimoErro = e.message;
+        }
+      }
+    }
+
+    if (melhor && melhorScore >= 25) {
+      const id = efiGet(melhor, ["charge_id", "id", "transaction_id"]);
+      if (id) {
+        const detalhePaths = [
+          "/v1/charge/" + encodeURIComponent(id),
+          "/v1/charge/" + encodeURIComponent(id) + "/detail",
+          "/v1/transaction/" + encodeURIComponent(id),
+          "/v1/transactions/" + encodeURIComponent(id)
+        ];
+
+        for (const pth of detalhePaths) {
+          try {
+            const d = await efiRequest(pth, cfg);
+            if (d.ok) {
+              const detalhes = efiExtractChargeDetails(d.json);
+              await efiSalvarVinculoBoleto(body, detalhes);
+              return res.json({ ok:true, encontrado:true, fonte:"busca+detalhe", score:melhorScore, ...detalhes });
+            }
+          } catch(e) {}
+        }
+      }
+
+      const detalhes = efiExtractChargeDetails(melhor);
+      await efiSalvarVinculoBoleto(body, detalhes);
+      return res.json({ ok:true, encontrado:true, fonte:"busca", score:melhorScore, ...detalhes });
+    }
+
+    return res.json({
+      ok:true,
+      encontrado:false,
+      situacao_efi:"Integrado na Efí - boleto não localizado",
+      linha_digitavel:"",
+      pix_copia_cola:"",
+      link_boleto:"",
+      debug:{ numero, emissao, vencimento, cliente:body.cliente || "", valor:body.valor || body.valorPago || "", ultimoErro }
+    });
+  } catch (err) {
+    console.error("Erro /api/efi/boleto-importado/consultar:", err);
     return res.status(500).json({ ok:false, erro:err.message });
   }
 });

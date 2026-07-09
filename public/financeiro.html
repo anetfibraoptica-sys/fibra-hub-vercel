@@ -188,10 +188,15 @@
     if(!cfg.Documento){ alert("Informe o CPF/CNPJ da Conta Efí " + conta + "."); return; }
 
     try{
-      const resp = await fetch("/api/efi/salvar-config", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(cfg) });
+      const resp = await fetch("/api/efi/salvar-config", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body: JSON.stringify(cfg)
+      });
       const json = await resp.json();
       if(!resp.ok || !json.ok) throw new Error(json.erro || json.mensagem || "Erro ao salvar.");
       alert(json.mensagem || "Configuração Efí salva no Supabase.");
+      setTimeout(function(){ verificarStatusEfiOnline(conta); }, 500);
     }catch(e){
       alert("Erro ao salvar configuração Efí: " + e.message);
     }
@@ -199,27 +204,24 @@
 
   window.testarConexaoEfiConta = async function(conta){
     const cfg = coletar(conta);
-    if(!cfg.ClientId || !cfg.ClientSecret){ alert("Informe Client ID e Client Secret da Conta Efí " + conta + "."); return; }
+    if(!cfg.ClientId || !cfg.ClientSecret){
+      alert("Informe Client ID e Client Secret da Conta Efí " + conta + ".");
+      return;
+    }
 
     try{
-      const resp = await fetch("/api/efi/testar-conexao", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(cfg) });
+      const resp = await fetch("/api/efi/testar-conexao", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body: JSON.stringify(cfg)
+      });
       const json = await resp.json();
       alert(resp.ok && json.ok ? (json.mensagem || "Conexão Efí OK.") : ("Erro Efí: " + (json.erro || json.mensagem || "erro desconhecido")));
+      setTimeout(function(){ verificarStatusEfiOnline(conta); }, 500);
     }catch(e){
       alert("Erro ao testar conexão: " + e.message);
     }
   };
-
-  window.testarBoletosEfiConta1 = async function(){
-    try{
-      const resp = await fetch("/api/efi/boletos/teste", {cache:"no-store"});
-      const json = await resp.json();
-      alert(resp.ok && json.ok ? (json.mensagem + "\\n" + (json.observacao || "")) : ("Erro: " + (json.erro || json.mensagem || "erro desconhecido")));
-    }catch(e){
-      alert("Erro ao testar boletos: " + e.message);
-    }
-  };
-
 
   window.verificarStatusEfiOnline = async function(conta = 1){
     const box = document.getElementById("efiOnlineStatusBox");
@@ -262,6 +264,18 @@
         box.classList.remove("efi-online");
         box.classList.add("efi-offline");
       }
+    }
+  };
+
+  window.testarBoletosEfiConta1 = async function(){
+    try{
+      const resp = await fetch("/api/efi/boletos/teste", {cache:"no-store"});
+      const json = await resp.json();
+      alert(resp.ok && json.ok
+        ? (json.mensagem + "\\n" + (json.observacao || ""))
+        : ("Erro: " + (json.erro || json.mensagem || "erro desconhecido")));
+    }catch(e){
+      alert("Erro ao testar boletos: " + e.message);
     }
   };
 

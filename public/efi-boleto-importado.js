@@ -39,7 +39,8 @@
       valorPago: getValor("Valor pago").replace(/[^\d,.-]/g,""),
       emissao: getValor("Emissão") || getValor("Emissao"),
       vencimento: getValor("Vencimento"),
-      status: getValor("Status")
+      status: getValor("Status"),
+      conta: 1
     };
   }
 
