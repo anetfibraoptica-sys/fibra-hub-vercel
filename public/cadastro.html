@@ -3233,18 +3233,60 @@ document.addEventListener("DOMContentLoaded", function(){
   function aplicarRetornoEfi(boletoLocal, retorno){
     const efi = retorno && retorno.efi ? retorno.efi : {};
     const row = retorno && retorno.boleto ? retorno.boleto : {};
-    boletoLocal.numero = row.numero || boletoLocal.numero || efi.charge_id || Date.now();
-    boletoLocal.efiChargeId = efi.charge_id || row.efi_charge_id || boletoLocal.efiChargeId || "";
-    boletoLocal.efiStatus = efi.situacao_efi || row.efi_status || "Registrado na Efí";
-    boletoLocal.linhaDigitavel = efi.linha_digitavel || row.linha_digitavel || "";
-    boletoLocal.pix = efi.pix_copia_cola || row.pix || boletoLocal.pix || "";
+    const dados = row.dados || {};
+
+    boletoLocal.numero = row.numero || dados.numero || boletoLocal.numero || efi.charge_id || Date.now();
+    boletoLocal.login = row.cliente_login || dados.login || boletoLocal.login || "";
+    boletoLocal.nome = row.cliente_nome || dados.nome || boletoLocal.nome || "";
+    boletoLocal.cpfCnpj = row.cpf_cnpj || dados.cpfCnpj || boletoLocal.cpfCnpj || "";
+    boletoLocal.categoria = row.categoria || dados.categoria || boletoLocal.categoria || "Mensalidade";
+    boletoLocal.descricao = row.descricao || dados.descricao || boletoLocal.descricao || "Boleto gerado pela Efí";
+    boletoLocal.emissao = row.emissao || dados.emissao || boletoLocal.emissao || new Date().toISOString().slice(0,10);
+    boletoLocal.vencimento = row.vencimento || dados.vencimento || boletoLocal.vencimento || "";
+    boletoLocal.valor = Number(row.valor || dados.valor || boletoLocal.valor || 0);
+    boletoLocal.total = Number(row.total || dados.total || boletoLocal.total || boletoLocal.valor || 0);
+    boletoLocal.efiChargeId = efi.charge_id || row.efi_charge_id || dados.efiChargeId || boletoLocal.efiChargeId || "";
+    boletoLocal.efiStatus = efi.situacao_efi || row.efi_status || dados.efiStatus || "Registrado na Efí";
+    boletoLocal.linhaDigitavel = efi.linha_digitavel || row.linha_digitavel || dados.linhaDigitavel || "";
+    boletoLocal.pix = efi.pix_copia_cola || row.pix || dados.pix || boletoLocal.pix || "";
     boletoLocal.codigoPix = boletoLocal.pix;
-    boletoLocal.linkPdf = efi.link_boleto || row.link_pdf || "";
+    boletoLocal.linkPdf = efi.link_boleto || row.link_pdf || dados.linkPdf || "";
     boletoLocal.pdf = boletoLocal.linkPdf;
     boletoLocal.segundaVia = boletoLocal.linkPdf;
-    boletoLocal.status = "pendente";
+    boletoLocal.status = row.status || dados.status || "pendente";
     boletoLocal.origem = "Painel Fibra+ Hub Efí";
     return boletoLocal;
+  }
+
+  async function atualizarListaBoletosAposEfi(boletoNovo){
+    let lista = typeof fibraGetBoletosStorage === "function" ? fibraGetBoletosStorage() : [];
+    if(!Array.isArray(lista)) lista = [];
+
+    const numeroNovo = String(boletoNovo.numero || boletoNovo.efiChargeId || "");
+    const idx = lista.findIndex(b => String(b.numero || b.id || b.nossoNumero || b.titulo || b.efiChargeId) === numeroNovo);
+
+    if(idx >= 0) lista[idx] = {...lista[idx], ...boletoNovo};
+    else lista.push(boletoNovo);
+
+    if(typeof fibraSalvarBoletosStorage === "function") fibraSalvarBoletosStorage(lista);
+    else localStorage.setItem("boletos", JSON.stringify(lista));
+
+    ["boletos","titulos","cobrancas"].forEach(k => {
+      try{ localStorage.setItem(k, JSON.stringify(lista)); }catch(e){}
+    });
+
+    if(window.FibraDB && typeof FibraDB.carregarBoletos === "function"){
+      try{
+        const atualizados = await FibraDB.carregarBoletos();
+        if(Array.isArray(atualizados) && atualizados.length){
+          ["boletos","titulos","cobrancas"].forEach(k => localStorage.setItem(k, JSON.stringify(atualizados)));
+        }
+      }catch(e){
+        console.warn("Não foi possível recarregar boletos do Supabase:", e.message);
+      }
+    }
+
+    if(typeof renderizarBoletosCliente === "function") renderizarBoletosCliente();
   }
   async function criarBoletoEfi(payload){
     const resp = await fetch("/api/efi/boleto/criar", {
@@ -3316,9 +3358,7 @@ document.addEventListener("DOMContentLoaded", function(){
       const json = await criarBoletoEfi(boleto);
       aplicarRetornoEfi(boleto, json);
 
-      const lista = typeof fibraGetBoletosStorage === "function" ? fibraGetBoletosStorage() : [];
-      lista.push(boleto);
-      fibraSalvarBoletosStorage(lista);
+      await atualizarListaBoletosAposEfi(boleto);
 
       if(typeof fecharSubmodaisBoletos === "function") fecharSubmodaisBoletos();
       if(typeof renderizarBoletosCliente === "function") renderizarBoletosCliente();
@@ -3366,16 +3406,13 @@ document.addEventListener("DOMContentLoaded", function(){
 
     try{
       const json = await criarCarneEfi(payload);
-      const lista = typeof fibraGetBoletosStorage === "function" ? fibraGetBoletosStorage() : [];
-
-      (json.parcelas || []).forEach((p, idx) => {
+      for(const [idx, p] of (json.parcelas || []).entries()){
         const base = {...parcelas[idx], ...payload, status:"pendente", origem:"Painel Fibra+ Hub Efí"};
         delete base.parcelas;
         aplicarRetornoEfi(base, {efi:p.efi, boleto:p.boleto});
-        lista.push(base);
-      });
+        await atualizarListaBoletosAposEfi(base);
+      }
 
-      fibraSalvarBoletosStorage(lista);
       if(typeof fecharSubmodaisBoletos === "function") fecharSubmodaisBoletos();
       if(typeof renderizarBoletosCliente === "function") renderizarBoletosCliente();
 

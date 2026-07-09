@@ -1,7 +1,6 @@
 # Fibra+ Hub
 
 ## Correção atual
-- Corrigido erro Supabase: `invalid input syntax for type uuid: "1"`.
-- O sistema não grava mais número `1` na coluna `efi_conta_id`.
-- A conta Efí usada agora fica em `dados.contaEfi` e `dados.contaEfiNome`.
-- Layout, menu, clientes, servidores e MikroTik não foram alterados.
+- Após criar boleto na Efí, a lista do painel é atualizada imediatamente.
+- O painel agora grava o boleto retornado no cache local e tenta recarregar os boletos do Supabase.
+- Corrigido para aparecer na lista sem precisar reimportar ou limpar cache.
