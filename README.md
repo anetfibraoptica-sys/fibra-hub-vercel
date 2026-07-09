@@ -1,8 +1,6 @@
 # Fibra+ Hub
 
-## Versão de teste
-- Boleto Avulso existente agora tenta criar cobrança real na Efí.
-- Gerar Mensalidades/Carnê existente agora tenta criar parcelas integradas na Efí.
-- Baixa manual tenta registrar pagamento e desbloquear cliente no MikroTik pelo profile original.
-- Bloqueio mantém cliente online: profile BLOQUEADO + derruba sessão para reconectar sem internet.
-- Sem criação de novos menus ou novas páginas.
+## Correção atual
+- Corrigida a coleta do CPF/CNPJ ao gerar boleto Efí.
+- Agora aceita vários nomes de campo do cadastro e também lê direto dos inputs do formulário.
+- Layout não foi alterado.

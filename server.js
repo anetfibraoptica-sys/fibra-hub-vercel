@@ -2718,7 +2718,7 @@ function efiPessoaFisicaOuJuridica(documento, nome) {
 function efiBuildBilletPayload(body) {
   const valor = efiMoneyCents(body.valor || body.total || 0);
   const nome = String(body.nome || body.cliente || body.cliente_nome || "Cliente").trim();
-  const documento = efiOnlyNumbers(body.cpfCnpj || body.cpf || body.cpf_cnpj || body.documento || "");
+  const documento = efiOnlyNumbers(body.cpfCnpj || body.cpf_cnpj || body.cpf || body.cnpj || body.documento || body.doc || body.clienteCpf || body.clienteCnpj || "");
   const telefone = efiOnlyNumbers(body.telefone || body.celular || "");
   const email = String(body.email || "").trim();
   const descricao = String(body.descricao || body.categoria || "Mensalidade Fibra+").trim();

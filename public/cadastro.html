@@ -3198,6 +3198,32 @@ document.addEventListener("DOMContentLoaded", function(){
   function profileCadastro(c){
     return c.profile || c.plano || c.perfil || c.profileServidor || c.planoVelocidade || c.velocidade || "";
   }
+  function primeiroValorCliente(c, campos){
+    for(const k of campos){
+      if(c && c[k] !== undefined && c[k] !== null && String(c[k]).trim() !== "") return String(c[k]).trim();
+    }
+    for(const id of campos){
+      const el = document.getElementById(id) || document.querySelector(`[name="${id}"]`);
+      if(el && String(el.value || "").trim() !== "") return String(el.value).trim();
+    }
+    return "";
+  }
+  function cpfCliente(c){
+    return primeiroValorCliente(c, [
+      "cpfCnpj","cpf_cnpj","cpf","cnpj","documento","doc","clienteCpf","clienteCnpj",
+      "cliCpf","cliCnpj","cadCpf","cadCnpj","cpfCliente","cnpjCliente",
+      "cadastroCpf","cadastroCnpj","inputCpf","inputCnpj"
+    ]);
+  }
+  function nomeCliente(c){
+    return primeiroValorCliente(c, ["nome","cliente","nomeCliente","razaoSocial","razao_social","cadNome","inputNome"]);
+  }
+  function telefoneCliente(c){
+    return primeiroValorCliente(c, ["telefone1","telefone2","telefone","celular","whatsapp","fone","contato"]);
+  }
+  function emailCliente(c){
+    return primeiroValorCliente(c, ["email","e_mail","mail","emailCliente"]);
+  }
   function servidorCadastro(c){
     return c.servidor || c.popServidor || c.servidorPppoe || c.pop || "";
   }
@@ -3270,10 +3296,10 @@ document.addEventListener("DOMContentLoaded", function(){
     const boleto = {
       numero: Date.now(),
       login: loginCadastro(c),
-      nome: c.nome || "",
-      cpfCnpj: c.cpfCnpj || c.cpf || c.cnpj || "",
-      telefone: c.telefone1 || c.telefone2 || c.telefone || "",
-      email: c.email || "",
+      nome: nomeCliente(c),
+      cpfCnpj: cpfCliente(c),
+      telefone: telefoneCliente(c),
+      email: emailCliente(c),
       categoria: document.getElementById("avulsoCategoria")?.value || "Mensalidade",
       descricao: document.getElementById("avulsoDescricao")?.value || "Boleto Avulso",
       emissao: document.getElementById("avulsoEmissao")?.value || new Date().toISOString().slice(0,10),
@@ -3329,10 +3355,10 @@ document.addEventListener("DOMContentLoaded", function(){
 
     const payload = {
       login: loginCadastro(c),
-      nome: c.nome || "",
-      cpfCnpj: c.cpfCnpj || c.cpf || c.cnpj || "",
-      telefone: c.telefone1 || c.telefone2 || c.telefone || "",
-      email: c.email || "",
+      nome: nomeCliente(c),
+      cpfCnpj: cpfCliente(c),
+      telefone: telefoneCliente(c),
+      email: emailCliente(c),
       emissao: new Date().toISOString().slice(0,10),
       conta: 1,
       parcelas
