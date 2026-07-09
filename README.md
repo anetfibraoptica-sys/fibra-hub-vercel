@@ -1,12 +1,11 @@
 # Fibra+ Hub
 
 ## Alteração atual
-- Configuração da Efí agora fica salva no banco/backend, não apenas no navegador.
-- Criada migração `public/supabase_migracao_efi_configuracoes.sql`.
-- Backend cria/usa tabela `efi_configuracoes` quando houver `DATABASE_URL`.
-- Criado endpoint `GET /api/efi/config?conta=1` para carregar a configuração salva.
-- `POST /api/efi/salvar-config`, `/api/efi/testar-conexao`, `/api/efi/status` e teste de boletos agora usam a configuração persistida.
-- Financeiro Efí carrega automaticamente as contas salvas ao abrir a tela.
-- Boletos/importação passam a depender da configuração persistida no backend.
+- Removida a dependência da Efí com Supabase.
+- Apagada a migração `supabase_migracao_efi_configuracoes.sql`.
+- Removidos scripts auxiliares que apenas mascaravam status visual.
+- Configuração Efí agora salva no backend local em `data/efi-config.json`.
+- Financeiro Efí carrega/salva direto pelo backend local.
+- Mantidos endpoints `/api/efi/config`, `/api/efi/salvar-config`, `/api/efi/testar-conexao`, `/api/efi/status` e `/api/efi/boletos/teste`.
 
-Execute a migração SQL no Supabase se a tabela ainda não existir.
+Observação: em hospedagens serverless como Vercel, gravação em arquivo pode não persistir após redeploy/reinício. Para produção estável, use variáveis de ambiente ou banco. Nesta versão não envia nada ao Supabase.
