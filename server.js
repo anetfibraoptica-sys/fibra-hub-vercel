@@ -108,27 +108,51 @@ function routerosSend(host, port, user, pass, sentences, timeoutMs = 12000) {
   });
 }
 
+
 function servidorConfig(nomeServidor) {
   const nome = String(nomeServidor || "").toUpperCase();
 
-  if (nome.includes("ARMANDO")) {
+  const pick = (...keys) => {
+    for (const k of keys) {
+      if (process.env[k] !== undefined && String(process.env[k]).trim() !== "") return String(process.env[k]).trim();
+    }
+    return "";
+  };
+
+  const pickPort = (...keys) => pick(...keys) || 8728;
+
+  if (nome.includes("ARMANDO") || nome.includes("ZUMBI")) {
     return {
       key: "armando",
-      host: process.env.MIKROTIK_ARMANDO_HOST,
-      port: process.env.MIKROTIK_ARMANDO_PORT || 8728,
-      user: process.env.MIKROTIK_ARMANDO_USER,
-      pass: process.env.MIKROTIK_ARMANDO_PASS
+      host: pick("MIKROTIK_ARMANDO_HOST", "MK_ARMANDO_HOST", "ARMANDO_HOST", "MIKROTIK_HOST_ARMANDO", "MIKROTIK1_HOST"),
+      port: pickPort("MIKROTIK_ARMANDO_PORT", "MK_ARMANDO_PORT", "ARMANDO_PORT", "MIKROTIK_PORT_ARMANDO", "MIKROTIK1_PORT"),
+      user: pick("MIKROTIK_ARMANDO_USER", "MK_ARMANDO_USER", "ARMANDO_USER", "MIKROTIK_USER_ARMANDO", "MIKROTIK1_USER"),
+      pass: pick("MIKROTIK_ARMANDO_PASS", "MIKROTIK_ARMANDO_PASSWORD", "MK_ARMANDO_PASS", "ARMANDO_PASS", "MIKROTIK_PASS_ARMANDO", "MIKROTIK1_PASS")
     };
   }
 
   return {
     key: "colonia",
-    host: process.env.MIKROTIK_COLONIA_HOST,
-    port: process.env.MIKROTIK_COLONIA_PORT || 8728,
-    user: process.env.MIKROTIK_COLONIA_USER,
-    pass: process.env.MIKROTIK_COLONIA_PASS
+    host: pick("MIKROTIK_COLONIA_HOST", "MK_COLONIA_HOST", "COLONIA_HOST", "MIKROTIK_HOST_COLONIA", "MIKROTIK2_HOST"),
+    port: pickPort("MIKROTIK_COLONIA_PORT", "MK_COLONIA_PORT", "COLONIA_PORT", "MIKROTIK_PORT_COLONIA", "MIKROTIK2_PORT"),
+    user: pick("MIKROTIK_COLONIA_USER", "MK_COLONIA_USER", "COLONIA_USER", "MIKROTIK_USER_COLONIA", "MIKROTIK2_USER"),
+    pass: pick("MIKROTIK_COLONIA_PASS", "MIKROTIK_COLONIA_PASSWORD", "MK_COLONIA_PASS", "COLONIA_PASS", "MIKROTIK_PASS_COLONIA", "MIKROTIK2_PASS")
   };
 }
+
+function diagnosticoConfigServidor(nomeServidor) {
+  const cfg = servidorConfig(nomeServidor);
+  return {
+    key: cfg.key,
+    hostConfigurado: Boolean(cfg.host),
+    hostPreview: cfg.host ? String(cfg.host).replace(/(.{4}).+(.{3})$/, "$1***$2") : "",
+    port: cfg.port || 8728,
+    userConfigurado: Boolean(cfg.user),
+    userPreview: cfg.user ? String(cfg.user).slice(0, 2) + "***" : "",
+    passConfigurado: Boolean(cfg.pass)
+  };
+}
+
 
 async function criarPPPoECliente(cliente) {
   const cfg = servidorConfig(cliente.servidor);
@@ -1876,48 +1900,6 @@ app.get("/api/cliente/status", async (req, res) => {
 /* ============================================================
    DIAGNÓSTICO API / MIKROTIK
 ============================================================ */
-app.get("/api/diagnostico/mikrotik", async (req, res) => {
-  try {
-    const [armandoOnline, coloniaOnline, armandoStatus, coloniaStatus] = await Promise.all([
-      consultarOnlineServidor("ARMANDO"),
-      consultarOnlineServidor("COLONIA"),
-      consultarStatusServidor("ARMANDO"),
-      consultarStatusServidor("COLONIA")
-    ]);
-
-    return res.json({
-      ok: true,
-      atualizadoEm: new Date().toISOString(),
-      armando: {
-        online: armandoOnline.ok,
-        totalClientes: armandoOnline.total || 0,
-        erroOnline: armandoOnline.erro || "",
-        statusOk: armandoStatus.ok,
-        identity: armandoStatus.identity || "",
-        erroStatus: armandoStatus.erro || ""
-      },
-      colonia: {
-        online: coloniaOnline.ok,
-        totalClientes: coloniaOnline.total || 0,
-        erroOnline: coloniaOnline.erro || "",
-        statusOk: coloniaStatus.ok,
-        identity: coloniaStatus.identity || "",
-        erroStatus: coloniaStatus.erro || ""
-      },
-      envNecessarias: [
-        "MIKROTIK_ARMANDO_HOST",
-        "MIKROTIK_ARMANDO_USER",
-        "MIKROTIK_ARMANDO_PASS",
-        "MIKROTIK_COLONIA_HOST",
-        "MIKROTIK_COLONIA_USER",
-        "MIKROTIK_COLONIA_PASS"
-      ]
-    });
-  } catch (err) {
-    return res.status(500).json({ ok:false, erro:err.message });
-  }
-});
-
 app.get("/api/diagnostico/rotas", (req, res) => {
   return res.json({
     ok: true,
@@ -1939,6 +1921,74 @@ app.get("/api/diagnostico/rotas", (req, res) => {
   });
 });
 
+
+
+
+app.get("/api/diagnostico/mikrotik", async (req, res) => {
+  try {
+    const [armandoOnline, coloniaOnline, armandoStatus, coloniaStatus] = await Promise.all([
+      consultarOnlineServidor("ARMANDO"),
+      consultarOnlineServidor("COLONIA"),
+      consultarStatusServidor("ARMANDO"),
+      consultarStatusServidor("COLONIA")
+    ]);
+
+    return res.json({
+      ok: true,
+      atualizadoEm: new Date().toISOString(),
+      explicacao: "Se host/user/pass estiver false, falta variável no deploy. Se estiver true e houver timeout/conexão recusada, é acesso à API RouterOS.",
+      armando: {
+        config: diagnosticoConfigServidor("ARMANDO"),
+        onlineOk: armandoOnline.ok,
+        totalClientes: armandoOnline.total || 0,
+        erroOnline: armandoOnline.erro || "",
+        statusOk: armandoStatus.ok,
+        identity: armandoStatus.identity || "",
+        erroStatus: armandoStatus.erro || ""
+      },
+      colonia: {
+        config: diagnosticoConfigServidor("COLONIA"),
+        onlineOk: coloniaOnline.ok,
+        totalClientes: coloniaOnline.total || 0,
+        erroOnline: coloniaOnline.erro || "",
+        statusOk: coloniaStatus.ok,
+        identity: coloniaStatus.identity || "",
+        erroStatus: coloniaStatus.erro || ""
+      }
+    });
+  } catch (err) {
+    return res.status(500).json({ ok:false, erro:err.message });
+  }
+});
+
+app.get("/api/servidores-debug", async (req, res) => {
+  try {
+    const [armandoOnline, coloniaOnline, armandoStatus, coloniaStatus] = await Promise.all([
+      consultarOnlineServidor("ARMANDO"),
+      consultarOnlineServidor("COLONIA"),
+      consultarStatusServidor("ARMANDO"),
+      consultarStatusServidor("COLONIA")
+    ]);
+
+    return res.json({
+      ok: true,
+      armando: {
+        onlineFinal: Boolean(armandoOnline.ok || armandoStatus.ok),
+        online: armandoOnline,
+        status: armandoStatus,
+        config: diagnosticoConfigServidor("ARMANDO")
+      },
+      colonia: {
+        onlineFinal: Boolean(coloniaOnline.ok || coloniaStatus.ok),
+        online: coloniaOnline,
+        status: coloniaStatus,
+        config: diagnosticoConfigServidor("COLONIA")
+      }
+    });
+  } catch (err) {
+    return res.status(500).json({ ok:false, erro:err.message });
+  }
+});
 
 io.on("connection",(socket)=>{
   socket.emit("hub-update", geral());
