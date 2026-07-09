@@ -331,7 +331,7 @@ async function initDb() {
   
   await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS efi_charge_id TEXT;");
   await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS efi_status TEXT;");
-  await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS efi_conta_id INTEGER;");
+  // efi_conta_id pode existir como UUID no Supabase; não alteramos nem gravamos número 1 nele.
   await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS efi_conta_nome TEXT;");
   await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS linha_digitavel TEXT;");
   await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS pix TEXT;");
@@ -2584,7 +2584,7 @@ app.post("/api/efi/sincronizar-importados", async (req, res) => {
 
     await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS efi_charge_id TEXT;");
     await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS efi_status TEXT;");
-    await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS efi_conta_id INTEGER;");
+    // efi_conta_id pode existir como UUID no Supabase; não alteramos nem gravamos número 1 nele.
     await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS efi_conta_nome TEXT;");
     await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS linha_digitavel TEXT;");
     await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS pix TEXT;");
@@ -2823,7 +2823,7 @@ async function salvarBoletoGeradoSupabase(body, detalhes, conta, nomeConta) {
 
   await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS efi_charge_id TEXT;");
   await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS efi_status TEXT;");
-  await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS efi_conta_id INTEGER;");
+  // efi_conta_id pode existir como UUID no Supabase; não alteramos nem gravamos número 1 nele.
   await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS efi_conta_nome TEXT;");
   await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS linha_digitavel TEXT;");
   await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS pix TEXT;");
@@ -2836,6 +2836,8 @@ async function salvarBoletoGeradoSupabase(body, detalhes, conta, nomeConta) {
     numero,
     efiChargeId: detalhes.charge_id || "",
     efiStatus: detalhes.situacao_efi || "Registrado na Efí",
+    contaEfi: Number(conta || 1),
+    contaEfiNome: nomeConta || "",
     linhaDigitavel: detalhes.linha_digitavel || "",
     pix: detalhes.pix_copia_cola || "",
     linkPdf: detalhes.link_boleto || "",
@@ -2847,9 +2849,9 @@ async function salvarBoletoGeradoSupabase(body, detalhes, conta, nomeConta) {
     INSERT INTO boletos
       (numero, cliente_login, cliente_nome, cpf_cnpj, categoria, descricao, emissao, vencimento,
        valor, total, valor_pago, status, linha_digitavel, pix, link_pdf,
-       efi_charge_id, efi_status, efi_conta_id, efi_conta_nome, dados, origem, atualizado_em)
+       efi_charge_id, efi_status, efi_conta_nome, dados, origem, atualizado_em)
     VALUES
-      ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,0,'pendente',$11,$12,$13,$14,$15,$16,$17,$18,'Painel Fibra+ Hub Efí',NOW())
+      ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,0,'pendente',$11,$12,$13,$14,$15,$16,$17,'Painel Fibra+ Hub Efí',NOW())
     ON CONFLICT (numero) DO UPDATE SET
       cliente_login=EXCLUDED.cliente_login,
       cliente_nome=EXCLUDED.cliente_nome,
@@ -2866,7 +2868,6 @@ async function salvarBoletoGeradoSupabase(body, detalhes, conta, nomeConta) {
       link_pdf=EXCLUDED.link_pdf,
       efi_charge_id=EXCLUDED.efi_charge_id,
       efi_status=EXCLUDED.efi_status,
-      efi_conta_id=EXCLUDED.efi_conta_id,
       efi_conta_nome=EXCLUDED.efi_conta_nome,
       dados=EXCLUDED.dados,
       origem=EXCLUDED.origem,
@@ -2888,9 +2889,8 @@ async function salvarBoletoGeradoSupabase(body, detalhes, conta, nomeConta) {
     detalhes.link_boleto || "",
     detalhes.charge_id || "",
     detalhes.situacao_efi || "Registrado na Efí",
-    Number(conta || 1),
     nomeConta || "",
-    JSON.stringify(dados)
+    JSON.stringify({...dados, contaEfi: Number(conta || 1), contaEfiNome: nomeConta || ""})
   ]);
 
   await efiSalvarVinculoBoleto(body, detalhes);
