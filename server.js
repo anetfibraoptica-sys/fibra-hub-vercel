@@ -2977,6 +2977,93 @@ app.post("/api/boletos/baixa-manual", async (req, res) => {
   }
 });
 
+
+
+app.get("/api/efi/debug-criar-boleto", async (req, res) => {
+  const safe = (v) => {
+    const s = String(v || "");
+    if (!s) return "";
+    if (s.length <= 8) return "***";
+    return s.slice(0, 5) + "***" + s.slice(-4);
+  };
+
+  try {
+    const conta = Number(req.query.conta || 1);
+    const cfg = await efiCarregarConfig(conta);
+
+    if (!cfg) {
+      return res.status(400).json({ ok:false, erro:"Conta Efí não encontrada no Supabase." });
+    }
+
+    const info = {
+      conta,
+      ambiente: cfg.Ambiente || "producao",
+      baseUrl: efiBaseUrl(cfg.Ambiente || "producao"),
+      clientIdPreview: safe(cfg.ClientId),
+      clientSecretConfigurado: Boolean(cfg.ClientSecret),
+      documentoConta: safe(cfg.Documento),
+      nomeConta: cfg.NomeConta || ""
+    };
+
+    let token = null;
+    try {
+      token = await efiGerarToken(cfg);
+    } catch (e) {
+      return res.status(500).json({
+        ok:false,
+        etapa:"oauth",
+        info,
+        erro:e.message
+      });
+    }
+
+    const tokenInfo = {
+      tokenGerado: Boolean(token && token.access_token),
+      tokenType: token.token_type || "",
+      expiresIn: token.expires_in || null,
+      scope: token.scope || token.scopes || ""
+    };
+
+    const payload = {
+      items: [{
+        name: "Teste Fibra Hub",
+        value: 500,
+        amount: 1
+      }],
+      metadata: {
+        custom_id: "debug-" + Date.now()
+      }
+    };
+
+    const criar = await efiRequest("/v1/charge", cfg, {
+      method: "POST",
+      body: payload
+    });
+
+    return res.json({
+      ok: true,
+      etapa: "charge",
+      info,
+      token: tokenInfo,
+      endpointTestado: "/v1/charge",
+      payloadEnviado: payload,
+      resposta: {
+        ok: criar.ok,
+        status: criar.status,
+        json: criar.json,
+        raw: criar.raw
+      }
+    });
+  } catch (err) {
+    return res.status(500).json({
+      ok:false,
+      etapa:"erro_geral",
+      erro:err.message,
+      stack:String(err.stack || "").split("\n").slice(0, 5)
+    });
+  }
+});
+
 io.on("connection",(socket)=>{
   socket.emit("hub-update", geral());
   socket.emit("mikrotik-update", geral());
