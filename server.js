@@ -323,6 +323,11 @@ async function initDb() {
     );
   `);
 
+  await pool.query("ALTER TABLE efi_boletos_vinculos ADD COLUMN IF NOT EXISTS efi_charge_id TEXT;");
+  await pool.query("ALTER TABLE efi_boletos_vinculos ADD COLUMN IF NOT EXISTS efi_carne_id TEXT;");
+  await pool.query("ALTER TABLE efi_boletos_vinculos ADD COLUMN IF NOT EXISTS identificacao_receitanet TEXT;");
+
+
   console.log("PostgreSQL conectado.");
 }
 
@@ -2053,7 +2058,7 @@ function efiExtractChargeDetails(json) {
     linha_digitavel: String(linha || ""),
     pix_copia_cola: String(pix || ""),
     link_boleto: String(link || ""),
-    charge_id: String(efiGet(data, ["charge_id", "id"]) || ""),
+    charge_id: String(efiGet(data, ["charge_id", "id", "transaction_id", "custom_id"]) || ""),
     txid: String(efiGet(data, ["txid", "pix.txid"]) || ""),
     raw: data
   };
@@ -2085,30 +2090,41 @@ function efiScoreCharge(item, alvo) {
   return pontos;
 }
 
+
 async function efiSalvarVinculoBoleto(dados, retorno) {
   await efiGarantirTabela();
 
+  const ids = efiExtrairIdsImportado(dados);
+  const chargeId = String(retorno.charge_id || ids.identificacao || "");
+  const carneId = String(ids.carne || "");
+
   await pool.query(`
     INSERT INTO efi_boletos_vinculos
-      (boleto_origem, cliente_nome, cliente_documento, valor, vencimento, conta, charge_id, txid, situacao_efi, linha_digitavel, pix_copia_cola, link_boleto, raw, atualizado_em)
+      (boleto_origem, cliente_nome, cliente_documento, valor, vencimento, conta,
+       charge_id, txid, situacao_efi, linha_digitavel, pix_copia_cola, link_boleto,
+       efi_charge_id, efi_carne_id, identificacao_receitanet, raw, atualizado_em)
     VALUES
-      ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,NOW())
+      ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,NOW())
   `, [
-    String(dados.numero || dados.boleto_origem || dados.id || ""),
+    String(dados.numero || dados.boleto_origem || dados.id || ids.identificacao || ""),
     String(dados.cliente || dados.cliente_nome || ""),
     efiOnlyNumbers(dados.cpf || dados.cpf_cnpj || dados.documento || ""),
     String(dados.valor || dados.valorPago || ""),
     String(dados.vencimento || ""),
     Number(dados.conta || 1),
-    String(retorno.charge_id || ""),
+    chargeId,
     String(retorno.txid || ""),
     String(retorno.situacao_efi || ""),
     String(retorno.linha_digitavel || ""),
     String(retorno.pix_copia_cola || ""),
     String(retorno.link_boleto || ""),
+    chargeId,
+    carneId,
+    String(ids.identificacao || ""),
     retorno.raw ? JSON.stringify(retorno.raw) : null
   ]);
 }
+
 
 app.get("/api/efi/config", async (req, res) => {
   try {
@@ -2216,6 +2232,96 @@ app.get("/api/efi/boletos/teste", async (req, res) => {
   }
 });
 
+
+
+function efiExtrairIdsImportado(body) {
+  const id = String(
+    body.identificacao ||
+    body.Identificacao ||
+    body["Identificação"] ||
+    body.identificacao_receitanet ||
+    body.efi_charge_id ||
+    body.charge_id ||
+    body.chargeId ||
+    body.transaction_id ||
+    body.numero ||
+    body.id ||
+    ""
+  ).trim();
+
+  const carne = String(
+    body.carne ||
+    body.Carne ||
+    body["Carnê"] ||
+    body.carne_id ||
+    body.efi_carne_id ||
+    body.carnet_id ||
+    ""
+  ).trim();
+
+  return { identificacao: id, carne };
+}
+
+
+
+app.post("/api/efi/boleto-importado/vincular", async (req, res) => {
+  try {
+    const body = req.body || {};
+    const ids = efiExtrairIdsImportado(body);
+    if (!ids.identificacao) {
+      return res.status(400).json({ ok:false, erro:"Identificação da Efí não informada." });
+    }
+
+    const conta = Number(body.conta || 1);
+    const cfg = await efiCarregarConfig(conta);
+    if (!cfg || !cfg.ClientId || !cfg.ClientSecret) {
+      return res.status(400).json({ ok:false, erro:"Conta Efí não configurada." });
+    }
+
+    const tentativas = [
+      "/v1/charge/" + encodeURIComponent(ids.identificacao),
+      "/v1/charge/" + encodeURIComponent(ids.identificacao) + "/detail",
+      "/v1/transaction/" + encodeURIComponent(ids.identificacao),
+      "/v1/transactions/" + encodeURIComponent(ids.identificacao)
+    ];
+
+    if (ids.carne) {
+      tentativas.push("/v1/carnet/" + encodeURIComponent(ids.carne));
+      tentativas.push("/v1/carnet/" + encodeURIComponent(ids.carne) + "/detail");
+      tentativas.push("/v1/carnet/" + encodeURIComponent(ids.carne) + "/parcel/" + encodeURIComponent(ids.identificacao));
+    }
+
+    let ultimoErro = null;
+
+    for (const pathReq of tentativas) {
+      try {
+        const r = await efiRequest(pathReq, cfg);
+        if (r.ok) {
+          const detalhes = efiExtractChargeDetails(r.json);
+          detalhes.charge_id = detalhes.charge_id || ids.identificacao;
+          await efiSalvarVinculoBoleto(body, detalhes);
+          return res.json({ ok:true, encontrado:true, fonte:pathReq, ...detalhes });
+        }
+        ultimoErro = r.json;
+      } catch (e) {
+        ultimoErro = e.message;
+      }
+    }
+
+    return res.json({
+      ok:true,
+      encontrado:false,
+      situacao_efi:"Integrado na Efí - identificação não localizada",
+      identificacao: ids.identificacao,
+      carne: ids.carne,
+      ultimoErro
+    });
+  } catch (err) {
+    console.error("Erro /api/efi/boleto-importado/vincular:", err);
+    return res.status(500).json({ ok:false, erro:err.message });
+  }
+});
+
 app.post("/api/efi/boleto-importado/consultar", async (req, res) => {
   try {
     const body = req.body || {};
@@ -2226,7 +2332,8 @@ app.post("/api/efi/boleto-importado/consultar", async (req, res) => {
       return res.status(400).json({ ok:false, erro:"Conta Efí não configurada." });
     }
 
-    const numero = String(body.numero || body.id || body.charge_id || body.chargeId || "").trim();
+    const idsImportado = efiExtrairIdsImportado(body);
+    const numero = idsImportado.identificacao;
     const emissao = efiDateISO(body.emissao || "");
     const vencimento = efiDateISO(body.vencimento || "");
 
@@ -2237,6 +2344,12 @@ app.post("/api/efi/boleto-importado/consultar", async (req, res) => {
         "/v1/transaction/" + encodeURIComponent(numero),
         "/v1/transactions/" + encodeURIComponent(numero)
       ];
+
+      if (idsImportado.carne) {
+        tentativas.push("/v1/carnet/" + encodeURIComponent(idsImportado.carne));
+        tentativas.push("/v1/carnet/" + encodeURIComponent(idsImportado.carne) + "/detail");
+        tentativas.push("/v1/carnet/" + encodeURIComponent(idsImportado.carne) + "/parcel/" + encodeURIComponent(numero));
+      }
 
       for (const pathReq of tentativas) {
         try {

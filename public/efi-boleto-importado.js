@@ -34,6 +34,8 @@
   function dadosBoletoAberto(){
     return {
       numero: getValor("Número") || getValor("Numero") || getValor("Nº"),
+      identificacao: getValor("Identificação") || getValor("Identificacao") || getValor("ID Efí") || getValor("ID Efi") || getValor("Charge ID"),
+      carne: getValor("Carnê") || getValor("Carne") || getValor("Carnê ID") || getValor("Carne ID"),
       cliente: getValor("Cliente"),
       valor: getValor("Valor do boleto").replace(/[^\d,.-]/g,""),
       valorPago: getValor("Valor pago").replace(/[^\d,.-]/g,""),
@@ -77,6 +79,44 @@
       setCampo("Situação na Efí", "Erro na consulta Efí");
     }
   }
+
+
+  async function vincularBoletoAbertoNaEfi(){
+    const dados = dadosBoletoAberto();
+
+    if(!dados.identificacao && !dados.numero){
+      alert("Este boleto não possui Identificação Efí visível para vincular.");
+      return;
+    }
+
+    setCampo("Situação na Efí", "Vinculando com Efí...");
+
+    try{
+      const resp = await fetch("/api/efi/boleto-importado/vincular", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body: JSON.stringify(dados)
+      });
+
+      const json = await resp.json();
+      if(!resp.ok || !json.ok){
+        setCampo("Situação na Efí", "Erro ao vincular Efí");
+        alert(json.erro || "Erro ao vincular boleto na Efí.");
+        return;
+      }
+
+      setCampo("Situação na Efí", json.situacao_efi || (json.encontrado ? "Registrado na Efí" : "Identificação não localizada"));
+      setCampo("Linha Digitável", json.linha_digitavel || "—");
+      setCampo("Pix Copia e Cola", json.pix_copia_cola || "—");
+
+      alert(json.encontrado ? "Boleto vinculado com a Efí." : "A identificação foi enviada, mas a Efí não localizou este boleto.");
+    }catch(e){
+      setCampo("Situação na Efí", "Erro ao vincular Efí");
+      alert("Erro ao vincular boleto: " + e.message);
+    }
+  }
+
+  window.vincularBoletoAbertoNaEfi = vincularBoletoAbertoNaEfi;
 
   window.consultarBoletoAbertoNaEfi = consultarBoletoAbertoNaEfi;
 
