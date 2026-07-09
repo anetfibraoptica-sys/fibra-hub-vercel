@@ -161,12 +161,47 @@
     if(!obj) return;
     campos.forEach(function(c){
       const campo = document.getElementById("efi" + conta + c);
-      if(campo && obj[c] !== undefined) campo.value = obj[c];
+      if(campo && obj[c] !== undefined && obj[c] !== null) campo.value = obj[c];
     });
   }
 
+  async function carregarBackend(conta){
+    try{
+      const resp = await fetch("/api/efi/config?conta=" + conta, {cache:"no-store"});
+      const json = await resp.json();
 
-  function marcarEfiIntegradoGlobal(cfg){
+      if(resp.ok && json.ok && json.config){
+        preencher(conta, json.config);
+        localStorage.setItem(key(conta), JSON.stringify({conta, ...json.config}));
+        atualizarListaContasLocal();
+        return json.config;
+      }
+    }catch(e){}
+    return null;
+  }
+
+  function atualizarListaContasLocal(){
+    const contas = [1,2].map(function(n){
+      try { return JSON.parse(localStorage.getItem(key(n)) || "null"); } catch(e){ return null; }
+    }).filter(Boolean);
+
+    localStorage.setItem("fibra_efi_contas", JSON.stringify(contas));
+  }
+
+  async function salvarBackend(conta, cfg){
+    const resp = await fetch("/api/efi/salvar-config", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify(cfg)
+    });
+
+    const json = await resp.json();
+    if(!resp.ok || !json.ok) throw new Error(json.erro || json.mensagem || "Falha ao salvar no backend.");
+    return json;
+  }
+
+  function marcarIntegrado(conta, cfg){
+    if(conta !== 1) return;
     try{
       localStorage.setItem("efi_integrado", "true");
       localStorage.setItem("fibra_efi_integrado", "true");
@@ -178,17 +213,7 @@
         ambiente: cfg.Ambiente || "producao"
       }));
     }catch(e){}
-  }
-
-  async function salvarBackend(conta, cfg){
-    const resp = await fetch("/api/efi/salvar-config", {
-      method: "POST",
-      headers: {"Content-Type":"application/json"},
-      body: JSON.stringify(cfg)
-    });
-    const json = await resp.json();
-    if(!resp.ok || !json.ok) throw new Error(json.erro || json.mensagem || "Falha ao salvar no backend.");
-    return json;
+    if(window.marcarEfiIntegradoGlobal) window.marcarEfiIntegradoGlobal(cfg);
   }
 
   window.salvarConfiguracaoEfiConta = async function(conta){
@@ -205,17 +230,14 @@
     }
 
     localStorage.setItem(key(conta), JSON.stringify(cfg));
-    const contas = [1,2].map(function(n){
-      try { return JSON.parse(localStorage.getItem(key(n)) || "null"); } catch(e){ return null; }
-    }).filter(Boolean);
-    localStorage.setItem("fibra_efi_contas", JSON.stringify(contas));
+    atualizarListaContasLocal();
 
     try{
       await salvarBackend(conta, cfg);
-      if(conta === 1) marcarEfiIntegradoGlobal(cfg);
-      if(window.marcarEfiIntegradoGlobal && conta === 1) window.marcarEfiIntegradoGlobal(cfg); alert("Configuração da Conta Efí " + conta + " salva no painel e no backend.");
+      marcarIntegrado(conta, cfg);
+      alert("Configuração da Conta Efí " + conta + " salva no banco/backend.");
     }catch(e){
-      alert("Salvou no painel, mas falhou no backend: " + e.message);
+      alert("Erro ao salvar no backend: " + e.message);
     }
   };
 
@@ -233,9 +255,17 @@
         headers: {"Content-Type":"application/json"},
         body: JSON.stringify(cfg)
       });
+
       const json = await resp.json();
-      if(resp.ok && json.ok && conta === 1) marcarEfiIntegradoGlobal(cfg);
-      if(resp.ok && json.ok && window.marcarEfiIntegradoGlobal && conta === 1) window.marcarEfiIntegradoGlobal(cfg); alert(resp.ok && json.ok ? (json.mensagem || "Conexão OK.") : ("Erro Efí: " + (json.erro || json.mensagem || "erro desconhecido")));
+
+      if(resp.ok && json.ok){
+        localStorage.setItem(key(conta), JSON.stringify(cfg));
+        atualizarListaContasLocal();
+        marcarIntegrado(conta, cfg);
+        alert(json.mensagem || "Conexão Efí OK.");
+      }else{
+        alert("Erro Efí: " + (json.erro || json.mensagem || "erro desconhecido"));
+      }
     }catch(e){
       alert("Erro ao testar conexão: " + e.message);
     }
@@ -245,18 +275,24 @@
     try{
       const cfg = coletar(1);
       await salvarBackend(1, cfg);
+      marcarIntegrado(1, cfg);
+
       const resp = await fetch("/api/efi/boletos/teste", {cache:"no-store"});
       const json = await resp.json();
+
       alert(resp.ok && json.ok ? (json.mensagem + "\\n" + (json.observacao || "")) : ("Erro: " + (json.erro || json.mensagem || "erro desconhecido")));
     }catch(e){
       alert("Erro ao testar boletos: " + e.message);
     }
   };
 
-  document.addEventListener("DOMContentLoaded", function(){
+  document.addEventListener("DOMContentLoaded", async function(){
     [1,2].forEach(function(conta){
       try { preencher(conta, JSON.parse(localStorage.getItem(key(conta)) || "null")); } catch(e){}
     });
+
+    await carregarBackend(1);
+    await carregarBackend(2);
   });
 })();
 </script>
