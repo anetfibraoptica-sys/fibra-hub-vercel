@@ -116,6 +116,7 @@
       }
 
       setCampo("Situação na Efí", json.situacao_efi || (json.encontrado ? "Registrado na Efí" : "Integrado na Efí - boleto não localizado"));
+      if(!json.encontrado && json.debug) console.warn("Efí boleto não localizado:", json.debug, json.detalhe);
       setCampo("Linha Digitável", json.linha_digitavel || "—");
       setCampo("Pix Copia e Cola", json.pix_copia_cola || "—");
 

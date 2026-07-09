@@ -1731,6 +1731,9 @@ function extrairArrayCobrancas(json) {
   if (Array.isArray(json.data)) return json.data;
   if (Array.isArray(json.charges)) return json.charges;
   if (Array.isArray(json.items)) return json.items;
+  if (Array.isArray(json.transactions)) return json.transactions;
+  if (json.data && Array.isArray(json.data.transactions)) return json.data.transactions;
+  if (json.data && Array.isArray(json.data.charges)) return json.data.charges;
   return [];
 }
 
@@ -1779,11 +1782,11 @@ function extrairDadosBoletoEfi(json) {
 function pontuarCobranca(item, alvo) {
   let pontos = 0;
 
-  const id = String(getDeep(item, ["charge_id", "id", "custom_id", "metadata.custom_id", "numero"]) || "").trim();
-  const cliente = String(getDeep(item, ["customer.name", "name", "cliente", "client.name"]) || "").toLowerCase();
+  const id = String(getDeep(item, ["charge_id", "id", "transaction_id", "custom_id", "metadata.custom_id", "numero"]) || "").trim();
+  const cliente = String(getDeep(item, ["customer.name", "customer", "name", "cliente", "client.name", "payer.name"]) || "").toLowerCase();
   const doc = somenteNumeros(getDeep(item, ["customer.cpf", "customer.cnpj", "cpf", "cnpj", "cpf_cnpj"]));
-  const venc = dataISO(getDeep(item, ["expire_at", "due_date", "vencimento", "payment.banking_billet.expire_at"]));
-  const valor = Number(getDeep(item, ["total", "value", "amount", "payment.banking_billet.value"]) || 0);
+  const venc = dataISO(getDeep(item, ["expire_at", "due_date", "vencimento", "payment.banking_billet.expire_at", "billet.expire_at", "banking_billet.expire_at"]));
+  const valor = Number(getDeep(item, ["total", "value", "amount", "payment.banking_billet.value", "billet.value", "banking_billet.value"]) || 0);
 
   const idAlvo = String(alvo.numero || "").trim();
   const nomeAlvo = String(alvo.cliente || "").toLowerCase();
@@ -1848,13 +1851,15 @@ app.post("/api/efi/boleto-importado/consultar", async (req, res) => {
     let detalheErro = null;
 
     for (const dataBase of datasBase) {
-      const begin = addDias(dataBase, -45);
-      const end = addDias(dataBase, 45);
+      const begin = addDias(dataBase, -180);
+      const end = addDias(dataBase, 180);
 
       const caminhos = [
         `/v1/charges?begin_date=${begin}&end_date=${end}`,
         `/v1/charge?begin_date=${begin}&end_date=${end}`,
-        `/v1/charges?begin_date=${begin}&end_date=${end}&status=all`
+        `/v1/charges?begin_date=${begin}&end_date=${end}&status=all`,
+        `/v1/transactions?begin_date=${begin}&end_date=${end}`,
+        `/v1/transactions?begin_date=${begin}&end_date=${end}&status=all`
       ];
 
       for (const path of caminhos) {
@@ -1879,12 +1884,14 @@ app.post("/api/efi/boleto-importado/consultar", async (req, res) => {
       }
     }
 
-    if (melhor && melhorScore >= 35) {
+    if (melhor && melhorScore >= 25) {
       const id = getDeep(melhor, ["charge_id", "id"]);
       if (id) {
         const detalhePaths = [
           "/v1/charge/" + encodeURIComponent(id),
-          "/v1/charge/" + encodeURIComponent(id) + "/detail"
+          "/v1/charge/" + encodeURIComponent(id) + "/detail",
+          "/v1/transaction/" + encodeURIComponent(id),
+          "/v1/transactions/" + encodeURIComponent(id)
         ];
 
         for (const path of detalhePaths) {
@@ -1909,7 +1916,15 @@ app.post("/api/efi/boleto-importado/consultar", async (req, res) => {
       linha_digitavel:"",
       pix_copia_cola:"",
       link_boleto:"",
-      detalhe: detalheErro
+      detalhe: detalheErro,
+      debug:{
+        numero,
+        emissao,
+        vencimento,
+        valor: body.valor || body.valorPago || "",
+        cliente: body.cliente || "",
+        observacao:"Consulta tentou charge_id, charges e transactions com janela ampliada."
+      }
     });
   } catch (err) {
     console.error("Erro /api/efi/boleto-importado/consultar:", err);
