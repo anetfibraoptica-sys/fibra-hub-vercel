@@ -328,6 +328,15 @@ async function initDb() {
   await pool.query("ALTER TABLE efi_boletos_vinculos ADD COLUMN IF NOT EXISTS identificacao_receitanet TEXT;");
 
 
+  
+  await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS efi_charge_id TEXT;");
+  await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS efi_status TEXT;");
+  await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS efi_conta_id INTEGER;");
+  await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS efi_conta_nome TEXT;");
+  await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS linha_digitavel TEXT;");
+  await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS pix TEXT;");
+  await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS link_pdf TEXT;");
+
   console.log("PostgreSQL conectado.");
 }
 
@@ -2446,6 +2455,240 @@ app.post("/api/efi/boleto-importado/consultar", async (req, res) => {
   }
 });
 
+
+
+
+function efiBoletoRowToAlvo(row) {
+  return {
+    numero: row.numero || "",
+    cliente: row.cliente_nome || row.nome || "",
+    cliente_nome: row.cliente_nome || row.nome || "",
+    cpf_cnpj: row.cpf_cnpj || row.cpf || "",
+    documento: row.cpf_cnpj || row.cpf || "",
+    valor: row.valor || row.total || "",
+    vencimento: row.vencimento || "",
+    identificacao: row.identificacao_carne || "",
+    conta: 1
+  };
+}
+
+async function efiBuscarCobrancasIntervalo(cfg, begin, end) {
+  const paths = [
+    `/v1/charges?begin_date=${begin}&end_date=${end}`,
+    `/v1/charges?begin_date=${begin}&end_date=${end}&status=all`,
+    `/v1/transactions?begin_date=${begin}&end_date=${end}`,
+    `/v1/transactions?begin_date=${begin}&end_date=${end}&status=all`
+  ];
+
+  const todos = [];
+  const erros = [];
+
+  for (const pth of paths) {
+    try {
+      const r = await efiRequest(pth, cfg);
+      if (r.ok) {
+        const arr = efiExtractArray(r.json);
+        if (Array.isArray(arr)) todos.push(...arr);
+      } else {
+        erros.push({ endpoint: pth, status: r.status, erro: r.json });
+      }
+    } catch (e) {
+      erros.push({ endpoint: pth, erro: e.message });
+    }
+  }
+
+  const mapa = new Map();
+  for (const item of todos) {
+    const id = String(efiGet(item, ["charge_id", "id", "transaction_id", "custom_id"]) || JSON.stringify(item).slice(0, 120));
+    if (!mapa.has(id)) mapa.set(id, item);
+  }
+
+  return { lista: Array.from(mapa.values()), erros };
+}
+
+async function efiDetalharPorId(cfg, id) {
+  const detalhePaths = [
+    "/v1/charge/" + encodeURIComponent(id),
+    "/v1/charge/" + encodeURIComponent(id) + "/detail",
+    "/v1/transaction/" + encodeURIComponent(id),
+    "/v1/transactions/" + encodeURIComponent(id)
+  ];
+
+  for (const pth of detalhePaths) {
+    try {
+      const d = await efiRequest(pth, cfg);
+      if (d.ok) {
+        const detalhes = efiExtractChargeDetails(d.json);
+        detalhes.charge_id = detalhes.charge_id || String(id);
+        return { ok: true, fonte: pth, detalhes };
+      }
+    } catch (e) {}
+  }
+
+  return { ok: false };
+}
+
+async function efiAtualizarBoletoSupabase(row, detalhes, conta, contaNome) {
+  await pool.query(`
+    UPDATE boletos SET
+      efi_charge_id=$1,
+      efi_status=$2,
+      efi_conta_id=$3,
+      efi_conta_nome=$4,
+      linha_digitavel=$5,
+      pix=$6,
+      link_pdf=$7,
+      dados = COALESCE(dados, '{}'::jsonb) || $8::jsonb,
+      atualizado_em=NOW()
+    WHERE numero=$9
+  `, [
+    detalhes.charge_id || "",
+    detalhes.situacao_efi || "",
+    Number(conta || 1),
+    contaNome || "",
+    detalhes.linha_digitavel || "",
+    detalhes.pix_copia_cola || "",
+    detalhes.link_boleto || "",
+    JSON.stringify({
+      efiChargeId: detalhes.charge_id || "",
+      efiStatus: detalhes.situacao_efi || "",
+      linhaDigitavel: detalhes.linha_digitavel || "",
+      pix: detalhes.pix_copia_cola || "",
+      linkPdf: detalhes.link_boleto || "",
+      efiSincronizadoEm: new Date().toISOString()
+    }),
+    row.numero
+  ]);
+}
+
+app.post("/api/efi/sincronizar-importados", async (req, res) => {
+  try {
+    await efiGarantirTabela();
+
+    const body = req.body || {};
+    const conta = Number(body.conta || 1);
+    const limite = Math.min(Number(body.limite || 100), 300);
+    const cfg = await efiCarregarConfig(conta);
+
+    if (!cfg || !cfg.ClientId || !cfg.ClientSecret) {
+      return res.status(400).json({ ok:false, erro:"Conta Efí não configurada." });
+    }
+
+    await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS efi_charge_id TEXT;");
+    await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS efi_status TEXT;");
+    await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS efi_conta_id INTEGER;");
+    await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS efi_conta_nome TEXT;");
+    await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS linha_digitavel TEXT;");
+    await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS pix TEXT;");
+    await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS link_pdf TEXT;");
+
+    let boletos = [];
+    try {
+      const r = await pool.query(`
+        SELECT * FROM boletos
+        WHERE (efi_charge_id IS NULL OR efi_charge_id = '')
+          AND (
+            origem ILIKE '%ReceitaNet%'
+            OR descricao ILIKE '%ReceitaNet%'
+            OR identificacao_carne IS NOT NULL
+          )
+        ORDER BY vencimento DESC NULLS LAST
+        LIMIT $1
+      `, [limite]);
+      boletos = r.rows || [];
+    } catch (e) {
+      const r = await pool.query(`
+        SELECT * FROM boletos
+        WHERE (efi_charge_id IS NULL OR efi_charge_id = '')
+        ORDER BY vencimento DESC NULLS LAST
+        LIMIT $1
+      `, [limite]);
+      boletos = r.rows || [];
+    }
+
+    if (!boletos.length) {
+      return res.json({ ok:true, total:0, vinculados:0, naoEncontrados:0, mensagem:"Nenhum boleto importado pendente de vínculo foi encontrado." });
+    }
+
+    const datas = boletos.map(b => efiDateISO(b.vencimento)).filter(Boolean).sort();
+    const begin = efiAddDays(datas[0] || new Date().toISOString().slice(0,10), -180);
+    const end = efiAddDays(datas[datas.length - 1] || new Date().toISOString().slice(0,10), 180);
+
+    const busca = await efiBuscarCobrancasIntervalo(cfg, begin, end);
+    const cobrancas = busca.lista || [];
+
+    let vinculados = 0;
+    const naoEncontrados = [];
+    const encontrados = [];
+
+    for (const b of boletos) {
+      const alvo = efiBoletoRowToAlvo(b);
+
+      let melhor = null;
+      let melhorScore = 0;
+      let segundoScore = 0;
+
+      for (const c of cobrancas) {
+        const score = efiScoreCharge(c, alvo);
+        if (score > melhorScore) {
+          segundoScore = melhorScore;
+          melhorScore = score;
+          melhor = c;
+        } else if (score > segundoScore) {
+          segundoScore = score;
+        }
+      }
+
+      // Exige correspondência forte e evita empate perigoso.
+      if (melhor && melhorScore >= 70 && melhorScore > segundoScore) {
+        const id = String(efiGet(melhor, ["charge_id", "id", "transaction_id", "custom_id"]) || "");
+        let detalhes = efiExtractChargeDetails(melhor);
+        if (id) {
+          const det = await efiDetalharPorId(cfg, id);
+          if (det.ok) detalhes = det.detalhes;
+          detalhes.charge_id = detalhes.charge_id || id;
+        }
+
+        await efiAtualizarBoletoSupabase(b, detalhes, conta, cfg.NomeConta || ("Conta Efí " + conta));
+        await efiSalvarVinculoBoleto(alvo, detalhes);
+
+        vinculados++;
+        encontrados.push({
+          numero: b.numero,
+          cliente: b.cliente_nome,
+          valor: b.valor,
+          vencimento: b.vencimento,
+          charge_id: detalhes.charge_id,
+          score: melhorScore
+        });
+      } else {
+        naoEncontrados.push({
+          numero: b.numero,
+          cliente: b.cliente_nome,
+          valor: b.valor,
+          vencimento: b.vencimento,
+          motivo: melhor ? `Sem correspondência segura. Melhor score ${melhorScore}, segundo ${segundoScore}` : "Nenhuma cobrança candidata encontrada"
+        });
+      }
+    }
+
+    return res.json({
+      ok:true,
+      conta,
+      periodo:{ begin, end },
+      total: boletos.length,
+      cobrancasEfi: cobrancas.length,
+      vinculados,
+      naoEncontrados: naoEncontrados.length,
+      encontrados,
+      pendentes: naoEncontrados.slice(0, 30),
+      errosBusca: busca.erros || []
+    });
+  } catch (err) {
+    console.error("Erro /api/efi/sincronizar-importados:", err);
+    return res.status(500).json({ ok:false, erro:err.message });
+  }
+});
 
 io.on("connection",(socket)=>{
   socket.emit("hub-update", geral());

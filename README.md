@@ -1,9 +1,7 @@
 # Fibra+ Hub
 
 ## Alteração atual
-- Efí salva e carrega pelo Supabase/Postgres (`efi_configuracoes`).
-- Status Efí Online/Offline com OAuth real.
-- Preparada tabela `efi_boletos_vinculos` para gravar vínculos dos boletos com a Efí.
-- Boleto importado tenta consultar a Efí e salvar linha digitável, Pix Copia e Cola, segunda via e status.
-- Sem Chave PIX e sem certificado `.p12`.
+- Adicionado botão único `Sincronizar boletos importados com a Efí` no Financeiro Efí.
+- Criado endpoint `POST /api/efi/sincronizar-importados`.
+- A sincronização busca boletos importados ainda sem `efi_charge_id`, consulta cobranças na Efí e vincula apenas correspondências seguras.
 - Não foram alterados MikroTik, servidores, clientes, menu ou layout global.
