@@ -3215,6 +3215,12 @@ document.addEventListener("DOMContentLoaded", function(){
       "cadastroCpf","cadastroCnpj","inputCpf","inputCnpj"
     ]);
   }
+  function loginCliente(c){
+    return primeiroValorCliente(c, [
+      "loginPppoe","login_pppoe","login","usuario","user","pppoe","clienteLogin",
+      "loginCliente","cadLogin","inputLogin","usuarioPppoe","userPppoe"
+    ]);
+  }
   function nomeCliente(c){
     return primeiroValorCliente(c, ["nome","cliente","nomeCliente","razaoSocial","razao_social","cadNome","inputNome"]);
   }
@@ -3227,18 +3233,20 @@ document.addEventListener("DOMContentLoaded", function(){
   function servidorCadastro(c){
     return c.servidor || c.popServidor || c.servidorPppoe || c.pop || "";
   }
-  function loginCadastro(c){
-    return c.loginPppoe || c.login || c.usuario || c.pppoe || "";
-  }
+  function loginCadastro(c){ return loginCliente(c); }
   function aplicarRetornoEfi(boletoLocal, retorno){
     const efi = retorno && retorno.efi ? retorno.efi : {};
     const row = retorno && retorno.boleto ? retorno.boleto : {};
     const dados = row.dados || {};
 
     boletoLocal.numero = row.numero || dados.numero || boletoLocal.numero || efi.charge_id || Date.now();
-    boletoLocal.login = row.cliente_login || dados.login || boletoLocal.login || "";
-    boletoLocal.nome = row.cliente_nome || dados.nome || boletoLocal.nome || "";
-    boletoLocal.cpfCnpj = row.cpf_cnpj || dados.cpfCnpj || boletoLocal.cpfCnpj || "";
+    boletoLocal.login = row.cliente_login || dados.login || boletoLocal.login || boletoLocal.loginPppoe || boletoLocal.clienteLogin || "";
+    boletoLocal.loginPppoe = boletoLocal.loginPppoe || boletoLocal.login;
+    boletoLocal.clienteLogin = boletoLocal.clienteLogin || boletoLocal.login;
+    boletoLocal.nome = row.cliente_nome || dados.nome || dados.cliente || boletoLocal.nome || boletoLocal.cliente || "";
+    boletoLocal.cliente = boletoLocal.cliente || boletoLocal.nome;
+    boletoLocal.cpfCnpj = row.cpf_cnpj || dados.cpfCnpj || dados.cpf || boletoLocal.cpfCnpj || boletoLocal.cpf || "";
+    boletoLocal.cpf = boletoLocal.cpf || boletoLocal.cpfCnpj;
     boletoLocal.categoria = row.categoria || dados.categoria || boletoLocal.categoria || "Mensalidade";
     boletoLocal.descricao = row.descricao || dados.descricao || boletoLocal.descricao || "Boleto gerado pela Efí";
     boletoLocal.emissao = row.emissao || dados.emissao || boletoLocal.emissao || new Date().toISOString().slice(0,10);
@@ -3338,8 +3346,12 @@ document.addEventListener("DOMContentLoaded", function(){
     const boleto = {
       numero: Date.now(),
       login: loginCadastro(c),
+      loginPppoe: loginCadastro(c),
+      clienteLogin: loginCadastro(c),
       nome: nomeCliente(c),
+      cliente: nomeCliente(c),
       cpfCnpj: cpfCliente(c),
+      cpf: cpfCliente(c),
       telefone: telefoneCliente(c),
       email: emailCliente(c),
       categoria: document.getElementById("avulsoCategoria")?.value || "Mensalidade",
@@ -3395,8 +3407,12 @@ document.addEventListener("DOMContentLoaded", function(){
 
     const payload = {
       login: loginCadastro(c),
+      loginPppoe: loginCadastro(c),
+      clienteLogin: loginCadastro(c),
       nome: nomeCliente(c),
+      cliente: nomeCliente(c),
       cpfCnpj: cpfCliente(c),
+      cpf: cpfCliente(c),
       telefone: telefoneCliente(c),
       email: emailCliente(c),
       emissao: new Date().toISOString().slice(0,10),
@@ -3470,6 +3486,52 @@ document.addEventListener("DOMContentLoaded", function(){
     if(!pix){ alert("Pix ainda não disponível. Verifique a integração Efí do boleto."); return; }
     navigator.clipboard?.writeText(pix);
     alert("Pix copiado.");
+  };
+})();
+</script>
+
+
+<script>
+/* CORREÇÃO VÍNCULO BOLETO EFI CLIENTE */
+(function(){
+  function norm(v){ return String(v || "").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim(); }
+  function doc(v){ return String(v || "").replace(/\D/g,""); }
+
+  function clienteAtual(){
+    try{ return typeof clienteDoCadastro === "function" ? (clienteDoCadastro() || {}) : {}; }catch(e){ return {}; }
+  }
+
+  function idsCliente(c){
+    return [
+      norm(c.loginPppoe || c.login_pppoe || c.login || c.usuario || c.pppoe || c.clienteLogin),
+      doc(c.cpfCnpj || c.cpf_cnpj || c.cpf || c.cnpj || c.documento),
+      norm(c.nome || c.cliente || c.nomeCliente || c.razaoSocial)
+    ].filter(Boolean);
+  }
+
+  function idsBoleto(b){
+    return [
+      norm(b.login || b.loginPppoe || b.login_pppoe || b.clienteLogin || b.usuario || b.pppoe),
+      doc(b.cpfCnpj || b.cpf_cnpj || b.cpf || b.cnpj || b.documento),
+      norm(b.nome || b.cliente || b.nomeCliente || b.cliente_nome)
+    ].filter(Boolean);
+  }
+
+  function mesmoCliente(b, chavesCliente){
+    if(!chavesCliente.length) return true;
+    const chavesBoleto = idsBoleto(b);
+    if(!chavesBoleto.length) return true;
+
+    return chavesCliente.some(c => chavesBoleto.some(bk => c === bk || c.includes(bk) || bk.includes(c)));
+  }
+
+  window.fibraBoletosClienteAtual = function(){
+    let lista = [];
+    try{ lista = JSON.parse(localStorage.getItem("boletos") || "[]"); }catch(e){ lista = []; }
+    if(!Array.isArray(lista)) lista = [];
+
+    const chavesCliente = idsCliente(clienteAtual());
+    return lista.filter(b => mesmoCliente(b, chavesCliente));
   };
 })();
 </script>

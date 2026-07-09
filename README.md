@@ -1,6 +1,6 @@
 # Fibra+ Hub
 
 ## Correção atual
-- Após criar boleto na Efí, a lista do painel é atualizada imediatamente.
-- O painel agora grava o boleto retornado no cache local e tenta recarregar os boletos do Supabase.
-- Corrigido para aparecer na lista sem precisar reimportar ou limpar cache.
+- Boleto criado na Efí agora fica vinculado ao cliente por login, loginPppoe, clienteLogin, CPF/CNPJ e nome.
+- A lista de boletos do cliente agora filtra usando múltiplos identificadores.
+- Corrige caso o boleto tenha sido criado, mas não apareça no modal do cliente.
