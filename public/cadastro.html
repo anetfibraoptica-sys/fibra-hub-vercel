@@ -3179,4 +3179,236 @@ document.addEventListener("DOMContentLoaded", function(){
 })();
 </script>
 <script src="efi-boleto-importado.js"></script>
+
+<script>
+/* ============================================================
+   INTEGRAÇÃO EFI - BOLETOS EXISTENTES + BAIXA/DESBLOQUEIO
+   Usa os botões atuais: Boleto Avulso, Gerar Mensalidades/Carnê e Baixa Manual.
+============================================================ */
+(function(){
+  function doc(v){ return String(v || "").replace(/\D/g,""); }
+  function num(v){
+    if(typeof fibraNumero === "function") return fibraNumero(v);
+    let s = String(v || "").replace(/[R$\s]/g,"").replace(/\./g,"").replace(",",".").replace(/[^\d.-]/g,"");
+    return Number(s) || 0;
+  }
+  function cliente(){
+    try{ return typeof clienteDoCadastro === "function" ? (clienteDoCadastro() || {}) : {}; }catch(e){ return {}; }
+  }
+  function profileCadastro(c){
+    return c.profile || c.plano || c.perfil || c.profileServidor || c.planoVelocidade || c.velocidade || "";
+  }
+  function servidorCadastro(c){
+    return c.servidor || c.popServidor || c.servidorPppoe || c.pop || "";
+  }
+  function loginCadastro(c){
+    return c.loginPppoe || c.login || c.usuario || c.pppoe || "";
+  }
+  function aplicarRetornoEfi(boletoLocal, retorno){
+    const efi = retorno && retorno.efi ? retorno.efi : {};
+    const row = retorno && retorno.boleto ? retorno.boleto : {};
+    boletoLocal.numero = row.numero || boletoLocal.numero || efi.charge_id || Date.now();
+    boletoLocal.efiChargeId = efi.charge_id || row.efi_charge_id || boletoLocal.efiChargeId || "";
+    boletoLocal.efiStatus = efi.situacao_efi || row.efi_status || "Registrado na Efí";
+    boletoLocal.linhaDigitavel = efi.linha_digitavel || row.linha_digitavel || "";
+    boletoLocal.pix = efi.pix_copia_cola || row.pix || boletoLocal.pix || "";
+    boletoLocal.codigoPix = boletoLocal.pix;
+    boletoLocal.linkPdf = efi.link_boleto || row.link_pdf || "";
+    boletoLocal.pdf = boletoLocal.linkPdf;
+    boletoLocal.segundaVia = boletoLocal.linkPdf;
+    boletoLocal.status = "pendente";
+    boletoLocal.origem = "Painel Fibra+ Hub Efí";
+    return boletoLocal;
+  }
+  async function criarBoletoEfi(payload){
+    const resp = await fetch("/api/efi/boleto/criar", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify(payload)
+    });
+    const json = await resp.json();
+    if(!resp.ok || !json.ok) throw new Error(json.erro || json.mensagem || "Erro ao criar boleto na Efí.");
+    return json;
+  }
+  async function criarCarneEfi(payload){
+    const resp = await fetch("/api/efi/carne/criar", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify(payload)
+    });
+    const json = await resp.json();
+    if(!resp.ok || !json.ok) throw new Error(json.erro || json.mensagem || "Erro ao criar carnê na Efí.");
+    return json;
+  }
+  async function desbloquearClientePorPagamento(){
+    const c = cliente();
+    const login = loginCadastro(c);
+    const servidor = servidorCadastro(c);
+    const profile = profileCadastro(c);
+    if(!login || !servidor || !profile) return {ok:false, motivo:"dados_incompletos"};
+
+    try{
+      const resp = await fetch("/api/mikrotik/cliente-acao", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({acao:"pagamento", login, servidor, profile, profileCadastro:profile})
+      });
+      return await resp.json();
+    }catch(e){
+      return {ok:false, erro:e.message};
+    }
+  }
+  window.fibraDesbloquearClientePorPagamento = desbloquearClientePorPagamento;
+
+  const oldGerarBoletoAvulso = window.gerarBoletoAvulsoCliente;
+  window.gerarBoletoAvulsoCliente = async function(){
+    const c = cliente();
+    const valor = num(document.getElementById("avulsoValor")?.value);
+    const venc = document.getElementById("avulsoVencimento")?.value;
+    if(!valor || !venc){ alert("Informe valor e vencimento."); return; }
+
+    const boleto = {
+      numero: Date.now(),
+      login: loginCadastro(c),
+      nome: c.nome || "",
+      cpfCnpj: c.cpfCnpj || c.cpf || c.cnpj || "",
+      telefone: c.telefone1 || c.telefone2 || c.telefone || "",
+      email: c.email || "",
+      categoria: document.getElementById("avulsoCategoria")?.value || "Mensalidade",
+      descricao: document.getElementById("avulsoDescricao")?.value || "Boleto Avulso",
+      emissao: document.getElementById("avulsoEmissao")?.value || new Date().toISOString().slice(0,10),
+      vencimento: venc,
+      valor,
+      total: valor,
+      observacao: document.getElementById("avulsoObservacao")?.value || "",
+      status: "pendente",
+      origem: "Painel Fibra+ Hub Efí",
+      conta: 1
+    };
+
+    try{
+      const json = await criarBoletoEfi(boleto);
+      aplicarRetornoEfi(boleto, json);
+
+      const lista = typeof fibraGetBoletosStorage === "function" ? fibraGetBoletosStorage() : [];
+      lista.push(boleto);
+      fibraSalvarBoletosStorage(lista);
+
+      if(typeof fecharSubmodaisBoletos === "function") fecharSubmodaisBoletos();
+      if(typeof renderizarBoletosCliente === "function") renderizarBoletosCliente();
+
+      alert("Boleto criado na Efí com integração.");
+    }catch(e){
+      alert("Erro ao gerar boleto na Efí: " + e.message);
+    }
+  };
+
+  const oldGerarMensalidades = window.gerarMensalidadesCliente;
+  window.gerarMensalidadesCliente = async function(){
+    const c = cliente();
+    const valor = num(document.getElementById("mensalidadeValor")?.value);
+    const primeiro = document.getElementById("mensalidadePrimeiroVencimento")?.value;
+    const qtd = Math.max(1, Number(document.getElementById("mensalidadeQuantidade")?.value || 1));
+    const per = document.getElementById("mensalidadePeriodicidade")?.value || "mensal";
+    if(!valor || !primeiro){ alert("Informe valor e primeiro vencimento."); return; }
+
+    const parcelas = [];
+    for(let i=0;i<qtd;i++){
+      let venc = primeiro;
+      if(typeof addMes === "function" && per === "mensal") venc = addMes(primeiro, i);
+      else if(typeof addDias === "function") venc = addDias(primeiro, per === "quinzenal" ? i*15 : i*7);
+      parcelas.push({
+        numero: Date.now()+i,
+        vencimento: venc,
+        valor,
+        total: valor,
+        descricao: `Mensalidade ${String(venc).slice(5,7)}/${String(venc).slice(0,4)}`,
+        categoria: "Mensalidade"
+      });
+    }
+
+    const payload = {
+      login: loginCadastro(c),
+      nome: c.nome || "",
+      cpfCnpj: c.cpfCnpj || c.cpf || c.cnpj || "",
+      telefone: c.telefone1 || c.telefone2 || c.telefone || "",
+      email: c.email || "",
+      emissao: new Date().toISOString().slice(0,10),
+      conta: 1,
+      parcelas
+    };
+
+    try{
+      const json = await criarCarneEfi(payload);
+      const lista = typeof fibraGetBoletosStorage === "function" ? fibraGetBoletosStorage() : [];
+
+      (json.parcelas || []).forEach((p, idx) => {
+        const base = {...parcelas[idx], ...payload, status:"pendente", origem:"Painel Fibra+ Hub Efí"};
+        delete base.parcelas;
+        aplicarRetornoEfi(base, {efi:p.efi, boleto:p.boleto});
+        lista.push(base);
+      });
+
+      fibraSalvarBoletosStorage(lista);
+      if(typeof fecharSubmodaisBoletos === "function") fecharSubmodaisBoletos();
+      if(typeof renderizarBoletosCliente === "function") renderizarBoletosCliente();
+
+      alert("Carnê/mensalidades criados na Efí com integração.");
+    }catch(e){
+      alert("Erro ao gerar carnê na Efí: " + e.message);
+    }
+  };
+
+  const oldConfirmarBaixaManual = window.confirmarBaixaManual;
+  window.confirmarBaixaManual = async function(){
+    const numero = window.boletoSelecionadoNumero || "";
+    const lista = typeof fibraGetBoletosStorage === "function" ? fibraGetBoletosStorage() : [];
+    const idx = lista.findIndex(b => String(b.numero || b.id || b.nossoNumero || b.titulo) === String(numero));
+
+    if(typeof oldConfirmarBaixaManual === "function"){
+      await oldConfirmarBaixaManual();
+    }
+
+    try{
+      const b = idx >= 0 ? lista[idx] : {};
+      await fetch("/api/boletos/baixa-manual", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({
+          numero,
+          valorPago: document.getElementById("baixaValorPago")?.value || b.valor || b.total || "",
+          dataPagamento: document.getElementById("baixaDataPagamento")?.value || new Date().toISOString().slice(0,10),
+          formaPagamento: document.getElementById("baixaFormaPagamento")?.value || "baixa_manual",
+          observacao: document.getElementById("baixaObservacao")?.value || ""
+        })
+      });
+    }catch(e){
+      console.warn("Erro ao registrar baixa no Supabase:", e.message);
+    }
+
+    const ret = await desbloquearClientePorPagamento();
+    if(ret && ret.ok){
+      alert("Baixa registrada e cliente desbloqueado no MikroTik.");
+    }else if(ret && (ret.erro || ret.motivo)){
+      console.warn("Desbloqueio não executado:", ret.erro || ret.motivo);
+    }
+  };
+
+  window.segundaViaBoletoCliente = function(numero){
+    const b = typeof encontrarBoleto === "function" ? encontrarBoleto(numero) : null;
+    const link = b && (b.linkPdf || b.link_pdf || b.link || b.pdf || b.url || b.segundaVia);
+    if(link) window.open(link, "_blank");
+    else alert("Segunda via ainda não disponível. Verifique a integração Efí do boleto.");
+  };
+
+  window.copiarPixBoletoCliente = function(numero){
+    const b = typeof encontrarBoleto === "function" ? encontrarBoleto(numero) : null;
+    const pix = b && (b.pix || b.codigoPix || b.copiaCola || b.pixCopiaCola);
+    if(!pix){ alert("Pix ainda não disponível. Verifique a integração Efí do boleto."); return; }
+    navigator.clipboard?.writeText(pix);
+    alert("Pix copiado.");
+  };
+})();
+</script>
+
 </body></html>

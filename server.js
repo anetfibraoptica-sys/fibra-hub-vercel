@@ -2472,13 +2472,21 @@ function efiBoletoRowToAlvo(row) {
   };
 }
 
+
 async function efiBuscarCobrancasIntervalo(cfg, begin, end) {
+  // A Efí exige charge_type + begin_date + end_date para listar cobranças.
+  // Consultamos boleto avulso e carnê, pois boletos do ReceitaNet podem vir de ambos.
   const paths = [
-    `/v1/charges?begin_date=${begin}&end_date=${end}`,
-    `/v1/charges?begin_date=${begin}&end_date=${end}&status=all`,
-    `/v1/transactions?begin_date=${begin}&end_date=${end}`,
-    `/v1/transactions?begin_date=${begin}&end_date=${end}&status=all`
+    `/v1/charges?charge_type=banking_billet&begin_date=${begin}&end_date=${end}`,
+    `/v1/charges?charge_type=carnet&begin_date=${begin}&end_date=${end}`
   ];
+
+  const statusList = ["waiting", "unpaid", "paid", "settled", "canceled", "expired", "link"];
+
+  for (const status of statusList) {
+    paths.push(`/v1/charges?charge_type=banking_billet&begin_date=${begin}&end_date=${end}&status=${status}`);
+    paths.push(`/v1/charges?charge_type=carnet&begin_date=${begin}&end_date=${end}&status=${status}`);
+  }
 
   const todos = [];
   const erros = [];
@@ -2503,7 +2511,7 @@ async function efiBuscarCobrancasIntervalo(cfg, begin, end) {
     if (!mapa.has(id)) mapa.set(id, item);
   }
 
-  return { lista: Array.from(mapa.values()), erros };
+  return { lista: Array.from(mapa.values()), erros, endpointsConsultados: paths.length };
 }
 
 async function efiDetalharPorId(cfg, id) {
@@ -2678,6 +2686,7 @@ app.post("/api/efi/sincronizar-importados", async (req, res) => {
       periodo:{ begin, end },
       total: boletos.length,
       cobrancasEfi: cobrancas.length,
+      endpointsConsultados: busca.endpointsConsultados || 0,
       vinculados,
       naoEncontrados: naoEncontrados.length,
       encontrados,
@@ -2686,6 +2695,265 @@ app.post("/api/efi/sincronizar-importados", async (req, res) => {
     });
   } catch (err) {
     console.error("Erro /api/efi/sincronizar-importados:", err);
+    return res.status(500).json({ ok:false, erro:err.message });
+  }
+});
+
+
+
+/* EFI GERAR BOLETOS PELO PAINEL */
+function efiFormatDateBRorISO(v) {
+  const iso = efiDateISO(v);
+  return iso || new Date().toISOString().slice(0, 10);
+}
+
+function efiPessoaFisicaOuJuridica(documento, nome) {
+  const doc = efiOnlyNumbers(documento);
+  if (doc.length > 11) {
+    return { juridical_person: { corporate_name: nome || "Cliente", cnpj: doc } };
+  }
+  return { name: nome || "Cliente", cpf: doc };
+}
+
+function efiBuildBilletPayload(body) {
+  const valor = efiMoneyCents(body.valor || body.total || 0);
+  const nome = String(body.nome || body.cliente || body.cliente_nome || "Cliente").trim();
+  const documento = efiOnlyNumbers(body.cpfCnpj || body.cpf || body.cpf_cnpj || body.documento || "");
+  const telefone = efiOnlyNumbers(body.telefone || body.celular || "");
+  const email = String(body.email || "").trim();
+  const descricao = String(body.descricao || body.categoria || "Mensalidade Fibra+").trim();
+  const vencimento = efiFormatDateBRorISO(body.vencimento || body.dueDate || body.due_date);
+
+  if (!valor || valor <= 0) throw new Error("Valor do boleto inválido.");
+  if (!documento) throw new Error("CPF/CNPJ do cliente é obrigatório para gerar boleto Efí.");
+
+  const customer = {
+    ...efiPessoaFisicaOuJuridica(documento, nome)
+  };
+  if (telefone) customer.phone_number = telefone;
+  if (email) customer.email = email;
+
+  return {
+    items: [{
+      name: descricao || "Mensalidade",
+      value: valor,
+      amount: 1
+    }],
+    payment: {
+      banking_billet: {
+        expire_at: vencimento,
+        customer,
+        message: String(body.mensagem || "Boleto gerado pelo Fibra+ Hub").slice(0, 80)
+      }
+    },
+    metadata: {
+      custom_id: String(body.numero || body.login || Date.now()),
+      notification_url: String(body.webhook || "")
+    }
+  };
+}
+
+async function efiCriarBoletoOneStep(body, conta = 1) {
+  const cfg = await efiCarregarConfig(conta);
+  if (!cfg || !cfg.ClientId || !cfg.ClientSecret) throw new Error("Conta Efí não configurada.");
+
+  const payload = efiBuildBilletPayload(body);
+  if (!payload.metadata.notification_url) delete payload.metadata.notification_url;
+
+  const tentativas = [
+    { path: "/v1/charge/one-step", body: payload },
+    { path: "/v1/charge", body: { items: payload.items, metadata: payload.metadata } }
+  ];
+
+  let ultimo = null;
+
+  for (const t of tentativas) {
+    const r = await efiRequest(t.path, cfg, { method: "POST", body: t.body });
+    if (r.ok) {
+      let detalhes = efiExtractChargeDetails(r.json);
+      const id = detalhes.charge_id || efiGet(r.json, ["data.charge_id", "charge_id", "data.id", "id"]);
+      detalhes.charge_id = String(id || detalhes.charge_id || "");
+
+      // Se criou via /v1/charge sem one-step, tenta definir boleto como pagamento.
+      if (t.path === "/v1/charge" && detalhes.charge_id) {
+        try {
+          const pay = await efiRequest("/v1/charge/" + encodeURIComponent(detalhes.charge_id) + "/pay", cfg, {
+            method: "POST",
+            body: { payment: payload.payment }
+          });
+          if (pay.ok) detalhes = { ...detalhes, ...efiExtractChargeDetails(pay.json), charge_id: detalhes.charge_id };
+        } catch(e) {}
+      }
+
+      // Busca detalhe para pegar linha digitável/link se não veio completo.
+      if (detalhes.charge_id) {
+        const det = await efiDetalharPorId(cfg, detalhes.charge_id);
+        if (det.ok) detalhes = { ...detalhes, ...det.detalhes, charge_id: detalhes.charge_id };
+      }
+
+      return { cfg, detalhes, raw: r.json };
+    }
+    ultimo = r.json || r.raw;
+  }
+
+  throw new Error("Efí não criou o boleto: " + JSON.stringify(ultimo).slice(0, 500));
+}
+
+async function salvarBoletoGeradoSupabase(body, detalhes, conta, nomeConta) {
+  await efiGarantirTabela();
+
+  await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS efi_charge_id TEXT;");
+  await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS efi_status TEXT;");
+  await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS efi_conta_id INTEGER;");
+  await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS efi_conta_nome TEXT;");
+  await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS linha_digitavel TEXT;");
+  await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS pix TEXT;");
+  await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS link_pdf TEXT;");
+
+  const numero = String(body.numero || detalhes.charge_id || Date.now());
+  const valor = Number(body.valor || body.total || 0);
+  const dados = {
+    ...body,
+    numero,
+    efiChargeId: detalhes.charge_id || "",
+    efiStatus: detalhes.situacao_efi || "Registrado na Efí",
+    linhaDigitavel: detalhes.linha_digitavel || "",
+    pix: detalhes.pix_copia_cola || "",
+    linkPdf: detalhes.link_boleto || "",
+    origem: "Painel Fibra+ Hub Efí",
+    atualizadoEm: new Date().toISOString()
+  };
+
+  const r = await pool.query(`
+    INSERT INTO boletos
+      (numero, cliente_login, cliente_nome, cpf_cnpj, categoria, descricao, emissao, vencimento,
+       valor, total, valor_pago, status, linha_digitavel, pix, link_pdf,
+       efi_charge_id, efi_status, efi_conta_id, efi_conta_nome, dados, origem, atualizado_em)
+    VALUES
+      ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,0,'pendente',$11,$12,$13,$14,$15,$16,$17,$18,'Painel Fibra+ Hub Efí',NOW())
+    ON CONFLICT (numero) DO UPDATE SET
+      cliente_login=EXCLUDED.cliente_login,
+      cliente_nome=EXCLUDED.cliente_nome,
+      cpf_cnpj=EXCLUDED.cpf_cnpj,
+      categoria=EXCLUDED.categoria,
+      descricao=EXCLUDED.descricao,
+      emissao=EXCLUDED.emissao,
+      vencimento=EXCLUDED.vencimento,
+      valor=EXCLUDED.valor,
+      total=EXCLUDED.total,
+      status='pendente',
+      linha_digitavel=EXCLUDED.linha_digitavel,
+      pix=EXCLUDED.pix,
+      link_pdf=EXCLUDED.link_pdf,
+      efi_charge_id=EXCLUDED.efi_charge_id,
+      efi_status=EXCLUDED.efi_status,
+      efi_conta_id=EXCLUDED.efi_conta_id,
+      efi_conta_nome=EXCLUDED.efi_conta_nome,
+      dados=EXCLUDED.dados,
+      origem=EXCLUDED.origem,
+      atualizado_em=NOW()
+    RETURNING *;
+  `, [
+    numero,
+    body.login || body.loginPppoe || body.clienteLogin || "",
+    body.nome || body.cliente || "",
+    body.cpfCnpj || body.cpf || body.cpf_cnpj || "",
+    body.categoria || "Mensalidade",
+    body.descricao || "Boleto gerado pela Efí",
+    body.emissao || new Date().toISOString().slice(0, 10),
+    body.vencimento,
+    valor,
+    valor,
+    detalhes.linha_digitavel || "",
+    detalhes.pix_copia_cola || "",
+    detalhes.link_boleto || "",
+    detalhes.charge_id || "",
+    detalhes.situacao_efi || "Registrado na Efí",
+    Number(conta || 1),
+    nomeConta || "",
+    JSON.stringify(dados)
+  ]);
+
+  await efiSalvarVinculoBoleto(body, detalhes);
+  return r.rows[0];
+}
+
+app.post("/api/efi/boleto/criar", async (req, res) => {
+  try {
+    const body = req.body || {};
+    const conta = Number(body.conta || 1);
+    const criado = await efiCriarBoletoOneStep(body, conta);
+    const row = await salvarBoletoGeradoSupabase(body, criado.detalhes, conta, criado.cfg.NomeConta || ("Conta Efí " + conta));
+
+    return res.json({
+      ok: true,
+      mensagem: "Boleto criado na Efí.",
+      boleto: row,
+      efi: criado.detalhes
+    });
+  } catch (err) {
+    console.error("Erro /api/efi/boleto/criar:", err);
+    return res.status(500).json({ ok:false, erro:err.message });
+  }
+});
+
+app.post("/api/efi/carne/criar", async (req, res) => {
+  try {
+    const body = req.body || {};
+    const conta = Number(body.conta || 1);
+    const parcelas = Array.isArray(body.parcelas) ? body.parcelas : [];
+    if (!parcelas.length) return res.status(400).json({ ok:false, erro:"Nenhuma parcela informada." });
+
+    const criados = [];
+    for (const parcela of parcelas) {
+      const payload = { ...body, ...parcela, conta };
+      const criado = await efiCriarBoletoOneStep(payload, conta);
+      const row = await salvarBoletoGeradoSupabase(payload, criado.detalhes, conta, criado.cfg.NomeConta || ("Conta Efí " + conta));
+      criados.push({ boleto: row, efi: criado.detalhes });
+    }
+
+    return res.json({
+      ok: true,
+      mensagem: "Carnê criado na Efí como parcelas integradas.",
+      total: criados.length,
+      parcelas: criados
+    });
+  } catch (err) {
+    console.error("Erro /api/efi/carne/criar:", err);
+    return res.status(500).json({ ok:false, erro:err.message });
+  }
+});
+
+app.post("/api/boletos/baixa-manual", async (req, res) => {
+  try {
+    const body = req.body || {};
+    const numero = String(body.numero || "").trim();
+    if (!numero) return res.status(400).json({ ok:false, erro:"Número do boleto não informado." });
+
+    await pool.query(`
+      UPDATE boletos SET
+        status='pago',
+        valor_pago=COALESCE($1::numeric, valor),
+        pagamento=$2,
+        dados = COALESCE(dados, '{}'::jsonb) || $3::jsonb,
+        atualizado_em=NOW()
+      WHERE numero=$4
+    `, [
+      Number(body.valorPago || body.valor_pago || body.valor || 0) || null,
+      body.dataPagamento || new Date().toISOString().slice(0,10),
+      JSON.stringify({
+        status: "pago",
+        valorPago: body.valorPago || body.valor_pago || body.valor || "",
+        formaPagamento: body.formaPagamento || "baixa_manual",
+        observacaoBaixa: body.observacao || "",
+        baixaManualEm: new Date().toISOString()
+      }),
+      numero
+    ]);
+
+    return res.json({ ok:true, mensagem:"Baixa manual registrada." });
+  } catch (err) {
+    console.error("Erro /api/boletos/baixa-manual:", err);
     return res.status(500).json({ ok:false, erro:err.message });
   }
 });
