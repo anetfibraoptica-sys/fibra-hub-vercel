@@ -3600,29 +3600,95 @@ document.addEventListener("DOMContentLoaded", function(){
     return "";
   }
 
+
   function clienteCadastroAtual(){
     let c = {};
+
     try{
       if(typeof clienteDoCadastro === "function"){
         c = clienteDoCadastro() || {};
       }
     }catch(e){}
 
-    return {
-      login: texto(
-        c.loginPppoe || c.login_pppoe || c.login || c.usuario || c.pppoe ||
-        valorInput(["loginPppoe","login_pppoe","login","usuario","pppoe"])
-      ),
-      cpf: texto(
-        c.cpfCnpj || c.cpf_cnpj || c.cpf || c.cnpj || c.documento ||
-        valorInput(["cpfCnpj","cpf_cnpj","cpf","cnpj","documento"])
-      ),
-      nome: texto(
-        c.nome || c.cliente || c.nomeCliente || c.razaoSocial ||
-        valorInput(["nome","nomeCliente","cliente","razaoSocial"])
-      )
+    // Também procura objetos globais usados por versões anteriores do Cadastro.
+    const candidatosGlobais = [
+      window.clienteAtual,
+      window.clienteSelecionado,
+      window.clienteCadastro,
+      window.clienteEmEdicao,
+      window.clienteAberto,
+      window.cadastroClienteAtual,
+      window.__clienteAtual,
+      window.__clienteSelecionado
+    ];
+
+    for(const candidato of candidatosGlobais){
+      if(candidato && typeof candidato === "object"){
+        c = {...c, ...candidato};
+      }
+    }
+
+    // Procura parâmetros que possam ter sido usados ao abrir o Cadastro.
+    const qs = new URLSearchParams(location.search);
+    const urlLogin = qs.get("login") || qs.get("loginPppoe") || qs.get("usuario") || "";
+    const urlCpf = qs.get("cpf") || qs.get("cpfCnpj") || qs.get("documento") || "";
+    const urlNome = qs.get("nome") || qs.get("cliente") || "";
+
+    // Varre todos os campos da tela e procura por IDs/names relacionados.
+    const todosCampos = Array.from(document.querySelectorAll("input, select, textarea"));
+    const porPadrao = (padroes) => {
+      for(const el of todosCampos){
+        const chave = texto(el.id || el.name || el.getAttribute("data-field") || "").toLowerCase();
+        const valor = texto(el.value);
+        if(!valor) continue;
+        if(padroes.some(p => chave === p || chave.includes(p))) return valor;
+      }
+      return "";
     };
+
+    const loginTela = porPadrao([
+      "loginpppoe","login_pppoe","login","usuario","user","pppoe","clientelogin"
+    ]);
+
+    const cpfTela = porPadrao([
+      "cpfcnpj","cpf_cnpj","cpf","cnpj","documento","doc"
+    ]);
+
+    const nomeTela = porPadrao([
+      "nomecliente","nome_cliente","nome","cliente","razaosocial","razao_social"
+    ]);
+
+    // Procura também textos exibidos em elementos não-editáveis.
+    const textoRotulo = (rotulos) => {
+      const elementos = Array.from(document.querySelectorAll("[data-field], [data-value], .campo-valor, .valor-campo, span, strong, td, dd"));
+      for(const el of elementos){
+        const chave = texto(el.getAttribute("data-field") || el.getAttribute("data-label") || "").toLowerCase();
+        if(chave && rotulos.some(r => chave === r || chave.includes(r))){
+          const v = texto(el.getAttribute("data-value") || el.textContent);
+          if(v) return v;
+        }
+      }
+      return "";
+    };
+
+    const login = texto(
+      c.loginPppoe || c.login_pppoe || c.login || c.usuario || c.user || c.pppoe || c.clienteLogin ||
+      loginTela || urlLogin || textoRotulo(["loginpppoe","login","usuario","pppoe"])
+    );
+
+    const cpf = texto(
+      c.cpfCnpj || c.cpf_cnpj || c.cpf || c.cnpj || c.documento || c.doc ||
+      cpfTela || urlCpf || textoRotulo(["cpfcnpj","cpf","cnpj","documento"])
+    );
+
+    const nome = texto(
+      c.nome || c.cliente || c.nomeCliente || c.razaoSocial || c.razao_social ||
+      nomeTela || urlNome || textoRotulo(["nomecliente","nome","cliente","razaosocial"])
+    );
+
+    return { login, cpf, nome };
   }
+
 
   function numero(v){
     if(typeof v === "number") return Number.isFinite(v) ? v : 0;
@@ -3663,7 +3729,7 @@ document.addEventListener("DOMContentLoaded", function(){
     const c = clienteCadastroAtual();
 
     if(!c.login && !c.cpf && !c.nome){
-      throw new Error("Abra ou selecione um cliente antes de visualizar os boletos.");
+      throw new Error("O Cadastro está aberto, mas não foi possível ler login, CPF/CNPJ ou nome do cliente na tela.");
     }
 
     const params = new URLSearchParams({

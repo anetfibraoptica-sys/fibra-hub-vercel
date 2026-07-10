@@ -1,7 +1,6 @@
 # Fibra+ Hub
 
 ## Correção atual
-- O botão Boletos do Cadastro agora abre a lista.
-- A lista do cliente consulta exclusivamente `/api/boletos/cliente` no Supabase.
-- Implementações antigas de localStorage são substituídas pelo último bloco carregado.
-- Os boletos Efí já gerados passam a aparecer com charge ID, linha digitável e PDF.
+- Corrigida a identificação do cliente ao abrir Boletos.
+- O sistema procura login, CPF/CNPJ e nome nos campos da tela, objetos globais e parâmetros da URL.
+- Os boletos continuam sendo carregados exclusivamente do Supabase.
