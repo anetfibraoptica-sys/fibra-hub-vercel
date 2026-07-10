@@ -3357,7 +3357,15 @@ function fbBoletoRow(row){
     categoria: row.categoria || d.categoria || "",
     descricao: row.descricao || d.descricao || "",
     emissao: row.emissao || d.emissao || "",
-    vencimento: row.vencimento || d.vencimento || "",
+    vencimento:
+          row.vencimento ||
+          d.vencimento ||
+          d.dataVencimento ||
+          d.expire_at ||
+          d.expireAt ||
+          d.due_date ||
+          d.dueDate ||
+          "",
     pagamento: row.pagamento || d.pagamento || d.dataPagamento || "",
     valor: Number(row.valor || d.valor || 0),
     total: Number(row.total || d.total || row.valor || 0),

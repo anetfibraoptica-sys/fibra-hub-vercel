@@ -10,6 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@300;400;600;700&display=swap" rel="stylesheet">
 
 
+
 <style>
 #modalBoletosCliente table {
   width: 100%;
@@ -18,17 +19,33 @@
 #modalBoletosCliente th:nth-child(1),
 #modalBoletosCliente td:nth-child(1) { width: 18%; }
 #modalBoletosCliente th:nth-child(2),
-#modalBoletosCliente td:nth-child(2) { width: 24%; }
+#modalBoletosCliente td:nth-child(2) { width: 27%; }
 #modalBoletosCliente th:nth-child(3),
 #modalBoletosCliente td:nth-child(3) { width: 18%; }
 #modalBoletosCliente th:nth-child(4),
-#modalBoletosCliente td:nth-child(4) { width: 14%; }
+#modalBoletosCliente td:nth-child(4) { width: 17%; }
 #modalBoletosCliente th:nth-child(5),
-#modalBoletosCliente td:nth-child(5) { width: 26%; }
+#modalBoletosCliente td:nth-child(5) { width: 20%; }
+
 #modalBoletosCliente td,
 #modalBoletosCliente th {
   overflow-wrap: anywhere;
   vertical-align: middle;
+}
+
+#modalBoletosCliente .boleto-row-clicavel {
+  cursor: pointer;
+  transition: background .15s ease, transform .08s ease;
+}
+
+#modalBoletosCliente .boleto-row-clicavel:hover,
+#modalBoletosCliente .boleto-row-clicavel:focus {
+  background: rgba(255,255,255,.07);
+  outline: none;
+}
+
+#modalBoletosCliente .boleto-row-clicavel:active {
+  transform: scale(.998);
 }
 </style>
 
@@ -895,7 +912,7 @@ function fibraNormalizarStatusClienteCadastro(c){
             <th>Valor</th>
             <th>Total</th>
             <th>Status</th>
-            <th>Ações</th>
+            
           </tr>
         </thead>
         <tbody id="tbodyBoletosCliente">
@@ -2693,13 +2710,25 @@ document.addEventListener("DOMContentLoaded", function(){
   }
 
   function dataBR(v){
-    if(!v) return "";
-    const s = String(v).trim();
-    let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-    if(m) return m[3] + "/" + m[2] + "/" + m[1];
-    m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
-    if(m) return s.slice(0,10);
-    return s;
+    if(v === undefined || v === null || v === "") return "--";
+
+    if(v instanceof Date && !isNaN(v.getTime())){
+      return v.toLocaleDateString("pt-BR", {timeZone:"UTC"});
+    }
+
+    const original = String(v).trim();
+    const iso = original.match(/^(\d{4})-(\d{2})-(\d{2})(?:T.*)?$/);
+    if(iso) return `${iso[3]}/${iso[2]}/${iso[1]}`;
+
+    const br = original.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if(br) return original;
+
+    const d = new Date(original);
+    if(!isNaN(d.getTime())){
+      return d.toLocaleDateString("pt-BR", {timeZone:"UTC"});
+    }
+
+    return original;
   }
 
   function atualizarProximaFatura(){
@@ -3850,27 +3879,39 @@ document.addEventListener("DOMContentLoaded", function(){
 
       const valor = numero(b.total || b.valor);
 
-      return `<tr>
+      return `<tr
+        class="boleto-row-clicavel"
+        tabindex="0"
+        role="button"
+        title="Clique para abrir os detalhes do boleto"
+        onclick="abrirDetalhesBoleto('${numeroBoleto}')"
+        onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();abrirDetalhesBoleto('${numeroBoleto}');}"
+      >
         <td>
           <strong>${numeroBoleto || "--"}</strong>
           ${b.efiChargeId ? `<br><small>Efí: ${texto(b.efiChargeId)}</small>` : ""}
         </td>
         <td>
-          <b>Vencimento:</b> ${dataBR(b.vencimento || b.dataVencimento || b.due_date || b.dueDate)}<br>
-          <b>Emissão:</b> ${dataBR(b.emissao || b.dataEmissao || b.created_at)}
+          <b>Vencimento:</b> ${dataBR(
+            b.vencimento ||
+            b.dataVencimento ||
+            b.expire_at ||
+            b.expireAt ||
+            b.due_date ||
+            b.dueDate
+          )}<br>
+          <b>Emissão:</b> ${dataBR(
+            b.emissao ||
+            b.dataEmissao ||
+            b.created_at ||
+            b.criado_em
+          )}
         </td>
         <td>
           <b>Valor:</b> ${moeda(b.valor)}
         </td>
         <td><strong>${moeda(valor)}</strong></td>
         <td><span class="boleto-status ${st}">${st.charAt(0).toUpperCase()+st.slice(1)}</span></td>
-        <td class="boleto-acoes">
-          <button title="Visualizar" onclick="abrirDetalhesBoleto('${numeroBoleto}')">👁</button>
-          <button title="Segunda via / PDF" onclick="segundaViaBoletoCliente('${numeroBoleto}')">📄</button>
-          <button title="Copiar Pix" onclick="copiarPixBoletoCliente('${numeroBoleto}')">📲</button>
-          <button title="Baixa manual" onclick="marcarBoletoPagoCliente('${numeroBoleto}')">💳</button>
-          <button title="Excluir boleto do painel" onclick="excluirBoletoCliente('${numeroBoleto}')">🗑️</button>
-        </td>
       </tr>`;
     }).join("");
   };
