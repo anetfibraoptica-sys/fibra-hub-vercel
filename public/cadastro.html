@@ -1516,8 +1516,8 @@ function abrirDetalhesBoleto(numero){
       <p><b>Valor do boleto</b><span>${fibraMoedaBR(total)}</span></p>
       <p><b>Valor pago</b><span>${fibraMoedaBR(pago)}</span></p>
       <p><b>Diferença</b><span>${fibraMoedaBR(dif)}</span></p>
-      <p><b>Emissão</b><span>${b.emissao || "--"}</span></p>
-      <p><b>Vencimento</b><span>${b.vencimento || "--"}</span></p>
+      <p><b>Emissão</b><span>${fibraDataBR(b.emissao || b.dataEmissao || b.created_at || b.criado_em)}</span></p>
+      <p><b>Vencimento</b><span>${fibraDataBR(b.vencimento || b.dataVencimento || b.expire_at || b.expireAt || b.due_date || b.dueDate)}</span></p>
       <p><b>Status</b><span>${fibraStatusBoleto(b)}</span></p>
       <p></p>
       <p><b>Linha Digitável</b><span>${b.linhaDigitavel || "--"}</span></p>
@@ -1801,8 +1801,8 @@ function abrirDetalhesBoleto(numero){
       <p><b>Valor do boleto</b><span>${fibraMoedaBR(total)}</span></p>
       <p><b>Valor pago</b><span>${fibraMoedaBR(pago)}</span></p>
       <p><b>Diferença</b><span>${fibraMoedaBR(dif)}</span></p>
-      <p><b>Emissão</b><span>${b.emissao || "--"}</span></p>
-      <p><b>Vencimento</b><span>${b.vencimento || "--"}</span></p>
+      <p><b>Emissão</b><span>${fibraDataBR(b.emissao || b.dataEmissao || b.created_at || b.criado_em)}</span></p>
+      <p><b>Vencimento</b><span>${fibraDataBR(b.vencimento || b.dataVencimento || b.expire_at || b.expireAt || b.due_date || b.dueDate)}</span></p>
       <p><b>Status</b><span>${fibraStatusBoleto(b)}</span></p>
       <p></p>
       <p><b>Linha Digitável</b><span>${b.linhaDigitavel || "--"}</span></p>
@@ -4076,6 +4076,35 @@ document.addEventListener("DOMContentLoaded", function(){
     }
   };
 
+})();
+</script>
+
+
+<script>
+/* FORMATAÇÃO FINAL DE DATAS DOS BOLETOS */
+(function(){
+  window.fibraDataBR = function(v){
+    if(v === undefined || v === null || v === "") return "--";
+
+    if(v instanceof Date && !isNaN(v.getTime())){
+      return v.toLocaleDateString("pt-BR", {timeZone:"UTC"});
+    }
+
+    const s = String(v).trim();
+
+    const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})(?:T.*)?$/);
+    if(iso) return `${iso[3]}/${iso[2]}/${iso[1]}`;
+
+    const br = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if(br) return s;
+
+    const d = new Date(s);
+    if(!isNaN(d.getTime())){
+      return d.toLocaleDateString("pt-BR", {timeZone:"UTC"});
+    }
+
+    return s;
+  };
 })();
 </script>
 
