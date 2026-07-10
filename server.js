@@ -2326,6 +2326,38 @@ app.post("/api/efi/boleto-importado/vincular", async (req, res) => {
 
 app.post("/api/efi/boleto-importado/consultar", async (req, res) => {
   try {
+
+    const chargeExistente = String(
+      body.efi_charge_id ||
+      body.efiChargeId ||
+      body.charge_id ||
+      ""
+    ).trim();
+
+    if (chargeExistente) {
+      const salvo = await pool.query(`
+        SELECT *
+        FROM boletos
+        WHERE efi_charge_id=$1 OR numero=$2
+        ORDER BY atualizado_em DESC NULLS LAST
+        LIMIT 1
+      `, [chargeExistente, String(body.numero || "")]);
+
+      if (salvo.rows[0]) {
+        const row = salvo.rows[0];
+        const dados = row.dados || {};
+        return res.json({
+          ok:true,
+          encontrado:true,
+          preservado:true,
+          charge_id: row.efi_charge_id || chargeExistente,
+          situacao_efi: row.efi_status || dados.efiStatus || "Aguardando pagamento",
+          linha_digitavel: row.linha_digitavel || dados.linhaDigitavel || "",
+          pix_copia_cola: row.pix || dados.pix || dados.codigoPix || dados.pixCopiaCola || "",
+          link_boleto: row.link_pdf || dados.linkPdf || dados.pdf || ""
+        });
+      }
+    }
     const body = req.body || {};
     const conta = Number(body.conta || 1);
     const cfg = await efiCarregarConfig(conta);
@@ -2959,12 +2991,12 @@ async function salvarBoletoGeradoSupabase(body, detalhes, conta, nomeConta) {
       total=$10,
       valor_pago=COALESCE(valor_pago,0),
       status='pendente',
-      linha_digitavel=$11,
-      pix=$12,
-      link_pdf=$13,
       efi_charge_id=$14,
-      efi_status=$15,
-      efi_conta_nome=$16,
+      efi_status=COALESCE(NULLIF($15,''), efi_status),
+      efi_conta_nome=COALESCE(NULLIF($16,''), efi_conta_nome),
+      linha_digitavel=COALESCE(NULLIF($11,''), linha_digitavel),
+      pix=COALESCE(NULLIF($12,''), pix),
+      link_pdf=COALESCE(NULLIF($13,''), link_pdf),
       dados=COALESCE(dados,'{}'::jsonb) || $17::jsonb,
       origem='Painel Fibra+ Hub Efí',
       atualizado_em=NOW()
@@ -3474,7 +3506,20 @@ app.post("/api/efi/boleto/pix", async (req, res) => {
 
     const pixRet = await efiBuscarPixDaCobranca(cfg, chargeId);
     if (!pixRet.pix) {
-      return res.json({ ok:true, encontrado:false, pix:"", mensagem:"A Efí não retornou Pix para esta cobrança." });
+      const atual = await pool.query(
+        "SELECT pix, dados FROM boletos WHERE efi_charge_id=$1 OR numero=$2 LIMIT 1",
+        [chargeId, numero]
+      );
+      const row = atual.rows[0] || {};
+      const dados = row.dados || {};
+      const pixSalvo = String(row.pix || dados.pix || dados.codigoPix || dados.pixCopiaCola || "").trim();
+
+      return res.json({
+        ok:true,
+        encontrado:Boolean(pixSalvo),
+        pix:pixSalvo,
+        mensagem:pixSalvo ? "Pix preservado do Supabase." : "A Efí não retornou Pix para esta cobrança."
+      });
     }
 
     await pool.query(`

@@ -3253,9 +3253,23 @@ document.addEventListener("DOMContentLoaded", function(){
     boletoLocal.valor = Number(row.valor || dados.valor || boletoLocal.valor || 0);
     boletoLocal.total = Number(row.total || dados.total || boletoLocal.total || boletoLocal.valor || 0);
     boletoLocal.efiChargeId = efi.charge_id || row.efi_charge_id || dados.efiChargeId || boletoLocal.efiChargeId || "";
-    boletoLocal.efiStatus = efi.situacao_efi || row.efi_status || dados.efiStatus || "Registrado na Efí";
+    boletoLocal.efiStatus =
+      efi.situacao_efi ||
+      row.efi_status ||
+      dados.efiStatus ||
+      boletoLocal.efiStatus ||
+      (boletoLocal.efiChargeId ? "Aguardando pagamento" : "Registrado na Efí");
     boletoLocal.linhaDigitavel = efi.linha_digitavel || row.linha_digitavel || dados.linhaDigitavel || "";
-    boletoLocal.pix = efi.pix_copia_cola || row.pix || dados.pix || boletoLocal.pix || "";
+    boletoLocal.pix =
+      efi.pix_copia_cola ||
+      row.pix ||
+      dados.pix ||
+      dados.codigoPix ||
+      dados.pixCopiaCola ||
+      boletoLocal.pix ||
+      boletoLocal.codigoPix ||
+      boletoLocal.pixCopiaCola ||
+      "";
     boletoLocal.codigoPix = boletoLocal.pix;
     boletoLocal.linkPdf = efi.link_boleto || row.link_pdf || dados.linkPdf || "";
     boletoLocal.pdf = boletoLocal.linkPdf;
@@ -3810,7 +3824,10 @@ document.addEventListener("DOMContentLoaded", function(){
     tbody.innerHTML = lista.map(b => {
       const numeroBoleto = texto(b.numero || b.id || b.efiChargeId);
       const st = statusBoleto(b);
-      const efi = texto(b.efiStatus || (b.efiChargeId ? "Integrado à Efí" : ""));
+      let efi = texto(b.efiStatus || (b.efiChargeId ? "Aguardando pagamento" : ""));
+      if(b.efiChargeId && efi.toLowerCase().includes("boleto não localizado")){
+        efi = "Aguardando pagamento";
+      }
       const valor = numero(b.total || b.valor);
 
       return `<tr>

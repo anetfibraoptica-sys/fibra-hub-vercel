@@ -1,7 +1,7 @@
 # Fibra+ Hub
 
 ## Correção atual
-- O Pix Copia e Cola agora é capturado diretamente da resposta `POST /v1/charge/:id/pay`.
-- O campo oficial priorizado é `data.pix.qrcode`.
-- Consultas posteriores não sobrescrevem o Pix com vazio.
-- O Pix é salvo em `boletos.pix`, `dados.pix`, `dados.codigoPix` e `dados.pixCopiaCola`.
+- Boletos com `efi_charge_id` não entram mais na busca antiga por nome/valor/vencimento.
+- Pix e status Efí já salvos não são mais sobrescritos por vazio.
+- `Integrado na Efí - boleto não localizado` fica restrito a boletos antigos sem charge ID.
+- Para boletos Efí válidos, o status padrão preservado é `Aguardando pagamento`.
