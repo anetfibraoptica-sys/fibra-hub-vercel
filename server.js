@@ -2747,6 +2747,42 @@ function efiBuildBilletPayload(body) {
 }
 
 
+
+
+async function efiBuscarPixDaCobranca(cfg, chargeId) {
+  if (!chargeId) return { pix: "", raw: null, fonte: "" };
+
+  const paths = [
+    "/v1/charge/" + encodeURIComponent(chargeId),
+    "/v1/charge/" + encodeURIComponent(chargeId) + "/detail"
+  ];
+
+  for (const pth of paths) {
+    try {
+      const r = await efiRequest(pth, cfg);
+      if (!r.ok) continue;
+
+      // Pix Copia e Cola oficial do Bolix Efí:
+      // resposta.data.pix.qrcode
+      const pix = String(
+        efiGet(r.json, [
+          "data.pix.qrcode",
+          "data.payment.banking_billet.pix.qrcode",
+          "data.pix.copy_paste",
+          "data.pix.copia_cola",
+          "pix.qrcode",
+          "payment.banking_billet.pix.qrcode"
+        ]) || ""
+      ).trim();
+
+      if (pix) return { pix, raw: r.json, fonte: pth };
+    } catch (e) {}
+  }
+
+  return { pix: "", raw: null, fonte: "" };
+}
+
+
 async function efiCriarBoletoOneStep(body, conta = 1) {
   const cfg = await efiCarregarConfig(conta);
   if (!cfg || !cfg.ClientId || !cfg.ClientSecret) {
@@ -2798,6 +2834,11 @@ async function efiCriarBoletoOneStep(body, conta = 1) {
       ...det.detalhes,
       charge_id: chargeId
     };
+  }
+
+  if (!detalhes.pix_copia_cola) {
+    const pixRet = await efiBuscarPixDaCobranca(cfg, chargeId);
+    if (pixRet.pix) detalhes.pix_copia_cola = pixRet.pix;
   }
 
   return {
@@ -3377,6 +3418,147 @@ app.get("/api/debug/boletos", async (req,res)=>{
     res.status(500).json({ok:false,erro:err.message});
   }
 });
+
+
+app.post("/api/efi/boleto/pix", async (req, res) => {
+  try {
+    const body = req.body || {};
+    const numero = String(body.numero || "").trim();
+    const chargeIdBody = String(body.efi_charge_id || body.efiChargeId || "").trim();
+    const conta = Number(body.conta || 1);
+
+    let chargeId = chargeIdBody;
+    if (!chargeId && numero) {
+      const r = await pool.query(
+        "SELECT efi_charge_id FROM boletos WHERE numero=$1 LIMIT 1",
+        [numero]
+      );
+      chargeId = String(r.rows[0]?.efi_charge_id || "");
+    }
+
+    if (!chargeId) {
+      return res.status(400).json({ ok:false, erro:"Boleto sem efi_charge_id." });
+    }
+
+    const cfg = await efiCarregarConfig(conta);
+    if (!cfg || !cfg.ClientId || !cfg.ClientSecret) {
+      return res.status(400).json({ ok:false, erro:"Conta Efí não configurada." });
+    }
+
+    const pixRet = await efiBuscarPixDaCobranca(cfg, chargeId);
+    if (!pixRet.pix) {
+      return res.json({ ok:true, encontrado:false, pix:"", mensagem:"A Efí não retornou Pix para esta cobrança." });
+    }
+
+    await pool.query(`
+      UPDATE boletos SET
+        pix=$1,
+        dados=COALESCE(dados,'{}'::jsonb) || $2::jsonb,
+        atualizado_em=NOW()
+      WHERE efi_charge_id=$3 OR numero=$4
+    `, [
+      pixRet.pix,
+      JSON.stringify({ pix: pixRet.pix, codigoPix: pixRet.pix, pixAtualizadoEm: new Date().toISOString() }),
+      chargeId,
+      numero
+    ]);
+
+    return res.json({ ok:true, encontrado:true, pix:pixRet.pix });
+  } catch (err) {
+    console.error("Erro /api/efi/boleto/pix:", err);
+    return res.status(500).json({ ok:false, erro:err.message });
+  }
+});
+
+
+
+
+
+app.delete("/api/boletos/:numero", async (req, res) => {
+  try {
+    const numero = String(req.params.numero || "").trim();
+    const conta = Number(req.query.conta || 1);
+
+    if (!numero) {
+      return res.status(400).json({ ok:false, erro:"Número do boleto não informado." });
+    }
+
+    const consulta = await pool.query(`
+      SELECT id, numero, efi_charge_id, cliente_nome, status, origem
+      FROM boletos
+      WHERE numero=$1 OR efi_charge_id=$1
+      LIMIT 1
+    `, [numero]);
+
+    const boleto = consulta.rows[0];
+
+    if (!boleto) {
+      return res.status(404).json({ ok:false, erro:"Boleto não encontrado no Supabase." });
+    }
+
+    const chargeId = String(boleto.efi_charge_id || "").trim();
+    let canceladoEfi = false;
+    let respostaEfi = null;
+
+    if (chargeId) {
+      const cfg = await efiCarregarConfig(conta);
+
+      if (!cfg || !cfg.ClientId || !cfg.ClientSecret) {
+        return res.status(400).json({
+          ok:false,
+          erro:"Conta Efí não configurada. O boleto não foi excluído."
+        });
+      }
+
+      const cancelamento = await efiRequest(
+        "/v1/charge/" + encodeURIComponent(chargeId) + "/cancel",
+        cfg,
+        { method:"PUT", body:{} }
+      );
+
+      respostaEfi = cancelamento.json || cancelamento.raw;
+
+      if (!cancelamento.ok) {
+        const statusAtual = String(
+          efiGet(cancelamento.json, ["data.status", "status", "error_description", "message"]) || ""
+        ).toLowerCase();
+
+        const jaCancelado = statusAtual.includes("cancel") || statusAtual.includes("canceled");
+
+        if (!jaCancelado) {
+          return res.status(409).json({
+            ok:false,
+            erro:"A Efí não permitiu cancelar esta cobrança. O boleto foi mantido no painel.",
+            efi_status: cancelamento.status,
+            efi_resposta: respostaEfi
+          });
+        }
+      }
+
+      canceladoEfi = true;
+    }
+
+    const removido = await pool.query(`
+      DELETE FROM boletos
+      WHERE id=$1
+      RETURNING id, numero, efi_charge_id, cliente_nome
+    `, [boleto.id]);
+
+    return res.json({
+      ok:true,
+      mensagem: chargeId
+        ? "Boleto cancelado na Efí e excluído do painel."
+        : "Boleto sem integração Efí excluído do painel.",
+      canceladoEfi,
+      efi_resposta: respostaEfi,
+      boleto: removido.rows[0]
+    });
+  } catch (err) {
+    console.error("Erro DELETE /api/boletos/:numero:", err);
+    return res.status(500).json({ ok:false, erro:err.message });
+  }
+});
+
 io.on("connection",(socket)=>{
   socket.emit("hub-update", geral());
   socket.emit("mikrotik-update", geral());

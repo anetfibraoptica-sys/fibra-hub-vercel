@@ -3833,6 +3833,7 @@ document.addEventListener("DOMContentLoaded", function(){
           <button title="Segunda via / PDF" onclick="segundaViaBoletoCliente('${numeroBoleto}')">📄</button>
           <button title="Copiar Pix" onclick="copiarPixBoletoCliente('${numeroBoleto}')">📲</button>
           <button title="Baixa manual" onclick="marcarBoletoPagoCliente('${numeroBoleto}')">💳</button>
+          <button title="Excluir boleto do painel" onclick="excluirBoletoCliente('${numeroBoleto}')">🗑️</button>
         </td>
       </tr>`;
     }).join("");
@@ -3895,6 +3896,107 @@ document.addEventListener("DOMContentLoaded", function(){
       };
     }
   });
+})();
+</script>
+
+
+<script>
+/* PIX E EXCLUSÃO DE BOLETOS */
+(function(){
+  function txt(v){ return String(v === undefined || v === null ? "" : v).trim(); }
+
+  window.copiarPixBoletoCliente = async function(numeroBoleto){
+    const b = typeof encontrarBoleto === "function" ? encontrarBoleto(numeroBoleto) : null;
+    let pix = b && (b.pix || b.codigoPix || b.pixCopiaCola || b.copiaCola);
+
+    if(!pix && b && (b.efiChargeId || b.efi_charge_id)){
+      try{
+        const resp = await fetch("/api/efi/boleto/pix", {
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({
+            numero: numeroBoleto,
+            efiChargeId: b.efiChargeId || b.efi_charge_id,
+            conta: 1
+          })
+        });
+        const json = await resp.json();
+        if(resp.ok && json.ok && json.pix){
+          pix = json.pix;
+          b.pix = pix;
+          b.codigoPix = pix;
+        }else if(json && json.mensagem){
+          alert(json.mensagem);
+          return;
+        }
+      }catch(e){
+        alert("Erro ao consultar Pix na Efí: " + e.message);
+        return;
+      }
+    }
+
+    if(!pix){
+      alert("A Efí não retornou Pix Copia e Cola para este boleto. A linha digitável está disponível.");
+      return;
+    }
+
+    try{
+      await navigator.clipboard.writeText(pix);
+      alert("Pix Copia e Cola oficial da Efí copiado.");
+    }catch(e){
+      prompt("Copie o Pix:", pix);
+    }
+  };
+
+
+  window.excluirBoletoCliente = async function(numeroBoleto){
+    const b = typeof encontrarBoleto === "function" ? encontrarBoleto(numeroBoleto) : null;
+    const valor = b ? (b.valor || b.total || "") : "";
+    const cliente = b ? (b.nome || b.cliente || "") : "";
+    const integrado = Boolean(b && (b.efiChargeId || b.efi_charge_id));
+
+    const aviso = integrado
+      ? "Este boleto será CANCELADO NA EFÍ e depois excluído do painel/Supabase."
+      : "Este boleto não possui charge_id Efí e será excluído somente do painel/Supabase.";
+
+    if(!confirm(
+      aviso + "\n\n" +
+      (cliente ? "Cliente: " + cliente + "\n" : "") +
+      (valor ? "Valor: R$ " + valor + "\n" : "") +
+      "Número: " + numeroBoleto
+    )) return;
+
+    try{
+      const resp = await fetch(
+        "/api/boletos/" + encodeURIComponent(numeroBoleto) + "?conta=1",
+        {
+          method:"DELETE",
+          headers:{"Accept":"application/json"}
+        }
+      );
+
+      const json = await resp.json();
+
+      if(!resp.ok || !json.ok){
+        let mensagem = json.erro || "Erro ao cancelar/excluir boleto.";
+        if(json.efi_resposta){
+          mensagem += "\n\nResposta Efí: " + JSON.stringify(json.efi_resposta);
+        }
+        throw new Error(mensagem);
+      }
+
+      if(typeof fibraRecarregarBoletosAposEfi === "function"){
+        await fibraRecarregarBoletosAposEfi();
+      }else if(typeof abrirModalBoletosCliente === "function"){
+        await abrirModalBoletosCliente();
+      }
+
+      alert(json.mensagem || "Boleto cancelado e excluído.");
+    }catch(e){
+      alert("Erro ao cancelar/excluir boleto: " + e.message);
+    }
+  };
+
 })();
 </script>
 

@@ -1,6 +1,6 @@
 # Fibra+ Hub
 
 ## Correção atual
-- Corrigida a identificação do cliente ao abrir Boletos.
-- O sistema procura login, CPF/CNPJ e nome nos campos da tela, objetos globais e parâmetros da URL.
-- Os boletos continuam sendo carregados exclusivamente do Supabase.
+- Excluir boleto integrado agora cancela primeiro na Efí via `PUT /v1/charge/:id/cancel`.
+- Somente após cancelamento confirmado o registro é removido do Supabase.
+- Pix Copia e Cola usa o campo oficial Efí `data.pix.qrcode`.
