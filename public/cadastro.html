@@ -3179,102 +3179,6 @@ document.addEventListener("DOMContentLoaded", function(){
 })();
 </script>
 <script src="efi-boleto-importado.js"></script>
-
-
-<script>
-/* SUPABASE ÚNICO PARA BOLETOS E CADASTRO */
-(function(){
-  function norm(v){ return String(v || "").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim(); }
-
-  function clienteAtual(){
-    try{ return typeof clienteDoCadastro === "function" ? (clienteDoCadastro() || {}) : {}; }catch(e){ return {}; }
-  }
-
-  function getClienteIdent(){
-    const c = clienteAtual();
-    return {
-      login: c.loginPppoe || c.login_pppoe || c.login || c.usuario || c.pppoe || "",
-      cpf: c.cpfCnpj || c.cpf_cnpj || c.cpf || c.cnpj || c.documento || "",
-      nome: c.nome || c.cliente || c.nomeCliente || c.razaoSocial || ""
-    };
-  }
-
-  async function carregarBoletosClienteSupabase(){
-    const ident = getClienteIdent();
-    const params = new URLSearchParams({ login: ident.login || "", cpf: ident.cpf || "", nome: ident.nome || "" });
-    const resp = await fetch("/api/boletos/cliente?" + params.toString(), {cache:"no-store"});
-    const json = await resp.json();
-    if(!resp.ok || !json.ok) throw new Error(json.erro || "Erro ao carregar boletos do Supabase.");
-    return json.boletos || [];
-  }
-
-  window.fibraCarregarBoletosClienteSupabase = carregarBoletosClienteSupabase;
-
-  window.fibraGetBoletosStorage = function(){
-    return window.__fibraBoletosClienteSupabase || [];
-  };
-
-  window.fibraSalvarBoletosStorage = function(lista){
-    window.__fibraBoletosClienteSupabase = Array.isArray(lista) ? lista : [];
-  };
-
-  window.fibraBoletosClienteAtual = function(){
-    return window.__fibraBoletosClienteSupabase || [];
-  };
-
-  window.fibraRecarregarBoletosAposEfi = async function(){
-    window.__fibraBoletosClienteSupabase = await carregarBoletosClienteSupabase();
-    if(typeof renderizarBoletosCliente === "function") renderizarBoletosCliente();
-  };
-
-  const oldAbrirModal = window.abrirModalBoletosCliente;
-  window.abrirModalBoletosCliente = async function(){
-    const modal = document.getElementById("modalBoletosCliente");
-    if(modal){
-      modal.classList.add("aberto");
-      modal.setAttribute("aria-hidden","false");
-    }
-    const tbody = document.getElementById("tbodyBoletosCliente");
-    if(tbody) tbody.innerHTML = '<tr><td colspan="6">Carregando boletos do Supabase...</td></tr>';
-    try{
-      await window.fibraRecarregarBoletosAposEfi();
-    }catch(e){
-      window.__fibraBoletosClienteSupabase = [];
-      if(tbody) tbody.innerHTML = '<tr><td colspan="6">Erro ao carregar boletos: '+ e.message +'</td></tr>';
-    }
-  };
-
-  async function salvarClienteAtualSupabase(){
-    const c = clienteAtual();
-    if(!(c.loginPppoe || c.login || c.cpfCnpj || c.cpf || c.nome)) return;
-    try{
-      const resp = await fetch("/api/clientes/salvar", {
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body: JSON.stringify(c)
-      });
-      const json = await resp.json();
-      if(!resp.ok || !json.ok) throw new Error(json.erro || "Erro ao salvar cliente.");
-      console.log("Cliente salvo no Supabase:", json.cliente);
-    }catch(e){
-      console.warn("Erro ao salvar cliente no Supabase:", e.message);
-      alert("Atenção: cliente não foi salvo no Supabase. " + e.message);
-    }
-  }
-
-  window.fibraSalvarClienteAtualSupabase = salvarClienteAtualSupabase;
-
-  document.addEventListener("click", function(e){
-    const el = e.target.closest("button,a,input[type=button],input[type=submit]");
-    if(!el) return;
-    const txt = norm(el.textContent || el.value || "");
-    if(txt.includes("gravar") || txt.includes("salvar")){
-      setTimeout(salvarClienteAtualSupabase, 400);
-    }
-  }, true);
-})();
-</script>
-
 <script>
 /* ============================================================
    INTEGRAÇÃO EFI - BOLETOS EXISTENTES + BAIXA/DESBLOQUEIO
@@ -3567,98 +3471,87 @@ document.addEventListener("DOMContentLoaded", function(){
 </script>
 
 <script>
-/* SUPABASE PAINEL DEFINITIVO - CLIENTES E BOLETOS */
+/* SUPABASE FINAL CLIENTES BOLETOS */
 (function(){
   function norm(v){ return String(v || "").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim(); }
-  function val(id){
+  function field(id){
     const el = document.getElementById(id) || document.querySelector(`[name="${id}"]`);
     return el ? String(el.value || "").trim() : "";
   }
-  function clienteAtualSeguro(){
+  function clienteAtual(){
     let c = {};
     try{ if(typeof clienteDoCadastro === "function") c = clienteDoCadastro() || {}; }catch(e){}
-    document.querySelectorAll("input,select,textarea").forEach(el => {
+    document.querySelectorAll("input,select,textarea").forEach(el=>{
       const id = el.id || el.name;
       if(id && String(el.value || "").trim() !== "") c[id] = el.value;
     });
-    c.loginPppoe = c.loginPppoe || c.login_pppoe || c.login || c.usuario || c.pppoe || val("loginPppoe") || val("login") || val("usuario");
+    c.loginPppoe = c.loginPppoe || c.login_pppoe || c.login || c.usuario || c.pppoe || field("loginPppoe") || field("login") || field("usuario");
     c.login = c.login || c.loginPppoe;
-    c.nome = c.nome || c.cliente || c.nomeCliente || c.razaoSocial || val("nome") || val("nomeCliente");
-    c.cpfCnpj = c.cpfCnpj || c.cpf_cnpj || c.cpf || c.cnpj || c.documento || val("cpfCnpj") || val("cpf") || val("cnpj");
-    c.telefone1 = c.telefone1 || c.telefone || c.celular || val("telefone1") || val("telefone") || val("celular");
-    c.servidor = c.servidor || c.popServidor || c.pop || val("servidor") || val("popServidor");
-    c.profile = c.profile || c.perfil || c.planoVelocidade || c.plano || val("profile") || val("perfil") || val("plano");
+    c.nome = c.nome || c.cliente || c.nomeCliente || c.razaoSocial || field("nome") || field("nomeCliente");
+    c.cpfCnpj = c.cpfCnpj || c.cpf_cnpj || c.cpf || c.cnpj || c.documento || field("cpfCnpj") || field("cpf") || field("cnpj");
+    c.telefone1 = c.telefone1 || c.telefone || c.celular || field("telefone1") || field("telefone") || field("celular");
+    c.servidor = c.servidor || c.popServidor || c.pop || field("servidor") || field("popServidor");
+    c.profile = c.profile || c.perfil || c.planoVelocidade || c.plano || field("profile") || field("perfil") || field("plano");
     return c;
   }
-  window.fibraClienteAtualSeguro = clienteAtualSeguro;
+  window.fibraClienteAtualSeguro = clienteAtual;
 
-  async function salvarClienteSupabase(){
-    const c = clienteAtualSeguro();
-    if(!(c.loginPppoe || c.login || c.cpfCnpj || c.cpf || c.nome)){
-      alert("Cliente sem dados suficientes para salvar.");
-      return null;
-    }
+  async function salvarCliente(){
+    const c = clienteAtual();
+    if(!(c.loginPppoe || c.login || c.cpfCnpj || c.cpf || c.nome)) return null;
     const resp = await fetch("/api/clientes/salvar", {
       method:"POST",
       headers:{"Content-Type":"application/json"},
-      body: JSON.stringify(c)
+      body:JSON.stringify(c)
     });
     const json = await resp.json();
     if(!resp.ok || !json.ok) throw new Error(json.erro || "Erro ao salvar cliente.");
-    console.log("Cliente salvo no Supabase:", json.cliente);
     return json.cliente;
   }
-  window.fibraSalvarClienteAtualSupabase = salvarClienteSupabase;
+  window.fibraSalvarClienteAtualSupabase = salvarCliente;
 
-  async function carregarClientesSupabase(){
+  async function carregarClientes(){
     const resp = await fetch("/api/clientes", {cache:"no-store"});
     const json = await resp.json();
     if(!resp.ok || !json.ok) throw new Error(json.erro || "Erro ao carregar clientes.");
     window.__fibraClientesSupabase = json.clientes || [];
-    ["clientes","clientesReceitaNet","fibra_clientes","clientes_importados"].forEach(k => {
-      try{ localStorage.setItem(k, JSON.stringify(window.__fibraClientesSupabase)); }catch(e){}
-    });
+    try{ localStorage.setItem("clientes", JSON.stringify(window.__fibraClientesSupabase)); }catch(e){}
     if(typeof renderClientes === "function") renderClientes(window.__fibraClientesSupabase);
     if(typeof renderizarClientes === "function") renderizarClientes(window.__fibraClientesSupabase);
     if(typeof atualizarTabelaClientes === "function") atualizarTabelaClientes(window.__fibraClientesSupabase);
     return window.__fibraClientesSupabase;
   }
-  window.fibraCarregarClientesSupabase = carregarClientesSupabase;
+  window.fibraCarregarClientesSupabase = carregarClientes;
 
-  function identCliente(){
-    const c = clienteAtualSeguro();
-    return {
-      login: c.loginPppoe || c.login || c.usuario || "",
-      cpf: c.cpfCnpj || c.cpf || c.cnpj || c.documento || "",
-      nome: c.nome || c.cliente || c.nomeCliente || ""
-    };
-  }
-  async function carregarBoletosClienteSupabase(){
-    const i = identCliente();
-    const params = new URLSearchParams({login:i.login || "", cpf:i.cpf || "", nome:i.nome || ""});
+  async function carregarBoletosCliente(){
+    const c = clienteAtual();
+    const params = new URLSearchParams({
+      login: c.loginPppoe || c.login || "",
+      cpf: c.cpfCnpj || c.cpf || "",
+      nome: c.nome || ""
+    });
     const resp = await fetch("/api/boletos/cliente?" + params.toString(), {cache:"no-store"});
     const json = await resp.json();
     if(!resp.ok || !json.ok) throw new Error(json.erro || "Erro ao carregar boletos.");
     window.__fibraBoletosClienteSupabase = json.boletos || [];
     return window.__fibraBoletosClienteSupabase;
   }
-  window.fibraCarregarBoletosClienteSupabase = carregarBoletosClienteSupabase;
+  window.fibraCarregarBoletosClienteSupabase = carregarBoletosCliente;
   window.fibraGetBoletosStorage = function(){ return window.__fibraBoletosClienteSupabase || []; };
   window.fibraSalvarBoletosStorage = function(lista){ window.__fibraBoletosClienteSupabase = Array.isArray(lista) ? lista : []; };
   window.fibraBoletosClienteAtual = function(){ return window.__fibraBoletosClienteSupabase || []; };
   window.fibraRecarregarBoletosAposEfi = async function(){
-    await carregarBoletosClienteSupabase();
+    await carregarBoletosCliente();
     if(typeof renderizarBoletosCliente === "function") renderizarBoletosCliente();
   };
 
-  const oldAbrir = window.abrirModalBoletosCliente;
   window.abrirModalBoletosCliente = async function(){
     const modal = document.getElementById("modalBoletosCliente");
     if(modal){ modal.classList.add("aberto"); modal.setAttribute("aria-hidden","false"); }
     const tbody = document.getElementById("tbodyBoletosCliente");
-    if(tbody) tbody.innerHTML = '<tr><td colspan="6">Carregando boletos do Supabase...</td></tr>';
+    if(tbody) tbody.innerHTML='<tr><td colspan="6">Carregando boletos do Supabase...</td></tr>';
     try{ await window.fibraRecarregarBoletosAposEfi(); }
-    catch(e){ if(tbody) tbody.innerHTML = '<tr><td colspan="6">Erro ao carregar boletos: '+e.message+'</td></tr>'; }
+    catch(e){ if(tbody) tbody.innerHTML='<tr><td colspan="6">Erro ao carregar boletos: '+e.message+'</td></tr>'; }
   };
 
   document.addEventListener("click", function(e){
@@ -3666,16 +3559,12 @@ document.addEventListener("DOMContentLoaded", function(){
     if(!el) return;
     const txt = norm(el.textContent || el.value || "");
     if(txt.includes("gravar") || txt.includes("salvar") || txt.includes("cadastrar")){
-      setTimeout(() => salvarClienteSupabase()
-        .then(() => carregarClientesSupabase().catch(()=>{}))
-        .catch(err => alert("Erro ao salvar cliente no Supabase: " + err.message)), 250);
+      setTimeout(()=>salvarCliente().then(()=>carregarClientes().catch(()=>{})).catch(err=>alert("Erro ao salvar cliente: "+err.message)), 300);
     }
   }, true);
 
   if(location.pathname.toLowerCase().includes("clientes")){
-    document.addEventListener("DOMContentLoaded", () => {
-      setTimeout(() => carregarClientesSupabase().catch(e => console.warn(e.message)), 600);
-    });
+    document.addEventListener("DOMContentLoaded", ()=>setTimeout(()=>carregarClientes().catch(e=>console.warn(e.message)), 600));
   }
 })();
 </script>
