@@ -2811,84 +2811,153 @@ async function efiCriarBoletoOneStep(body, conta = 1) {
 }
 
 
+
 async function salvarBoletoGeradoSupabase(body, detalhes, conta, nomeConta) {
   await efiGarantirTabela();
 
-  await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS efi_charge_id TEXT;");
-  await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS efi_status TEXT;");
-  // efi_conta_id pode existir como UUID no Supabase; não alteramos nem gravamos número 1 nele.
-  await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS efi_conta_nome TEXT;");
+  await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS numero TEXT;");
+  await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS cliente_login TEXT;");
+  await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS cliente_nome TEXT;");
+  await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS cpf_cnpj TEXT;");
+  await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS categoria TEXT;");
+  await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS descricao TEXT;");
+  await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS emissao DATE;");
+  await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS vencimento DATE;");
+  await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS valor NUMERIC DEFAULT 0;");
+  await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS total NUMERIC DEFAULT 0;");
+  await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS valor_pago NUMERIC DEFAULT 0;");
+  await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pendente';");
   await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS linha_digitavel TEXT;");
   await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS pix TEXT;");
   await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS link_pdf TEXT;");
+  await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS efi_charge_id TEXT;");
+  await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS efi_status TEXT;");
+  await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS efi_conta_nome TEXT;");
+  await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS dados JSONB;");
+  await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS origem TEXT;");
+  await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS atualizado_em TIMESTAMP DEFAULT NOW();");
+  await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS criado_em TIMESTAMP DEFAULT NOW();");
 
-  const numero = String(body.numero || detalhes.charge_id || Date.now());
-  const valor = Number(body.valor || body.total || 0);
+  const chargeId = String(detalhes.charge_id || "");
+  const numero = String(body.numero || chargeId || Date.now());
+  const valor = Number(body.valor || body.total || 0) || 0;
+  const login = String(body.login || body.loginPppoe || body.clienteLogin || body.usuario || "");
+  const nome = String(body.nome || body.cliente || body.cliente_nome || "");
+  const cpf = String(body.cpfCnpj || body.cpf || body.cpf_cnpj || body.documento || "");
+  const vencimento = efiDateISO(body.vencimento || body.dueDate || body.due_date) || null;
+  const emissao = efiDateISO(body.emissao || new Date().toISOString().slice(0, 10)) || new Date().toISOString().slice(0,10);
+
   const dados = {
     ...body,
     numero,
-    efiChargeId: detalhes.charge_id || "",
+    login,
+    loginPppoe: login,
+    clienteLogin: login,
+    nome,
+    cliente: nome,
+    cpfCnpj: cpf,
+    cpf,
+    valor,
+    total: valor,
+    vencimento,
+    emissao,
+    status: "pendente",
+    efiChargeId: chargeId,
     efiStatus: detalhes.situacao_efi || "Registrado na Efí",
     contaEfi: Number(conta || 1),
     contaEfiNome: nomeConta || "",
     linhaDigitavel: detalhes.linha_digitavel || "",
     pix: detalhes.pix_copia_cola || "",
+    codigoPix: detalhes.pix_copia_cola || "",
     linkPdf: detalhes.link_boleto || "",
+    pdf: detalhes.link_boleto || "",
+    segundaVia: detalhes.link_boleto || "",
     origem: "Painel Fibra+ Hub Efí",
     atualizadoEm: new Date().toISOString()
   };
 
-  const r = await pool.query(`
-    INSERT INTO boletos
-      (numero, cliente_login, cliente_nome, cpf_cnpj, categoria, descricao, emissao, vencimento,
-       valor, total, valor_pago, status, linha_digitavel, pix, link_pdf,
-       efi_charge_id, efi_status, efi_conta_nome, dados, origem, atualizado_em)
-    VALUES
-      ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,0,'pendente',$11,$12,$13,$14,$15,$16,$17,'Painel Fibra+ Hub Efí',NOW())
-    ON CONFLICT (numero) DO UPDATE SET
-      cliente_login=EXCLUDED.cliente_login,
-      cliente_nome=EXCLUDED.cliente_nome,
-      cpf_cnpj=EXCLUDED.cpf_cnpj,
-      categoria=EXCLUDED.categoria,
-      descricao=EXCLUDED.descricao,
-      emissao=EXCLUDED.emissao,
-      vencimento=EXCLUDED.vencimento,
-      valor=EXCLUDED.valor,
-      total=EXCLUDED.total,
+  // Primeiro tenta atualizar por efi_charge_id/numero. Se não atualizar, insere.
+  let r = await pool.query(`
+    UPDATE boletos SET
+      numero=$1,
+      cliente_login=$2,
+      cliente_nome=$3,
+      cpf_cnpj=$4,
+      categoria=$5,
+      descricao=$6,
+      emissao=$7,
+      vencimento=$8,
+      valor=$9,
+      total=$10,
+      valor_pago=COALESCE(valor_pago,0),
       status='pendente',
-      linha_digitavel=EXCLUDED.linha_digitavel,
-      pix=EXCLUDED.pix,
-      link_pdf=EXCLUDED.link_pdf,
-      efi_charge_id=EXCLUDED.efi_charge_id,
-      efi_status=EXCLUDED.efi_status,
-      efi_conta_nome=EXCLUDED.efi_conta_nome,
-      dados=EXCLUDED.dados,
-      origem=EXCLUDED.origem,
+      linha_digitavel=$11,
+      pix=$12,
+      link_pdf=$13,
+      efi_charge_id=$14,
+      efi_status=$15,
+      efi_conta_nome=$16,
+      dados=COALESCE(dados,'{}'::jsonb) || $17::jsonb,
+      origem='Painel Fibra+ Hub Efí',
       atualizado_em=NOW()
+    WHERE
+      ($14 <> '' AND efi_charge_id=$14)
+      OR numero=$1
     RETURNING *;
   `, [
     numero,
-    body.login || body.loginPppoe || body.clienteLogin || "",
-    body.nome || body.cliente || "",
-    body.cpfCnpj || body.cpf || body.cpf_cnpj || "",
+    login,
+    nome,
+    cpf,
     body.categoria || "Mensalidade",
     body.descricao || "Boleto gerado pela Efí",
-    body.emissao || new Date().toISOString().slice(0, 10),
-    body.vencimento,
+    emissao,
+    vencimento,
     valor,
     valor,
     detalhes.linha_digitavel || "",
     detalhes.pix_copia_cola || "",
     detalhes.link_boleto || "",
-    detalhes.charge_id || "",
+    chargeId,
     detalhes.situacao_efi || "Registrado na Efí",
     nomeConta || "",
-    JSON.stringify({...dados, contaEfi: Number(conta || 1), contaEfiNome: nomeConta || ""})
+    JSON.stringify(dados)
   ]);
+
+  if (!r.rows[0]) {
+    r = await pool.query(`
+      INSERT INTO boletos
+        (numero, cliente_login, cliente_nome, cpf_cnpj, categoria, descricao, emissao, vencimento,
+         valor, total, valor_pago, status, linha_digitavel, pix, link_pdf,
+         efi_charge_id, efi_status, efi_conta_nome, dados, origem, atualizado_em, criado_em)
+      VALUES
+        ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,0,'pendente',$11,$12,$13,$14,$15,$16,$17,'Painel Fibra+ Hub Efí',NOW(),NOW())
+      RETURNING *;
+    `, [
+      numero,
+      login,
+      nome,
+      cpf,
+      body.categoria || "Mensalidade",
+      body.descricao || "Boleto gerado pela Efí",
+      emissao,
+      vencimento,
+      valor,
+      valor,
+      detalhes.linha_digitavel || "",
+      detalhes.pix_copia_cola || "",
+      detalhes.link_boleto || "",
+      chargeId,
+      detalhes.situacao_efi || "Registrado na Efí",
+      nomeConta || "",
+      JSON.stringify(dados)
+    ]);
+  }
 
   await efiSalvarVinculoBoleto(body, detalhes);
   return r.rows[0];
 }
+
 
 app.post("/api/efi/boleto/criar", async (req, res) => {
   try {
@@ -3296,13 +3365,18 @@ app.get("/api/debug/boletos", async (req,res)=>{
   try{
     await fbEnsureTables();
     const total = await pool.query("SELECT COUNT(*)::int AS total FROM boletos");
-    const ultimos = await pool.query("SELECT id,numero,cliente_login,cliente_nome,cpf_cnpj,valor,total,status,efi_charge_id,criado_em FROM boletos ORDER BY id DESC LIMIT 20");
+    const ultimos = await pool.query(`
+      SELECT id, numero, cliente_login, cliente_nome, cpf_cnpj, valor, total, status,
+             efi_charge_id, efi_status, linha_digitavel, pix, link_pdf, origem, atualizado_em, criado_em
+      FROM boletos
+      ORDER BY COALESCE(atualizado_em, criado_em) DESC NULLS LAST, id DESC
+      LIMIT 30
+    `);
     res.json({ok:true,total:total.rows[0].total,ultimos:ultimos.rows});
   }catch(err){
     res.status(500).json({ok:false,erro:err.message});
   }
 });
-
 io.on("connection",(socket)=>{
   socket.emit("hub-update", geral());
   socket.emit("mikrotik-update", geral());
