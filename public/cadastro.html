@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+<script src="supabase-only.js"></script>
 <script src="00-fix-definitivo.js"></script>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cadastro de Cliente - Fibra+ Hub</title><link rel="stylesheet" href="style.css">
@@ -4103,6 +4104,129 @@ document.addEventListener("DOMContentLoaded", function(){
 
     return s;
   };
+})();
+</script>
+
+<script>
+/* CADASTRO DIRETO NO SUPABASE */
+(function(){
+  const campo = id => document.getElementById(id);
+  const valor = id => String(campo(id)?.value ?? "").trim();
+
+  function coletar(){
+    const dados = {};
+    document.querySelectorAll("[id^='cad']").forEach(el => {
+      if(!el.id) return;
+      dados[el.id] = el.type === "checkbox" ? Boolean(el.checked) : String(el.value ?? "").trim();
+    });
+
+    dados.nome = valor("cadNome");
+    dados.cadNome = dados.nome;
+    dados.cpfCnpj = valor("cadCpf");
+    dados.cadCpf = dados.cpfCnpj;
+    dados.loginPppoe = valor("cadLogin");
+    dados.login = dados.loginPppoe;
+    dados.cadLogin = dados.loginPppoe;
+    dados.senha = valor("cadSenha");
+    dados.cadSenha = dados.senha;
+    dados.servidor = valor("cadPop");
+    dados.popServidor = dados.servidor;
+    dados.cadPop = dados.servidor;
+    dados.profile = valor("cadProfile");
+    dados.perfil = dados.profile;
+    dados.plano = valor("cadPlano") || dados.profile;
+    dados.cadProfile = dados.profile;
+    dados.telefone1 = valor("cadTelefone1");
+    dados.telefone2 = valor("cadTelefone2");
+    dados.telefone3 = valor("cadTelefone3");
+    dados.telefone = dados.telefone1 || dados.telefone2 || dados.telefone3 || "";
+    dados.email = valor("cadEmail");
+    dados.cep = valor("cadCep");
+    dados.endereco = valor("cadEndereco");
+    dados.numeroEndereco = valor("cadNumeroContrato") || valor("cadNumero");
+    dados.complemento = valor("cadComplemento");
+    dados.bairro = valor("cadBairro");
+    dados.cidade = valor("cadCidade");
+    dados.uf = valor("cadUf");
+    dados.referencia = valor("cadReferencia");
+    dados.vencimento = valor("cadVencimento");
+    dados.observacoes = valor("cadObservacao");
+    dados.situacao = valor("cadSituacao");
+    dados.statusCobranca = valor("cadStatusCobranca");
+    return dados;
+  }
+
+  async function salvarNoSupabase(dados){
+    const resp = await fetch("/api/clientes/salvar", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify(dados)
+    });
+    const json = await resp.json().catch(() => ({}));
+    if(!resp.ok || !json.ok) throw new Error(json.erro || "Falha ao salvar no Supabase.");
+    if(!json.cliente) throw new Error("Supabase não confirmou o cliente salvo.");
+    return json.cliente;
+  }
+
+  window.salvarCadastroCliente = async function(gravarServidor){
+    try{
+      const dados = coletar();
+      if(!dados.nome) throw new Error("Informe o nome do cliente.");
+      if(!dados.loginPppoe) throw new Error("Informe o login PPPoE.");
+      if(!dados.servidor) throw new Error("Selecione o servidor/POP.");
+      if(!dados.profile) throw new Error("Selecione o profile.");
+
+      const salvo = await salvarNoSupabase(dados);
+      window.__clienteSupabaseAtual = salvo;
+
+      if(gravarServidor === true){
+        if(typeof gravarClienteCompletoNoMikrotik === "function"){
+          const r = await gravarClienteCompletoNoMikrotik(dados);
+          if(r === false) throw new Error("Cliente salvo no Supabase, mas falhou no MikroTik.");
+        }else{
+          const r = await fetch("/api/mikrotik/cliente-profile", {
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({
+              servidor:dados.servidor,
+              login:dados.loginPppoe,
+              profile:dados.profile,
+              senha:dados.senha,
+              nome:dados.nome
+            })
+          });
+          const j = await r.json().catch(() => ({}));
+          if(!r.ok || j.ok === false) throw new Error(j.erro || "Falha no MikroTik.");
+        }
+      }
+
+      history.replaceState(null, "", "cadastro.html?cliente=" + encodeURIComponent(
+        salvo.id || salvo.loginPppoe || dados.loginPppoe
+      ));
+
+      alert(gravarServidor
+        ? "Cliente salvo no Supabase e sincronizado com o MikroTik."
+        : "Cliente salvo no Supabase."
+      );
+      return salvo;
+    }catch(e){
+      alert("Erro ao salvar cliente: " + e.message);
+      return false;
+    }
+  };
+
+  document.addEventListener("DOMContentLoaded", function(){
+    document.querySelectorAll("button,input[type='button'],input[type='submit']").forEach(btn => {
+      const t = String(btn.textContent || btn.value || "").trim().toLowerCase();
+      if(t.includes("gravar no fibra+ hub + servidor") || t.includes("salvar no fibra+ hub + servidor")){
+        btn.type = "button";
+        btn.onclick = ev => { ev.preventDefault(); salvarCadastroCliente(true); };
+      }else if(t.includes("gravar no fibra+ hub") || t.includes("salvar no fibra+ hub")){
+        btn.type = "button";
+        btn.onclick = ev => { ev.preventDefault(); salvarCadastroCliente(false); };
+      }
+    });
+  });
 })();
 </script>
 

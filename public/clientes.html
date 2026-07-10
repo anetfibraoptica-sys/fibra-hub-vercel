@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+<script src="supabase-only.js"></script>
 <script src="00-fix-definitivo.js"></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -623,6 +624,41 @@ document.addEventListener("fibra:supabase-sync", function(){
   if(location.pathname.toLowerCase().includes("clientes")){
     document.addEventListener("DOMContentLoaded", ()=>setTimeout(()=>carregarClientes().catch(e=>console.warn(e.message)), 600));
   }
+})();
+</script>
+
+
+<script>
+/* LISTA DE CLIENTES DIRETO DO SUPABASE */
+(function(){
+  async function carregarSupabaseUnico(){
+    try{
+      const lista = await FibraSupabaseOnly.listarClientes();
+      window.__fibraClientesSupabase = lista;
+      window.__clientesReceitaNet = lista;
+
+      if(typeof renderizarClientesReceitaNet === "function"){
+        renderizarClientesReceitaNet(lista);
+      }else if(typeof renderizarClientes === "function"){
+        renderizarClientes(lista);
+      }else if(typeof renderClientes === "function"){
+        renderClientes(lista);
+      }
+      return lista;
+    }catch(e){
+      console.error(e);
+      const tbody = document.querySelector("tbody");
+      if(tbody) tbody.innerHTML = `<tr><td colspan="5">Erro ao carregar clientes do Supabase: ${e.message}</td></tr>`;
+      return [];
+    }
+  }
+
+  window.abrirClienteCadastro = function(chave){
+    location.href = "cadastro.html?cliente=" + encodeURIComponent(decodeURIComponent(chave || ""));
+  };
+
+  document.addEventListener("DOMContentLoaded", carregarSupabaseUnico);
+  window.addEventListener("pageshow", carregarSupabaseUnico);
 })();
 </script>
 

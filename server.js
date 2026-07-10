@@ -2325,6 +2325,7 @@ app.post("/api/efi/boleto-importado/vincular", async (req, res) => {
 });
 
 app.post("/api/efi/boleto-importado/consultar", async (req, res) => {
+  const body = req.body || {};
   try {
 
     const chargeExistente = String(
@@ -2358,7 +2359,7 @@ app.post("/api/efi/boleto-importado/consultar", async (req, res) => {
         });
       }
     }
-    const body = req.body || {};
+    
     const conta = Number(body.conta || 1);
     const cfg = await efiCarregarConfig(conta);
 
@@ -3253,17 +3254,31 @@ function fbPickAny(body, keys){
   }
   return "";
 }
+
+
 function fbClienteFromAny(body){
+  body = body || {};
+  const get = (...keys) => {
+    for(const k of keys){
+      const v = body[k];
+      if(v !== undefined && v !== null && String(v).trim() !== ""){
+        return String(v).trim();
+      }
+    }
+    return "";
+  };
   return {
-    login_pppoe: fbPickAny(body, ["loginPppoe","login_pppoe","login","usuario","pppoe","clienteLogin"]),
-    nome: fbPickAny(body, ["nome","cliente","nomeCliente","razaoSocial","razao_social"]),
-    cpf_cnpj: fbOnlyDigits(fbPickAny(body, ["cpfCnpj","cpf_cnpj","cpf","cnpj","documento"])),
-    telefone: fbPickAny(body, ["telefone1","telefone2","telefone","celular","whatsapp"]),
-    plano: fbPickAny(body, ["plano","planoNome","valorPlano"]),
-    servidor: fbPickAny(body, ["servidor","popServidor","pop","servidorPppoe"]),
-    profile: fbPickAny(body, ["profile","perfil","planoVelocidade","velocidade","plano"])
+    login_pppoe: get("cadLogin","loginPppoe","login_pppoe","login","usuario","pppoe","clienteLogin"),
+    nome: get("cadNome","nome","cliente","nomeCliente","razaoSocial","razao_social"),
+    cpf_cnpj: fbOnlyDigits(get("cadCpf","cpfCnpj","cpf_cnpj","cpf","cnpj","documento")),
+    telefone: get("cadTelefone1","cadTelefone2","cadTelefone3","telefone1","telefone2","telefone","celular","whatsapp"),
+    plano: get("cadPlano","cadProfile","plano","planoNome","valorPlano"),
+    servidor: get("cadPop","servidor","popServidor","pop","servidorPppoe"),
+    profile: get("cadProfile","profile","perfil","planoVelocidade","velocidade","plano")
   };
 }
+
+
 async function fbEnsureTables(){
   if(!process.env.DATABASE_URL) throw new Error("DATABASE_URL não configurada.");
   await pool.query(`
@@ -4430,7 +4445,7 @@ app.get("/api/automacao/status", async (req, res) => {
       cron:"/api/cron/bloqueios",
       mikrotikAtivo:String(process.env.AUTOMACAO_MIKROTIK_ATIVA || "true").toLowerCase() !== "false",
       profileBloqueado:process.env.MIKROTIK_PROFILE_BLOQUEADO || "BLOQUEADO",
-      diasAposVencimento:Number(process.env.BLOQUEIO_DIAS_APOS_VENCIMENTO || 1),
+
       eventos:ultimos.rows
     });
   } catch (err) {
@@ -4439,6 +4454,62 @@ app.get("/api/automacao/status", async (req, res) => {
 });
 
 /* AUTOMAÇÃO EFI MIKROTIK - FIM */
+
+
+
+app.get("/api/clientes/buscar", async (req, res) => {
+  try {
+    await fbEnsureTables();
+    const chave = String(req.query.chave || req.query.login || req.query.cpf || req.query.id || "").trim();
+    if (!chave) return res.status(400).json({ok:false, erro:"Chave do cliente não informada."});
+
+    const somenteDigitos = chave.replace(/\D/g, "");
+    const r = await pool.query(`
+      SELECT *
+      FROM clientes
+      WHERE
+        id::text=$1
+        OR login_pppoe=$1
+        OR lower(COALESCE(nome,''))=lower($1)
+        OR ($2 <> '' AND regexp_replace(COALESCE(cpf_cnpj,''),'\\D','','g')=$2)
+        OR dados->>'login'=$1
+        OR dados->>'loginPppoe'=$1
+        OR lower(COALESCE(dados->>'nome',''))=lower($1)
+      ORDER BY atualizado_em DESC NULLS LAST, criado_em DESC NULLS LAST
+      LIMIT 1
+    `, [chave, somenteDigitos]);
+
+    if (!r.rows[0]) return res.status(404).json({ok:false, erro:"Cliente não encontrado."});
+    return res.json({ok:true, cliente:fbClienteRow(r.rows[0])});
+  } catch (err) {
+    console.error("Erro /api/clientes/buscar:", err);
+    return res.status(500).json({ok:false, erro:err.message});
+  }
+});
+
+
+
+app.get("/api/debug/cliente-salvo", async (req, res) => {
+  try {
+    await fbEnsureTables();
+    const chave = String(req.query.chave || req.query.login || req.query.cpf || "").trim();
+    if (!chave) {
+      const r = await pool.query("SELECT * FROM clientes ORDER BY atualizado_em DESC NULLS LAST, criado_em DESC NULLS LAST LIMIT 10");
+      return res.json({ok:true, clientes:r.rows.map(fbClienteRow)});
+    }
+    const digitos = chave.replace(/\D/g, "");
+    const r = await pool.query(`
+      SELECT * FROM clientes
+      WHERE id::text=$1 OR login_pppoe=$1
+         OR ($2<>'' AND regexp_replace(COALESCE(cpf_cnpj,''),'\D','','g')=$2)
+      ORDER BY atualizado_em DESC NULLS LAST
+      LIMIT 1
+    `, [chave, digitos]);
+    return res.json({ok:true, encontrado:Boolean(r.rows[0]), cliente:r.rows[0] ? fbClienteRow(r.rows[0]) : null});
+  } catch (err) {
+    return res.status(500).json({ok:false, erro:err.message});
+  }
+});
 
 io.on("connection",(socket)=>{
   socket.emit("hub-update", geral());
