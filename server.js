@@ -2837,6 +2837,15 @@ async function efiCriarBoletoOneStep(body, conta = 1) {
   }
 
   const payload = efiBuildBilletPayload(body);
+
+  if (!payload.metadata.notification_url) {
+    const webhookConfigurado = autoTexto(cfg.Webhook || cfg.webhook);
+    const basePublica = autoBasePublica();
+    payload.metadata.notification_url =
+      webhookConfigurado ||
+      (basePublica ? basePublica + "/api/efi/webhook?conta=" + conta : "");
+  }
+
   if (!payload.metadata.notification_url) delete payload.metadata.notification_url;
 
   // Fluxo correto da API Cobranças:
@@ -3109,30 +3118,34 @@ app.post("/api/boletos/baixa-manual", async (req, res) => {
   try {
     const body = req.body || {};
     const numero = String(body.numero || "").trim();
-    if (!numero) return res.status(400).json({ ok:false, erro:"Número do boleto não informado." });
+    if (!numero) {
+      return res.status(400).json({ ok:false, erro:"Número do boleto não informado." });
+    }
 
-    await pool.query(`
-      UPDATE boletos SET
-        status='pago',
-        valor_pago=COALESCE($1::numeric, valor),
-        pagamento=$2,
-        dados = COALESCE(dados, '{}'::jsonb) || $3::jsonb,
-        atualizado_em=NOW()
-      WHERE numero=$4
-    `, [
-      Number(body.valorPago || body.valor_pago || body.valor || 0) || null,
-      body.dataPagamento || new Date().toISOString().slice(0,10),
-      JSON.stringify({
-        status: "pago",
-        valorPago: body.valorPago || body.valor_pago || body.valor || "",
-        formaPagamento: body.formaPagamento || "baixa_manual",
-        observacaoBaixa: body.observacao || "",
-        baixaManualEm: new Date().toISOString()
-      }),
-      numero
-    ]);
+    const consulta = await pool.query(
+      "SELECT * FROM boletos WHERE numero=$1 LIMIT 1",
+      [numero]
+    );
 
-    return res.json({ ok:true, mensagem:"Baixa manual registrada." });
+    const boleto = consulta.rows[0];
+    if (!boleto) {
+      return res.status(404).json({ ok:false, erro:"Boleto não encontrado." });
+    }
+
+    const resultado = await autoProcessarPagamento({
+      chargeId:autoTexto(boleto.efi_charge_id),
+      numero,
+      valorPago:body.valorPago || body.valor_pago || body.valor || boleto.total || boleto.valor,
+      dataPagamento:body.dataPagamento || new Date().toISOString().slice(0,10),
+      origem:"baixa_manual",
+      eventoChave:"baixa-manual:" + numero + ":" + Date.now()
+    });
+
+    return res.json({
+      ok:true,
+      mensagem:"Baixa manual registrada e cliente processado no MikroTik.",
+      automacao:resultado
+    });
   } catch (err) {
     console.error("Erro /api/boletos/baixa-manual:", err);
     return res.status(500).json({ ok:false, erro:err.message });
@@ -3643,6 +3656,789 @@ app.delete("/api/boletos/:numero", async (req, res) => {
     return res.status(500).json({ ok:false, erro:err.message });
   }
 });
+
+
+
+/* AUTOMAÇÃO EFI MIKROTIK - INÍCIO */
+
+function autoTexto(v) {
+  return String(v === undefined || v === null ? "" : v).trim();
+}
+
+function autoDigitos(v) {
+  return autoTexto(v).replace(/\D/g, "");
+}
+
+function autoPrimeiro(obj, campos) {
+  for (const campo of campos) {
+    const valor = obj && obj[campo];
+    if (valor !== undefined && valor !== null && autoTexto(valor) !== "") {
+      return autoTexto(valor);
+    }
+  }
+  return "";
+}
+
+function autoDados(row) {
+  return row && row.dados && typeof row.dados === "object" ? row.dados : {};
+}
+
+async function autoGarantirTabelas() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS automacao_eventos (
+      id BIGSERIAL PRIMARY KEY,
+      evento_chave TEXT UNIQUE NOT NULL,
+      tipo TEXT NOT NULL,
+      charge_id TEXT,
+      boleto_numero TEXT,
+      cliente_login TEXT,
+      servidor TEXT,
+      status TEXT DEFAULT 'processando',
+      tentativa INTEGER DEFAULT 1,
+      mensagem TEXT,
+      detalhes JSONB,
+      criado_em TIMESTAMP DEFAULT NOW(),
+      atualizado_em TIMESTAMP DEFAULT NOW()
+    );
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS automacao_config (
+      chave TEXT PRIMARY KEY,
+      valor TEXT,
+      atualizado_em TIMESTAMP DEFAULT NOW()
+    );
+  `);
+
+  const alters = [
+    "ALTER TABLE clientes ADD COLUMN IF NOT EXISTS login_pppoe TEXT;",
+    "ALTER TABLE clientes ADD COLUMN IF NOT EXISTS profile TEXT;",
+    "ALTER TABLE clientes ADD COLUMN IF NOT EXISTS servidor TEXT;",
+    "ALTER TABLE clientes ADD COLUMN IF NOT EXISTS dados JSONB;",
+    "ALTER TABLE clientes ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'ativo';",
+    "ALTER TABLE clientes ADD COLUMN IF NOT EXISTS confianca_ate TEXT;",
+    "ALTER TABLE boletos ADD COLUMN IF NOT EXISTS efi_charge_id TEXT;",
+    "ALTER TABLE boletos ADD COLUMN IF NOT EXISTS efi_status TEXT;",
+    "ALTER TABLE boletos ADD COLUMN IF NOT EXISTS dados JSONB;",
+    "ALTER TABLE boletos ADD COLUMN IF NOT EXISTS pagamento DATE;",
+    "ALTER TABLE boletos ADD COLUMN IF NOT EXISTS valor_pago NUMERIC DEFAULT 0;",
+    "ALTER TABLE boletos ADD COLUMN IF NOT EXISTS atualizado_em TIMESTAMP DEFAULT NOW();"
+  ];
+
+  for (const sql of alters) {
+    try { await pool.query(sql); } catch (e) {}
+  }
+}
+
+async function autoEventoIniciar(chave, tipo, dados = {}) {
+  await autoGarantirTabelas();
+
+  const existente = await pool.query(
+    "SELECT * FROM automacao_eventos WHERE evento_chave=$1 LIMIT 1",
+    [chave]
+  );
+
+  if (existente.rows[0] && existente.rows[0].status === "sucesso") {
+    return { ignorar: true, evento: existente.rows[0] };
+  }
+
+  const r = await pool.query(`
+    INSERT INTO automacao_eventos
+      (evento_chave,tipo,charge_id,boleto_numero,cliente_login,servidor,status,tentativa,mensagem,detalhes,atualizado_em)
+    VALUES
+      ($1,$2,$3,$4,$5,$6,'processando',1,'Iniciando processamento',$7,NOW())
+    ON CONFLICT (evento_chave) DO UPDATE SET
+      status='processando',
+      tentativa=automacao_eventos.tentativa+1,
+      mensagem='Nova tentativa',
+      detalhes=COALESCE(automacao_eventos.detalhes,'{}'::jsonb) || EXCLUDED.detalhes,
+      atualizado_em=NOW()
+    RETURNING *
+  `, [
+    chave,
+    tipo,
+    autoTexto(dados.charge_id),
+    autoTexto(dados.boleto_numero),
+    autoTexto(dados.cliente_login),
+    autoTexto(dados.servidor),
+    JSON.stringify(dados)
+  ]);
+
+  return { ignorar: false, evento: r.rows[0] };
+}
+
+async function autoEventoFinalizar(chave, status, mensagem, detalhes = {}) {
+  try {
+    await pool.query(`
+      UPDATE automacao_eventos SET
+        status=$1,
+        mensagem=$2,
+        detalhes=COALESCE(detalhes,'{}'::jsonb) || $3::jsonb,
+        atualizado_em=NOW()
+      WHERE evento_chave=$4
+    `, [status, mensagem, JSON.stringify(detalhes), chave]);
+  } catch (e) {
+    console.error("Falha ao registrar automação:", e.message);
+  }
+}
+
+function autoClienteCampos(cliente, boleto = {}) {
+  const cd = autoDados(cliente);
+  const bd = autoDados(boleto);
+
+  const login =
+    autoPrimeiro(boleto, ["cliente_login","login","login_pppoe"]) ||
+    autoPrimeiro(bd, ["login","loginPppoe","clienteLogin","usuario","pppoe"]) ||
+    autoPrimeiro(cliente, ["login_pppoe","pppoe","usuario","login"]) ||
+    autoPrimeiro(cd, ["loginPppoe","login_pppoe","login","usuario","pppoe","clienteLogin"]);
+
+  const servidor =
+    autoPrimeiro(cliente, ["servidor"]) ||
+    autoPrimeiro(cd, ["servidor","popServidor","pop","servidorPppoe"]) ||
+    autoPrimeiro(bd, ["servidor","popServidor","pop"]);
+
+  const profile =
+    autoPrimeiro(cliente, ["profile"]) ||
+    autoPrimeiro(cd, ["profile","perfil","profileServidor","planoVelocidade","velocidade"]) ||
+    autoPrimeiro(cliente, ["plano"]) ||
+    autoPrimeiro(cd, ["plano"]);
+
+  return { login, servidor, profile };
+}
+
+async function autoBuscarClienteDoBoleto(boleto) {
+  const bd = autoDados(boleto);
+  const login =
+    autoPrimeiro(boleto, ["cliente_login"]) ||
+    autoPrimeiro(bd, ["login","loginPppoe","clienteLogin","usuario","pppoe"]);
+
+  const cpf = autoDigitos(
+    autoPrimeiro(boleto, ["cpf_cnpj"]) ||
+    autoPrimeiro(bd, ["cpfCnpj","cpf","cnpj","documento"])
+  );
+
+  const nome =
+    autoPrimeiro(boleto, ["cliente_nome"]) ||
+    autoPrimeiro(bd, ["nome","cliente","nomeCliente"]);
+
+  const r = await pool.query(`
+    SELECT *
+    FROM clientes
+    WHERE
+      ($1 <> '' AND (
+        login_pppoe=$1 OR pppoe=$1 OR dados->>'login'=$1 OR dados->>'loginPppoe'=$1
+      ))
+      OR ($2 <> '' AND regexp_replace(COALESCE(cpf_cnpj,cpf,dados->>'cpfCnpj',dados->>'cpf',''),'\\D','','g')=$2)
+      OR ($3 <> '' AND lower(COALESCE(nome,dados->>'nome',dados->>'cliente',''))=lower($3))
+    ORDER BY id DESC
+    LIMIT 1
+  `, [login, cpf, nome]);
+
+  return r.rows[0] || null;
+}
+
+async function autoProfileExiste(cfg, profile) {
+  const resposta = await routerosSend(
+    cfg.host, cfg.port, cfg.user, cfg.pass,
+    [["/ppp/profile/print", "?name=" + profile]],
+    15000
+  );
+  return parseRouterosRows(resposta).some(p => autoTexto(p.name) === autoTexto(profile));
+}
+
+async function autoDerrubarSessao(cfg, login) {
+  const resposta = await routerosSend(
+    cfg.host, cfg.port, cfg.user, cfg.pass,
+    [["/ppp/active/print", "?name=" + login]],
+    15000
+  );
+
+  const ativos = parseRouterosRows(resposta);
+  let removidas = 0;
+
+  for (const ativo of ativos) {
+    if (!ativo || !ativo[".id"]) continue;
+    await routerosSend(
+      cfg.host, cfg.port, cfg.user, cfg.pass,
+      [["/ppp/active/remove", "=.id=" + ativo[".id"]]],
+      15000
+    );
+    removidas++;
+  }
+
+  return removidas;
+}
+
+async function autoExecutarMikrotik({ servidor, login, profile, acao }) {
+  if (String(process.env.AUTOMACAO_MIKROTIK_ATIVA || "true").toLowerCase() === "false") {
+    return { ok:true, simulado:true, mensagem:"Automação MikroTik desativada por variável de ambiente." };
+  }
+
+  if (!servidor) throw new Error("Servidor MikroTik não definido no cadastro do cliente.");
+  if (!login) throw new Error("Login PPPoE não definido no cadastro do cliente.");
+
+  const cfg = servidorConfig(servidor);
+  if (!cfg.host || !cfg.user || !cfg.pass) {
+    throw new Error("Variáveis do MikroTik não configuradas para " + (cfg.key || servidor));
+  }
+
+  const secretResp = await routerosSend(
+    cfg.host, cfg.port, cfg.user, cfg.pass,
+    [["/ppp/secret/print", "?name=" + login]],
+    15000
+  );
+  const secret = parseRouterosRows(secretResp)[0];
+
+  if (!secret || !secret[".id"]) {
+    throw new Error("PPP Secret não encontrado para " + login);
+  }
+
+  const destino = acao === "bloquear"
+    ? autoTexto(process.env.MIKROTIK_PROFILE_BLOQUEADO || "BLOQUEADO")
+    : autoTexto(profile);
+
+  if (!destino) {
+    throw new Error("Profile normal do cliente não foi definido.");
+  }
+
+  const existe = await autoProfileExiste(cfg, destino);
+  if (!existe) {
+    throw new Error("Profile não existe no MikroTik " + (cfg.key || servidor) + ": " + destino);
+  }
+
+  await routerosSend(
+    cfg.host, cfg.port, cfg.user, cfg.pass,
+    [[
+      "/ppp/secret/set",
+      "=.id=" + secret[".id"],
+      "=disabled=no",
+      "=profile=" + destino
+    ]],
+    15000
+  );
+
+  const sessoesRemovidas = await autoDerrubarSessao(cfg, login);
+
+  return {
+    ok:true,
+    servidor:cfg.key || servidor,
+    login,
+    profile:destino,
+    sessoesRemovidas,
+    mensagem: acao === "bloquear"
+      ? "Cliente bloqueado e sessão PPP reiniciada."
+      : "Cliente desbloqueado e sessão PPP reiniciada."
+  };
+}
+
+async function autoProcessarPagamento({ chargeId, numero, valorPago, dataPagamento, origem, eventoChave }) {
+  await autoGarantirTabelas();
+
+  const chave = eventoChave || "pagamento:" + (chargeId || numero);
+  const inicio = await autoEventoIniciar(chave, "pagamento", {
+    charge_id:chargeId,
+    boleto_numero:numero,
+    origem
+  });
+
+  if (inicio.ignorar) {
+    return { ok:true, repetido:true, mensagem:"Pagamento já processado anteriormente." };
+  }
+
+  try {
+    const boletoResult = await pool.query(`
+      SELECT *
+      FROM boletos
+      WHERE
+        ($1 <> '' AND efi_charge_id=$1)
+        OR ($2 <> '' AND numero=$2)
+      ORDER BY atualizado_em DESC NULLS LAST
+      LIMIT 1
+    `, [autoTexto(chargeId), autoTexto(numero)]);
+
+    const boleto = boletoResult.rows[0];
+    if (!boleto) throw new Error("Boleto não localizado no Supabase.");
+
+    const pagamento = dataPagamento || new Date().toISOString().slice(0,10);
+    const pago = Number(valorPago || boleto.total || boleto.valor || 0) || 0;
+
+    await pool.query(`
+      UPDATE boletos SET
+        status='pago',
+        efi_status='Pago',
+        valor_pago=CASE WHEN $1::numeric > 0 THEN $1::numeric ELSE COALESCE(total,valor,0) END,
+        pagamento=$2,
+        dados=COALESCE(dados,'{}'::jsonb) || $3::jsonb,
+        atualizado_em=NOW()
+      WHERE id=$4
+    `, [
+      pago,
+      pagamento,
+      JSON.stringify({
+        status:"pago",
+        efiStatus:"Pago",
+        valorPago:pago,
+        dataPagamento:pagamento,
+        pagamentoAutomatico:true,
+        origemPagamento:origem || "efi_webhook",
+        processadoEm:new Date().toISOString()
+      }),
+      boleto.id
+    ]);
+
+    const cliente = await autoBuscarClienteDoBoleto(boleto);
+    if (!cliente) throw new Error("Cliente do boleto não localizado no Supabase.");
+
+    const campos = autoClienteCampos(cliente, boleto);
+    const mikrotik = await autoExecutarMikrotik({
+      servidor:campos.servidor,
+      login:campos.login,
+      profile:campos.profile,
+      acao:"pagamento"
+    });
+
+    await pool.query(`
+      UPDATE clientes SET
+        status='ativo',
+        confianca_ate='',
+        dados=COALESCE(dados,'{}'::jsonb) || $1::jsonb
+      WHERE id=$2
+    `, [
+      JSON.stringify({
+        status:"ativo",
+        ultimoDesbloqueioAutomatico:new Date().toISOString(),
+        ultimoPagamentoChargeId:autoTexto(chargeId)
+      }),
+      cliente.id
+    ]);
+
+    await autoEventoFinalizar(chave, "sucesso", "Pagamento processado e cliente desbloqueado.", {
+      mikrotik,
+      cliente_id:cliente.id
+    });
+
+    return {
+      ok:true,
+      boleto:boleto.numero,
+      charge_id:boleto.efi_charge_id,
+      cliente:cliente.nome,
+      mikrotik
+    };
+  } catch (err) {
+    await autoEventoFinalizar(chave, "erro", err.message, {});
+    throw err;
+  }
+}
+
+async function autoProcessarBloqueioCliente(cliente, boleto) {
+  const campos = autoClienteCampos(cliente, boleto);
+  const chave = "bloqueio:" + cliente.id + ":" + boleto.numero;
+  const inicio = await autoEventoIniciar(chave, "bloqueio", {
+    boleto_numero:boleto.numero,
+    cliente_login:campos.login,
+    servidor:campos.servidor
+  });
+
+  if (inicio.ignorar) return { ok:true, repetido:true };
+
+  try {
+    const mikrotik = await autoExecutarMikrotik({
+      servidor:campos.servidor,
+      login:campos.login,
+      profile:campos.profile,
+      acao:"bloquear"
+    });
+
+    await pool.query(`
+      UPDATE clientes SET
+        status='bloqueado',
+        dados=COALESCE(dados,'{}'::jsonb) || $1::jsonb
+      WHERE id=$2
+    `, [
+      JSON.stringify({
+        status:"bloqueado",
+        bloqueioAutomaticoEm:new Date().toISOString(),
+        boletoVencido:boleto.numero,
+        profileNormal:campos.profile
+      }),
+      cliente.id
+    ]);
+
+    await autoEventoFinalizar(chave, "sucesso", "Cliente bloqueado automaticamente.", { mikrotik });
+    return { ok:true, cliente:cliente.nome, boleto:boleto.numero, mikrotik };
+  } catch (err) {
+    await autoEventoFinalizar(chave, "erro", err.message, {});
+    throw err;
+  }
+}
+
+async function autoExecutarRotinaDiaria() {
+  await autoGarantirTabelas();
+
+  // Concilia cobranças Efí pendentes, inclusive as criadas antes do webhook automático.
+  const pendentesEfi = await pool.query(`
+    SELECT *
+    FROM boletos
+    WHERE efi_charge_id IS NOT NULL
+      AND efi_charge_id <> ''
+      AND lower(COALESCE(status,'pendente')) NOT IN ('pago','paid','cancelado','canceled')
+    ORDER BY atualizado_em DESC NULLS LAST
+    LIMIT 100
+  `);
+
+  const conciliacaoEfi = [];
+  const cfgPadrao = await efiCarregarConfig(1);
+  const webhookPublico = autoBasePublica() ? autoBasePublica() + "/api/efi/webhook" : "";
+
+  if (cfgPadrao && cfgPadrao.ClientId && cfgPadrao.ClientSecret) {
+    for (const boleto of pendentesEfi.rows) {
+      try {
+        const chargeId = autoTexto(boleto.efi_charge_id);
+
+        if (webhookPublico) {
+          try {
+            await efiRequest(
+              "/v1/charge/" + encodeURIComponent(chargeId) + "/metadata",
+              cfgPadrao,
+              {
+                method:"PUT",
+                body:{ notification_url:webhookPublico }
+              }
+            );
+          } catch (e) {}
+        }
+
+        const detalhe = await efiDetalharPorId(cfgPadrao, chargeId);
+        if (!detalhe.ok) {
+          conciliacaoEfi.push({ ok:false, charge_id:chargeId, erro:"Consulta Efí falhou." });
+          continue;
+        }
+
+        const statusAtual = autoTexto(
+          detalhe.detalhes?.status ||
+          detalhe.detalhes?.situacao_efi
+        ).toLowerCase();
+
+        await pool.query(`
+          UPDATE boletos SET
+            efi_status=$1,
+            dados=COALESCE(dados,'{}'::jsonb) || $2::jsonb,
+            atualizado_em=NOW()
+          WHERE id=$3
+        `, [
+          statusAtual || boleto.efi_status || "",
+          JSON.stringify({
+            efiStatus:statusAtual || boleto.efi_status || "",
+            ultimaConciliacaoEfi:new Date().toISOString()
+          }),
+          boleto.id
+        ]);
+
+        if (["paid","settled","pago"].includes(statusAtual)) {
+          const resultado = await autoProcessarPagamento({
+            chargeId,
+            numero:boleto.numero,
+            valorPago:boleto.total || boleto.valor,
+            dataPagamento:new Date().toISOString().slice(0,10),
+            origem:"conciliacao_efi_diaria",
+            eventoChave:"pagamento:" + chargeId
+          });
+          conciliacaoEfi.push({ ok:true, charge_id:chargeId, pagamento:true, resultado });
+        } else {
+          conciliacaoEfi.push({ ok:true, charge_id:chargeId, status:statusAtual || "desconhecido" });
+        }
+      } catch (err) {
+        conciliacaoEfi.push({
+          ok:false,
+          charge_id:autoTexto(boleto.efi_charge_id),
+          erro:err.message
+        });
+      }
+    }
+  }
+
+  const dias = Math.max(0, Number(process.env.BLOQUEIO_DIAS_APOS_VENCIMENTO || 1));
+  const limite = Math.max(1, Math.min(500, Number(process.env.BLOQUEIO_MAX_CLIENTES_POR_EXECUCAO || 100)));
+
+  const candidatos = await pool.query(`
+    SELECT DISTINCT ON (c.id)
+      c.*,
+      b.id AS boleto_id,
+      b.numero AS boleto_numero,
+      b.cliente_login AS boleto_login,
+      b.cliente_nome AS boleto_cliente_nome,
+      b.cpf_cnpj AS boleto_cpf_cnpj,
+      b.vencimento AS boleto_vencimento,
+      b.status AS boleto_status,
+      b.dados AS boleto_dados
+    FROM clientes c
+    JOIN boletos b ON (
+      (COALESCE(c.login_pppoe,c.pppoe,c.dados->>'loginPppoe',c.dados->>'login','') <> ''
+       AND COALESCE(c.login_pppoe,c.pppoe,c.dados->>'loginPppoe',c.dados->>'login','')
+         = COALESCE(b.cliente_login,b.dados->>'loginPppoe',b.dados->>'login',''))
+      OR
+      (regexp_replace(COALESCE(c.cpf_cnpj,c.cpf,c.dados->>'cpfCnpj',c.dados->>'cpf',''),'\\D','','g') <> ''
+       AND regexp_replace(COALESCE(c.cpf_cnpj,c.cpf,c.dados->>'cpfCnpj',c.dados->>'cpf',''),'\\D','','g')
+         = regexp_replace(COALESCE(b.cpf_cnpj,b.dados->>'cpfCnpj',b.dados->>'cpf',''),'\\D','','g'))
+    )
+    WHERE
+      lower(COALESCE(b.status,'pendente')) NOT IN ('pago','paid','cancelado','canceled')
+      AND b.vencimento IS NOT NULL
+      AND b.vencimento < (CURRENT_DATE - $1::integer)
+      AND (
+        COALESCE(c.confianca_ate,'') = ''
+        OR c.confianca_ate !~ '^\\d{4}-\\d{2}-\\d{2}$'
+        OR c.confianca_ate::date < CURRENT_DATE
+      )
+    ORDER BY c.id, b.vencimento ASC
+    LIMIT $2
+  `, [dias, limite]);
+
+  const resultados = [];
+
+  for (const row of candidatos.rows) {
+    const boleto = {
+      id:row.boleto_id,
+      numero:row.boleto_numero,
+      cliente_login:row.boleto_login,
+      cliente_nome:row.boleto_cliente_nome,
+      cpf_cnpj:row.boleto_cpf_cnpj,
+      vencimento:row.boleto_vencimento,
+      status:row.boleto_status,
+      dados:row.boleto_dados || {}
+    };
+
+    try {
+      resultados.push(await autoProcessarBloqueioCliente(row, boleto));
+    } catch (err) {
+      resultados.push({
+        ok:false,
+        cliente:row.nome,
+        boleto:row.boleto_numero,
+        erro:err.message
+      });
+    }
+  }
+
+  // Reconcilia pagamentos que foram baixados, mas cujo desbloqueio falhou.
+  const reconciliar = await pool.query(`
+    SELECT b.*
+    FROM boletos b
+    LEFT JOIN automacao_eventos a
+      ON a.charge_id=b.efi_charge_id AND a.tipo='pagamento'
+    WHERE lower(COALESCE(b.status,'')) IN ('pago','paid')
+      AND b.efi_charge_id IS NOT NULL
+      AND b.efi_charge_id <> ''
+      AND (a.id IS NULL OR a.status='erro')
+    ORDER BY b.atualizado_em DESC NULLS LAST
+    LIMIT 50
+  `);
+
+  const reconciliados = [];
+  for (const b of reconciliar.rows) {
+    try {
+      reconciliados.push(await autoProcessarPagamento({
+        chargeId:b.efi_charge_id,
+        numero:b.numero,
+        valorPago:b.valor_pago || b.total || b.valor,
+        dataPagamento:b.pagamento,
+        origem:"reconciliacao_diaria",
+        eventoChave:"pagamento:" + b.efi_charge_id
+      }));
+    } catch (err) {
+      reconciliados.push({ ok:false, boleto:b.numero, erro:err.message });
+    }
+  }
+
+  return {
+    ok:true,
+    cobrancasEfiAnalisadas:pendentesEfi.rows.length,
+    conciliacaoEfi,
+    bloqueiosAnalisados:candidatos.rows.length,
+    bloqueios:resultados,
+    reconciliacoes:reconciliados
+  };
+}
+
+function autoBasePublica(req) {
+  const configurada = autoTexto(process.env.PUBLIC_BASE_URL || process.env.APP_URL);
+  if (configurada) return configurada.replace(/\/+$/, "");
+
+  const vercel = autoTexto(process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL);
+  if (vercel) return ("https://" + vercel).replace(/\/+$/, "");
+
+  if (req) {
+    const proto = autoTexto(req.headers["x-forwarded-proto"] || req.protocol || "https");
+    const host = autoTexto(req.headers["x-forwarded-host"] || req.headers.host);
+    if (host) return proto + "://" + host;
+  }
+
+  return "";
+}
+
+app.post("/api/efi/webhook", async (req, res) => {
+  const token = autoTexto(
+    req.body?.notification ||
+    req.body?.token ||
+    req.query?.notification ||
+    req.query?.token
+  );
+
+  if (!token) {
+    return res.status(400).json({ ok:false, erro:"Token de notificação não informado." });
+  }
+
+  try {
+    await autoGarantirTabelas();
+
+    const contas = await pool.query(`
+      SELECT conta
+      FROM efi_configuracoes
+      WHERE COALESCE(ativo,TRUE)=TRUE
+      ORDER BY conta
+    `);
+
+    const ids = contas.rows.length ? contas.rows.map(r => Number(r.conta)) : [1];
+    let notificacao = null;
+    let contaUsada = null;
+    let ultimoErro = "";
+
+    for (const conta of ids) {
+      try {
+        const cfg = await efiCarregarConfig(conta);
+        if (!cfg || !cfg.ClientId || !cfg.ClientSecret) continue;
+
+        const resposta = await efiRequest(
+          "/v1/notification/" + encodeURIComponent(token),
+          cfg
+        );
+
+        if (resposta.ok && resposta.json) {
+          notificacao = resposta.json;
+          contaUsada = conta;
+          break;
+        }
+
+        ultimoErro = JSON.stringify(resposta.json || resposta.raw || "");
+      } catch (e) {
+        ultimoErro = e.message;
+      }
+    }
+
+    if (!notificacao) {
+      throw new Error("Não foi possível consultar a notificação na Efí. " + ultimoErro);
+    }
+
+    const eventos = Array.isArray(notificacao.data) ? notificacao.data : [];
+    const processados = [];
+
+    for (const evento of eventos) {
+      const statusAtual = autoTexto(evento?.status?.current).toLowerCase();
+      const chargeId = autoTexto(evento?.identifiers?.charge_id);
+      if (!chargeId) continue;
+
+      if (["paid","settled"].includes(statusAtual)) {
+        const valor = Number(evento.value || 0) / 100;
+        const resultado = await autoProcessarPagamento({
+          chargeId,
+          numero:autoTexto(evento.custom_id),
+          valorPago:valor,
+          dataPagamento:autoTexto(evento.received_by_bank_at) || new Date().toISOString().slice(0,10),
+          origem:"efi_webhook",
+          eventoChave:"efi:" + token + ":" + evento.id + ":" + statusAtual
+        });
+        processados.push({ status:statusAtual, charge_id:chargeId, resultado });
+      } else {
+        await pool.query(`
+          UPDATE boletos SET
+            efi_status=$1,
+            dados=COALESCE(dados,'{}'::jsonb) || $2::jsonb,
+            atualizado_em=NOW()
+          WHERE efi_charge_id=$3
+        `, [
+          statusAtual,
+          JSON.stringify({
+            efiStatus:statusAtual,
+            ultimaNotificacaoEfi:new Date().toISOString(),
+            tokenNotificacao:token
+          }),
+          chargeId
+        ]);
+        processados.push({ status:statusAtual, charge_id:chargeId, atualizado:true });
+      }
+    }
+
+    return res.status(200).json({
+      ok:true,
+      conta:contaUsada,
+      token,
+      eventos:eventos.length,
+      processados
+    });
+  } catch (err) {
+    console.error("Erro /api/efi/webhook:", err);
+    return res.status(500).json({ ok:false, erro:err.message });
+  }
+});
+
+app.get("/api/cron/bloqueios", async (req, res) => {
+  const segredo = autoTexto(process.env.CRON_SECRET);
+  const recebido = autoTexto(req.headers.authorization);
+
+  if (!segredo || recebido !== "Bearer " + segredo) {
+    return res.status(401).json({ ok:false, erro:"Não autorizado." });
+  }
+
+  try {
+    const resultado = await autoExecutarRotinaDiaria();
+    return res.json(resultado);
+  } catch (err) {
+    console.error("Erro /api/cron/bloqueios:", err);
+    return res.status(500).json({ ok:false, erro:err.message });
+  }
+});
+
+app.post("/api/automacao/testar-pagamento", async (req, res) => {
+  try {
+    const resultado = await autoProcessarPagamento({
+      chargeId:autoTexto(req.body?.chargeId || req.body?.efi_charge_id),
+      numero:autoTexto(req.body?.numero),
+      valorPago:req.body?.valorPago,
+      dataPagamento:req.body?.dataPagamento,
+      origem:"teste_manual_backend",
+      eventoChave:"teste:" + Date.now()
+    });
+    return res.json(resultado);
+  } catch (err) {
+    return res.status(500).json({ ok:false, erro:err.message });
+  }
+});
+
+app.get("/api/automacao/status", async (req, res) => {
+  try {
+    await autoGarantirTabelas();
+    const ultimos = await pool.query(`
+      SELECT *
+      FROM automacao_eventos
+      ORDER BY atualizado_em DESC
+      LIMIT 50
+    `);
+
+    return res.json({
+      ok:true,
+      webhook:autoBasePublica(req) + "/api/efi/webhook",
+      cron:"/api/cron/bloqueios",
+      mikrotikAtivo:String(process.env.AUTOMACAO_MIKROTIK_ATIVA || "true").toLowerCase() !== "false",
+      profileBloqueado:process.env.MIKROTIK_PROFILE_BLOQUEADO || "BLOQUEADO",
+      diasAposVencimento:Number(process.env.BLOQUEIO_DIAS_APOS_VENCIMENTO || 1),
+      eventos:ultimos.rows
+    });
+  } catch (err) {
+    return res.status(500).json({ ok:false, erro:err.message });
+  }
+});
+
+/* AUTOMAÇÃO EFI MIKROTIK - FIM */
 
 io.on("connection",(socket)=>{
   socket.emit("hub-update", geral());
