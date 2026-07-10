@@ -4019,4 +4019,16 @@ document.addEventListener("DOMContentLoaded", function(){
 })();
 </script>
 
+
+<script>
+document.addEventListener('DOMContentLoaded',()=>{
+  document.querySelectorAll('*').forEach(el=>{
+    if((el.textContent||'').trim()==='Situação na Efí'){
+      const card=el.closest('.card,.campo,.bloco,div');
+      if(card) card.style.display='none';
+    }
+  });
+});
+</script>
+
 </body></html>
