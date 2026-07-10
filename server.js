@@ -2749,6 +2749,32 @@ function efiBuildBilletPayload(body) {
 
 
 
+
+function efiExtrairPixOficial(payload) {
+  if (!payload) return "";
+
+  const caminhos = [
+    "data.pix.qrcode",
+    "data.payment.banking_billet.pix.qrcode",
+    "data.payment.banking_billet.pix.copy_paste",
+    "data.pix.copy_paste",
+    "data.pix.copia_cola",
+    "pix.qrcode",
+    "payment.banking_billet.pix.qrcode",
+    "payment.banking_billet.pix.copy_paste"
+  ];
+
+  for (const caminho of caminhos) {
+    const valor = efiGet(payload, [caminho]);
+    if (valor !== undefined && valor !== null && String(valor).trim() !== "") {
+      return String(valor).trim();
+    }
+  }
+
+  return "";
+}
+
+
 async function efiBuscarPixDaCobranca(cfg, chargeId) {
   if (!chargeId) return { pix: "", raw: null, fonte: "" };
 
@@ -2762,25 +2788,14 @@ async function efiBuscarPixDaCobranca(cfg, chargeId) {
       const r = await efiRequest(pth, cfg);
       if (!r.ok) continue;
 
-      // Pix Copia e Cola oficial do Bolix Efí:
-      // resposta.data.pix.qrcode
-      const pix = String(
-        efiGet(r.json, [
-          "data.pix.qrcode",
-          "data.payment.banking_billet.pix.qrcode",
-          "data.pix.copy_paste",
-          "data.pix.copia_cola",
-          "pix.qrcode",
-          "payment.banking_billet.pix.qrcode"
-        ]) || ""
-      ).trim();
-
+      const pix = efiExtrairPixOficial(r.json);
       if (pix) return { pix, raw: r.json, fonte: pth };
     } catch (e) {}
   }
 
   return { pix: "", raw: null, fonte: "" };
 }
+
 
 
 async function efiCriarBoletoOneStep(body, conta = 1) {
@@ -2824,21 +2839,32 @@ async function efiCriarBoletoOneStep(body, conta = 1) {
     throw new Error("Efí não registrou o boleto: " + JSON.stringify(pagar.json || pagar.raw).slice(0, 700));
   }
 
+  const pixLogoPay = efiExtrairPixOficial(pagar.json);
+
   let detalhes = efiExtractChargeDetails(pagar.json);
+  if (pixLogoPay) detalhes.pix_copia_cola = pixLogoPay;
   detalhes.charge_id = detalhes.charge_id || chargeId;
 
   const det = await efiDetalharPorId(cfg, chargeId);
   if (det.ok) {
+    const pixAntesDetalhe = detalhes.pix_copia_cola || "";
     detalhes = {
       ...detalhes,
       ...det.detalhes,
       charge_id: chargeId
     };
+    if (!detalhes.pix_copia_cola && pixAntesDetalhe) {
+      detalhes.pix_copia_cola = pixAntesDetalhe;
+    }
   }
 
   if (!detalhes.pix_copia_cola) {
     const pixRet = await efiBuscarPixDaCobranca(cfg, chargeId);
     if (pixRet.pix) detalhes.pix_copia_cola = pixRet.pix;
+  }
+
+  if (!detalhes.pix_copia_cola && pixLogoPay) {
+    detalhes.pix_copia_cola = pixLogoPay;
   }
 
   return {
@@ -2910,6 +2936,7 @@ async function salvarBoletoGeradoSupabase(body, detalhes, conta, nomeConta) {
     linhaDigitavel: detalhes.linha_digitavel || "",
     pix: detalhes.pix_copia_cola || "",
     codigoPix: detalhes.pix_copia_cola || "",
+    pixCopiaCola: detalhes.pix_copia_cola || "",
     linkPdf: detalhes.link_boleto || "",
     pdf: detalhes.link_boleto || "",
     segundaVia: detalhes.link_boleto || "",
@@ -3458,7 +3485,12 @@ app.post("/api/efi/boleto/pix", async (req, res) => {
       WHERE efi_charge_id=$3 OR numero=$4
     `, [
       pixRet.pix,
-      JSON.stringify({ pix: pixRet.pix, codigoPix: pixRet.pix, pixAtualizadoEm: new Date().toISOString() }),
+      JSON.stringify({
+        pix: pixRet.pix,
+        codigoPix: pixRet.pix,
+        pixCopiaCola: pixRet.pix,
+        pixAtualizadoEm: new Date().toISOString()
+      }),
       chargeId,
       numero
     ]);

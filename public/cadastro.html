@@ -3877,7 +3877,7 @@ document.addEventListener("DOMContentLoaded", function(){
 
   window.copiarPixBoletoCliente = function(numeroBoleto){
     const b = window.encontrarBoleto(numeroBoleto);
-    const pix = b && (b.pix || b.codigoPix || b.pixCopiaCola || b.copiaCola);
+    const pix = b && (b.pix || b.codigoPix || b.pixCopiaCola || b.copiaCola || b.pix_copia_cola);
     if(!pix){
       alert("Este boleto não possui Pix Copia e Cola. A linha digitável está disponível nos detalhes.");
       return;
@@ -3907,7 +3907,7 @@ document.addEventListener("DOMContentLoaded", function(){
 
   window.copiarPixBoletoCliente = async function(numeroBoleto){
     const b = typeof encontrarBoleto === "function" ? encontrarBoleto(numeroBoleto) : null;
-    let pix = b && (b.pix || b.codigoPix || b.pixCopiaCola || b.copiaCola);
+    let pix = b && (b.pix || b.codigoPix || b.pixCopiaCola || b.copiaCola || b.pix_copia_cola);
 
     if(!pix && b && (b.efiChargeId || b.efi_charge_id)){
       try{
@@ -3925,6 +3925,8 @@ document.addEventListener("DOMContentLoaded", function(){
           pix = json.pix;
           b.pix = pix;
           b.codigoPix = pix;
+          b.pixCopiaCola = pix;
+          b.pix_copia_cola = pix;
         }else if(json && json.mensagem){
           alert(json.mensagem);
           return;
