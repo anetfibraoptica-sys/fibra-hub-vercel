@@ -16,23 +16,7 @@
 <a href="planos.html" class=""><span class="icon">▦</span>Planos</a>
 <a href="usuarios.html" class=""><span class="icon">👥</span>Usuários</a>
 <a href="configuracoes.html" class="active"><span class="icon"></span>Configurações</a>
-<a href="backup.html" class=""><span class="icon">☁</span>Backup</a><a href="#" onclick="sair()"><span class="icon">↪</span></a></nav></aside><main class="main"><header class="topbar"><h1>Configurações</h1><div class="topbar-right"><span id="liveStatus" class="badge badge-off">CONECTANDO</span><span class="badge">2 Servidores</span><span class="badge">Administrador</span></div></header><section class="content"><section class="panel"><h3>Configurações</h3><p>Tela pronta no Fibra+ Hub.</p></section>
-<section class="panel" id="configFinanceiroBloqueio">
-  <h3>Financeiro e Bloqueio</h3>
-  <p class="cadastro-note">
-    Configure aqui as regras financeiras do Fibra+ Hub. Essas configurações serão usadas para definir
-    quando um cliente deve sair de <b>Ativo</b> e passar para <b>Bloqueado</b> conforme os boletos em atraso.
-  </p>
-
-  <div class="grid-2">
-    <div class="form-group">
-      <label>Dias para bloqueio automático</label>
-      <input id="cfgDiasBloqueio" type="text" inputmode="numeric" placeholder="4">
-      <small>
-        Exemplo: se o vencimento foi dia 05/07 e a regra for 4 dias,
-        o cliente será bloqueado no 4º dia de atraso, caso o boleto continue sem pagamento.
-      </small>
-    </div>
+<a href="backup.html" class=""><span class="icon">☁</span>Backup</a><a href="#" onclick="sair()"><span class="icon">↪</span></a></nav></aside><main class="main"><header class="topbar"><h1>Configurações</h1>
 
     <div class="form-group">
       <label>Regra atual</label>
@@ -195,4 +179,9 @@ document.addEventListener("DOMContentLoaded", function(){
 });
 document.addEventListener("fibra:supabase-sync", listarContasEfiPainel);
 </script>
+
+<div class="config-info-texto">
+    Controlado pelo servidor. Prazo atual: <strong id="diasBloqueioServidor">carregando...</strong> dias após o vencimento.
+  </div>
+</div>
 </body></html>
