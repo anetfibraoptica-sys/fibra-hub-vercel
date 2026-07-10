@@ -3249,6 +3249,227 @@ app.get("/api/boletos/cliente", async (req, res) => {
   }
 });
 
+
+
+/* SUPABASE PAINEL CLIENTES BOLETOS DEFINITIVO */
+function fbOnlyDigits(v){ return String(v || "").replace(/\D/g, ""); }
+function fbPick(body, keys){
+  for (const k of keys) {
+    if (body && body[k] !== undefined && body[k] !== null && String(body[k]).trim() !== "") return String(body[k]).trim();
+  }
+  return "";
+}
+function fbClienteFromBody(body){
+  return {
+    login_pppoe: fbPick(body, ["loginPppoe","login_pppoe","login","usuario","pppoe","clienteLogin"]),
+    nome: fbPick(body, ["nome","cliente","nomeCliente","razaoSocial","razao_social"]),
+    cpf_cnpj: fbOnlyDigits(fbPick(body, ["cpfCnpj","cpf_cnpj","cpf","cnpj","documento"])),
+    telefone: fbPick(body, ["telefone1","telefone2","telefone","celular","whatsapp"]),
+    plano: fbPick(body, ["plano","planoNome","valorPlano"]),
+    servidor: fbPick(body, ["servidor","popServidor","pop","servidorPppoe"]),
+    profile: fbPick(body, ["profile","perfil","planoVelocidade","velocidade","plano"])
+  };
+}
+async function fbEnsureClienteBoletoTables(){
+  if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL não configurada.");
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS clientes (
+      id SERIAL PRIMARY KEY,
+      login_pppoe TEXT,
+      nome TEXT,
+      cpf_cnpj TEXT,
+      telefone TEXT,
+      plano TEXT,
+      servidor TEXT,
+      profile TEXT,
+      dados JSONB,
+      atualizado_em TIMESTAMP DEFAULT NOW(),
+      criado_em TIMESTAMP DEFAULT NOW()
+    );
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS boletos (
+      id SERIAL PRIMARY KEY,
+      numero TEXT UNIQUE,
+      cliente_login TEXT,
+      cliente_nome TEXT,
+      cpf_cnpj TEXT,
+      categoria TEXT,
+      descricao TEXT,
+      emissao DATE,
+      vencimento DATE,
+      pagamento DATE,
+      desconto NUMERIC DEFAULT 0,
+      valor NUMERIC DEFAULT 0,
+      total NUMERIC DEFAULT 0,
+      valor_pago NUMERIC DEFAULT 0,
+      status TEXT DEFAULT 'pendente',
+      linha_digitavel TEXT,
+      pix TEXT,
+      link_pdf TEXT,
+      efi_charge_id TEXT,
+      efi_status TEXT,
+      efi_conta_nome TEXT,
+      observacao TEXT,
+      dados JSONB,
+      origem TEXT,
+      atualizado_em TIMESTAMP DEFAULT NOW(),
+      criado_em TIMESTAMP DEFAULT NOW()
+    );
+  `);
+  await pool.query("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS login_pppoe TEXT;");
+  await pool.query("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS cpf_cnpj TEXT;");
+  await pool.query("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS dados JSONB;");
+  await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS linha_digitavel TEXT;");
+  await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS pix TEXT;");
+  await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS link_pdf TEXT;");
+  await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS efi_charge_id TEXT;");
+  await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS efi_status TEXT;");
+  await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS efi_conta_nome TEXT;");
+  await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS dados JSONB;");
+}
+
+function fbClienteRowToObj(r){
+  const d = r.dados || {};
+  return {
+    ...d,
+    id: r.id,
+    loginPppoe: r.login_pppoe || d.loginPppoe || d.login || "",
+    login: r.login_pppoe || d.login || d.loginPppoe || "",
+    nome: r.nome || d.nome || d.cliente || "",
+    cpfCnpj: r.cpf_cnpj || d.cpfCnpj || d.cpf || "",
+    cpf: r.cpf_cnpj || d.cpf || d.cpfCnpj || "",
+    telefone1: r.telefone || d.telefone1 || d.telefone || "",
+    plano: r.plano || d.plano || "",
+    servidor: r.servidor || d.servidor || d.popServidor || "",
+    popServidor: r.servidor || d.popServidor || d.servidor || "",
+    profile: r.profile || d.profile || d.perfil || d.plano || "",
+    atualizadoEm: r.atualizado_em
+  };
+}
+function fbBoletoRowToObj(row){
+  const d = row.dados || {};
+  return {
+    ...d,
+    id: row.id,
+    numero: row.numero,
+    login: row.cliente_login || d.login || d.loginPppoe || d.clienteLogin || "",
+    loginPppoe: row.cliente_login || d.loginPppoe || d.login || "",
+    clienteLogin: row.cliente_login || d.clienteLogin || d.login || "",
+    nome: row.cliente_nome || d.nome || d.cliente || "",
+    cliente: row.cliente_nome || d.cliente || d.nome || "",
+    cpfCnpj: row.cpf_cnpj || d.cpfCnpj || d.cpf || "",
+    cpf: row.cpf_cnpj || d.cpf || d.cpfCnpj || "",
+    categoria: row.categoria || d.categoria || "",
+    descricao: row.descricao || d.descricao || "",
+    emissao: row.emissao || d.emissao || "",
+    vencimento: row.vencimento || d.vencimento || "",
+    pagamento: row.pagamento || d.pagamento || d.dataPagamento || "",
+    valor: Number(row.valor || d.valor || 0),
+    total: Number(row.total || d.total || row.valor || 0),
+    valorPago: Number(row.valor_pago || d.valorPago || 0),
+    status: row.status || d.status || "pendente",
+    linhaDigitavel: row.linha_digitavel || d.linhaDigitavel || "",
+    pix: row.pix || d.pix || d.codigoPix || "",
+    codigoPix: row.pix || d.codigoPix || d.pix || "",
+    linkPdf: row.link_pdf || d.linkPdf || d.pdf || "",
+    pdf: row.link_pdf || d.pdf || d.linkPdf || "",
+    segundaVia: row.link_pdf || d.segundaVia || d.linkPdf || "",
+    efiChargeId: row.efi_charge_id || d.efiChargeId || "",
+    efiStatus: row.efi_status || d.efiStatus || "",
+    efiContaNome: row.efi_conta_nome || d.efiContaNome || "",
+    observacao: row.observacao || d.observacao || "",
+    origem: row.origem || d.origem || ""
+  };
+}
+
+app.post("/api/clientes/salvar", async (req, res) => {
+  try {
+    await fbEnsureClienteBoletoTables();
+    const body = req.body || {};
+    const c = fbClienteFromBody(body);
+    if (!c.login_pppoe && !c.cpf_cnpj && !c.nome) return res.status(400).json({ok:false, erro:"Cliente sem login, CPF/CNPJ ou nome."});
+
+    const existente = await pool.query(`
+      SELECT id FROM clientes
+      WHERE ($1 <> '' AND login_pppoe = $1)
+         OR ($2 <> '' AND regexp_replace(COALESCE(cpf_cnpj,''), '\\D','','g') = $2)
+      ORDER BY id DESC LIMIT 1
+    `, [c.login_pppoe, c.cpf_cnpj]);
+
+    let r;
+    if (existente.rows[0]) {
+      r = await pool.query(`
+        UPDATE clientes SET
+          login_pppoe=$1,nome=$2,cpf_cnpj=$3,telefone=$4,plano=$5,servidor=$6,profile=$7,
+          dados=COALESCE(dados,'{}'::jsonb) || $8::jsonb,
+          atualizado_em=NOW()
+        WHERE id=$9 RETURNING *
+      `, [c.login_pppoe,c.nome,c.cpf_cnpj,c.telefone,c.plano,c.servidor,c.profile,JSON.stringify(body),existente.rows[0].id]);
+    } else {
+      r = await pool.query(`
+        INSERT INTO clientes (login_pppoe,nome,cpf_cnpj,telefone,plano,servidor,profile,dados,atualizado_em)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW()) RETURNING *
+      `, [c.login_pppoe,c.nome,c.cpf_cnpj,c.telefone,c.plano,c.servidor,c.profile,JSON.stringify(body)]);
+    }
+    return res.json({ok:true, cliente:fbClienteRowToObj(r.rows[0]), mensagem:"Cliente salvo no Supabase."});
+  } catch(err) {
+    console.error("Erro /api/clientes/salvar:", err);
+    return res.status(500).json({ok:false, erro:err.message});
+  }
+});
+
+app.get("/api/clientes", async (req, res) => {
+  try {
+    await fbEnsureClienteBoletoTables();
+    const r = await pool.query("SELECT * FROM clientes ORDER BY id DESC LIMIT 5000");
+    return res.json({ok:true, total:r.rows.length, clientes:r.rows.map(fbClienteRowToObj)});
+  } catch(err) {
+    console.error("Erro /api/clientes:", err);
+    return res.status(500).json({ok:false, erro:err.message});
+  }
+});
+
+app.get("/api/boletos/cliente", async (req, res) => {
+  try {
+    await fbEnsureClienteBoletoTables();
+    const login = String(req.query.login || req.query.loginPppoe || "").trim();
+    const cpf = fbOnlyDigits(req.query.cpf || req.query.cpfCnpj || req.query.documento || "");
+    const nome = String(req.query.nome || "").trim().toLowerCase();
+
+    const r = await pool.query(`
+      SELECT * FROM boletos
+      WHERE
+        ($1 <> '' AND cliente_login = $1)
+        OR ($2 <> '' AND regexp_replace(COALESCE(cpf_cnpj,''), '\\D','','g') = $2)
+        OR ($3 <> '' AND lower(COALESCE(cliente_nome,'')) = $3)
+        OR (
+          dados IS NOT NULL AND (
+            ($1 <> '' AND (dados->>'login' = $1 OR dados->>'loginPppoe' = $1 OR dados->>'clienteLogin' = $1))
+            OR ($2 <> '' AND regexp_replace(COALESCE(dados->>'cpfCnpj', dados->>'cpf', dados->>'documento', ''), '\\D','','g') = $2)
+          )
+        )
+      ORDER BY vencimento ASC NULLS LAST, id DESC
+    `, [login, cpf, nome]);
+
+    return res.json({ok:true, total:r.rows.length, boletos:r.rows.map(fbBoletoRowToObj)});
+  } catch(err) {
+    console.error("Erro /api/boletos/cliente:", err);
+    return res.status(500).json({ok:false, erro:err.message});
+  }
+});
+
+app.get("/api/boletos", async (req, res) => {
+  try {
+    await fbEnsureClienteBoletoTables();
+    const r = await pool.query("SELECT * FROM boletos ORDER BY vencimento DESC NULLS LAST, id DESC LIMIT 5000");
+    return res.json({ok:true, total:r.rows.length, boletos:r.rows.map(fbBoletoRowToObj)});
+  } catch(err) {
+    console.error("Erro /api/boletos:", err);
+    return res.status(500).json({ok:false, erro:err.message});
+  }
+});
+
 io.on("connection",(socket)=>{
   socket.emit("hub-update", geral());
   socket.emit("mikrotik-update", geral());

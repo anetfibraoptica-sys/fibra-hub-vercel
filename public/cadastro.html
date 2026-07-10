@@ -3565,4 +3565,119 @@ document.addEventListener("DOMContentLoaded", function(){
   };
 })();
 </script>
+
+<script>
+/* SUPABASE PAINEL DEFINITIVO - CLIENTES E BOLETOS */
+(function(){
+  function norm(v){ return String(v || "").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim(); }
+  function val(id){
+    const el = document.getElementById(id) || document.querySelector(`[name="${id}"]`);
+    return el ? String(el.value || "").trim() : "";
+  }
+  function clienteAtualSeguro(){
+    let c = {};
+    try{ if(typeof clienteDoCadastro === "function") c = clienteDoCadastro() || {}; }catch(e){}
+    document.querySelectorAll("input,select,textarea").forEach(el => {
+      const id = el.id || el.name;
+      if(id && String(el.value || "").trim() !== "") c[id] = el.value;
+    });
+    c.loginPppoe = c.loginPppoe || c.login_pppoe || c.login || c.usuario || c.pppoe || val("loginPppoe") || val("login") || val("usuario");
+    c.login = c.login || c.loginPppoe;
+    c.nome = c.nome || c.cliente || c.nomeCliente || c.razaoSocial || val("nome") || val("nomeCliente");
+    c.cpfCnpj = c.cpfCnpj || c.cpf_cnpj || c.cpf || c.cnpj || c.documento || val("cpfCnpj") || val("cpf") || val("cnpj");
+    c.telefone1 = c.telefone1 || c.telefone || c.celular || val("telefone1") || val("telefone") || val("celular");
+    c.servidor = c.servidor || c.popServidor || c.pop || val("servidor") || val("popServidor");
+    c.profile = c.profile || c.perfil || c.planoVelocidade || c.plano || val("profile") || val("perfil") || val("plano");
+    return c;
+  }
+  window.fibraClienteAtualSeguro = clienteAtualSeguro;
+
+  async function salvarClienteSupabase(){
+    const c = clienteAtualSeguro();
+    if(!(c.loginPppoe || c.login || c.cpfCnpj || c.cpf || c.nome)){
+      alert("Cliente sem dados suficientes para salvar.");
+      return null;
+    }
+    const resp = await fetch("/api/clientes/salvar", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify(c)
+    });
+    const json = await resp.json();
+    if(!resp.ok || !json.ok) throw new Error(json.erro || "Erro ao salvar cliente.");
+    console.log("Cliente salvo no Supabase:", json.cliente);
+    return json.cliente;
+  }
+  window.fibraSalvarClienteAtualSupabase = salvarClienteSupabase;
+
+  async function carregarClientesSupabase(){
+    const resp = await fetch("/api/clientes", {cache:"no-store"});
+    const json = await resp.json();
+    if(!resp.ok || !json.ok) throw new Error(json.erro || "Erro ao carregar clientes.");
+    window.__fibraClientesSupabase = json.clientes || [];
+    ["clientes","clientesReceitaNet","fibra_clientes","clientes_importados"].forEach(k => {
+      try{ localStorage.setItem(k, JSON.stringify(window.__fibraClientesSupabase)); }catch(e){}
+    });
+    if(typeof renderClientes === "function") renderClientes(window.__fibraClientesSupabase);
+    if(typeof renderizarClientes === "function") renderizarClientes(window.__fibraClientesSupabase);
+    if(typeof atualizarTabelaClientes === "function") atualizarTabelaClientes(window.__fibraClientesSupabase);
+    return window.__fibraClientesSupabase;
+  }
+  window.fibraCarregarClientesSupabase = carregarClientesSupabase;
+
+  function identCliente(){
+    const c = clienteAtualSeguro();
+    return {
+      login: c.loginPppoe || c.login || c.usuario || "",
+      cpf: c.cpfCnpj || c.cpf || c.cnpj || c.documento || "",
+      nome: c.nome || c.cliente || c.nomeCliente || ""
+    };
+  }
+  async function carregarBoletosClienteSupabase(){
+    const i = identCliente();
+    const params = new URLSearchParams({login:i.login || "", cpf:i.cpf || "", nome:i.nome || ""});
+    const resp = await fetch("/api/boletos/cliente?" + params.toString(), {cache:"no-store"});
+    const json = await resp.json();
+    if(!resp.ok || !json.ok) throw new Error(json.erro || "Erro ao carregar boletos.");
+    window.__fibraBoletosClienteSupabase = json.boletos || [];
+    return window.__fibraBoletosClienteSupabase;
+  }
+  window.fibraCarregarBoletosClienteSupabase = carregarBoletosClienteSupabase;
+  window.fibraGetBoletosStorage = function(){ return window.__fibraBoletosClienteSupabase || []; };
+  window.fibraSalvarBoletosStorage = function(lista){ window.__fibraBoletosClienteSupabase = Array.isArray(lista) ? lista : []; };
+  window.fibraBoletosClienteAtual = function(){ return window.__fibraBoletosClienteSupabase || []; };
+  window.fibraRecarregarBoletosAposEfi = async function(){
+    await carregarBoletosClienteSupabase();
+    if(typeof renderizarBoletosCliente === "function") renderizarBoletosCliente();
+  };
+
+  const oldAbrir = window.abrirModalBoletosCliente;
+  window.abrirModalBoletosCliente = async function(){
+    const modal = document.getElementById("modalBoletosCliente");
+    if(modal){ modal.classList.add("aberto"); modal.setAttribute("aria-hidden","false"); }
+    const tbody = document.getElementById("tbodyBoletosCliente");
+    if(tbody) tbody.innerHTML = '<tr><td colspan="6">Carregando boletos do Supabase...</td></tr>';
+    try{ await window.fibraRecarregarBoletosAposEfi(); }
+    catch(e){ if(tbody) tbody.innerHTML = '<tr><td colspan="6">Erro ao carregar boletos: '+e.message+'</td></tr>'; }
+  };
+
+  document.addEventListener("click", function(e){
+    const el = e.target.closest("button,a,input[type=button],input[type=submit]");
+    if(!el) return;
+    const txt = norm(el.textContent || el.value || "");
+    if(txt.includes("gravar") || txt.includes("salvar") || txt.includes("cadastrar")){
+      setTimeout(() => salvarClienteSupabase()
+        .then(() => carregarClientesSupabase().catch(()=>{}))
+        .catch(err => alert("Erro ao salvar cliente no Supabase: " + err.message)), 250);
+    }
+  }, true);
+
+  if(location.pathname.toLowerCase().includes("clientes")){
+    document.addEventListener("DOMContentLoaded", () => {
+      setTimeout(() => carregarClientesSupabase().catch(e => console.warn(e.message)), 600);
+    });
+  }
+})();
+</script>
+
 </body></html>
