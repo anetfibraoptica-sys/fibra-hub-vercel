@@ -1,7 +1,7 @@
 # Fibra+ Hub
 
 ## Correção atual
-- Boletos do cliente carregam somente do Supabase.
-- localStorage não é mais fonte persistente dos boletos.
-- Ao gerar boleto Efí, a lista é recarregada direto do Supabase.
-- Cliente salvo no cadastro é enviado para `/api/clientes/salvar`.
+- O botão Boletos do Cadastro agora abre a lista.
+- A lista do cliente consulta exclusivamente `/api/boletos/cliente` no Supabase.
+- Implementações antigas de localStorage são substituídas pelo último bloco carregado.
+- Os boletos Efí já gerados passam a aparecer com charge ID, linha digitável e PDF.
