@@ -1479,7 +1479,7 @@ function abrirDetalhesBoleto(numero){
       <p><b>Emissão</b><span>${b.emissao || "--"}</span></p>
       <p><b>Vencimento</b><span>${b.vencimento || "--"}</span></p>
       <p><b>Status</b><span>${fibraStatusBoleto(b)}</span></p>
-      <p><b>Situação na Efí</b><span>${b.efiStatus || "Aguardando integração"}</span></p>
+      <p></p>
       <p><b>Linha Digitável</b><span>${b.linhaDigitavel || "--"}</span></p>
       <p><b>Pix Copia e Cola</b><span>${b.pix || b.codigoPix || "--"}</span></p>
       <p><b>Observação</b><span>${b.observacao || "--"}</span></p>
@@ -1764,7 +1764,7 @@ function abrirDetalhesBoleto(numero){
       <p><b>Emissão</b><span>${b.emissao || "--"}</span></p>
       <p><b>Vencimento</b><span>${b.vencimento || "--"}</span></p>
       <p><b>Status</b><span>${fibraStatusBoleto(b)}</span></p>
-      <p><b>Situação na Efí</b><span>${b.efiStatus || "Aguardando integração"}</span></p>
+      <p></p>
       <p><b>Linha Digitável</b><span>${b.linhaDigitavel || "--"}</span></p>
       <p><b>Pix Copia e Cola</b><span>${b.pix || b.codigoPix || "--"}</span></p>
       <p><b>Observação</b><span>${b.observacao || "--"}</span></p>
@@ -4017,18 +4017,6 @@ document.addEventListener("DOMContentLoaded", function(){
   };
 
 })();
-</script>
-
-
-<script>
-document.addEventListener('DOMContentLoaded',()=>{
-  document.querySelectorAll('*').forEach(el=>{
-    if((el.textContent||'').trim()==='Situação na Efí'){
-      const card=el.closest('.card,.campo,.bloco,div');
-      if(card) card.style.display='none';
-    }
-  });
-});
 </script>
 
 </body></html>
