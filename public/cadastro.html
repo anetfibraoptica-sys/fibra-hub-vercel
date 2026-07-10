@@ -9,6 +9,29 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@300;400;600;700&display=swap" rel="stylesheet">
 
+
+<style>
+#modalBoletosCliente table {
+  width: 100%;
+  table-layout: fixed;
+}
+#modalBoletosCliente th:nth-child(1),
+#modalBoletosCliente td:nth-child(1) { width: 18%; }
+#modalBoletosCliente th:nth-child(2),
+#modalBoletosCliente td:nth-child(2) { width: 24%; }
+#modalBoletosCliente th:nth-child(3),
+#modalBoletosCliente td:nth-child(3) { width: 18%; }
+#modalBoletosCliente th:nth-child(4),
+#modalBoletosCliente td:nth-child(4) { width: 14%; }
+#modalBoletosCliente th:nth-child(5),
+#modalBoletosCliente td:nth-child(5) { width: 26%; }
+#modalBoletosCliente td,
+#modalBoletosCliente th {
+  overflow-wrap: anywhere;
+  vertical-align: middle;
+}
+</style>
+
 </head>
 <body onload="protegerPagina(); iniciarSocket(); carregarCadastroClienteHub();">
 
@@ -876,7 +899,7 @@ function fibraNormalizarStatusClienteCadastro(c){
           </tr>
         </thead>
         <tbody id="tbodyBoletosCliente">
-          <tr><td colspan="6">Nenhum boleto encontrado.</td></tr>
+          <tr><td colspan="5">Nenhum boleto encontrado.</td></tr>
         </tbody>
       </table>
     </div>
@@ -1014,7 +1037,7 @@ let vencidos = 0, aberto = 0, pagos = 0;
   setTxt("boletoResumoPagos", pagos);
 
   if(!boletos.length){
-    tbody.innerHTML = '<tr><td colspan="6">Nenhum boleto encontrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5">Nenhum boleto encontrado.</td></tr>';
     return;
   }
 
@@ -1365,7 +1388,7 @@ function renderizarBoletosCliente(){
   });
   const set=(id,v)=>{const el=document.getElementById(id); if(el) el.textContent=fibraMoedaBR(v)};
   set("boletoResumoVencidos",vencidos); set("boletoResumoAberto",aberto); set("boletoResumoPagos",pagos);
-  if(!boletos.length){tbody.innerHTML='<tr><td colspan="6">Nenhum boleto encontrado.</td></tr>'; return;}
+  if(!boletos.length){tbody.innerHTML='<tr><td colspan="5">Nenhum boleto encontrado.</td></tr>'; return;}
   tbody.innerHTML=boletos.map((b,i)=>{
     const numero=fibraValorCampo(b,["numero","id","nossoNumero","titulo"]) || (i+1);
     const venc=b.vencimento||"--", emissao=b.emissao||"--";
@@ -1653,7 +1676,7 @@ function renderizarBoletosCliente(){
   set("boletoResumoAberto",aberto);
   set("boletoResumoPagos",pagos);
   if(!boletos.length){
-    tbody.innerHTML='<tr><td colspan="6">Nenhum boleto encontrado.</td></tr>';
+    tbody.innerHTML='<tr><td colspan="5">Nenhum boleto encontrado.</td></tr>';
     return;
   }
   tbody.innerHTML=boletos.map((b,i)=>{
@@ -3563,9 +3586,9 @@ document.addEventListener("DOMContentLoaded", function(){
     const modal = document.getElementById("modalBoletosCliente");
     if(modal){ modal.classList.add("aberto"); modal.setAttribute("aria-hidden","false"); }
     const tbody = document.getElementById("tbodyBoletosCliente");
-    if(tbody) tbody.innerHTML='<tr><td colspan="6">Carregando boletos do Supabase...</td></tr>';
+    if(tbody) tbody.innerHTML='<tr><td colspan="5">Carregando boletos do Supabase...</td></tr>';
     try{ await window.fibraRecarregarBoletosAposEfi(); }
-    catch(e){ if(tbody) tbody.innerHTML='<tr><td colspan="6">Erro ao carregar boletos: '+e.message+'</td></tr>'; }
+    catch(e){ if(tbody) tbody.innerHTML='<tr><td colspan="5">Erro ao carregar boletos: '+e.message+'</td></tr>'; }
   };
 
   document.addEventListener("click", function(e){
@@ -3817,17 +3840,14 @@ document.addEventListener("DOMContentLoaded", function(){
     setResumo("boletoResumoPagos", pagos);
 
     if(!lista.length){
-      tbody.innerHTML = '<tr><td colspan="6">Nenhum boleto encontrado para este cliente no Supabase.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="5">Nenhum boleto encontrado para este cliente no Supabase.</td></tr>';
       return;
     }
 
     tbody.innerHTML = lista.map(b => {
       const numeroBoleto = texto(b.numero || b.id || b.efiChargeId);
       const st = statusBoleto(b);
-      let efi = texto(b.efiStatus || (b.efiChargeId ? "Aguardando pagamento" : ""));
-      if(b.efiChargeId && efi.toLowerCase().includes("boleto não localizado")){
-        efi = "Aguardando pagamento";
-      }
+
       const valor = numero(b.total || b.valor);
 
       return `<tr>
@@ -3836,12 +3856,11 @@ document.addEventListener("DOMContentLoaded", function(){
           ${b.efiChargeId ? `<br><small>Efí: ${texto(b.efiChargeId)}</small>` : ""}
         </td>
         <td>
-          <b>Vencimento:</b> ${dataBR(b.vencimento)}<br>
-          <b>Emissão:</b> ${dataBR(b.emissao)}
+          <b>Vencimento:</b> ${dataBR(b.vencimento || b.dataVencimento || b.due_date || b.dueDate)}<br>
+          <b>Emissão:</b> ${dataBR(b.emissao || b.dataEmissao || b.created_at)}
         </td>
         <td>
-          <b>Valor:</b> ${moeda(b.valor)}<br>
-          ${efi ? `<small>${efi}</small>` : ""}
+          <b>Valor:</b> ${moeda(b.valor)}
         </td>
         <td><strong>${moeda(valor)}</strong></td>
         <td><span class="boleto-status ${st}">${st.charAt(0).toUpperCase()+st.slice(1)}</span></td>
@@ -3866,7 +3885,7 @@ document.addEventListener("DOMContentLoaded", function(){
     }
 
     if(tbody){
-      tbody.innerHTML = '<tr><td colspan="6">Carregando boletos do Supabase...</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="5">Carregando boletos do Supabase...</td></tr>';
     }
 
     try{
@@ -3875,7 +3894,7 @@ document.addEventListener("DOMContentLoaded", function(){
     }catch(e){
       boletosSupabaseCliente = [];
       if(tbody){
-        tbody.innerHTML = `<tr><td colspan="6">Erro ao carregar boletos: ${texto(e.message)}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5">Erro ao carregar boletos: ${texto(e.message)}</td></tr>`;
       }
     }
   };
