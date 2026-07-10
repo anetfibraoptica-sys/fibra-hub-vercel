@@ -1506,7 +1506,7 @@ function abrirDetalhesBoleto(numero){
   const b=encontrarBoleto(numero);
   if(!b) return;
   const c=clienteAtualBoletos(), total=fibraTotalBoleto(b), pago=fibraNumero(b.valorPago || 0);
-  const dif=Math.max(total-pago,0);
+  const dif=pago > 0 ? Math.max(total-pago,0) : 0;
   document.getElementById("conteudoDetalhesBoleto").innerHTML = `
     <div class="detalhe-grid">
       <p><b>Cliente</b><span>${c.nome || b.nome || "--"}</span></p>
@@ -1519,7 +1519,6 @@ function abrirDetalhesBoleto(numero){
       <p><b>Emissão</b><span>${fibraDataBR(b.emissao || b.dataEmissao || b.created_at || b.criado_em)}</span></p>
       <p><b>Vencimento</b><span>${fibraDataBR(b.vencimento || b.dataVencimento || b.expire_at || b.expireAt || b.due_date || b.dueDate)}</span></p>
       <p><b>Status</b><span>${fibraStatusBoleto(b)}</span></p>
-      <p></p>
       <p><b>Linha Digitável</b><span>${b.linhaDigitavel || "--"}</span></p>
       <p><b>Pix Copia e Cola</b><span>${b.pix || b.codigoPix || "--"}</span></p>
       <p><b>Observação</b><span>${b.observacao || "--"}</span></p>
@@ -1791,7 +1790,7 @@ function abrirDetalhesBoleto(numero){
   const b=encontrarBoleto(numero);
   if(!b) return;
   const c=clienteAtualBoletos(), total=fibraTotalBoleto(b), pago=fibraNumero(b.valorPago || 0);
-  const dif=Math.max(total-pago,0);
+  const dif=pago > 0 ? Math.max(total-pago,0) : 0;
   document.getElementById("conteudoDetalhesBoleto").innerHTML = `
     <div class="detalhe-grid">
       <p><b>Cliente</b><span>${c.nome || b.nome || "--"}</span></p>
@@ -1804,7 +1803,6 @@ function abrirDetalhesBoleto(numero){
       <p><b>Emissão</b><span>${fibraDataBR(b.emissao || b.dataEmissao || b.created_at || b.criado_em)}</span></p>
       <p><b>Vencimento</b><span>${fibraDataBR(b.vencimento || b.dataVencimento || b.expire_at || b.expireAt || b.due_date || b.dueDate)}</span></p>
       <p><b>Status</b><span>${fibraStatusBoleto(b)}</span></p>
-      <p></p>
       <p><b>Linha Digitável</b><span>${b.linhaDigitavel || "--"}</span></p>
       <p><b>Pix Copia e Cola</b><span>${b.pix || b.codigoPix || "--"}</span></p>
       <p><b>Observação</b><span>${b.observacao || "--"}</span></p>
