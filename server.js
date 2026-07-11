@@ -4580,6 +4580,117 @@ app.get("/api/debug/cliente-salvo", async (req, res) => {
   }
 });
 
+
+
+app.post("/api/clientes/importar", async (req, res) => {
+  const client = await pool.connect();
+
+  try {
+    const clientes = Array.isArray(req.body?.clientes) ? req.body.clientes : [];
+    if (!clientes.length) {
+      return res.status(400).json({ok:false, erro:"Nenhum cliente recebido para importação."});
+    }
+
+    await fbEnsureTables();
+    await client.query("BEGIN");
+
+    let novos = 0;
+    let atualizados = 0;
+    const erros = [];
+
+    for (let i = 0; i < clientes.length; i++) {
+      const body = {
+        ...(clientes[i] || {}),
+        origem: "ReceitaNet CSV"
+      };
+
+      try {
+        const c = fbClienteFromAny(body);
+
+        if (!c.login_pppoe && !c.cpf_cnpj && !c.nome) {
+          erros.push({linha:i + 1, erro:"Cliente sem login, CPF/CNPJ ou nome."});
+          continue;
+        }
+
+        const existente = await client.query(`
+          SELECT id
+          FROM clientes
+          WHERE
+            ($1 <> '' AND login_pppoe=$1)
+            OR ($2 <> '' AND regexp_replace(COALESCE(cpf_cnpj,''),'\\D','','g')=$2)
+          ORDER BY atualizado_em DESC NULLS LAST, criado_em DESC NULLS LAST
+          LIMIT 1
+        `, [c.login_pppoe, c.cpf_cnpj]);
+
+        if (existente.rows[0]) {
+          await client.query(`
+            UPDATE clientes SET
+              login_pppoe=$1,
+              nome=$2,
+              cpf_cnpj=$3,
+              telefone=$4,
+              plano=$5,
+              servidor=$6,
+              profile=$7,
+              dados=COALESCE(dados,'{}'::jsonb) || $8::jsonb,
+              atualizado_em=NOW()
+            WHERE id=$9
+          `, [
+            c.login_pppoe,
+            c.nome,
+            c.cpf_cnpj,
+            c.telefone,
+            c.plano,
+            c.servidor,
+            c.profile,
+            JSON.stringify(body),
+            existente.rows[0].id
+          ]);
+          atualizados++;
+        } else {
+          await client.query(`
+            INSERT INTO clientes
+              (login_pppoe,nome,cpf_cnpj,telefone,plano,servidor,profile,dados,atualizado_em,criado_em)
+            VALUES
+              ($1,$2,$3,$4,$5,$6,$7,$8,NOW(),NOW())
+          `, [
+            c.login_pppoe,
+            c.nome,
+            c.cpf_cnpj,
+            c.telefone,
+            c.plano,
+            c.servidor,
+            c.profile,
+            JSON.stringify(body)
+          ]);
+          novos++;
+        }
+      } catch (erroLinha) {
+        erros.push({linha:i + 1, erro:erroLinha.message});
+      }
+    }
+
+    await client.query("COMMIT");
+
+    const totalBanco = await pool.query("SELECT COUNT(*)::int AS total FROM clientes");
+
+    return res.json({
+      ok:true,
+      recebidos:clientes.length,
+      novos,
+      atualizados,
+      erros,
+      totalBanco:totalBanco.rows[0].total
+    });
+  } catch (err) {
+    try { await client.query("ROLLBACK"); } catch (e) {}
+    console.error("Erro /api/clientes/importar:", err);
+    return res.status(500).json({ok:false, erro:err.message});
+  } finally {
+    client.release();
+  }
+});
+
 io.on("connection",(socket)=>{
   socket.emit("hub-update", geral());
   socket.emit("mikrotik-update", geral());
