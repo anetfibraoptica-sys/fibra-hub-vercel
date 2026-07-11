@@ -294,7 +294,10 @@
       const login = primeiro(c, ["loginPppoe","login","usuario","user"]);
       const nome = primeiro(c, ["nome","cliente","razaoSocial"]) || login || "--";
 
-      return `<tr class="linha-clicavel" data-chave="${encodeURIComponent(chave)}">
+      return `<tr class="linha-clicavel"
+        data-cliente-id="${encodeURIComponent(chave)}"
+        data-href="cadastro.html?cliente=${encodeURIComponent(chave)}"
+        style="cursor:pointer">
         <td class="status-col">${statusIcone(c)}</td>
         <td class="login-col">${login || "--"}</td>
         <td class="nome-col">${nome}</td>
@@ -376,5 +379,22 @@
   window.addEventListener("pageshow", carregar);
 })();
 </script>
+
+<script>
+/* ABRIR CLIENTE — FLUXO ÚNICO */
+(function(){
+  document.addEventListener("click", function(evento){
+    const linha = evento.target.closest("tr[data-href]");
+    if(!linha) return;
+
+    evento.preventDefault();
+    evento.stopPropagation();
+
+    const destino = linha.getAttribute("data-href");
+    if(destino) window.location.assign(destino);
+  });
+})();
+</script>
+
 </body>
 </html>

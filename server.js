@@ -4567,43 +4567,6 @@ app.get("/api/automacao/status", async (req, res) => {
 
 
 
-app.get("/api/clientes/buscar", async (req, res) => {
-  try {
-    await fbEnsureTables();
-    const chave = String(req.query.chave || req.query.login || req.query.cpf || req.query.id || "").trim();
-    if (!chave) return res.status(400).json({ok:false, erro:"Chave do cliente não informada."});
-
-    const somenteDigitos = chave.replace(/\D/g, "");
-    const r = await pool.query(`
-      SELECT *
-      FROM clientes
-      WHERE
-        id::text=$1
-        OR login_pppoe=$1
-        OR lower(COALESCE(nome,''))=lower($1)
-        OR ($2 <> '' AND regexp_replace(COALESCE(cpf_cnpj,''),'\\D','','g')=$2)
-        OR dados->>'login'=$1
-        OR dados->>'loginPppoe'=$1
-        OR lower(COALESCE(dados->>'nome',''))=lower($1)
-      ORDER BY atualizado_em DESC NULLS LAST, criado_em DESC NULLS LAST
-      LIMIT 1
-    `, [chave, somenteDigitos]);
-
-    if (!r.rows[0]) return res.status(404).json({ok:false, erro:"Cliente não encontrado."});
-    return res.json({
-      ok:true,
-      criado:resultadoSupabase?.criado ?? false,
-      atualizado:resultadoSupabase?.atualizado ?? false,
-      conflitoPor:resultadoSupabase?.conflitoPor || "",
-      clienteSupabase:resultadoSupabase?.cliente || null, cliente:fbClienteRow(r.rows[0])});
-  } catch (err) {
-    console.error("Erro /api/clientes/buscar:", err);
-    return res.status(500).json({ok:false, erro:err.message});
-  }
-});
-
-
-
 app.get("/api/debug/cliente-salvo", async (req, res) => {
   try {
     await fbEnsureTables();
@@ -4734,6 +4697,52 @@ app.post("/api/clientes/importar", async (req, res) => {
     return res.status(500).json({ok:false, erro:err.message});
   } finally {
     client.release();
+  }
+});
+
+
+
+app.get("/api/clientes/buscar", async (req, res) => {
+  try {
+    await fbEnsureTables();
+
+    const chave = String(
+      req.query.chave ||
+      req.query.id ||
+      req.query.login ||
+      req.query.cpf ||
+      ""
+    ).trim();
+
+    if (!chave) {
+      return res.status(400).json({ok:false, erro:"Chave do cliente não informada."});
+    }
+
+    const digitos = chave.replace(/\D/g, "");
+
+    const r = await pool.query(`
+      SELECT *
+      FROM clientes
+      WHERE
+        id::text=$1
+        OR login_pppoe=$1
+        OR lower(COALESCE(nome,''))=lower($1)
+        OR ($2 <> '' AND regexp_replace(COALESCE(cpf_cnpj,''),'\\D','','g')=$2)
+        OR dados->>'login'=$1
+        OR dados->>'loginPppoe'=$1
+        OR lower(COALESCE(dados->>'nome',''))=lower($1)
+      ORDER BY atualizado_em DESC NULLS LAST, criado_em DESC NULLS LAST
+      LIMIT 1
+    `, [chave, digitos]);
+
+    if (!r.rows[0]) {
+      return res.status(404).json({ok:false, erro:"Cliente não encontrado no Supabase."});
+    }
+
+    return res.json({ok:true, cliente:fbClienteRow(r.rows[0])});
+  } catch (err) {
+    console.error("Erro /api/clientes/buscar:", err);
+    return res.status(500).json({ok:false, erro:err.message});
   }
 });
 
