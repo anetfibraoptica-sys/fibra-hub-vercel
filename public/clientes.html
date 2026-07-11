@@ -663,71 +663,124 @@ document.addEventListener("fibra:supabase-sync", function(){
 </script>
 
 <script>
-/* CONTADORES CLIENTES SUPABASE - IDS REAIS */
+/* CLIENTES E CONTADORES — SOMENTE SUPABASE */
 (function(){
-  async function carregarClientesEContadores(){
-    try{
-      const resp = await fetch("/api/clientes", {cache:"no-store"});
-      const json = await resp.json();
+  let carregando = null;
 
-      if(!resp.ok || !json.ok){
-        throw new Error(json.erro || "Erro ao carregar clientes.");
-      }
+  async function buscarClientesSupabase(){
+    const resp = await fetch("/api/clientes?_=" + Date.now(), {
+      cache:"no-store",
+      headers:{"Accept":"application/json"}
+    });
+    const json = await resp.json();
 
-      const lista = Array.isArray(json.clientes) ? json.clientes : [];
-
-      window.__fibraClientesSupabase = lista;
-      window.__clientesReceitaNet = lista;
-
-      // Usa a função original da própria página, que já conhece
-      // os status ativo, bloqueado, cancelado e isento.
-      if(typeof atualizarContadores === "function"){
-        atualizarContadores(lista);
-      }else{
-        const total = lista.length;
-        const bloqueados = lista.filter(c => {
-          const status = String(
-            c.status || c.situacao || c.statusCobranca || ""
-          ).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
-
-          return status.includes("bloque") ||
-            Boolean(c.dataBloqueio || c.data_bloqueio);
-        }).length;
-
-        const ativos = Math.max(0, total - bloqueados);
-
-        const set = (id, valor) => {
-          const el = document.getElementById(id);
-          if(el) el.textContent = String(valor);
-        };
-
-        set("qtdTotal", total);
-        set("qtdBloqueados", bloqueados);
-        set("qtdAtivos", ativos);
-      }
-
-      // Mantém a tabela sincronizada com a mesma lista.
-      if(typeof renderizarClientesReceitaNet === "function"){
-        renderizarClientesReceitaNet(lista);
-      }
-
-      if(typeof mostrarStatusImportacao === "function"){
-        mostrarStatusImportacao(lista);
-      }
-    }catch(e){
-      console.warn("Erro ao carregar clientes e contadores:", e.message);
+    if(!resp.ok || !json.ok){
+      throw new Error(json.erro || "Erro ao carregar clientes.");
     }
+
+    return Array.isArray(json.clientes) ? json.clientes : [];
   }
 
-  document.addEventListener("DOMContentLoaded", function(){
-    setTimeout(carregarClientesEContadores, 100);
-  });
+  function atualizarNumeros(lista){
+    const clientes = Array.isArray(lista) ? lista : [];
+    const total = clientes.length;
 
-  window.addEventListener("pageshow", function(){
-    setTimeout(carregarClientesEContadores, 100);
-  });
+    const normalizar = v => String(v || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g,"")
+      .trim()
+      .toLowerCase();
 
-  window.fibraRecarregarClientesEContadores = carregarClientesEContadores;
+    const temData = v => {
+      const s = String(v || "").trim();
+      return Boolean(s && s !== "0000-00-00");
+    };
+
+    const cancelados = clientes.filter(c => {
+      const s = normalizar(c.status || c.situacao || c.statusCobranca);
+      return s.includes("cancel") ||
+        s.includes("encerrado") ||
+        temData(c.dataCancelamento || c.data_cancelamento);
+    }).length;
+
+    const isentos = clientes.filter(c => {
+      const s = normalizar(
+        c.status || c.situacao || c.statusCobranca ||
+        c.tipoCobranca || c.cobranca
+      );
+      return s.includes("isento") ||
+        s === "n" ||
+        s === "nao cobrar";
+    }).length;
+
+    const bloqueados = clientes.filter(c => {
+      const s = normalizar(c.status || c.situacao || c.statusCobranca);
+      const profile = normalizar(c.profile || c.perfil);
+      return !s.includes("cancel") &&
+        !s.includes("isento") &&
+        (
+          s.includes("bloque") ||
+          s.includes("suspens") ||
+          profile === "bloqueado" ||
+          temData(c.dataBloqueio || c.data_bloqueio)
+        );
+    }).length;
+
+    const ativos = Math.max(0, total - cancelados - isentos - bloqueados);
+
+    const set = (id, valor) => {
+      const el = document.getElementById(id);
+      if(el) el.textContent = String(valor);
+    };
+
+    set("qtdTotal", total);
+    set("qtdAtivos", ativos);
+    set("qtdBloqueados", bloqueados);
+    set("qtdCancelados", cancelados);
+    set("qtdIsentos", isentos);
+
+    return {total, ativos, bloqueados, cancelados, isentos};
+  }
+
+  async function carregarTudo(){
+    if(carregando) return carregando;
+
+    carregando = (async () => {
+      try{
+        const lista = await buscarClientesSupabase();
+
+        window.__fibraClientesSupabase = lista;
+        window.__clientesReceitaNet = lista;
+
+        atualizarNumeros(lista);
+
+        if(typeof renderizarClientesReceitaNet === "function"){
+          renderizarClientesReceitaNet(lista);
+        }
+
+        if(typeof mostrarStatusImportacao === "function"){
+          mostrarStatusImportacao(lista);
+        }
+
+        return lista;
+      }catch(e){
+        console.warn("Erro ao carregar clientes do Supabase:", e.message);
+        return [];
+      }finally{
+        carregando = null;
+      }
+    })();
+
+    return carregando;
+  }
+
+  // Substitui definitivamente a função antiga usada pelo onload,
+  // filtros e botões da página.
+  window.carregarClientesReceitaNet = carregarTudo;
+  window.fibraRecarregarClientesEContadores = carregarTudo;
+
+  document.addEventListener("DOMContentLoaded", carregarTudo);
+  window.addEventListener("pageshow", carregarTudo);
 })();
 </script>
 
