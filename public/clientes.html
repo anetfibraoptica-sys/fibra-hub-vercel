@@ -662,5 +662,110 @@ document.addEventListener("fibra:supabase-sync", function(){
 })();
 </script>
 
+
+<script>
+/* CONTADORES CLIENTES SUPABASE */
+(function(){
+  function normalizar(v){
+    return String(v || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g,"")
+      .trim()
+      .toLowerCase();
+  }
+
+  function bloqueado(c){
+    const status = normalizar(
+      c.status || c.situacao || c.statusCobranca || c.status_cobranca
+    );
+    const profile = normalizar(c.profile || c.perfil);
+
+    return status.includes("bloque") ||
+      profile === "bloqueado" ||
+      Boolean(c.dataBloqueio || c.data_bloqueio);
+  }
+
+  function definir(seletores, valor){
+    seletores.forEach(seletor => {
+      document.querySelectorAll(seletor).forEach(el => {
+        el.textContent = String(valor);
+      });
+    });
+  }
+
+  window.fibraAtualizarContadoresClientes = function(lista){
+    const clientes = Array.isArray(lista) ? lista : [];
+    const total = clientes.length;
+    const bloqueados = clientes.filter(bloqueado).length;
+    const ativos = Math.max(0, total - bloqueados);
+
+    definir([
+      "#totalClientes",
+      "#clientesTotal",
+      "#contadorTotalClientes",
+      "#total-clientes",
+      "[data-total-clientes]",
+      "[data-contador='total-clientes']"
+    ], total);
+
+    definir([
+      "#totalBloqueados",
+      "#clientesBloqueados",
+      "#contadorClientesBloqueados",
+      "#bloqueadosTotal",
+      "#total-bloqueados",
+      "[data-clientes-bloqueados]",
+      "[data-contador='clientes-bloqueados']"
+    ], bloqueados);
+
+    definir([
+      "#totalAtivos",
+      "#clientesAtivos",
+      "#contadorClientesAtivos",
+      "#ativosTotal",
+      "#total-ativos",
+      "[data-clientes-ativos]",
+      "[data-contador='clientes-ativos']"
+    ], ativos);
+
+    // Fallback para os cards laterais identificados pelo texto.
+    document.querySelectorAll("div,span,p,h3,h4,strong,b").forEach(rotulo => {
+      const texto = normalizar(rotulo.textContent);
+      const pai = rotulo.parentElement;
+      if(!pai) return;
+
+      let valorEl = pai.querySelector("[data-value],.valor,.numero,.count,.contador,strong,b,span");
+      if(!valorEl || valorEl === rotulo) return;
+
+      if(texto === "total de clientes" || texto === "total clientes"){
+        valorEl.textContent = String(total);
+      }else if(texto === "bloqueados" || texto === "clientes bloqueados"){
+        valorEl.textContent = String(bloqueados);
+      }else if(texto === "ativos" || texto === "clientes ativos"){
+        valorEl.textContent = String(ativos);
+      }
+    });
+
+    return {total, bloqueados, ativos};
+  };
+
+  async function recarregarContadores(){
+    try{
+      const resposta = await fetch("/api/clientes", {cache:"no-store"});
+      const json = await resposta.json();
+      if(!resposta.ok || !json.ok) throw new Error(json.erro || "Erro ao carregar clientes.");
+      const lista = Array.isArray(json.clientes) ? json.clientes : [];
+      window.__fibraClientesSupabase = lista;
+      window.fibraAtualizarContadoresClientes(lista);
+    }catch(e){
+      console.warn("Erro ao atualizar contadores:", e.message);
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", recarregarContadores);
+  window.addEventListener("pageshow", recarregarContadores);
+})();
+</script>
+
 </body>
 </html>

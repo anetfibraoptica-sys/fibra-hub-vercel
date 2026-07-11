@@ -1296,6 +1296,27 @@ app.post("/api/mikrotik/cliente-profile", async (req, res) => {
   try {
     const body = req.body || {};
 
+    // Garantia definitiva: nenhuma alteração no MikroTik ocorre antes
+    // de o cliente estar persistido no Supabase.
+    const clienteSupabase = await fbSalvarClienteSupabaseUnico({
+      ...body,
+      loginPppoe: body.loginPppoe || body.login || "",
+      login: body.login || body.loginPppoe || "",
+      cpfCnpj: body.cpfCnpj || body.cpf || "",
+      telefone1: body.telefone1 || body.telefone || "",
+      servidor: body.servidor || "",
+      popServidor: body.servidor || "",
+      profile: body.profile || "",
+      plano: body.plano || body.profile || "",
+      origem: "Painel Fibra+ Hub"
+    });
+
+    console.log(
+      "Cliente confirmado no Supabase antes do MikroTik:",
+      clienteSupabase.loginPppoe || clienteSupabase.login,
+      clienteSupabase.id
+    );
+
     const servidor = String(body.servidor || "").trim();
     const login = String(body.login || "").trim();
     const loginAnterior = String(body.loginAnterior || body.login_antigo || "").trim();
@@ -3413,44 +3434,92 @@ function fbBoletoRow(row){
   };
 }
 
-app.post("/api/clientes/salvar", async (req,res)=>{
-  try{
-    await fbEnsureTables();
-    const body = req.body || {};
-    const c = fbClienteFromAny(body);
-    if(!c.login_pppoe && !c.cpf_cnpj && !c.nome) return res.status(400).json({ok:false, erro:"Cliente sem login, CPF/CNPJ ou nome."});
 
-    const exists = await pool.query(`
-      SELECT id FROM clientes
-      WHERE ($1<>'' AND login_pppoe=$1)
-         OR ($2<>'' AND regexp_replace(COALESCE(cpf_cnpj,''),'\\D','','g')=$2)
-      ORDER BY id DESC LIMIT 1
-    `,[c.login_pppoe,c.cpf_cnpj]);
+async function fbSalvarClienteSupabaseUnico(body) {
+  await fbEnsureTables();
 
-    let r;
-    if(exists.rows[0]){
-      r = await pool.query(`
-        UPDATE clientes SET login_pppoe=$1,nome=$2,cpf_cnpj=$3,telefone=$4,plano=$5,servidor=$6,profile=$7,
-        dados=COALESCE(dados,'{}'::jsonb)||$8::jsonb, atualizado_em=NOW()
-        WHERE id=$9 RETURNING *
-      `,[c.login_pppoe,c.nome,c.cpf_cnpj,c.telefone,c.plano,c.servidor,c.profile,JSON.stringify(body),exists.rows[0].id]);
-    }else{
-      r = await pool.query(`
-        INSERT INTO clientes (login_pppoe,nome,cpf_cnpj,telefone,plano,servidor,profile,dados,atualizado_em)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW()) RETURNING *
-      `,[c.login_pppoe,c.nome,c.cpf_cnpj,c.telefone,c.plano,c.servidor,c.profile,JSON.stringify(body)]);
-    }
-    res.json({ok:true, mensagem:"Cliente salvo no Supabase.", cliente:fbClienteRow(r.rows[0])});
-  }catch(err){
+  const c = fbClienteFromAny(body || {});
+  if (!c.login_pppoe && !c.cpf_cnpj && !c.nome) {
+    throw new Error("Cliente sem login, CPF/CNPJ ou nome.");
+  }
+
+  const existente = await pool.query(`
+    SELECT id
+    FROM clientes
+    WHERE
+      ($1 <> '' AND login_pppoe=$1)
+      OR ($2 <> '' AND regexp_replace(COALESCE(cpf_cnpj,''),'\\D','','g')=$2)
+    ORDER BY atualizado_em DESC NULLS LAST, criado_em DESC NULLS LAST
+    LIMIT 1
+  `, [c.login_pppoe, c.cpf_cnpj]);
+
+  let r;
+  if (existente.rows[0]) {
+    r = await pool.query(`
+      UPDATE clientes SET
+        login_pppoe=$1,
+        nome=$2,
+        cpf_cnpj=$3,
+        telefone=$4,
+        plano=$5,
+        servidor=$6,
+        profile=$7,
+        dados=COALESCE(dados,'{}'::jsonb) || $8::jsonb,
+        atualizado_em=NOW()
+      WHERE id=$9
+      RETURNING *
+    `, [
+      c.login_pppoe,
+      c.nome,
+      c.cpf_cnpj,
+      c.telefone,
+      c.plano,
+      c.servidor,
+      c.profile,
+      JSON.stringify({...body, origem: body.origem || "Painel Fibra+ Hub"}),
+      existente.rows[0].id
+    ]);
+  } else {
+    r = await pool.query(`
+      INSERT INTO clientes
+        (login_pppoe,nome,cpf_cnpj,telefone,plano,servidor,profile,dados,atualizado_em,criado_em)
+      VALUES
+        ($1,$2,$3,$4,$5,$6,$7,$8,NOW(),NOW())
+      RETURNING *
+    `, [
+      c.login_pppoe,
+      c.nome,
+      c.cpf_cnpj,
+      c.telefone,
+      c.plano,
+      c.servidor,
+      c.profile,
+      JSON.stringify({...body, origem: body.origem || "Painel Fibra+ Hub"})
+    ]);
+  }
+
+  return fbClienteRow(r.rows[0]);
+}
+
+app.post("/api/clientes/salvar", async (req, res) => {
+  try {
+    const cliente = await fbSalvarClienteSupabaseUnico(req.body || {});
+    console.log("Cliente salvo no Supabase:", cliente.loginPppoe || cliente.login, cliente.id);
+    return res.json({
+      ok:true,
+      mensagem:"Cliente salvo no Supabase.",
+      cliente
+    });
+  } catch (err) {
     console.error("Erro /api/clientes/salvar:", err);
-    res.status(500).json({ok:false, erro:err.message});
+    return res.status(500).json({ok:false, erro:err.message});
   }
 });
 
 app.get("/api/clientes", async (req,res)=>{
   try{
     await fbEnsureTables();
-    const r = await pool.query("SELECT * FROM clientes ORDER BY id DESC LIMIT 5000");
+    const r = await pool.query("SELECT * FROM clientes ORDER BY atualizado_em DESC NULLS LAST, criado_em DESC NULLS LAST LIMIT 5000");
     res.json({ok:true,total:r.rows.length,clientes:r.rows.map(fbClienteRow)});
   }catch(err){
     console.error("Erro /api/clientes:", err);

@@ -503,9 +503,9 @@ fibraCadastroLimparStoragesSelecao();
       </div>
 
 <div class="cadastro-save-row">
-        <button class="save-blue" onclick="salvarCadastroCliente(false)">Gravar no Fibra+ Hub</button>
+        <button type="button" id="btnSalvarClienteSupabase" class="save-blue">Gravar no Fibra+ Hub</button>
         <div class="save-servidor-wrap">
-          <button class="save-red" onclick="salvarCadastroCliente(true)">Gravar no Fibra+ Hub + Servidor</button>
+          <button type="button" id="btnSalvarClienteSupabaseMikrotik" class="save-red">Gravar no Fibra+ Hub + Servidor</button>
           <button class="delete-client-btn" onclick="excluirClienteCadastro()">Excluir Cliente</button>
         </div>
         <button class="cancel-btn" onclick="limparCadastroCliente()">Cancelar</button>
@@ -2960,37 +2960,6 @@ document.addEventListener("DOMContentLoaded", function(){
   window.gravarClienteCompletoNoMikrotik = gravarClienteCompletoNoMikrotik;
   window.gravarProfileNoMikrotik = gravarClienteCompletoNoMikrotik;
 
-  const originalSalvar = window.salvarCadastroCliente;
-
-  if(typeof originalSalvar === "function"){
-    window.salvarCadastroCliente = async function(gravarServidor){
-      const r = await originalSalvar.apply(this, arguments);
-
-      if(gravarServidor === true){
-        try{
-          await gravarClienteCompletoNoMikrotik();
-        }catch(e){
-          console.error("Erro ao sincronizar cliente no MikroTik:", e);
-          alert("Erro ao sincronizar cliente no MikroTik: " + e.message);
-        }
-      }
-
-      return r;
-    };
-  }else{
-    document.addEventListener("click", async function(e){
-      const btn = e.target && e.target.closest && e.target.closest(".save-red");
-      if(!btn) return;
-
-      setTimeout(async function(){
-        try{
-          await gravarClienteCompletoNoMikrotik();
-        }catch(err){
-          alert("Erro ao sincronizar cliente no MikroTik: " + err.message);
-        }
-      }, 700);
-    });
-  }
 })();
 </script>
 
@@ -4108,125 +4077,154 @@ document.addEventListener("DOMContentLoaded", function(){
 </script>
 
 <script>
-/* CADASTRO DIRETO NO SUPABASE */
+/* CADASTRO SUPABASE DEFINITIVO */
 (function(){
-  const campo = id => document.getElementById(id);
-  const valor = id => String(campo(id)?.value ?? "").trim();
+  const $ = id => document.getElementById(id);
+  const valor = id => String($(id)?.value ?? "").trim();
 
-  function coletar(){
-    const dados = {};
+  function coletarCadastro(){
+    const d = {};
+
     document.querySelectorAll("[id^='cad']").forEach(el => {
       if(!el.id) return;
-      dados[el.id] = el.type === "checkbox" ? Boolean(el.checked) : String(el.value ?? "").trim();
+      d[el.id] = el.type === "checkbox"
+        ? Boolean(el.checked)
+        : String(el.value ?? "").trim();
     });
 
-    dados.nome = valor("cadNome");
-    dados.cadNome = dados.nome;
-    dados.cpfCnpj = valor("cadCpf");
-    dados.cadCpf = dados.cpfCnpj;
-    dados.loginPppoe = valor("cadLogin");
-    dados.login = dados.loginPppoe;
-    dados.cadLogin = dados.loginPppoe;
-    dados.senha = valor("cadSenha");
-    dados.cadSenha = dados.senha;
-    dados.servidor = valor("cadPop");
-    dados.popServidor = dados.servidor;
-    dados.cadPop = dados.servidor;
-    dados.profile = valor("cadProfile");
-    dados.perfil = dados.profile;
-    dados.plano = valor("cadPlano") || dados.profile;
-    dados.cadProfile = dados.profile;
-    dados.telefone1 = valor("cadTelefone1");
-    dados.telefone2 = valor("cadTelefone2");
-    dados.telefone3 = valor("cadTelefone3");
-    dados.telefone = dados.telefone1 || dados.telefone2 || dados.telefone3 || "";
-    dados.email = valor("cadEmail");
-    dados.cep = valor("cadCep");
-    dados.endereco = valor("cadEndereco");
-    dados.numeroEndereco = valor("cadNumeroContrato") || valor("cadNumero");
-    dados.complemento = valor("cadComplemento");
-    dados.bairro = valor("cadBairro");
-    dados.cidade = valor("cadCidade");
-    dados.uf = valor("cadUf");
-    dados.referencia = valor("cadReferencia");
-    dados.vencimento = valor("cadVencimento");
-    dados.observacoes = valor("cadObservacao");
-    dados.situacao = valor("cadSituacao");
-    dados.statusCobranca = valor("cadStatusCobranca");
-    return dados;
+    d.nome = valor("cadNome");
+    d.cadNome = d.nome;
+    d.cpfCnpj = valor("cadCpf");
+    d.cadCpf = d.cpfCnpj;
+    d.loginPppoe = valor("cadLogin");
+    d.login = d.loginPppoe;
+    d.cadLogin = d.loginPppoe;
+    d.senha = valor("cadSenha");
+    d.cadSenha = d.senha;
+    d.servidor = valor("cadPop") || valor("cadServidorReceita");
+    d.popServidor = d.servidor;
+    d.cadPop = d.servidor;
+    d.profile = valor("cadProfile");
+    d.perfil = d.profile;
+    d.plano = valor("cadPlano") || d.profile;
+    d.cadProfile = d.profile;
+    d.telefone1 = valor("cadTelefone1");
+    d.telefone2 = valor("cadTelefone2");
+    d.telefone3 = valor("cadTelefone3");
+    d.telefone = d.telefone1 || d.telefone2 || d.telefone3 || "";
+    d.email = valor("cadEmail");
+    d.cep = valor("cadCep");
+    d.endereco = valor("cadEndereco");
+    d.numeroEndereco = valor("cadNumeroContrato") || valor("cadNumero");
+    d.complemento = valor("cadComplemento");
+    d.bairro = valor("cadBairro");
+    d.cidade = valor("cadCidade");
+    d.uf = valor("cadUf");
+    d.referencia = valor("cadReferencia");
+    d.vencimento = valor("cadVencimento");
+    d.diaVencimento = valor("cadVencimento");
+    d.observacoes = valor("cadObservacao");
+    d.observacao = d.observacoes;
+    d.situacao = valor("cadSituacao") || "ativo";
+    d.origem = "Painel Fibra+ Hub";
+    return d;
   }
 
-  async function salvarNoSupabase(dados){
-    const resp = await fetch("/api/clientes/salvar", {
+  function validar(d){
+    if(!d.nome) throw new Error("Informe o nome do cliente.");
+    if(!d.loginPppoe) throw new Error("Informe o login PPPoE.");
+    if(!d.servidor) throw new Error("Selecione o servidor/POP.");
+    if(!d.profile) throw new Error("Selecione o profile.");
+  }
+
+  async function postJson(url, dados){
+    const r = await fetch(url, {
       method:"POST",
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify(dados)
     });
-    const json = await resp.json().catch(() => ({}));
-    if(!resp.ok || !json.ok) throw new Error(json.erro || "Falha ao salvar no Supabase.");
-    if(!json.cliente) throw new Error("Supabase não confirmou o cliente salvo.");
-    return json.cliente;
+    const j = await r.json().catch(() => ({}));
+    if(!r.ok || j.ok === false){
+      throw new Error(j.erro || j.mensagem || "Falha na operação.");
+    }
+    return j;
   }
 
-  window.salvarCadastroCliente = async function(gravarServidor){
+  async function executar(comMikrotik, botao){
+    if(botao) botao.disabled = true;
+
     try{
-      const dados = coletar();
-      if(!dados.nome) throw new Error("Informe o nome do cliente.");
-      if(!dados.loginPppoe) throw new Error("Informe o login PPPoE.");
-      if(!dados.servidor) throw new Error("Selecione o servidor/POP.");
-      if(!dados.profile) throw new Error("Selecione o profile.");
+      const dados = coletarCadastro();
+      validar(dados);
 
-      const salvo = await salvarNoSupabase(dados);
-      window.__clienteSupabaseAtual = salvo;
-
-      if(gravarServidor === true){
-        if(typeof gravarClienteCompletoNoMikrotik === "function"){
-          const r = await gravarClienteCompletoNoMikrotik(dados);
-          if(r === false) throw new Error("Cliente salvo no Supabase, mas falhou no MikroTik.");
-        }else{
-          const r = await fetch("/api/mikrotik/cliente-profile", {
-            method:"POST",
-            headers:{"Content-Type":"application/json"},
-            body:JSON.stringify({
-              servidor:dados.servidor,
-              login:dados.loginPppoe,
-              profile:dados.profile,
-              senha:dados.senha,
-              nome:dados.nome
-            })
-          });
-          const j = await r.json().catch(() => ({}));
-          if(!r.ok || j.ok === false) throw new Error(j.erro || "Falha no MikroTik.");
-        }
+      let resposta;
+      if(comMikrotik){
+        resposta = await postJson("/api/mikrotik/cliente-profile", {
+          ...dados,
+          login:dados.loginPppoe,
+          cpf:dados.cpfCnpj,
+          telefone:dados.telefone
+        });
+      }else{
+        resposta = await postJson("/api/clientes/salvar", dados);
       }
 
-      history.replaceState(null, "", "cadastro.html?cliente=" + encodeURIComponent(
-        salvo.id || salvo.loginPppoe || dados.loginPppoe
-      ));
+      const cliente = resposta.cliente || resposta.clienteSupabase || null;
+      const chave =
+        cliente?.id ||
+        cliente?.loginPppoe ||
+        dados.loginPppoe;
 
-      alert(gravarServidor
-        ? "Cliente salvo no Supabase e sincronizado com o MikroTik."
-        : "Cliente salvo no Supabase."
+      history.replaceState(
+        null,
+        "",
+        "cadastro.html?cliente=" + encodeURIComponent(chave)
       );
-      return salvo;
+
+      document.dispatchEvent(new CustomEvent("fibra:cliente-salvo", {
+        detail:{cliente:cliente || null}
+      }));
+
+      alert(
+        comMikrotik
+          ? "Cliente salvo no Supabase e sincronizado com o MikroTik."
+          : "Cliente salvo no Supabase."
+      );
+
+      return true;
     }catch(e){
       alert("Erro ao salvar cliente: " + e.message);
       return false;
+    }finally{
+      if(botao) botao.disabled = false;
     }
-  };
+  }
 
   document.addEventListener("DOMContentLoaded", function(){
-    document.querySelectorAll("button,input[type='button'],input[type='submit']").forEach(btn => {
-      const t = String(btn.textContent || btn.value || "").trim().toLowerCase();
-      if(t.includes("gravar no fibra+ hub + servidor") || t.includes("salvar no fibra+ hub + servidor")){
-        btn.type = "button";
-        btn.onclick = ev => { ev.preventDefault(); salvarCadastroCliente(true); };
-      }else if(t.includes("gravar no fibra+ hub") || t.includes("salvar no fibra+ hub")){
-        btn.type = "button";
-        btn.onclick = ev => { ev.preventDefault(); salvarCadastroCliente(false); };
-      }
-    });
+    const btnBanco = $("btnSalvarClienteSupabase");
+    const btnCompleto = $("btnSalvarClienteSupabaseMikrotik");
+
+    if(btnBanco){
+      btnBanco.addEventListener("click", ev => {
+        ev.preventDefault();
+        executar(false, btnBanco);
+      });
+    }
+
+    if(btnCompleto){
+      btnCompleto.addEventListener("click", ev => {
+        ev.preventDefault();
+        executar(true, btnCompleto);
+      });
+    }
   });
+
+  window.salvarCadastroCliente = function(comMikrotik){
+    const btn = comMikrotik
+      ? $("btnSalvarClienteSupabaseMikrotik")
+      : $("btnSalvarClienteSupabase");
+    return executar(Boolean(comMikrotik), btn);
+  };
 })();
 </script>
 
