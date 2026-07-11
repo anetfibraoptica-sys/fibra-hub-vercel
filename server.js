@@ -1298,7 +1298,7 @@ app.post("/api/mikrotik/cliente-profile", async (req, res) => {
 
     // Garantia definitiva: nenhuma alteração no MikroTik ocorre antes
     // de o cliente estar persistido no Supabase.
-    const clienteSupabase = await fbSalvarClienteSupabaseUnico({
+    const resultadoSupabase = await fbSalvarClienteSupabaseUnico({
       ...body,
       loginPppoe: body.loginPppoe || body.login || "",
       login: body.login || body.loginPppoe || "",
@@ -1311,10 +1311,15 @@ app.post("/api/mikrotik/cliente-profile", async (req, res) => {
       origem: "Painel Fibra+ Hub"
     });
 
+    const clienteSupabase = resultadoSupabase.cliente;
+
     console.log(
-      "Cliente confirmado no Supabase antes do MikroTik:",
+      resultadoSupabase.criado
+        ? "Cliente novo confirmado no Supabase antes do MikroTik:"
+        : "Cliente existente atualizado no Supabase antes do MikroTik:",
       clienteSupabase.loginPppoe || clienteSupabase.login,
-      clienteSupabase.id
+      clienteSupabase.id,
+      resultadoSupabase.conflitoPor || ""
     );
 
     const servidor = String(body.servidor || "").trim();
@@ -3444,11 +3449,20 @@ async function fbSalvarClienteSupabaseUnico(body) {
   }
 
   const existente = await pool.query(`
-    SELECT id
+    SELECT
+      id,
+      login_pppoe,
+      cpf_cnpj,
+      nome,
+      CASE
+        WHEN $1 <> '' AND login_pppoe=$1 THEN 'login'
+        WHEN $2 <> '' AND regexp_replace(COALESCE(cpf_cnpj,''),'\D','','g')=$2 THEN 'cpf'
+        ELSE ''
+      END AS conflito_por
     FROM clientes
     WHERE
       ($1 <> '' AND login_pppoe=$1)
-      OR ($2 <> '' AND regexp_replace(COALESCE(cpf_cnpj,''),'\\D','','g')=$2)
+      OR ($2 <> '' AND regexp_replace(COALESCE(cpf_cnpj,''),'\D','','g')=$2)
     ORDER BY atualizado_em DESC NULLS LAST, criado_em DESC NULLS LAST
     LIMIT 1
   `, [c.login_pppoe, c.cpf_cnpj]);
@@ -3498,16 +3512,43 @@ async function fbSalvarClienteSupabaseUnico(body) {
     ]);
   }
 
-  return fbClienteRow(r.rows[0]);
+  const cliente = fbClienteRow(r.rows[0]);
+
+  return {
+    cliente,
+    criado: !existente.rows[0],
+    atualizado: Boolean(existente.rows[0]),
+    conflitoPor: existente.rows[0]?.conflito_por || "",
+    clienteAnterior: existente.rows[0] ? {
+      id: existente.rows[0].id,
+      loginPppoe: existente.rows[0].login_pppoe || "",
+      cpfCnpj: existente.rows[0].cpf_cnpj || "",
+      nome: existente.rows[0].nome || ""
+    } : null
+  };
 }
 
 app.post("/api/clientes/salvar", async (req, res) => {
   try {
-    const cliente = await fbSalvarClienteSupabaseUnico(req.body || {});
-    console.log("Cliente salvo no Supabase:", cliente.loginPppoe || cliente.login, cliente.id);
+    const resultado = await fbSalvarClienteSupabaseUnico(req.body || {});
+    const cliente = resultado.cliente;
+
+    console.log(
+      resultado.criado ? "Cliente novo criado no Supabase:" : "Cliente existente atualizado no Supabase:",
+      cliente.loginPppoe || cliente.login,
+      cliente.id,
+      resultado.conflitoPor || ""
+    );
+
     return res.json({
       ok:true,
-      mensagem:"Cliente salvo no Supabase.",
+      criado:resultado.criado,
+      atualizado:resultado.atualizado,
+      conflitoPor:resultado.conflitoPor,
+      clienteAnterior:resultado.clienteAnterior,
+      mensagem:resultado.criado
+        ? "Cliente novo criado no Supabase."
+        : "Cliente existente atualizado no Supabase.",
       cliente
     });
   } catch (err) {
@@ -4549,7 +4590,12 @@ app.get("/api/clientes/buscar", async (req, res) => {
     `, [chave, somenteDigitos]);
 
     if (!r.rows[0]) return res.status(404).json({ok:false, erro:"Cliente não encontrado."});
-    return res.json({ok:true, cliente:fbClienteRow(r.rows[0])});
+    return res.json({
+      ok:true,
+      criado:resultadoSupabase?.criado ?? false,
+      atualizado:resultadoSupabase?.atualizado ?? false,
+      conflitoPor:resultadoSupabase?.conflitoPor || "",
+      clienteSupabase:resultadoSupabase?.cliente || null, cliente:fbClienteRow(r.rows[0])});
   } catch (err) {
     console.error("Erro /api/clientes/buscar:", err);
     return res.status(500).json({ok:false, erro:err.message});

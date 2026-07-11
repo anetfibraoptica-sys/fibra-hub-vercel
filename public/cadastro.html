@@ -4175,6 +4175,22 @@ document.addEventListener("DOMContentLoaded", function(){
         cliente?.loginPppoe ||
         dados.loginPppoe;
 
+      let mensagemCadastro = "";
+      if(resposta.criado === true){
+        mensagemCadastro = "Cliente novo criado no Supabase.";
+      }else if(resposta.atualizado === true){
+        const motivo = resposta.conflitoPor === "login"
+          ? "o login PPPoE já existia"
+          : resposta.conflitoPor === "cpf"
+            ? "o CPF/CNPJ já existia"
+            : "já existia um cadastro correspondente";
+
+        mensagemCadastro =
+          "Cliente existente atualizado no Supabase porque " + motivo + ".";
+      }else{
+        mensagemCadastro = "Cliente salvo no Supabase.";
+      }
+
       history.replaceState(
         null,
         "",
@@ -4187,8 +4203,9 @@ document.addEventListener("DOMContentLoaded", function(){
 
       alert(
         comMikrotik
-          ? "Cliente salvo no Supabase e sincronizado com o MikroTik."
-          : "Cliente salvo no Supabase."
+          ? mensagemCadastro + "
+Sincronizado com o MikroTik."
+          : mensagemCadastro
       );
 
       return true;
