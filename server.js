@@ -723,78 +723,6 @@ app.post("/api/clientes", async (req, res) => {
 
 
 
-app.get("/api/clientes/buscar", async (req, res) => {
-  try {
-    await fbEnsureTables();
-
-    const chave = String(
-      req.query.chave ||
-      req.query.id ||
-      req.query.login ||
-      req.query.cpf ||
-      ""
-    ).trim();
-
-    if (!chave) {
-      return res.status(400).json({ok:false, erro:"Chave do cliente não informada."});
-    }
-
-    const digitos = chave.replace(/\D/g, "");
-
-    const r = await pool.query(`
-      SELECT *
-      FROM clientes
-      WHERE
-        id::text=$1
-        OR login_pppoe=$1
-        OR lower(COALESCE(nome,''))=lower($1)
-        OR ($2 <> '' AND regexp_replace(COALESCE(cpf_cnpj,''),'\\D','','g')=$2)
-        OR dados->>'login'=$1
-        OR dados->>'loginPppoe'=$1
-        OR lower(COALESCE(dados->>'nome',''))=lower($1)
-      ORDER BY atualizado_em DESC NULLS LAST, criado_em DESC NULLS LAST
-      LIMIT 1
-    `, [chave, digitos]);
-
-    if (!r.rows[0]) {
-      return res.status(404).json({ok:false, erro:"Cliente não encontrado no Supabase."});
-    }
-
-    return res.json({ok:true, cliente:fbClienteRow(r.rows[0])});
-  } catch (err) {
-    console.error("Erro /api/clientes/buscar:", err);
-    return res.status(500).json({ok:false, erro:err.message});
-  }
-});
-
-
-
-app.get("/api/cliente-edicao/:id([0-9a-fA-F-]{36})", async (req, res) => {
-  try {
-    await fbEnsureTables();
-
-    const r = await pool.query(
-      "SELECT * FROM clientes WHERE id=$1 LIMIT 1",
-      [req.params.id]
-    );
-
-    if (!r.rows[0]) {
-      return res.status(404).json({
-        ok:false,
-        erro:"Cliente não encontrado no Supabase."
-      });
-    }
-
-    return res.json({
-      ok:true,
-      cliente:fbClienteRow(r.rows[0])
-    });
-  } catch (err) {
-    console.error("Erro /api/cliente-edicao/:id:", err);
-    return res.status(500).json({ok:false, erro:err.message});
-  }
-});
-
 app.get("/api/clientes/:id/acesso-remoto", async (req, res) => {
   try {
     const r = await pool.query("SELECT * FROM clientes WHERE id=$1", [req.params.id]);
@@ -975,7 +903,7 @@ async function consultarIpPPPoECliente(cliente) {
   };
 }
 
-app.get("/api/clientes/:id([0-9a-fA-F-]{36})", async (req, res) => {
+app.get("/api/clientes/:id", async (req, res) => {
   try {
     const result = await pool.query("SELECT * FROM clientes WHERE id=$1", [req.params.id]);
     if (!result.rows.length) return res.status(404).json({ ok: false, erro: "Cliente não encontrado" });
@@ -1370,7 +1298,7 @@ app.post("/api/mikrotik/cliente-profile", async (req, res) => {
 
     // Garantia definitiva: nenhuma alteração no MikroTik ocorre antes
     // de o cliente estar persistido no Supabase.
-    const resultadoSupabase = await fbSalvarClienteSupabaseUnico({
+    const clienteSupabase = await fbSalvarClienteSupabaseUnico({
       ...body,
       loginPppoe: body.loginPppoe || body.login || "",
       login: body.login || body.loginPppoe || "",
@@ -1383,15 +1311,10 @@ app.post("/api/mikrotik/cliente-profile", async (req, res) => {
       origem: "Painel Fibra+ Hub"
     });
 
-    const clienteSupabase = resultadoSupabase.cliente;
-
     console.log(
-      resultadoSupabase.criado
-        ? "Cliente novo confirmado no Supabase antes do MikroTik:"
-        : "Cliente existente atualizado no Supabase antes do MikroTik:",
+      "Cliente confirmado no Supabase antes do MikroTik:",
       clienteSupabase.loginPppoe || clienteSupabase.login,
-      clienteSupabase.id,
-      resultadoSupabase.conflitoPor || ""
+      clienteSupabase.id
     );
 
     const servidor = String(body.servidor || "").trim();
@@ -1483,10 +1406,6 @@ app.post("/api/mikrotik/cliente-profile", async (req, res) => {
 
       return res.json({
         ok:true,
-        criado:resultadoSupabase.criado,
-        atualizado:resultadoSupabase.atualizado,
-        conflitoPor:resultadoSupabase.conflitoPor,
-        clienteSupabase,
         acao:"atualizado",
         mensagem:"Cliente atualizado no MikroTik: login, senha, profile e service PPPoE sincronizados.",
         servidor: cfg.key || servidor,
@@ -1514,10 +1433,6 @@ app.post("/api/mikrotik/cliente-profile", async (req, res) => {
 
     return res.json({
       ok:true,
-      criado:resultadoSupabase.criado,
-      atualizado:resultadoSupabase.atualizado,
-      conflitoPor:resultadoSupabase.conflitoPor,
-      clienteSupabase,
       acao:"criado",
       mensagem:"Cliente criado no MikroTik com login, senha, profile e service PPPoE.",
       servidor: cfg.key || servidor,
@@ -3520,66 +3435,25 @@ function fbBoletoRow(row){
 }
 
 
-
 async function fbSalvarClienteSupabaseUnico(body) {
   await fbEnsureTables();
 
-  body = body || {};
-  const c = fbClienteFromAny(body);
-  const clienteId = String(body.id || body.clienteId || body.cliente_id || "").trim();
-
+  const c = fbClienteFromAny(body || {});
   if (!c.login_pppoe && !c.cpf_cnpj && !c.nome) {
     throw new Error("Cliente sem login, CPF/CNPJ ou nome.");
   }
 
-  let existente;
-
-  if (clienteId) {
-    existente = await pool.query(`
-      SELECT id, login_pppoe, cpf_cnpj, nome, 'id' AS conflito_por
-      FROM clientes
-      WHERE id::text=$1
-      LIMIT 1
-    `, [clienteId]);
-  } else {
-    existente = await pool.query(`
-      SELECT
-        id,
-        login_pppoe,
-        cpf_cnpj,
-        nome,
-        CASE
-          WHEN $1 <> '' AND login_pppoe=$1 THEN 'login'
-          WHEN $2 <> '' AND regexp_replace(COALESCE(cpf_cnpj,''),'\\D','','g')=$2 THEN 'cpf'
-          ELSE ''
-        END AS conflito_por
-      FROM clientes
-      WHERE
-        ($1 <> '' AND login_pppoe=$1)
-        OR ($2 <> '' AND regexp_replace(COALESCE(cpf_cnpj,''),'\\D','','g')=$2)
-      ORDER BY atualizado_em DESC NULLS LAST, criado_em DESC NULLS LAST
-      LIMIT 1
-    `, [c.login_pppoe, c.cpf_cnpj]);
-  }
-
-  const dadosCompletos = {
-    ...body,
-    id: existente.rows[0]?.id || clienteId || body.id || null,
-    nome: c.nome,
-    login: c.login_pppoe,
-    loginPppoe: c.login_pppoe,
-    cpfCnpj: body.cpfCnpj || body.cpf || body.cpf_cnpj || c.cpf_cnpj,
-    telefone: c.telefone,
-    servidor: c.servidor,
-    popServidor: c.servidor,
-    profile: c.profile,
-    plano: c.plano,
-    origem: body.origem || "Painel Fibra+ Hub",
-    atualizadoEm: new Date().toISOString()
-  };
+  const existente = await pool.query(`
+    SELECT id
+    FROM clientes
+    WHERE
+      ($1 <> '' AND login_pppoe=$1)
+      OR ($2 <> '' AND regexp_replace(COALESCE(cpf_cnpj,''),'\\D','','g')=$2)
+    ORDER BY atualizado_em DESC NULLS LAST, criado_em DESC NULLS LAST
+    LIMIT 1
+  `, [c.login_pppoe, c.cpf_cnpj]);
 
   let r;
-
   if (existente.rows[0]) {
     r = await pool.query(`
       UPDATE clientes SET
@@ -3602,7 +3476,7 @@ async function fbSalvarClienteSupabaseUnico(body) {
       c.plano,
       c.servidor,
       c.profile,
-      JSON.stringify(dadosCompletos),
+      JSON.stringify({...body, origem: body.origem || "Painel Fibra+ Hub"}),
       existente.rows[0].id
     ]);
   } else {
@@ -3620,48 +3494,20 @@ async function fbSalvarClienteSupabaseUnico(body) {
       c.plano,
       c.servidor,
       c.profile,
-      JSON.stringify(dadosCompletos)
+      JSON.stringify({...body, origem: body.origem || "Painel Fibra+ Hub"})
     ]);
   }
 
-  const cliente = fbClienteRow(r.rows[0]);
-
-  return {
-    cliente,
-    criado: !existente.rows[0],
-    atualizado: Boolean(existente.rows[0]),
-    conflitoPor: existente.rows[0]?.conflito_por || "",
-    clienteAnterior: existente.rows[0] ? {
-      id: existente.rows[0].id,
-      loginPppoe: existente.rows[0].login_pppoe || "",
-      cpfCnpj: existente.rows[0].cpf_cnpj || "",
-      nome: existente.rows[0].nome || ""
-    } : null
-  };
+  return fbClienteRow(r.rows[0]);
 }
-
 
 app.post("/api/clientes/salvar", async (req, res) => {
   try {
-    const resultado = await fbSalvarClienteSupabaseUnico(req.body || {});
-    const cliente = resultado.cliente;
-
-    console.log(
-      resultado.criado ? "Cliente novo criado no Supabase:" : "Cliente existente atualizado no Supabase:",
-      cliente.loginPppoe || cliente.login,
-      cliente.id,
-      resultado.conflitoPor || ""
-    );
-
+    const cliente = await fbSalvarClienteSupabaseUnico(req.body || {});
+    console.log("Cliente salvo no Supabase:", cliente.loginPppoe || cliente.login, cliente.id);
     return res.json({
       ok:true,
-      criado:resultado.criado,
-      atualizado:resultado.atualizado,
-      conflitoPor:resultado.conflitoPor,
-      clienteAnterior:resultado.clienteAnterior,
-      mensagem:resultado.criado
-        ? "Cliente novo criado no Supabase."
-        : "Cliente existente atualizado no Supabase.",
+      mensagem:"Cliente salvo no Supabase.",
       cliente
     });
   } catch (err) {
@@ -4680,6 +4526,38 @@ app.get("/api/automacao/status", async (req, res) => {
 
 
 
+app.get("/api/clientes/buscar", async (req, res) => {
+  try {
+    await fbEnsureTables();
+    const chave = String(req.query.chave || req.query.login || req.query.cpf || req.query.id || "").trim();
+    if (!chave) return res.status(400).json({ok:false, erro:"Chave do cliente não informada."});
+
+    const somenteDigitos = chave.replace(/\D/g, "");
+    const r = await pool.query(`
+      SELECT *
+      FROM clientes
+      WHERE
+        id::text=$1
+        OR login_pppoe=$1
+        OR lower(COALESCE(nome,''))=lower($1)
+        OR ($2 <> '' AND regexp_replace(COALESCE(cpf_cnpj,''),'\\D','','g')=$2)
+        OR dados->>'login'=$1
+        OR dados->>'loginPppoe'=$1
+        OR lower(COALESCE(dados->>'nome',''))=lower($1)
+      ORDER BY atualizado_em DESC NULLS LAST, criado_em DESC NULLS LAST
+      LIMIT 1
+    `, [chave, somenteDigitos]);
+
+    if (!r.rows[0]) return res.status(404).json({ok:false, erro:"Cliente não encontrado."});
+    return res.json({ok:true, cliente:fbClienteRow(r.rows[0])});
+  } catch (err) {
+    console.error("Erro /api/clientes/buscar:", err);
+    return res.status(500).json({ok:false, erro:err.message});
+  }
+});
+
+
+
 app.get("/api/debug/cliente-salvo", async (req, res) => {
   try {
     await fbEnsureTables();
@@ -4697,164 +4575,6 @@ app.get("/api/debug/cliente-salvo", async (req, res) => {
       LIMIT 1
     `, [chave, digitos]);
     return res.json({ok:true, encontrado:Boolean(r.rows[0]), cliente:r.rows[0] ? fbClienteRow(r.rows[0]) : null});
-  } catch (err) {
-    return res.status(500).json({ok:false, erro:err.message});
-  }
-});
-
-
-
-app.post("/api/clientes/importar", async (req, res) => {
-  const client = await pool.connect();
-
-  try {
-    const clientes = Array.isArray(req.body?.clientes) ? req.body.clientes : [];
-    if (!clientes.length) {
-      return res.status(400).json({ok:false, erro:"Nenhum cliente recebido para importação."});
-    }
-
-    await fbEnsureTables();
-    await client.query("BEGIN");
-
-    let novos = 0;
-    let atualizados = 0;
-    const erros = [];
-
-    for (let i = 0; i < clientes.length; i++) {
-      const body = {
-        ...(clientes[i] || {}),
-        origem: "ReceitaNet CSV"
-      };
-
-      try {
-        const c = fbClienteFromAny(body);
-
-        if (!c.login_pppoe && !c.cpf_cnpj && !c.nome) {
-          erros.push({linha:i + 1, erro:"Cliente sem login, CPF/CNPJ ou nome."});
-          continue;
-        }
-
-        const existente = await client.query(`
-          SELECT id
-          FROM clientes
-          WHERE
-            ($1 <> '' AND login_pppoe=$1)
-            OR ($2 <> '' AND regexp_replace(COALESCE(cpf_cnpj,''),'\\D','','g')=$2)
-          ORDER BY atualizado_em DESC NULLS LAST, criado_em DESC NULLS LAST
-          LIMIT 1
-        `, [c.login_pppoe, c.cpf_cnpj]);
-
-        if (existente.rows[0]) {
-          await client.query(`
-            UPDATE clientes SET
-              login_pppoe=$1,
-              nome=$2,
-              cpf_cnpj=$3,
-              telefone=$4,
-              plano=$5,
-              servidor=$6,
-              profile=$7,
-              dados=COALESCE(dados,'{}'::jsonb) || $8::jsonb,
-              atualizado_em=NOW()
-            WHERE id=$9
-          `, [
-            c.login_pppoe,
-            c.nome,
-            c.cpf_cnpj,
-            c.telefone,
-            c.plano,
-            c.servidor,
-            c.profile,
-            JSON.stringify(body),
-            existente.rows[0].id
-          ]);
-          atualizados++;
-        } else {
-          await client.query(`
-            INSERT INTO clientes
-              (login_pppoe,nome,cpf_cnpj,telefone,plano,servidor,profile,dados,atualizado_em,criado_em)
-            VALUES
-              ($1,$2,$3,$4,$5,$6,$7,$8,NOW(),NOW())
-          `, [
-            c.login_pppoe,
-            c.nome,
-            c.cpf_cnpj,
-            c.telefone,
-            c.plano,
-            c.servidor,
-            c.profile,
-            JSON.stringify(body)
-          ]);
-          novos++;
-        }
-      } catch (erroLinha) {
-        erros.push({linha:i + 1, erro:erroLinha.message});
-      }
-    }
-
-    await client.query("COMMIT");
-
-    const totalBanco = await pool.query("SELECT COUNT(*)::int AS total FROM clientes");
-
-    return res.json({
-      ok:true,
-      recebidos:clientes.length,
-      novos,
-      atualizados,
-      erros,
-      totalBanco:totalBanco.rows[0].total
-    });
-  } catch (err) {
-    try { await client.query("ROLLBACK"); } catch (e) {}
-    console.error("Erro /api/clientes/importar:", err);
-    return res.status(500).json({ok:false, erro:err.message});
-  } finally {
-    client.release();
-  }
-});
-
-
-
-
-
-app.get("/api/sistema/pronto", async (req, res) => {
-  try {
-    await fbEnsureTables();
-
-    const clientes = await pool.query("SELECT COUNT(*)::int AS total FROM clientes");
-    const boletos = await pool.query("SELECT COUNT(*)::int AS total FROM boletos");
-    const boletosEfi = await pool.query(`
-      SELECT COUNT(*)::int AS total
-      FROM boletos
-      WHERE efi_charge_id IS NOT NULL AND efi_charge_id <> ''
-    `);
-    const pagos = await pool.query(`
-      SELECT COUNT(*)::int AS total
-      FROM boletos
-      WHERE lower(COALESCE(status,'')) IN ('pago','paid','settled')
-    `);
-
-    return res.json({
-      ok:true,
-      cadastro:{
-        supabase:true,
-        totalClientes:clientes.rows[0].total,
-        rotaSalvar:"/api/clientes/salvar",
-        rotaBuscar:"/api/clientes/buscar"
-      },
-      boletos:{
-        total:boletos.rows[0].total,
-        integradosEfi:boletosEfi.rows[0].total,
-        pagos:pagos.rows[0].total
-      },
-      automacao:{
-        webhook:"/api/efi/webhook",
-        cron:"/api/cron/bloqueios",
-        mikrotikAtivo:String(process.env.AUTOMACAO_MIKROTIK_ATIVA || "true").toLowerCase() !== "false",
-        profileBloqueado:process.env.MIKROTIK_PROFILE_BLOQUEADO || "BLOQUEADO",
-        diasAposVencimento:Number(process.env.BLOQUEIO_DIAS_APOS_VENCIMENTO || 4)
-      }
-    });
   } catch (err) {
     return res.status(500).json({ok:false, erro:err.message});
   }
