@@ -1788,6 +1788,16 @@ function consultarCepContato(){ buscarCepAutomatico(); }
         : String(el.value ?? "").trim();
     });
 
+    d.id =
+      window.__clienteSupabaseAtual?.id ||
+      document.body.dataset.clienteId ||
+      "";
+    d.clienteId = d.id;
+    d.loginAnterior =
+      window.__clienteSupabaseAtual?.loginPppoe ||
+      window.__clienteSupabaseAtual?.login ||
+      "";
+
     d.nome = valor("cadNome");
     d.cadNome = d.nome;
     d.cpfCnpj = valor("cadCpf");
@@ -1857,7 +1867,10 @@ function consultarCepContato(){ buscarCepAutomatico(); }
       if(comMikrotik){
         resposta = await postJson("/api/mikrotik/cliente-profile", {
           ...dados,
+          id:dados.id,
+          clienteId:dados.id,
           login:dados.loginPppoe,
+          loginAnterior:dados.loginAnterior,
           cpf:dados.cpfCnpj,
           telefone:dados.telefone
         });
@@ -1865,7 +1878,11 @@ function consultarCepContato(){ buscarCepAutomatico(); }
         resposta = await postJson("/api/clientes/salvar", dados);
       }
 
-      const cliente = resposta.cliente || resposta.clienteSupabase || null;
+      const cliente =
+        resposta.cliente ||
+        resposta.clienteSupabase ||
+        window.__clienteSupabaseAtual ||
+        null;
       const chave =
         cliente?.id ||
         cliente?.loginPppoe ||
@@ -1885,6 +1902,13 @@ function consultarCepContato(){ buscarCepAutomatico(); }
           "Cliente existente atualizado no Supabase porque " + motivo + ".";
       }else{
         mensagemCadastro = "Cliente salvo no Supabase.";
+      }
+
+      if(cliente){
+        window.__clienteSupabaseAtual = cliente;
+        window.clienteAtual = cliente;
+        window.clienteSelecionado = cliente;
+        document.body.dataset.clienteId = String(cliente.id || dados.id || "");
       }
 
       history.replaceState(
@@ -2038,6 +2062,7 @@ function consultarCepContato(){ buscarCepAutomatico(); }
     window.__clienteSupabaseAtual = cliente;
     window.clienteAtual = cliente;
     window.clienteSelecionado = cliente;
+    document.body.dataset.clienteId = String(cliente.id || "");
 
     const titulo =
       document.querySelector(".topbar h1") ||
@@ -2100,6 +2125,153 @@ function consultarCepContato(){ buscarCepAutomatico(); }
   document.addEventListener("DOMContentLoaded", iniciarModoEdicao);
   window.addEventListener("load", iniciarModoEdicao);
   setTimeout(iniciarModoEdicao, 250);
+})();
+</script>
+
+
+<script>
+/* ABAS CADASTRO CORRIGIDAS */
+(function(){
+  function norm(v){
+    return String(v || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g,"")
+      .trim()
+      .toLowerCase();
+  }
+
+  function todosPaineis(){
+    return Array.from(document.querySelectorAll(
+      ".tab-content, .aba-conteudo, .cadastro-tab-content, [data-tab-content], [data-aba-conteudo]"
+    ));
+  }
+
+  function todosBotoes(){
+    return Array.from(document.querySelectorAll(
+      ".tab-button, .tab-btn, .aba-btn, .cadastro-tab, [data-tab], [data-aba]"
+    ));
+  }
+
+  function descobrirAlvo(botao){
+    return (
+      botao.getAttribute("data-tab") ||
+      botao.getAttribute("data-aba") ||
+      botao.getAttribute("data-target") ||
+      botao.getAttribute("aria-controls") ||
+      botao.getAttribute("href")?.replace(/^#/, "") ||
+      ""
+    );
+  }
+
+  function abrirPorAlvo(alvo, botao){
+    if(!alvo) return false;
+
+    const id = alvo.replace(/^#/, "");
+    const painel =
+      document.getElementById(id) ||
+      document.querySelector(`[data-tab-content="${id}"]`) ||
+      document.querySelector(`[data-aba-conteudo="${id}"]`);
+
+    if(!painel) return false;
+
+    todosPaineis().forEach(p => {
+      p.classList.remove("active", "ativo", "aberto");
+      p.hidden = true;
+      p.style.display = "none";
+    });
+
+    todosBotoes().forEach(b => {
+      b.classList.remove("active", "ativo");
+      b.setAttribute("aria-selected", "false");
+    });
+
+    painel.hidden = false;
+    painel.style.display = "";
+    painel.classList.add("active", "ativo", "aberto");
+
+    if(botao){
+      botao.classList.add("active", "ativo");
+      botao.setAttribute("aria-selected", "true");
+    }
+
+    return true;
+  }
+
+  function abrirPorTexto(botao){
+    const texto = norm(botao.textContent || botao.value);
+
+    const candidatos = {
+      "contato": ["contato", "tab-contato", "aba-contato", "conteudo-contato"],
+      "cobranca": ["cobranca", "tab-cobranca", "aba-cobranca", "conteudo-cobranca"],
+      "servidor": ["servidor", "tab-servidor", "aba-servidor", "conteudo-servidor"],
+      "cadastro": ["cadastro", "tab-cadastro", "aba-cadastro", "conteudo-cadastro"]
+    };
+
+    const chave = Object.keys(candidatos).find(k => texto.includes(k));
+    if(!chave) return false;
+
+    for(const id of candidatos[chave]){
+      if(abrirPorAlvo(id, botao)) return true;
+    }
+
+    // Fallback: procura painel cujo id/classe contenha o nome da aba.
+    const painel = todosPaineis().find(p => {
+      const assinatura = norm(
+        [p.id, p.className, p.getAttribute("data-tab-content"), p.getAttribute("data-aba-conteudo")]
+          .filter(Boolean)
+          .join(" ")
+      );
+      return assinatura.includes(chave);
+    });
+
+    if(!painel) return false;
+
+    todosPaineis().forEach(p => {
+      p.classList.remove("active", "ativo", "aberto");
+      p.hidden = true;
+      p.style.display = "none";
+    });
+
+    todosBotoes().forEach(b => {
+      b.classList.remove("active", "ativo");
+      b.setAttribute("aria-selected", "false");
+    });
+
+    painel.hidden = false;
+    painel.style.display = "";
+    painel.classList.add("active", "ativo", "aberto");
+    botao.classList.add("active", "ativo");
+    botao.setAttribute("aria-selected", "true");
+    return true;
+  }
+
+  document.addEventListener("click", function(e){
+    const botao = e.target.closest(
+      ".tab-button, .tab-btn, .aba-btn, .cadastro-tab, [data-tab], [data-aba]"
+    );
+    if(!botao) return;
+
+    e.preventDefault();
+
+    const alvo = descobrirAlvo(botao);
+    if(abrirPorAlvo(alvo, botao)) return;
+
+    abrirPorTexto(botao);
+  }, true);
+
+  document.addEventListener("DOMContentLoaded", function(){
+    // Garante que a aba já marcada como ativa permaneça visível.
+    const ativo = todosBotoes().find(b =>
+      b.classList.contains("active") ||
+      b.classList.contains("ativo") ||
+      b.getAttribute("aria-selected") === "true"
+    );
+
+    if(ativo){
+      const alvo = descobrirAlvo(ativo);
+      if(!abrirPorAlvo(alvo, ativo)) abrirPorTexto(ativo);
+    }
+  });
 })();
 </script>
 

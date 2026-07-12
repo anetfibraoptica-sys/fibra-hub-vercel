@@ -1456,6 +1456,10 @@ app.post("/api/mikrotik/cliente-profile", async (req, res) => {
 
       return res.json({
         ok:true,
+        criado:resultadoSupabase.criado,
+        atualizado:resultadoSupabase.atualizado,
+        conflitoPor:resultadoSupabase.conflitoPor,
+        clienteSupabase,
         acao:"atualizado",
         mensagem:"Cliente atualizado no MikroTik: login, senha, profile e service PPPoE sincronizados.",
         servidor: cfg.key || servidor,
@@ -1483,6 +1487,10 @@ app.post("/api/mikrotik/cliente-profile", async (req, res) => {
 
     return res.json({
       ok:true,
+      criado:resultadoSupabase.criado,
+      atualizado:resultadoSupabase.atualizado,
+      conflitoPor:resultadoSupabase.conflitoPor,
+      clienteSupabase,
       acao:"criado",
       mensagem:"Cliente criado no MikroTik com login, senha, profile e service PPPoE.",
       servidor: cfg.key || servidor,
@@ -3485,34 +3493,66 @@ function fbBoletoRow(row){
 }
 
 
+
 async function fbSalvarClienteSupabaseUnico(body) {
   await fbEnsureTables();
 
-  const c = fbClienteFromAny(body || {});
+  body = body || {};
+  const c = fbClienteFromAny(body);
+  const clienteId = String(body.id || body.clienteId || body.cliente_id || "").trim();
+
   if (!c.login_pppoe && !c.cpf_cnpj && !c.nome) {
     throw new Error("Cliente sem login, CPF/CNPJ ou nome.");
   }
 
-  const existente = await pool.query(`
-    SELECT
-      id,
-      login_pppoe,
-      cpf_cnpj,
-      nome,
-      CASE
-        WHEN $1 <> '' AND login_pppoe=$1 THEN 'login'
-        WHEN $2 <> '' AND regexp_replace(COALESCE(cpf_cnpj,''),'\D','','g')=$2 THEN 'cpf'
-        ELSE ''
-      END AS conflito_por
-    FROM clientes
-    WHERE
-      ($1 <> '' AND login_pppoe=$1)
-      OR ($2 <> '' AND regexp_replace(COALESCE(cpf_cnpj,''),'\D','','g')=$2)
-    ORDER BY atualizado_em DESC NULLS LAST, criado_em DESC NULLS LAST
-    LIMIT 1
-  `, [c.login_pppoe, c.cpf_cnpj]);
+  let existente;
+
+  if (clienteId) {
+    existente = await pool.query(`
+      SELECT id, login_pppoe, cpf_cnpj, nome, 'id' AS conflito_por
+      FROM clientes
+      WHERE id::text=$1
+      LIMIT 1
+    `, [clienteId]);
+  } else {
+    existente = await pool.query(`
+      SELECT
+        id,
+        login_pppoe,
+        cpf_cnpj,
+        nome,
+        CASE
+          WHEN $1 <> '' AND login_pppoe=$1 THEN 'login'
+          WHEN $2 <> '' AND regexp_replace(COALESCE(cpf_cnpj,''),'\\D','','g')=$2 THEN 'cpf'
+          ELSE ''
+        END AS conflito_por
+      FROM clientes
+      WHERE
+        ($1 <> '' AND login_pppoe=$1)
+        OR ($2 <> '' AND regexp_replace(COALESCE(cpf_cnpj,''),'\\D','','g')=$2)
+      ORDER BY atualizado_em DESC NULLS LAST, criado_em DESC NULLS LAST
+      LIMIT 1
+    `, [c.login_pppoe, c.cpf_cnpj]);
+  }
+
+  const dadosCompletos = {
+    ...body,
+    id: existente.rows[0]?.id || clienteId || body.id || null,
+    nome: c.nome,
+    login: c.login_pppoe,
+    loginPppoe: c.login_pppoe,
+    cpfCnpj: body.cpfCnpj || body.cpf || body.cpf_cnpj || c.cpf_cnpj,
+    telefone: c.telefone,
+    servidor: c.servidor,
+    popServidor: c.servidor,
+    profile: c.profile,
+    plano: c.plano,
+    origem: body.origem || "Painel Fibra+ Hub",
+    atualizadoEm: new Date().toISOString()
+  };
 
   let r;
+
   if (existente.rows[0]) {
     r = await pool.query(`
       UPDATE clientes SET
@@ -3535,7 +3575,7 @@ async function fbSalvarClienteSupabaseUnico(body) {
       c.plano,
       c.servidor,
       c.profile,
-      JSON.stringify({...body, origem: body.origem || "Painel Fibra+ Hub"}),
+      JSON.stringify(dadosCompletos),
       existente.rows[0].id
     ]);
   } else {
@@ -3553,7 +3593,7 @@ async function fbSalvarClienteSupabaseUnico(body) {
       c.plano,
       c.servidor,
       c.profile,
-      JSON.stringify({...body, origem: body.origem || "Painel Fibra+ Hub"})
+      JSON.stringify(dadosCompletos)
     ]);
   }
 
@@ -3572,6 +3612,7 @@ async function fbSalvarClienteSupabaseUnico(body) {
     } : null
   };
 }
+
 
 app.post("/api/clientes/salvar", async (req, res) => {
   try {
@@ -4746,6 +4787,51 @@ app.post("/api/clientes/importar", async (req, res) => {
 });
 
 
+
+
+
+app.get("/api/sistema/pronto", async (req, res) => {
+  try {
+    await fbEnsureTables();
+
+    const clientes = await pool.query("SELECT COUNT(*)::int AS total FROM clientes");
+    const boletos = await pool.query("SELECT COUNT(*)::int AS total FROM boletos");
+    const boletosEfi = await pool.query(`
+      SELECT COUNT(*)::int AS total
+      FROM boletos
+      WHERE efi_charge_id IS NOT NULL AND efi_charge_id <> ''
+    `);
+    const pagos = await pool.query(`
+      SELECT COUNT(*)::int AS total
+      FROM boletos
+      WHERE lower(COALESCE(status,'')) IN ('pago','paid','settled')
+    `);
+
+    return res.json({
+      ok:true,
+      cadastro:{
+        supabase:true,
+        totalClientes:clientes.rows[0].total,
+        rotaSalvar:"/api/clientes/salvar",
+        rotaBuscar:"/api/clientes/buscar"
+      },
+      boletos:{
+        total:boletos.rows[0].total,
+        integradosEfi:boletosEfi.rows[0].total,
+        pagos:pagos.rows[0].total
+      },
+      automacao:{
+        webhook:"/api/efi/webhook",
+        cron:"/api/cron/bloqueios",
+        mikrotikAtivo:String(process.env.AUTOMACAO_MIKROTIK_ATIVA || "true").toLowerCase() !== "false",
+        profileBloqueado:process.env.MIKROTIK_PROFILE_BLOQUEADO || "BLOQUEADO",
+        diasAposVencimento:Number(process.env.BLOQUEIO_DIAS_APOS_VENCIMENTO || 4)
+      }
+    });
+  } catch (err) {
+    return res.status(500).json({ok:false, erro:err.message});
+  }
+});
 
 io.on("connection",(socket)=>{
   socket.emit("hub-update", geral());
