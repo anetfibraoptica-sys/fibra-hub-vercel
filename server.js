@@ -4860,6 +4860,55 @@ app.get("/api/sistema/pronto", async (req, res) => {
   }
 });
 
+
+
+app.get("/api/mikrotik/pppoe-services", async (req, res) => {
+  try {
+    const servidor = String(req.query.servidor || "").trim();
+    if (!servidor) {
+      return res.status(400).json({ok:false, erro:"Servidor não informado."});
+    }
+
+    const cfg = servidorConfig(servidor);
+    if (!cfg || !cfg.host || !cfg.user || !cfg.pass) {
+      return res.status(400).json({
+        ok:false,
+        erro:"Configuração do MikroTik não encontrada para o servidor informado."
+      });
+    }
+
+    const resposta = await routerosSend(
+      cfg.host,
+      cfg.port,
+      cfg.user,
+      cfg.pass,
+      [["/interface/pppoe-server/server/print"]],
+      15000
+    );
+
+    const rows = parseRouterosRows(resposta);
+
+    const services = rows
+      .filter(item => String(item.disabled || "false").toLowerCase() !== "true")
+      .map(item => ({
+        id:item[".id"] || "",
+        serviceName:String(item["service-name"] || "").trim(),
+        interface:String(item.interface || "").trim(),
+        name:String(item["service-name"] || item.interface || "PPPOE").trim()
+      }))
+      .filter(item => item.name);
+
+    return res.json({
+      ok:true,
+      servidor:cfg.key || servidor,
+      services
+    });
+  } catch (err) {
+    console.error("Erro /api/mikrotik/pppoe-services:", err);
+    return res.status(500).json({ok:false, erro:err.message});
+  }
+});
+
 io.on("connection",(socket)=>{
   socket.emit("hub-update", geral());
   socket.emit("mikrotik-update", geral());

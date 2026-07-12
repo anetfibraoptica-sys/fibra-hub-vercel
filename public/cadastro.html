@@ -2310,4 +2310,188 @@ function consultarCepContato(){ buscarCepAutomatico(); }
 })();
 </script>
 
+
+<script>
+/* MIKROTIK CONEXÃO E PROFILES */
+(function(){
+  const servidorSelect = document.getElementById("cadPop");
+  const conexaoSelect = document.getElementById("cadConexao");
+  const profileSelect = document.getElementById("cadProfile");
+
+  if(!servidorSelect) return;
+
+  function valorAtualCliente(campo){
+    const c = window.__clienteSupabaseAtual || window.clienteAtual || {};
+    return String(c[campo] || "").trim();
+  }
+
+  function normalizar(v){
+    return String(v || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g,"")
+      .replace(/\s+/g," ")
+      .trim()
+      .toLowerCase();
+  }
+
+  function preencherSelect(select, itens, valorPreferido, placeholder){
+    if(!select) return;
+
+    const atual = String(valorPreferido || select.value || "").trim();
+    const atualNorm = normalizar(atual);
+
+    select.innerHTML = "";
+
+    if(placeholder){
+      const op = document.createElement("option");
+      op.value = "";
+      op.textContent = placeholder;
+      select.appendChild(op);
+    }
+
+    let selecionado = "";
+
+    itens.forEach(item => {
+      const value = String(item.value || item.name || item || "").trim();
+      const label = String(item.label || item.name || item || value).trim();
+      if(!value) return;
+
+      const op = document.createElement("option");
+      op.value = value;
+      op.textContent = label;
+      select.appendChild(op);
+
+      if(!selecionado && atualNorm){
+        if(normalizar(value) === atualNorm || normalizar(label) === atualNorm){
+          selecionado = value;
+        }
+      }
+    });
+
+    if(selecionado){
+      select.value = selecionado;
+    }else if(atual){
+      const op = document.createElement("option");
+      op.value = atual;
+      op.textContent = atual;
+      select.appendChild(op);
+      select.value = atual;
+    }
+  }
+
+  async function carregarConexoes(servidor){
+    if(!conexaoSelect) return;
+
+    const atual =
+      valorAtualCliente("conexao") ||
+      valorAtualCliente("serviceName") ||
+      valorAtualCliente("servicoPppoe") ||
+      conexaoSelect.value ||
+      "";
+
+    conexaoSelect.disabled = true;
+
+    try{
+      const resp = await fetch(
+        "/api/mikrotik/pppoe-services?servidor=" + encodeURIComponent(servidor) + "&_=" + Date.now(),
+        {cache:"no-store"}
+      );
+      const json = await resp.json();
+
+      if(!resp.ok || !json.ok){
+        throw new Error(json.erro || "Erro ao carregar conexões PPPoE.");
+      }
+
+      const itens = (json.services || []).map(item => ({
+        value:item.serviceName || item.name || item.interface || "PPPOE",
+        label:item.serviceName || item.name || item.interface || "PPPOE"
+      }));
+
+      preencherSelect(conexaoSelect, itens, atual, "Selecione");
+    }catch(e){
+      console.warn("Falha ao carregar Conexão:", e.message);
+      preencherSelect(
+        conexaoSelect,
+        atual ? [{value:atual,label:atual}] : [],
+        atual,
+        "Selecione"
+      );
+    }finally{
+      conexaoSelect.disabled = false;
+    }
+  }
+
+  async function carregarProfiles(servidor){
+    if(!profileSelect) return;
+
+    const atual =
+      valorAtualCliente("profile") ||
+      valorAtualCliente("perfil") ||
+      profileSelect.value ||
+      "";
+
+    profileSelect.disabled = true;
+
+    try{
+      const resp = await fetch(
+        "/api/mikrotik/profiles?servidor=" + encodeURIComponent(servidor) + "&_=" + Date.now(),
+        {cache:"no-store"}
+      );
+      const json = await resp.json();
+
+      if(!resp.ok){
+        throw new Error(json.erro || "Erro ao carregar profiles.");
+      }
+
+      const lista =
+        Array.isArray(json.profiles) ? json.profiles :
+        Array.isArray(json) ? json :
+        [];
+
+      const itens = lista.map(item => {
+        if(typeof item === "string"){
+          return {value:item,label:item};
+        }
+        return {
+          value:String(item.name || item.profile || item.nome || "").trim(),
+          label:String(item.name || item.profile || item.nome || "").trim()
+        };
+      }).filter(item => item.value);
+
+      preencherSelect(profileSelect, itens, atual, "Selecione");
+    }catch(e){
+      console.warn("Falha ao carregar Profiles:", e.message);
+      preencherSelect(
+        profileSelect,
+        atual ? [{value:atual,label:atual}] : [],
+        atual,
+        "Selecione"
+      );
+    }finally{
+      profileSelect.disabled = false;
+    }
+  }
+
+  async function atualizarMikrotik(){
+    const servidor = String(servidorSelect.value || "").trim();
+    if(!servidor) return;
+
+    await Promise.all([
+      carregarConexoes(servidor),
+      carregarProfiles(servidor)
+    ]);
+  }
+
+  servidorSelect.addEventListener("change", atualizarMikrotik);
+
+  document.addEventListener("DOMContentLoaded", function(){
+    setTimeout(atualizarMikrotik, 500);
+  });
+
+  window.addEventListener("load", function(){
+    setTimeout(atualizarMikrotik, 900);
+  });
+})();
+</script>
+
 </body></html>
