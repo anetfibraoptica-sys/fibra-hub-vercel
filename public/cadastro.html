@@ -2379,47 +2379,22 @@ function consultarCepContato(){ buscarCepAutomatico(); }
     }
   }
 
-  async function carregarConexoes(servidor){
+  async function carregarConexoes(){
     if(!conexaoSelect) return;
 
-    const atual =
-      valorAtualCliente("conexao") ||
-      valorAtualCliente("serviceName") ||
-      valorAtualCliente("servicoPppoe") ||
-      conexaoSelect.value ||
-      "";
+    preencherSelect(
+      conexaoSelect,
+      [{value:"PPPoE", label:"PPPoE"}],
+      "PPPoE",
+      ""
+    );
 
-    conexaoSelect.disabled = true;
-
-    try{
-      const resp = await fetch(
-        "/api/mikrotik/pppoe-services?servidor=" + encodeURIComponent(servidor) + "&_=" + Date.now(),
-        {cache:"no-store"}
-      );
-      const json = await resp.json();
-
-      if(!resp.ok || !json.ok){
-        throw new Error(json.erro || "Erro ao carregar conexões PPPoE.");
-      }
-
-      const itens = (json.services || []).map(item => ({
-        value:item.serviceName || item.name || item.interface || "PPPOE",
-        label:item.serviceName || item.name || item.interface || "PPPOE"
-      }));
-
-      preencherSelect(conexaoSelect, itens, atual, "Selecione");
-    }catch(e){
-      console.warn("Falha ao carregar Conexão:", e.message);
-      preencherSelect(
-        conexaoSelect,
-        atual ? [{value:atual,label:atual}] : [],
-        atual,
-        "Selecione"
-      );
-    }finally{
-      conexaoSelect.disabled = false;
-    }
+    conexaoSelect.value = "PPPoE";
+    conexaoSelect.disabled = false;
+    atualizarResumoCadastro();
   }
+
+  window.atualizarConexaoServidor = carregarConexoes;
 
   async function carregarProfiles(servidor){
     if(!profileSelect) return;
