@@ -2138,24 +2138,51 @@ function consultarCepContato(){ buscarCepAutomatico(); }
     const el = campo(id);
     if(!el) return;
 
-    const texto = valor === undefined || valor === null ? "" : String(valor);
+    let texto = valor === undefined || valor === null ? "" : String(valor).trim();
+
+    // Limpa valores inválidos herdados de CSV.
+    if(texto === '"' || texto === "''") texto = "";
+
+    // Interface deve continuar PPPoE quando o banco vier vazio/inválido.
+    if(id === "cadInterface" && !texto){
+      texto = "PPPOE";
+    }
 
     if(el.type === "checkbox"){
       el.checked = Boolean(valor);
       return;
     }
 
-    if(el.tagName === "SELECT" && texto){
-      const existe = Array.from(el.options || []).some(
-        opcao => String(opcao.value) === texto
+    if(el.tagName === "SELECT"){
+      const normalizarOpcao = v => String(v || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g,"")
+        .replace(/\s+/g," ")
+        .trim()
+        .toLowerCase();
+
+      const alvo = normalizarOpcao(texto);
+      const opcoes = Array.from(el.options || []);
+
+      // Reutiliza opção já existente mesmo com diferença de acento/caixa.
+      const equivalente = opcoes.find(opcao =>
+        normalizarOpcao(opcao.value) === alvo ||
+        normalizarOpcao(opcao.textContent) === alvo
       );
 
-      if(!existe){
+      if(equivalente){
+        el.value = equivalente.value;
+      }else if(texto){
         const opcao = document.createElement("option");
         opcao.value = texto;
         opcao.textContent = texto;
         el.appendChild(opcao);
+        el.value = texto;
+      }else{
+        el.value = "";
       }
+
+      return;
     }
 
     el.value = texto;
@@ -2213,7 +2240,7 @@ function consultarCepContato(){ buscarCepAutomatico(); }
       cadProfile:["profile","perfil","plano","cadProfile"],
       cadIp:["ip","cadIp"],
       cadMac:["mac","cadMac"],
-      cadInterface:["interface","cadInterface"],
+      cadInterface:["interface","tipoConexao","conexao","cadInterface"],
       cadTecnologia:["tecnologia","cadTecnologia"],
       cadSerialOnu:["serialOnu","serial_onu","cadSerialOnu"],
       cadMacOnu:["macOnu","mac_onu","cadMacOnu"],
@@ -2226,6 +2253,11 @@ function consultarCepContato(){ buscarCepAutomatico(); }
 
     for(const [id, nomes] of Object.entries(mapa)){
       escrever(id, primeiro(cliente, nomes));
+    }
+
+    const interfaceAtual = campo("cadInterface");
+    if(interfaceAtual && !String(interfaceAtual.value || "").trim()){
+      escrever("cadInterface", "PPPOE");
     }
 
     window.__clienteSupabaseAtual = cliente;
