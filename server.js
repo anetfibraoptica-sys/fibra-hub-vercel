@@ -768,6 +768,33 @@ app.get("/api/clientes/buscar", async (req, res) => {
 });
 
 
+
+app.get("/api/cliente-edicao/:id([0-9a-fA-F-]{36})", async (req, res) => {
+  try {
+    await fbEnsureTables();
+
+    const r = await pool.query(
+      "SELECT * FROM clientes WHERE id=$1 LIMIT 1",
+      [req.params.id]
+    );
+
+    if (!r.rows[0]) {
+      return res.status(404).json({
+        ok:false,
+        erro:"Cliente não encontrado no Supabase."
+      });
+    }
+
+    return res.json({
+      ok:true,
+      cliente:fbClienteRow(r.rows[0])
+    });
+  } catch (err) {
+    console.error("Erro /api/cliente-edicao/:id:", err);
+    return res.status(500).json({ok:false, erro:err.message});
+  }
+});
+
 app.get("/api/clientes/:id/acesso-remoto", async (req, res) => {
   try {
     const r = await pool.query("SELECT * FROM clientes WHERE id=$1", [req.params.id]);

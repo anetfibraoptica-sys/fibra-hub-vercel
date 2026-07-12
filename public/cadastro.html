@@ -1963,172 +1963,6 @@ function consultarCepContato(){ buscarCepAutomatico(); }
   };
 })();
 </script>
-
-<script>
-/* CADASTRO — MODO EDIÇÃO ÚNICO VIA SUPABASE */
-(function(){
-  let clienteCarregado = null;
-  let carregamentoEmAndamento = false;
-
-  const campo = id => document.getElementById(id);
-
-  function primeiro(obj, campos){
-    for(const nome of campos){
-      const valor = obj && obj[nome];
-      if(valor !== undefined && valor !== null && String(valor).trim() !== ""){
-        return valor;
-      }
-    }
-    return "";
-  }
-
-  function definir(id, valor){
-    const el = campo(id);
-    if(!el) return;
-
-    const final = valor === undefined || valor === null ? "" : String(valor);
-
-    if(el.type === "checkbox"){
-      el.checked = Boolean(valor);
-      return;
-    }
-
-    if(el.tagName === "SELECT"){
-      let opcaoExiste = Array.from(el.options || []).some(
-        option => String(option.value) === final
-      );
-
-      if(!opcaoExiste && final){
-        const option = document.createElement("option");
-        option.value = final;
-        option.textContent = final;
-        el.appendChild(option);
-      }
-    }
-
-    el.value = final;
-  }
-
-  function preencher(cliente){
-    const mapa = {
-      cadNome:["nome","cliente","razaoSocial"],
-      cadCpf:["cpfCnpj","cpf_cnpj","cpf","cnpj","documento"],
-      cadRg:["rg","rgIe"],
-      cadNascimento:["nascimento","dataNascimento"],
-      cadTelefone1:["telefone1","telefone","celular"],
-      cadTelefone2:["telefone2"],
-      cadTelefone3:["telefone3"],
-      cadEmail:["email"],
-      cadCep:["cep"],
-      cadEndereco:["endereco","logradouro","rua"],
-      cadNumeroContrato:["numeroEndereco","numero"],
-      cadNumero:["numeroEndereco","numero"],
-      cadComplemento:["complemento"],
-      cadBairro:["bairro"],
-      cadCidade:["cidade"],
-      cadUf:["uf","estado"],
-      cadReferencia:["referencia"],
-      cadLogin:["loginPppoe","login_pppoe","login","pppoe","usuario"],
-      cadSenha:["senhaPppoe","senha","password"],
-      cadPop:["servidor","popServidor","pop","servidorReceita"],
-      cadProfile:["profile","perfil","plano"],
-      cadPlano:["plano","profile"],
-      cadVencimento:["diaVencimento","vencimento","dia_do_vencimento"],
-      cadObservacao:["observacao","observacoes"],
-      cadSituacao:["situacao","status"],
-      cadStatusCobranca:["statusCobranca","status_cobranca"],
-      cadIp:["ip"],
-      cadMac:["mac"],
-      cadInterface:["interface"],
-      cadTecnologia:["tecnologia"],
-      cadSerialOnu:["serialOnu","serial_onu"],
-      cadMacOnu:["macOnu","mac_onu"],
-      cadElementoRede:["elementoRede","elemento_rede"],
-      cadCoordenadaX:["coordenadaX","coordenada_x"],
-      cadCoordenadaY:["coordenadaY","coordenada_y"],
-      cadDataCadastro:["dataCadastro","data_cadastro"],
-      cadDataAtivacao:["dataAtivacao","data_ativacao"]
-    };
-
-    for(const [id, nomes] of Object.entries(mapa)){
-      definir(id, primeiro(cliente, nomes));
-    }
-
-    for(const [chave, valor] of Object.entries(cliente || {})){
-      if(chave.startsWith("cad")) definir(chave, valor);
-    }
-
-    clienteCarregado = cliente;
-    window.__clienteSupabaseAtual = cliente;
-    window.clienteAtual = cliente;
-    window.clienteSelecionado = cliente;
-    document.body.dataset.clienteId = String(cliente.id || "");
-
-    const titulo =
-      document.querySelector(".topbar h1") ||
-      document.querySelector("main h1") ||
-      document.querySelector("h1");
-
-    if(titulo) titulo.textContent = "Cadastro de Cliente - Editando";
-
-    document.body.dataset.modoCadastro = "edicao";
-    document.body.dataset.clienteId = String(
-      cliente.id || cliente.loginPppoe || cliente.login || ""
-    );
-
-    if(typeof atualizarResumoCadastro === "function"){
-      try { atualizarResumoCadastro(); } catch(e) {}
-    }
-  }
-
-  async function buscarCliente(chave){
-    const resposta = await fetch(
-      "/api/clientes/buscar?chave=" + encodeURIComponent(chave) + "&_=" + Date.now(),
-      {
-        cache:"no-store",
-        headers:{"Accept":"application/json"}
-      }
-    );
-
-    const json = await resposta.json();
-
-    if(!resposta.ok || !json.ok){
-      throw new Error(json.erro || "Cliente não encontrado no Supabase.");
-    }
-
-    return json.cliente;
-  }
-
-  async function iniciarModoEdicao(){
-    if(carregamentoEmAndamento || clienteCarregado) return;
-
-    const chave = new URLSearchParams(location.search).get("cliente");
-    if(!chave) return;
-
-    carregamentoEmAndamento = true;
-
-    try{
-      const cliente = await buscarCliente(chave);
-
-      // Aguarda campos e selects da página existirem.
-      preencher(cliente);
-      setTimeout(() => preencher(cliente), 400);
-      setTimeout(() => preencher(cliente), 1000);
-      setTimeout(() => preencher(cliente), 1800);
-    }catch(erro){
-      alert("Erro ao abrir cliente: " + erro.message);
-    }finally{
-      carregamentoEmAndamento = false;
-    }
-  }
-
-  document.addEventListener("DOMContentLoaded", iniciarModoEdicao);
-  window.addEventListener("load", iniciarModoEdicao);
-  setTimeout(iniciarModoEdicao, 250);
-})();
-</script>
-
-
 <script>
 /* ABAS CADASTRO CORRIGIDAS */
 (function(){
@@ -2272,6 +2106,175 @@ function consultarCepContato(){ buscarCepAutomatico(); }
       if(!abrirPorAlvo(alvo, ativo)) abrirPorTexto(ativo);
     }
   });
+})();
+</script>
+
+
+<script>
+/* EDIÇÃO DE CLIENTE — ROTA EXCLUSIVA */
+(function(){
+  const params = new URLSearchParams(window.location.search);
+  const clienteId = String(params.get("cliente") || "").trim();
+
+  if(!clienteId) return;
+
+  let clienteAtual = null;
+
+  function campo(id){
+    return document.getElementById(id);
+  }
+
+  function primeiro(obj, nomes){
+    for(const nome of nomes){
+      const valor = obj && obj[nome];
+      if(valor !== undefined && valor !== null && String(valor).trim() !== ""){
+        return valor;
+      }
+    }
+    return "";
+  }
+
+  function escrever(id, valor){
+    const el = campo(id);
+    if(!el) return;
+
+    const texto = valor === undefined || valor === null ? "" : String(valor);
+
+    if(el.type === "checkbox"){
+      el.checked = Boolean(valor);
+      return;
+    }
+
+    if(el.tagName === "SELECT" && texto){
+      const existe = Array.from(el.options || []).some(
+        opcao => String(opcao.value) === texto
+      );
+
+      if(!existe){
+        const opcao = document.createElement("option");
+        opcao.value = texto;
+        opcao.textContent = texto;
+        el.appendChild(opcao);
+      }
+    }
+
+    el.value = texto;
+  }
+
+  function marcarModoEdicao(){
+    const titulo =
+      document.querySelector(".topbar h1") ||
+      document.querySelector("main h1") ||
+      document.querySelector("h1");
+
+    if(titulo) titulo.textContent = "Cadastro de Cliente - Editando";
+
+    const badge = document.querySelector(".topbar-right .badge:last-child");
+    if(badge) badge.textContent = "Editando Cliente";
+
+    document.body.dataset.modoCadastro = "edicao";
+    document.body.dataset.clienteId = clienteId;
+  }
+
+  function preencher(cliente){
+    clienteAtual = cliente;
+
+    const mapa = {
+      cadLogin:["loginPppoe","login_pppoe","login","pppoe","usuario"],
+      cadSenha:["senhaPppoe","senha","password","cadSenha"],
+      cadNome:["nome","cliente","razaoSocial"],
+      cadCpf:["cpfCnpj","cpf_cnpj","cpf","cnpj","documento"],
+      cadNascimento:["nascimento","dataNascimento","cadNascimento"],
+      cadRg:["rg","rgIe","cadRg"],
+      cadIndicadorIe:["indicadorIe","cadIndicadorIe"],
+      cadEmail:["email","cadEmail"],
+
+      cadCep:["cep","cadCep"],
+      cadEndereco:["endereco","logradouro","rua","cadEndereco"],
+      cadReferencia:["referencia","cadReferencia"],
+      cadComplemento:["complemento","cadComplemento"],
+      cadBairro:["bairro","cadBairro"],
+      cadCidade:["cidade","cadCidade"],
+      cadUf:["uf","estado","cadUf"],
+      cadClasse:["classe","cadClasse"],
+      cadSetor:["setor","cadSetor"],
+      cadSetorResponsavel:["setorResponsavel","cadSetorResponsavel"],
+      cadTelefone1:["telefone1","telefone","celular","cadTelefone1"],
+      cadTelefone2:["telefone2","cadTelefone2"],
+      cadTelefone3:["telefone3","cadTelefone3"],
+
+      cadVencimento:["diaVencimento","vencimento","dia_do_vencimento","cadVencimento"],
+      cadPlano:["plano","cadPlano"],
+      cadObservacao:["observacao","observacoes","cadObservacao"],
+      cadSituacao:["situacao","status","cadSituacao"],
+      cadStatusCobranca:["statusCobranca","status_cobranca","cadStatusCobranca"],
+
+      cadPop:["servidor","popServidor","pop","servidorReceita","cadPop"],
+      cadProfile:["profile","perfil","plano","cadProfile"],
+      cadIp:["ip","cadIp"],
+      cadMac:["mac","cadMac"],
+      cadInterface:["interface","cadInterface"],
+      cadTecnologia:["tecnologia","cadTecnologia"],
+      cadSerialOnu:["serialOnu","serial_onu","cadSerialOnu"],
+      cadMacOnu:["macOnu","mac_onu","cadMacOnu"],
+      cadElementoRede:["elementoRede","elemento_rede","cadElementoRede"],
+      cadCoordenadaX:["coordenadaX","coordenada_x","cadCoordenadaX"],
+      cadCoordenadaY:["coordenadaY","coordenada_y","cadCoordenadaY"],
+      cadDataCadastro:["dataCadastro","data_cadastro","cadDataCadastro"],
+      cadDataAtivacao:["dataAtivacao","data_ativacao","cadDataAtivacao"]
+    };
+
+    for(const [id, nomes] of Object.entries(mapa)){
+      escrever(id, primeiro(cliente, nomes));
+    }
+
+    window.__clienteSupabaseAtual = cliente;
+    window.clienteAtual = cliente;
+    window.clienteSelecionado = cliente;
+
+    document.body.dataset.clienteId = String(cliente.id || clienteId);
+
+    if(typeof atualizarResumoCadastro === "function"){
+      try { atualizarResumoCadastro(); } catch(e) {}
+    }
+  }
+
+  async function carregar(){
+    marcarModoEdicao();
+
+    try{
+      const resposta = await fetch(
+        "/api/cliente-edicao/" + encodeURIComponent(clienteId) + "?_=" + Date.now(),
+        {
+          cache:"no-store",
+          headers:{"Accept":"application/json"}
+        }
+      );
+
+      const json = await resposta.json();
+
+      if(!resposta.ok || !json.ok){
+        throw new Error(json.erro || "Não foi possível carregar o cliente.");
+      }
+
+      preencher(json.cliente);
+
+      // Reaplica somente para selects que podem carregar opções depois.
+      setTimeout(() => preencher(json.cliente), 500);
+      setTimeout(() => preencher(json.cliente), 1200);
+    }catch(erro){
+      console.error("Falha ao abrir cliente:", erro);
+      alert("Erro ao abrir cliente: " + erro.message);
+    }
+  }
+
+  marcarModoEdicao();
+
+  if(document.readyState === "loading"){
+    document.addEventListener("DOMContentLoaded", carregar, {once:true});
+  }else{
+    carregar();
+  }
 })();
 </script>
 
