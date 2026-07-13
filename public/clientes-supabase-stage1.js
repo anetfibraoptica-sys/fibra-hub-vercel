@@ -36,19 +36,41 @@
     else if(typeof renderClientes==='function') renderClientes(lista);
   }
   async function carregarCadastroURL(){
-    if(!/cadastro\.html$/i.test(location.pathname)) return;
-    const valor=new URLSearchParams(location.search).get('cliente');
-    if(!valor) return;
+    if(!/cadastro\.html$/i.test(location.pathname)) return null;
+
+    const params=new URLSearchParams(location.search);
+    const novo=params.get('novo');
+    if(novo==='1' || novo==='true') return null;
+
+    const valor=
+      params.get('cliente') ||
+      params.get('id') ||
+      params.get('login') ||
+      params.get('editar') ||
+      params.get('edit');
+
+    if(!valor) return null;
+
     const c=await buscar(valor);
     window.__fibraClienteSelecionado=c;
     if(typeof preencherCadastro==='function') preencherCadastro(c);
     else if(typeof preencherFormularioCliente==='function') preencherFormularioCliente(c);
     else if(typeof carregarClienteNoCadastro==='function') carregarClienteNoCadastro(c);
     document.dispatchEvent(new CustomEvent('fibra:cliente-carregado',{detail:c}));
+    return c;
   }
+
+  // Compatibilidade com o onload existente do cadastro.html.
+  // A função é global e segura tanto para novo cadastro quanto para edição.
+  window.carregarCadastroClienteHub=function(){
+    return carregarCadastroURL().catch(function(e){
+      console.error('Cadastro Supabase:',e);
+      return null;
+    });
+  };
   document.addEventListener('DOMContentLoaded',()=>{
     atualizarLista().catch(e=>console.error('Clientes Supabase:',e));
-    carregarCadastroURL().catch(e=>console.error('Cadastro Supabase:',e));
+    if(!/cadastro\.html$/i.test(location.pathname)) carregarCadastroURL().catch(e=>console.error('Cadastro Supabase:',e));
   });
   window.addEventListener('pageshow',()=>atualizarLista().catch(()=>{}));
 })();
