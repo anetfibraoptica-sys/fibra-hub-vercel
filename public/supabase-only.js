@@ -15,6 +15,13 @@
   const originalSet = Storage.prototype.setItem;
   const originalRemove = Storage.prototype.removeItem;
 
+  // Remove dados legados persistidos por versões anteriores. A memória abaixo
+  // serve apenas como buffer temporário durante a tela atual.
+  chavesDados.forEach(chave => {
+    try{ originalRemove.call(localStorage, chave); }catch(e){}
+    try{ originalRemove.call(sessionStorage, chave); }catch(e){}
+  });
+
   Storage.prototype.getItem = function(chave){
     if(chavesDados.has(String(chave))){
       return Object.prototype.hasOwnProperty.call(memoria, chave) ? memoria[chave] : null;

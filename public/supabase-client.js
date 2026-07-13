@@ -278,17 +278,11 @@ const FibraDB = {
   },
 
   setCacheClientes(clientes){
-    ["clientes","clientesReceitaNet","fibra_clientes","clientes_importados"].forEach(k => localStorage.setItem(k, JSON.stringify(clientes || [])));
+    window.__fibraClientesSupabase = Array.isArray(clientes) ? clientes : [];
   },
 
   getCacheClientes(){
-    for(const k of ["clientes","clientesReceitaNet","fibra_clientes","clientes_importados"]){
-      try{
-        const v = JSON.parse(localStorage.getItem(k) || "[]");
-        if(Array.isArray(v) && v.length) return v;
-      }catch(e){}
-    }
-    return [];
+    return Array.isArray(window.__fibraClientesSupabase) ? window.__fibraClientesSupabase : [];
   },
 
 

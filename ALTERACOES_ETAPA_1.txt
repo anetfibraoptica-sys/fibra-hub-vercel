@@ -1,0 +1,9 @@
+Fibra+ Hub - Etapa 1
+
+- Corrigido erro de sintaxe em bloqueio-configuravel.js.
+- Corrigido conflito de /api/clientes/buscar com /api/clientes/:id.
+- Cache de clientes do FibraDB agora é somente em memória.
+- Dados legados de clientes são removidos do localStorage/sessionStorage ao abrir as telas.
+- Adicionado clientes-supabase-stage1.js para lista, contadores, busca e abertura do cadastro via API/Supabase.
+- Importação continua enviando clientes ao Supabase, sem manter fonte persistente paralela.
+- Nenhuma alteração funcional foi feita em Efí, boletos ou MikroTik nesta etapa.

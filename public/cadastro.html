@@ -3549,7 +3549,6 @@ document.addEventListener("DOMContentLoaded", function(){
     const json = await resp.json();
     if(!resp.ok || !json.ok) throw new Error(json.erro || "Erro ao carregar clientes.");
     window.__fibraClientesSupabase = json.clientes || [];
-    try{ localStorage.setItem("clientes", JSON.stringify(window.__fibraClientesSupabase)); }catch(e){}
     if(typeof renderClientes === "function") renderClientes(window.__fibraClientesSupabase);
     if(typeof renderizarClientes === "function") renderizarClientes(window.__fibraClientesSupabase);
     if(typeof atualizarTabelaClientes === "function") atualizarTabelaClientes(window.__fibraClientesSupabase);
@@ -4228,4 +4227,5 @@ document.addEventListener("DOMContentLoaded", function(){
 })();
 </script>
 
+<script src="clientes-supabase-stage1.js"></script>
 </body></html>
