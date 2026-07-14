@@ -4369,6 +4369,62 @@ document.addEventListener("DOMContentLoaded", function(){
     }
   });
 
+  window.excluirClienteCadastro = async function(){
+    const atual = window.__fibraClienteCadastro || window.__fibraClienteSelecionado || {};
+    const params = new URLSearchParams(location.search);
+    const id = String(atual.id || atual.clienteId || atual.cliente_id || "").trim();
+    const nome = valor("cadNome") || atual.nome || atual.cliente || "Cliente";
+    const login = valor("cadLogin") || atual.loginPppoe || atual.login_pppoe || atual.login || "";
+    const servidor = valor("cadPop") || valor("cadServidorReceita") || atual.servidor || atual.popServidor || "";
+    const botao = document.querySelector(".delete-client-btn");
+
+    if(!id){
+      alert("Este cadastro ainda não possui um ID salvo no Supabase. Abra um cliente já cadastrado para excluí-lo.");
+      return false;
+    }
+    if(!login){
+      alert("O cliente não possui login PPPoE. A exclusão foi cancelada.");
+      return false;
+    }
+    if(!servidor){
+      alert("Selecione/registre o Servidor/POP do cliente antes de excluir.");
+      return false;
+    }
+
+    const confirmar = window.confirm(
+      "CONFIRMAR EXCLUSÃO DO PONTO?\n\n" +
+      "Cliente: " + nome + "\n" +
+      "Login PPPoE: " + login + "\n" +
+      "Servidor/POP: " + servidor + "\n\n" +
+      "Esta ação removerá o PPPoE Secret do MikroTik selecionado e, em seguida, removerá somente este cadastro do Supabase. Outros pontos do mesmo CPF não serão excluídos."
+    );
+    if(!confirmar) return false;
+
+    if(botao) botao.disabled = true;
+    try{
+      const r = await fetch("/api/clientes/" + encodeURIComponent(id), {
+        method:"DELETE",
+        headers:{"Accept":"application/json"},
+        cache:"no-store"
+      });
+      const j = await r.json().catch(() => ({}));
+      if(!r.ok || j.ok === false){
+        throw new Error(j.erro || j.mensagem || "Não foi possível excluir o cliente.");
+      }
+
+      window.__fibraClienteCadastro = null;
+      window.__fibraClienteSelecionado = null;
+      alert(j.mensagem || "Cliente removido do Supabase e do MikroTik.");
+      location.href = "clientes.html?excluido=1&t=" + Date.now();
+      return true;
+    }catch(e){
+      alert("Erro ao excluir cliente: " + e.message);
+      return false;
+    }finally{
+      if(botao) botao.disabled = false;
+    }
+  };
+
   window.salvarCadastroCliente = function(comMikrotik){
     const btn = comMikrotik
       ? $("btnSalvarClienteSupabaseMikrotik")

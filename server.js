@@ -945,50 +945,67 @@ app.get("/api/clientes/:id", async (req, res) => {
 
 
 async function removerPPPoEDoServidor(cliente, servidorAntigo) {
-  const clienteAntigo = { ...cliente, servidor: servidorAntigo };
-  const cfg = servidorConfig(clienteAntigo.servidor);
+  const dados = cliente && cliente.dados && typeof cliente.dados === "object" ? cliente.dados : {};
+  const servidor = String(
+    servidorAntigo || cliente.servidor || cliente.pop_servidor || dados.popServidor || dados.servidor || ""
+  ).trim();
+  const cfg = servidorConfig(servidor);
 
+  if (!servidor) throw new Error("Cliente sem Servidor/POP selecionado.");
   if (!cfg.host || !cfg.user || !cfg.pass) {
-    throw new Error("Variáveis do MikroTik antigo não configuradas para " + cfg.key);
+    throw new Error("Variáveis do MikroTik não configuradas para " + cfg.key);
   }
 
-  const usuario = String(cliente.pppoe || "").trim();
-  if (!usuario) throw new Error("Cliente sem usuário PPPoE para migrar.");
+  const usuario = String(
+    cliente.pppoe || cliente.login_pppoe || cliente.loginPppoe || cliente.login ||
+    dados.loginPppoe || dados.login_pppoe || dados.login || dados.pppoe || ""
+  ).trim();
+  if (!usuario) throw new Error("Cliente sem login PPPoE.");
 
-  // Derruba sessão ativa se existir.
+  // Derruba somente as sessões ativas cujo nome seja exatamente o login do cadastro.
   try {
     const activeResp = await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
       "/ppp/active/print",
       `?name=${usuario}`
     ]]);
+    const activeRows = (typeof parseRouterosRows === "function" ? parseRouterosRows(activeResp) : [])
+      .filter(row => String(row.name || "").trim() === usuario);
 
-    const activeRows = typeof parseRouterosRows === "function" ? parseRouterosRows(activeResp) : [];
-    const activeId = activeRows.length ? (activeRows[0][".id"] || activeRows[0]["id"]) : "";
-
-    if (activeId) {
-      await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
-        "/ppp/active/remove",
-        `=.id=${activeId}`
-      ]]);
+    for (const row of activeRows) {
+      const activeId = row[".id"] || row.id || "";
+      if (activeId) {
+        await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+          "/ppp/active/remove",
+          `=.id=${activeId}`
+        ]]);
+      }
     }
   } catch (e) {
     console.log("Sessão ativa não encontrada ou já desconectada:", usuario);
   }
 
-  // Remove o secret do servidor antigo.
-  try {
-    await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
-      "/ppp/secret/remove",
-      `=numbers=${usuario}`
-    ]]);
-  } catch (e) {
-    const msg = String(e.message || "").toLowerCase();
-    if (!(msg.includes("no such") || msg.includes("not found") || msg.includes("does not"))) {
-      throw e;
-    }
+  // Localiza o Secret pelo nome exato e remove pelo .id, evitando excluir outro PPPoE.
+  const secretResp = await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+    "/ppp/secret/print",
+    `?name=${usuario}`
+  ]]);
+  const secretRows = (typeof parseRouterosRows === "function" ? parseRouterosRows(secretResp) : [])
+    .filter(row => String(row.name || "").trim() === usuario);
+
+  if (!secretRows.length) {
+    return { removido: false, inexistente: true, usuario, servidor: cfg.key };
   }
 
-  return true;
+  for (const row of secretRows) {
+    const secretId = row[".id"] || row.id || "";
+    if (!secretId) throw new Error("Não foi possível identificar o PPPoE Secret no MikroTik.");
+    await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+      "/ppp/secret/remove",
+      `=.id=${secretId}`
+    ]]);
+  }
+
+  return { removido: true, inexistente: false, usuario, servidor: cfg.key };
 }
 
 async function migrarServidorCliente(clienteAntigo, clienteNovo) {
@@ -1127,9 +1144,75 @@ app.post("/api/clientes/:id/confianca", async (req, res) => {
   }
 });
 
-app.delete("/api/clientes/:id", async (req,res)=>{
-  try { await pool.query("DELETE FROM clientes WHERE id=$1",[req.params.id]); res.json({ok:true}); }
-  catch(e){ res.status(500).json({ok:false, erro:e.message}); }
+app.delete("/api/clientes/:id", async (req, res) => {
+  let cliente = null;
+  let mikrotik = null;
+  try {
+    await fbEnsureTables();
+    const consulta = await pool.query("SELECT * FROM clientes WHERE id::text=$1 LIMIT 1", [String(req.params.id)]);
+    if (!consulta.rows.length) {
+      return res.status(404).json({ ok:false, erro:"Cliente não encontrado no Supabase." });
+    }
+
+    const row = consulta.rows[0];
+    const completo = typeof fbClienteRow === "function" ? fbClienteRow(row) : row;
+    const dados = row.dados && typeof row.dados === "object" ? row.dados : {};
+    cliente = {
+      ...dados,
+      ...row,
+      ...completo,
+      id: row.id,
+      pppoe: row.pppoe || row.login_pppoe || completo.loginPppoe || dados.loginPppoe || dados.login || "",
+      login_pppoe: row.login_pppoe || completo.loginPppoe || dados.loginPppoe || dados.login || "",
+      servidor: row.servidor || completo.servidor || dados.popServidor || dados.servidor || "",
+      senha: row.senha || dados.cadSenha || dados.senhaPppoe || dados.senha || "",
+      plano: row.profile || row.plano || completo.profile || dados.profile || dados.plano || "default",
+      profile: row.profile || completo.profile || dados.profile || dados.plano || "default",
+      cpf: row.cpf_cnpj || row.cpf || completo.cpf || dados.cpfCnpj || dados.cpf || "",
+      telefone: row.telefone || completo.telefone1 || dados.telefone1 || dados.telefone || ""
+    };
+
+    if (!String(cliente.pppoe || "").trim()) {
+      return res.status(400).json({ ok:false, erro:"O cadastro não possui login PPPoE para excluir do MikroTik." });
+    }
+    if (!String(cliente.servidor || "").trim()) {
+      return res.status(400).json({ ok:false, erro:"Selecione/registre o Servidor/POP do cliente antes de excluir." });
+    }
+
+    // Primeiro remove somente o PPPoE exato do servidor registrado no cadastro.
+    mikrotik = await removerPPPoEDoServidor(cliente, cliente.servidor);
+
+    // Depois remove somente o registro selecionado, pelo ID único do Supabase.
+    const excluido = await pool.query("DELETE FROM clientes WHERE id::text=$1 RETURNING id", [String(req.params.id)]);
+    if (!excluido.rows.length) throw new Error("O cliente não foi removido do Supabase.");
+
+    return res.json({
+      ok:true,
+      mensagem: mikrotik && mikrotik.inexistente
+        ? "Cliente removido do Supabase. O PPPoE Secret já não existia no MikroTik."
+        : "Cliente removido do Supabase e do MikroTik.",
+      cliente_id: String(row.id),
+      login_pppoe: cliente.pppoe,
+      servidor: cliente.servidor,
+      mikrotik
+    });
+  } catch (e) {
+    // Se o MikroTik foi removido, mas a exclusão do Supabase falhou, tenta restaurar o Secret.
+    let restauracaoErro = "";
+    if (cliente && mikrotik && mikrotik.removido) {
+      try {
+        await criarPPPoEClienteComProfile(cliente);
+      } catch (restaurar) {
+        restauracaoErro = String(restaurar.message || restaurar);
+      }
+    }
+    return res.status(500).json({
+      ok:false,
+      erro: restauracaoErro
+        ? `${e.message} O PPPoE foi removido, mas não pôde ser restaurado automaticamente: ${restauracaoErro}`
+        : e.message
+    });
+  }
 });
 
 
