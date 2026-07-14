@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<script src="supabase-only.js"></script>
+<script src="00-fix-definitivo.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clientes - Fibra+ Hub</title>
+  <link rel="stylesheet" href="style.css">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+<script src="supabase-client.js"></script>
+<script src="auth-painel.js"></script>
+</head>
+<body onload="protegerPagina(); iniciarSocket(); carregarClientesReceitaNet();"><div class="sidebar-overlay" onclick="fecharMenuLateral()"></div>
+<button id="mobileMenuBtn" class="mobile-menu-btn" type="button" onclick="abrirMenuLateral()">☰ Menu</button>
+<div id="mobileMenuOverlay" class="mobile-menu-overlay" onclick="closeMobileMenu()"></div>
+<div class="mobile-top">
+  <button class="menu-btn" onclick="abrirMenuLateral()">☰</button>
+  <div class="logo-wrap">
+    <div class="brand"><span class="fibra">Fibra</span><span class="brand-dot"></span><span class="plus">+</span></div>
+    <div class="slogan">HUB DE CONTROLE</div>
+  </div>
+</div>
+
+<div class="layout">
+  <div class="overlay" onclick="fecharMenu()"></div>
+  <aside class="sidebar">
+    <div class="logo-wrap">
+      <div class="brand"><span class="fibra">Fibra</span><span class="brand-dot"></span><span class="plus">+</span></div>
+      <div class="slogan">HUB DE CONTROLE</div>
+    </div>
+    <nav class="nav">
+      <a href="dashboard.html"><span class="icon">🏠</span>Dashboard</a>
+      <a href="clientes.html" class="active"><span class="icon">👤</span>Clientes</a>
+      <a href="cadastro.html?novo=1"><span class="icon">👥</span>Cadastrar Cliente</a>
+      <a href="importacao.html"><span class="icon">⬆️</span>Importação</a>
+<a href="financeiro.html"><span class="icon">▤</span>Financeiro Efí</a>
+      <a href="chamados.html"><span class="icon">🔧</span>Chamados</a>
+      <a href="relatorios.html"><span class="icon">▥</span>Relatórios</a>
+      <a href="planos.html"><span class="icon">▦</span>Planos</a>
+      <a href="usuarios.html"><span class="icon">👥</span>Usuários</a>
+      <a href="configuracoes.html"><span class="icon"></span>Configurações</a>
+      <a href="backup.html"><span class="icon">☁</span>Backup</a>
+      <a href="#" onclick="sair()"><span class="icon">↪</span></a>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <header class="topbar clientes-topbar-receita">
+<div class="topbar-right">
+        <span class="user-dot"></span>
+        <b></b>
+        <b></b>
+        <a href="#" onclick="sair()"></a>
+        <span></span>
+      </div>
+    </header>
+
+    <section class="clientes-receita-wrapper">
+      <div class="clientes-page-title">Consulta de Clientes</div>
+
+      <div class="clientes-receita-grid">
+        <aside class="clientes-filtros-receita">
+          <div class="filtros-head">
+            <span>Filtros</span>
+            <a href="cadastro.html?novo=1">Novo Cliente</a>
+          </div>
+
+          <div class="filtros-status-grid">
+            <div class="status-card blue"><span>Ativos</span><b id="qtdAtivos">0</b></div>
+            <div class="status-card navy"><span>Não Ativados</span><b id="qtdNaoAtivos">0</b></div>
+            <div class="status-card red"><span>Bloqueados</span><b id="qtdBloqueados">0</b></div>
+            <div class="status-card dark"><span>Cancelados</span><b id="qtdCancelados">0</b></div>
+            <div class="status-card orange total"><span>TOTAL DE CLIENTES</span><b id="qtdTotal">0</b></div>
+            <div class="status-card amber"><span>Visada</span><b>0</b></div>
+            <div class="status-card pink"><span>Isentos</span><b id="qtdIsentos">0</b></div>
+            <div class="status-card coral"><span>Pai Controle</span><b>0</b></div>
+            <div class="status-card green"><span>Liberados Confiança</span><b>0</b></div>
+            <div class="status-card black"><span>Cancelados com Acordos</span><b>0</b></div>
+          </div>
+
+          <div class="filtro-form">
+            <label>Tipo de Filtros</label>
+            <select id="filtroTipo">
+              <option>Estático (padrão)</option>
+            </select>
+
+            <div class="radio-row">
+              <label><input type="radio" name="tipoPessoa"> Física</label>
+              <label><input type="radio" name="tipoPessoa"> Jurídica</label>
+            </div>
+
+            <label>Dia de Vencimento</label>
+            <select id="filtroVencimento" onchange="filtrarClientesReceitaNet()">
+              <option value="">TODOS</option>
+            </select>
+
+            <label>Login</label>
+            <input id="filtroLogin" oninput="filtrarClientesReceitaNet()">
+
+            <label>Nome</label>
+            <input id="filtroNome" oninput="filtrarClientesReceitaNet()">
+
+            <label>Endereço</label>
+            <input id="filtroEndereco" oninput="filtrarClientesReceitaNet()">
+          </div>
+        </aside>
+
+        <section class="clientes-lista-receita">
+          <div class="clientes-breadcrumb">🏠 Principal / 👥 Consulta de Clientes</div>
+          <div class="clientes-table-card receita-exato">
+            <div class="clientes-table-title">Clientes</div>
+            <table class="clientes-receita-table">
+              <thead>
+                <tr class="linha-clicavel" onclick="abrirClienteCadastro(encodeURIComponent(primeiroValor(c, ['loginPppoe','login','usuario','user','name','pppoe','nome','cliente','razaoSocial'])))">
+                  <th class="status-col"></th>
+                  <th>Login</th>
+                  <th>Nome</th>
+                  <th>Endereço</th>
+                  <th>Contato</th>
+                </tr>
+              </thead>
+              <tbody id="listaClientesReceita">
+                <tr class="linha-clicavel" onclick="abrirClienteCadastro(encodeURIComponent(primeiroValor(c, ['loginPppoe','login','usuario','user','name','pppoe','nome','cliente','razaoSocial'])))"><td colspan="5">Carregando clientes...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </section>
+  </main>
+</div>
+window.addEventListener("pageshow", function(){
+  carregarClientesReceitaNet();
+});
+</script>
+<script src="app.js">
+window.addEventListener("pageshow", function(){
+  carregarClientesReceitaNet();
+});
+</script>
+<script>
+function normalizarTexto(v){
+  return String(v || "").toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g,"");
+}
+function primeiroValor(c, campos){
+  for(const campo of campos){
+    if(c && c[campo] !== undefined && c[campo] !== null && String(c[campo]).trim() !== ""){
+      return String(c[campo]).trim();
+    }
+  }
+  return "";
+}
+function getClientesBase(){
+  const chaves = ["clientes", "clientesReceitaNet", "fibra_clientes", "clientes_importados"];
+  for(const chave of chaves){
+    try{
+      const raw = localStorage.getItem(chave);
+      if(!raw) continue;
+      const lista = JSON.parse(raw);
+      if(Array.isArray(lista) && lista.length){
+        return lista;
+      }
+    }catch(e){}
+  }
+  return [];
+}
+function statusIconeCliente(c){
+  const status = normalizarTexto(primeiroValor(c, ["status","situacao","statusCobranca","cli_status","estadoCliente","status_cliente","cobranca"]) || "");
+  const bloqueio = primeiroValor(c, ["bloqueio","dataBloqueio","dtBloqueio","cli_bloqueado"]) || "";
+  const cancelamento = primeiroValor(c, ["cancelamento","dataCancelamento","dtCancelamento","cli_dtcancelamento"]) || "";
+  const confiancaRaw = primeiroValor(c, ["liberacaoConfianca","liberadoConfianca","liberado","dataLiberacaoConfianca","cli_liberado","confianca","liberacao"]) || "";
+
+  function parseData(v){
+    if(!v) return null;
+    v = String(v).trim();
+    if(!v || v === "0000-00-00") return null;
+    let m = v.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if(m) return new Date(Number(m[1]), Number(m[2])-1, Number(m[3]), 23, 59, 59);
+    m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+    if(m) return new Date(Number(m[3]), Number(m[2])-1, Number(m[1]), 23, 59, 59);
+    const d = new Date(v);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  function confiancaValida(){
+    const d = parseData(confiancaRaw);
+    if(!d) return false;
+    const hoje = new Date();
+    hoje.setHours(0,0,0,0);
+    return d >= hoje;
+  }
+
+  if(status.includes("cancel") || status.includes("encerrado") || String(cancelamento).trim()){
+    return '<span class="cliente-status bloqueado">♟</span>';
+  }
+
+  if(confiancaValida()){
+    return '<span class="cliente-status ativo">✓</span>';
+  }
+
+  if(status.includes("bloque") || status.includes("suspens") || status.includes("cortado") || String(bloqueio).trim()){
+    return '<span class="cliente-status bloqueado">♟</span>';
+  }
+
+  return '<span class="cliente-status ativo">✓</span>';
+}
+function montarEnderecoCliente(c){
+  const endereco = primeiroValor(c, ["endereco","logradouro","rua"]);
+  const numero = primeiroValor(c, ["numero"]);
+  const complemento = primeiroValor(c, ["complemento"]);
+  const bairro = primeiroValor(c, ["bairro"]);
+  const cidade = primeiroValor(c, ["cidade","localidade"]) || "Manaus";
+  const uf = primeiroValor(c, ["uf","estado"]) || "AM";
+  const cep = primeiroValor(c, ["cep"]);
+  const linha1 = [endereco, numero, complemento].filter(Boolean).join(", ");
+  const linha2 = [bairro].filter(Boolean).join("");
+  const linha3 = [cidade, uf].filter(Boolean).join("/");
+  const linha4 = cep ? "CEP: " + cep : "";
+  return [linha1, linha2, linha3, linha4].filter(Boolean).join("<br>");
+}
+function montarContatoCliente(c){
+  const telefones = [
+    primeiroValor(c, ["telefone1","telefone","celular","fone"]),
+    primeiroValor(c, ["telefone2","celular2","fone2"]),
+    primeiroValor(c, ["telefone3","celular3","fone3"])
+  ].filter(Boolean);
+  const email = primeiroValor(c, ["email","e_mail"]);
+  return [...telefones, email].filter(Boolean).join("<br>") || "--";
+}
+function preencherVencimentos(){
+  const sel = document.getElementById("filtroVencimento");
+  if(!sel || sel.dataset.ok) return;
+  for(let i=1;i<=30;i++){
+    const op = document.createElement("option");
+    op.value = String(i);
+    op.textContent = String(i);
+    sel.appendChild(op);
+  }
+  sel.dataset.ok = "1";
+}
+function atualizarContadores(clientes){
+  clientes = Array.isArray(clientes) ? clientes : [];
+  const total = clientes.length;
+
+  function texto(c, campos){
+    return normalizarTexto(primeiroValor(c, campos) || "");
+  }
+
+  function valorCampo(c, campos){
+    return primeiroValor(c, campos) || "";
+  }
+
+  function temData(c, campos){
+    return campos.some(k => {
+      const v = c && c[k];
+      return v !== undefined && v !== null && String(v).trim() !== "" && String(v).trim() !== "0000-00-00";
+    });
+  }
+
+  function parseData(v){
+    if(!v) return null;
+    v = String(v).trim();
+    if(!v || v === "0000-00-00") return null;
+
+    let m = v.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if(m) return new Date(Number(m[1]), Number(m[2])-1, Number(m[3]), 23, 59, 59);
+
+    m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+    if(m) return new Date(Number(m[3]), Number(m[2])-1, Number(m[1]), 23, 59, 59);
+
+    const d = new Date(v);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  function ehCancelado(c){
+    const s = texto(c, ["status","situacao","statusCobranca","cli_status","estadoCliente","status_cliente","cobranca"]);
+    return (
+      s.includes("cancel") ||
+      s.includes("encerrado") ||
+      temData(c, ["cancelamento","dataCancelamento","dtCancelamento","cli_dtcancelamento"])
+    );
+  }
+
+  function ehIsento(c){
+    const s = texto(c, ["status","situacao","statusCobranca","cli_boleto","boleto","cobranca","tipoCobranca"]);
+    return (
+      s.includes("isento") ||
+      s === "n" ||
+      s === "nao cobrar" ||
+      s === "não cobrar"
+    );
+  }
+
+  function confiancaValida(c){
+    const raw = valorCampo(c, [
+      "liberacaoConfianca",
+      "liberadoConfianca",
+      "liberado",
+      "dataLiberacaoConfianca",
+      "cli_liberado",
+      "confianca",
+      "liberacao"
+    ]);
+    const d = parseData(raw);
+    if(!d) return false;
+
+    const hoje = new Date();
+    hoje.setHours(0,0,0,0);
+
+    return d >= hoje;
+  }
+
+  function ehBloqueado(c){
+    const s = texto(c, ["status","situacao","statusCobranca","cli_status","estadoCliente","status_cliente","cobranca"]);
+    return (
+      s.includes("bloque") ||
+      s.includes("suspens") ||
+      s.includes("cortado") ||
+      temData(c, ["bloqueio","dataBloqueio","dtBloqueio","cli_bloqueado"])
+    );
+  }
+
+  /*
+    Prioridade:
+    1. Cancelado
+    2. Isento
+    3. Liberação em Confiança válida = Ativo
+    4. Bloqueado
+    5. Ativo
+
+    Quando a confiança vencer, se ainda houver bloqueio, volta para Bloqueados.
+  */
+  const cancel = clientes.filter(c => ehCancelado(c)).length;
+  const isentos = clientes.filter(c => !ehCancelado(c) && ehIsento(c)).length;
+  const confianca = clientes.filter(c => !ehCancelado(c) && !ehIsento(c) && confiancaValida(c)).length;
+  const bloq = clientes.filter(c => !ehCancelado(c) && !ehIsento(c) && !confiancaValida(c) && ehBloqueado(c)).length;
+  const ativos = Math.max(total - cancel - isentos - bloq, 0);
+
+  const set = (id, valor) => {
+    const el = document.getElementById(id);
+    if(el) el.textContent = valor;
+  };
+
+  set("qtdAtivos", ativos);
+  set("qtdBloqueados", bloq);
+  set("qtdCancelados", cancel);
+  set("qtdIsentos", isentos);
+  set("qtdTotal", total);
+  set("qtdNaoAtivos", 0);
+
+  ["qtdConfianca","qtdLiberadosConfianca","qtdLiberacaoConfianca"].forEach(id => set(id, confianca));
+}
+function carregarClientesReceitaNet(){
+  preencherVencimentos();
+  const clientes = getClientesBase();
+  window.__clientesReceitaNet = clientes;
+  atualizarContadores(clientes);
+  renderizarClientesReceitaNet(clientes);
+  mostrarStatusImportacao(clientes);
+}
+function mostrarStatusImportacao(clientes){
+  let info = document.getElementById("statusImportacaoClientes");
+  if(!info){
+    const card = document.querySelector(".clientes-table-card");
+    if(card){
+      info = document.createElement("div");
+      info.id = "statusImportacaoClientes";
+      info.className = "import-status-clientes";
+      card.insertBefore(info, card.querySelector("table"));
+    }
+  }
+  if(!info) return;
+
+  let ultima = null;
+  try{ ultima = JSON.parse(localStorage.getItem("ultimaImportacaoReceitaNet") || "null"); }catch(e){}
+
+  if(clientes.length){
+    info.innerHTML = `Clientes carregados: <b>${clientes.length}</b>` + (ultima ? ` | Última importação: ${ultima.arquivo || "--"}` : "");
+  }else{
+    info.innerHTML = `Nenhum cliente importado encontrado. Vá em <b>Importação</b>, selecione o CSV do ReceitaNet e aguarde a mensagem "Importação concluída".`;
+  }
+}
+
+function renderizarClientesReceitaNet(clientes){
+  const tbody = document.getElementById("listaClientesReceita");
+  if(!tbody) return;
+  if(!clientes.length){
+    tbody.innerHTML = '<tr><td colspan="5" class="sem-clientes">Nenhum cliente importado encontrado. Importe o CSV na aba Importação.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = clientes.map(c=>{
+    const login = primeiroValor(c, ["loginPppoe","login","usuario","user"]);
+    const nome = primeiroValor(c, ["nome","cliente","razaoSocial"]) || login || "--";
+    const endereco = montarEnderecoCliente(c);
+    const contato = montarContatoCliente(c);
+    return `
+      <tr onclick="abrirClienteCadastro('${encodeURIComponent(login)}')">
+        <td class="status-col">${statusIconeCliente(c)}</td>
+        <td class="login-col">${login || "--"}</td>
+        <td class="nome-col">${nome}</td>
+        <td class="endereco-col">${endereco || "--"}</td>
+        <td class="contato-col">${contato}</td>
+      </tr>
+    `;
+  }).join("");
+}
+function filtrarClientesReceitaNet(){
+  const clientes = window.__clientesReceitaNet || getClientesBase();
+  const login = normalizarTexto(document.getElementById("filtroLogin")?.value || "");
+  const nome = normalizarTexto(document.getElementById("filtroNome")?.value || "");
+  const endereco = normalizarTexto(document.getElementById("filtroEndereco")?.value || "");
+  const venc = String(document.getElementById("filtroVencimento")?.value || "");
+  const filtrados = clientes.filter(c=>{
+    const loginTxt = normalizarTexto(primeiroValor(c, ["loginPppoe","login","usuario","user"]));
+    const nomeTxt = normalizarTexto(primeiroValor(c, ["nome","cliente","razaoSocial"]));
+    const endTxt = normalizarTexto(montarEnderecoCliente(c).replace(/<br>/g," "));
+    const vencTxt = String(primeiroValor(c, ["vencimento","diaVencimento","dia_do_vencimento"]));
+    return (!login || loginTxt.includes(login)) &&
+           (!nome || nomeTxt.includes(nome)) &&
+           (!endereco || endTxt.includes(endereco)) &&
+           (!venc || vencTxt === venc);
+  });
+  renderizarClientesReceitaNet(filtrados);
+}
+function abrirClienteCadastro(login){
+  const l = decodeURIComponent(login || "");
+  const lista = window.__clientesReceitaNet || getClientesBase();
+
+  const cliente = lista.find(c => {
+    const loginC = normalizarTexto(primeiroValor(c, ["loginPppoe","login","usuario","user","name","pppoe"]));
+    const nomeC = normalizarTexto(primeiroValor(c, ["nome","cliente","razaoSocial"]));
+    return loginC === normalizarTexto(l) || nomeC === normalizarTexto(l);
+  });
+
+  if(l) localStorage.setItem("clienteEditarLogin", l);
+  if(cliente){
+    localStorage.setItem("clienteSelecionadoCompleto", JSON.stringify(cliente));
+    localStorage.setItem("clienteCadastroSelecionado", JSON.stringify(cliente));
+  }
+
+  window.location.href = "cadastro.html?cliente=" + encodeURIComponent(l) + "&t=" + Date.now();
+}
+
+window.addEventListener("pageshow", function(){
+  carregarClientesReceitaNet();
+});
+</script>
+
+<script>
+(function(){
+  function norm(v){ return String(v || "").toLowerCase().trim(); }
+
+  function primeiro(c, campos){
+    for(const k of campos){
+      if(c && c[k] !== undefined && c[k] !== null && String(c[k]).trim() !== "") return String(c[k]).trim();
+    }
+    return "";
+  }
+
+  function baseClientes(){
+    const chaves = ["clientes", "clientesReceitaNet", "fibra_clientes", "clientes_importados"];
+    for(const chave of chaves){
+      try{
+        const raw = localStorage.getItem(chave);
+        if(!raw) continue;
+        const lista = JSON.parse(raw);
+        if(Array.isArray(lista) && lista.length) return lista;
+      }catch(e){}
+    }
+    return [];
+  }
+
+  function textoLinha(tr){
+    return Array.from(tr.querySelectorAll("td")).map(td => td.textContent.trim()).filter(Boolean).join(" ").toLowerCase();
+  }
+
+  function encontrarClientePelaLinha(tr){
+    const lista = window.__clientesReceitaNet || baseClientes();
+    const texto = textoLinha(tr);
+
+    return lista.find(c => {
+      const login = norm(primeiro(c, ["loginPppoe","login","usuario","user","name","pppoe"]));
+      const nome = norm(primeiro(c, ["nome","cliente","razaoSocial"]));
+      const cpf = norm(primeiro(c, ["cpfCnpj","cpf","cnpj","documento"]));
+      return (login && texto.includes(login)) || (nome && texto.includes(nome)) || (cpf && texto.includes(cpf));
+    });
+  }
+
+  document.addEventListener("click", function(e){
+    const tr = e.target.closest("tbody tr");
+    if(!tr) return;
+
+    // Ignora linhas vazias, carregando ou mensagens.
+    const t = tr.textContent.toLowerCase();
+    if(t.includes("carregando") || t.includes("nenhum cliente")) return;
+
+    const cliente = encontrarClientePelaLinha(tr);
+    if(!cliente) {
+      alert("Não consegui identificar este cliente. Reimporte o arquivo ou me envie um print da linha.");
+      return;
+    }
+
+    const login = primeiro(cliente, ["loginPppoe","login","usuario","user","name","pppoe"]) || primeiro(cliente, ["nome","cliente","razaoSocial"]);
+
+    localStorage.setItem("clienteSelecionadoCompleto", JSON.stringify(cliente));
+    localStorage.setItem("clienteCadastroSelecionado", JSON.stringify(cliente));
+    localStorage.setItem("clienteEditar", JSON.stringify(cliente));
+    localStorage.setItem("clienteEditarLogin", login);
+
+    window.location.href = "cadastro.html?cliente=" + encodeURIComponent(login) + "&t=" + Date.now();
+  });
+})();
+</script>
+
+
+<script>
+document.addEventListener("fibra:supabase-sync", function(){
+  if(typeof carregarClientes === "function") try{carregarClientes();}catch(e){}
+  if(typeof renderClientes === "function") try{renderClientes();}catch(e){}
+  if(typeof renderizarClientes === "function") try{renderizarClientes();}catch(e){}
+});
+</script>
+
+<script src="bloqueio-configuravel.js"></script>
+
+<script>
+/* SUPABASE FINAL CLIENTES BOLETOS */
+(function(){
+  function norm(v){ return String(v || "").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim(); }
+  function field(id){
+    const el = document.getElementById(id) || document.querySelector(`[name="${id}"]`);
+    return el ? String(el.value || "").trim() : "";
+  }
+  function clienteAtual(){
+    let c = {};
+    try{ if(typeof clienteDoCadastro === "function") c = clienteDoCadastro() || {}; }catch(e){}
+    document.querySelectorAll("input,select,textarea").forEach(el=>{
+      const id = el.id || el.name;
+      if(id && String(el.value || "").trim() !== "") c[id] = el.value;
+    });
+    c.loginPppoe = c.loginPppoe || c.login_pppoe || c.login || c.usuario || c.pppoe || field("loginPppoe") || field("login") || field("usuario");
+    c.login = c.login || c.loginPppoe;
+    c.nome = c.nome || c.cliente || c.nomeCliente || c.razaoSocial || field("nome") || field("nomeCliente");
+    c.cpfCnpj = c.cpfCnpj || c.cpf_cnpj || c.cpf || c.cnpj || c.documento || field("cpfCnpj") || field("cpf") || field("cnpj");
+    c.telefone1 = c.telefone1 || c.telefone || c.celular || field("telefone1") || field("telefone") || field("celular");
+    c.servidor = c.servidor || c.popServidor || c.pop || field("servidor") || field("popServidor");
+    c.profile = c.profile || c.perfil || c.planoVelocidade || c.plano || field("profile") || field("perfil") || field("plano");
+    return c;
+  }
+  window.fibraClienteAtualSeguro = clienteAtual;
+
+  async function salvarCliente(){
+    const c = clienteAtual();
+    if(!(c.loginPppoe || c.login || c.cpfCnpj || c.cpf || c.nome)) return null;
+    const resp = await fetch("/api/clientes/salvar", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify(c)
+    });
+    const json = await resp.json();
+    if(!resp.ok || !json.ok) throw new Error(json.erro || "Erro ao salvar cliente.");
+    return json.cliente;
+  }
+  window.fibraSalvarClienteAtualSupabase = salvarCliente;
+
+  async function carregarClientes(){
+    const resp = await fetch("/api/clientes", {cache:"no-store"});
+    const json = await resp.json();
+    if(!resp.ok || !json.ok) throw new Error(json.erro || "Erro ao carregar clientes.");
+    window.__fibraClientesSupabase = json.clientes || [];
+    if(typeof renderClientes === "function") renderClientes(window.__fibraClientesSupabase);
+    if(typeof renderizarClientes === "function") renderizarClientes(window.__fibraClientesSupabase);
+    if(typeof atualizarTabelaClientes === "function") atualizarTabelaClientes(window.__fibraClientesSupabase);
+    return window.__fibraClientesSupabase;
+  }
+  window.fibraCarregarClientesSupabase = carregarClientes;
+
+  async function carregarBoletosCliente(){
+    const c = clienteAtual();
+    const params = new URLSearchParams({
+      login: c.loginPppoe || c.login || "",
+      cpf: c.cpfCnpj || c.cpf || "",
+      nome: c.nome || ""
+    });
+    const resp = await fetch("/api/boletos/cliente?" + params.toString(), {cache:"no-store"});
+    const json = await resp.json();
+    if(!resp.ok || !json.ok) throw new Error(json.erro || "Erro ao carregar boletos.");
+    window.__fibraBoletosClienteSupabase = json.boletos || [];
+    return window.__fibraBoletosClienteSupabase;
+  }
+  window.fibraCarregarBoletosClienteSupabase = carregarBoletosCliente;
+  window.fibraGetBoletosStorage = function(){ return window.__fibraBoletosClienteSupabase || []; };
+  window.fibraSalvarBoletosStorage = function(lista){ window.__fibraBoletosClienteSupabase = Array.isArray(lista) ? lista : []; };
+  window.fibraBoletosClienteAtual = function(){ return window.__fibraBoletosClienteSupabase || []; };
+  window.fibraRecarregarBoletosAposEfi = async function(){
+    await carregarBoletosCliente();
+    if(typeof renderizarBoletosCliente === "function") renderizarBoletosCliente();
+  };
+
+  window.abrirModalBoletosCliente = async function(){
+    const modal = document.getElementById("modalBoletosCliente");
+    if(modal){ modal.classList.add("aberto"); modal.setAttribute("aria-hidden","false"); }
+    const tbody = document.getElementById("tbodyBoletosCliente");
+    if(tbody) tbody.innerHTML='<tr><td colspan="6">Carregando boletos do Supabase...</td></tr>';
+    try{ await window.fibraRecarregarBoletosAposEfi(); }
+    catch(e){ if(tbody) tbody.innerHTML='<tr><td colspan="6">Erro ao carregar boletos: '+e.message+'</td></tr>'; }
+  };
+
+  document.addEventListener("click", function(e){
+    const el = e.target.closest("button,a,input[type=button],input[type=submit]");
+    if(!el) return;
+    const txt = norm(el.textContent || el.value || "");
+    if(txt.includes("gravar") || txt.includes("salvar") || txt.includes("cadastrar")){
+      setTimeout(()=>salvarCliente().then(()=>carregarClientes().catch(()=>{})).catch(err=>alert("Erro ao salvar cliente: "+err.message)), 300);
+    }
+  }, true);
+
+  if(location.pathname.toLowerCase().includes("clientes")){
+    document.addEventListener("DOMContentLoaded", ()=>setTimeout(()=>carregarClientes().catch(e=>console.warn(e.message)), 600));
+  }
+})();
+</script>
+
+
+<script>
+/* LISTA DE CLIENTES DIRETO DO SUPABASE */
+(function(){
+  async function carregarSupabaseUnico(){
+    try{
+      const lista = await FibraSupabaseOnly.listarClientes();
+      window.__fibraClientesSupabase = lista;
+      window.__clientesReceitaNet = lista;
+
+      if(typeof renderizarClientesReceitaNet === "function"){
+        renderizarClientesReceitaNet(lista);
+      }else if(typeof renderizarClientes === "function"){
+        renderizarClientes(lista);
+      }else if(typeof renderClientes === "function"){
+        renderClientes(lista);
+      }
+      return lista;
+    }catch(e){
+      console.error(e);
+      const tbody = document.querySelector("tbody");
+      if(tbody) tbody.innerHTML = `<tr><td colspan="5">Erro ao carregar clientes do Supabase: ${e.message}</td></tr>`;
+      return [];
+    }
+  }
+
+  window.abrirClienteCadastro = function(chave){
+    location.href = "cadastro.html?cliente=" + encodeURIComponent(decodeURIComponent(chave || ""));
+  };
+
+  document.addEventListener("DOMContentLoaded", carregarSupabaseUnico);
+  window.addEventListener("pageshow", carregarSupabaseUnico);
+})();
+</script>
+
+<script>
+/* CONTADORES CLIENTES SUPABASE - IDS REAIS */
+(function(){
+  async function carregarClientesEContadores(){
+    try{
+      const resp = await fetch("/api/clientes", {cache:"no-store"});
+      const json = await resp.json();
+
+      if(!resp.ok || !json.ok){
+        throw new Error(json.erro || "Erro ao carregar clientes.");
+      }
+
+      const lista = Array.isArray(json.clientes) ? json.clientes : [];
+
+      window.__fibraClientesSupabase = lista;
+      window.__clientesReceitaNet = lista;
+
+      // Usa a função original da própria página, que já conhece
+      // os status ativo, bloqueado, cancelado e isento.
+      if(typeof atualizarContadores === "function"){
+        atualizarContadores(lista);
+      }else{
+        const total = lista.length;
+        const bloqueados = lista.filter(c => {
+          const status = String(
+            c.status || c.situacao || c.statusCobranca || ""
+          ).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+
+          return status.includes("bloque") ||
+            Boolean(c.dataBloqueio || c.data_bloqueio);
+        }).length;
+
+        const ativos = Math.max(0, total - bloqueados);
+
+        const set = (id, valor) => {
+          const el = document.getElementById(id);
+          if(el) el.textContent = String(valor);
+        };
+
+        set("qtdTotal", total);
+        set("qtdBloqueados", bloqueados);
+        set("qtdAtivos", ativos);
+      }
+
+      // Mantém a tabela sincronizada com a mesma lista.
+      if(typeof renderizarClientesReceitaNet === "function"){
+        renderizarClientesReceitaNet(lista);
+      }
+
+      if(typeof mostrarStatusImportacao === "function"){
+        mostrarStatusImportacao(lista);
+      }
+    }catch(e){
+      console.warn("Erro ao carregar clientes e contadores:", e.message);
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", function(){
+    setTimeout(carregarClientesEContadores, 100);
+  });
+
+  window.addEventListener("pageshow", function(){
+    setTimeout(carregarClientesEContadores, 100);
+  });
+
+  window.fibraRecarregarClientesEContadores = carregarClientesEContadores;
+})();
+</script>
+
+<script src="clientes-supabase-stage1.js"></script>
+</body>
+</html>

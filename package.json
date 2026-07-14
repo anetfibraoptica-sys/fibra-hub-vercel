@@ -1,0 +1,15 @@
+{
+  "name": "fibra-hub-2-servidores",
+  "version": "10.0.0",
+  "description": "Fibra+ Hub com 2 servidores MikroTik",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "socket.io": "^4.7.5",
+    "pg": "^8.11.5"
+  }
+}
