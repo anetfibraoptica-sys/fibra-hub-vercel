@@ -2976,7 +2976,8 @@ async function salvarBoletoGeradoSupabase(body, detalhes, conta, nomeConta) {
   await efiGarantirTabela();
 
   await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS numero TEXT;");
-  await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS cliente_id BIGINT;");
+  await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS cliente_id TEXT;");
+  await pool.query("ALTER TABLE boletos ALTER COLUMN cliente_id TYPE TEXT USING cliente_id::text;");
   await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS cliente_login TEXT;");
   await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS cliente_nome TEXT;");
   await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS cpf_cnpj TEXT;");
@@ -3003,10 +3004,10 @@ async function salvarBoletoGeradoSupabase(body, detalhes, conta, nomeConta) {
   const numero = String(body.numero || chargeId || Date.now());
   const valor = Number(body.valor || body.total || 0) || 0;
   const login = String(body.login || body.loginPppoe || body.clienteLogin || body.usuario || "").trim();
-  let clienteId = Number(body.clienteId || body.cliente_id || body.idCliente || 0) || 0;
+  let clienteId = String(body.clienteId || body.cliente_id || body.idCliente || "").trim();
   if (!clienteId && login) {
     const clienteExato = await pool.query(`SELECT id FROM clientes WHERE login_pppoe=$1 OR dados->>'loginPppoe'=$1 OR dados->>'login'=$1 ORDER BY id DESC LIMIT 1`, [login]);
-    clienteId = Number(clienteExato.rows[0]?.id || 0) || 0;
+    clienteId = String(clienteExato.rows[0]?.id || "").trim();
   }
   if (!clienteId) throw new Error("Não foi possível identificar o ponto do cliente. Abra o cadastro correto antes de gerar o boleto.");
   const nome = String(body.nome || body.cliente || body.cliente_nome || "");
@@ -3402,7 +3403,7 @@ async function fbEnsureTables(){
     "ALTER TABLE clientes ADD COLUMN IF NOT EXISTS servidor TEXT;",
     "ALTER TABLE clientes ADD COLUMN IF NOT EXISTS profile TEXT;",
     "ALTER TABLE clientes ADD COLUMN IF NOT EXISTS dados JSONB;",
-    "ALTER TABLE boletos ADD COLUMN IF NOT EXISTS cliente_id BIGINT;",
+    "ALTER TABLE boletos ADD COLUMN IF NOT EXISTS cliente_id TEXT;",
     "ALTER TABLE boletos ADD COLUMN IF NOT EXISTS cliente_login TEXT;",
     "ALTER TABLE boletos ADD COLUMN IF NOT EXISTS cliente_nome TEXT;",
     "ALTER TABLE boletos ADD COLUMN IF NOT EXISTS cpf_cnpj TEXT;",
@@ -3415,10 +3416,11 @@ async function fbEnsureTables(){
     "ALTER TABLE boletos ADD COLUMN IF NOT EXISTS dados JSONB;"
   ];
   for(const sql of alters) await pool.query(sql);
+  await pool.query("ALTER TABLE boletos ALTER COLUMN cliente_id TYPE TEXT USING cliente_id::text;");
   await pool.query("CREATE INDEX IF NOT EXISTS idx_boletos_cliente_id ON boletos(cliente_id);");
   await pool.query(`
     UPDATE boletos b
-    SET cliente_id=c.id
+    SET cliente_id=c.id::text
     FROM clientes c
     WHERE b.cliente_id IS NULL
       AND COALESCE(b.cliente_login,b.dados->>'loginPppoe',b.dados->>'login','') <> ''
@@ -3451,8 +3453,8 @@ function fbBoletoRow(row){
   return {
     ...d,
     id: row.id,
-    clienteId: Number(row.cliente_id || d.clienteId || d.cliente_id || 0) || null,
-    cliente_id: Number(row.cliente_id || d.cliente_id || d.clienteId || 0) || null,
+    clienteId: String(row.cliente_id || d.clienteId || d.cliente_id || "").trim() || null,
+    cliente_id: String(row.cliente_id || d.cliente_id || d.clienteId || "").trim() || null,
     numero: row.numero,
     login: row.cliente_login || d.login || d.loginPppoe || d.clienteLogin || "",
     loginPppoe: row.cliente_login || d.loginPppoe || d.login || "",
@@ -3498,7 +3500,7 @@ async function fbSalvarClienteSupabaseUnico(body) {
   body = body || {};
   const c = fbClienteFromAny(body);
   if (!c.login_pppoe && !c.nome) throw new Error("Cliente sem login PPPoE ou nome.");
-  const idInformado = Number(body.id || body.clienteId || body.cliente_id || 0) || 0;
+  const idInformado = String(body.id || body.clienteId || body.cliente_id || "").trim();
   let existente = { rows: [] };
   if (idInformado) existente = await pool.query("SELECT id FROM clientes WHERE id=$1 LIMIT 1", [idInformado]);
   else if (c.login_pppoe) existente = await pool.query(`SELECT id FROM clientes WHERE login_pppoe=$1 OR dados->>'loginPppoe'=$1 OR dados->>'login'=$1 ORDER BY atualizado_em DESC NULLS LAST, criado_em DESC NULLS LAST LIMIT 1`, [c.login_pppoe]);
@@ -3540,7 +3542,7 @@ app.get("/api/clientes", async (req,res)=>{
 app.get("/api/boletos/cliente", async (req,res)=>{
   try{
     await fbEnsureTables();
-    const clienteId=Number(req.query.cliente_id || req.query.clienteId || req.query.id || 0) || 0;
+    const clienteId=String(req.query.cliente_id || req.query.clienteId || req.query.id || "").trim();
     const login=String(req.query.login || req.query.loginPppoe || "").trim();
     let r;
     if(clienteId) r=await pool.query(`SELECT * FROM boletos WHERE cliente_id=$1 OR (cliente_id IS NULL AND $2<>'' AND cliente_login=$2) ORDER BY vencimento ASC NULLS LAST,id DESC`,[clienteId,login]);
@@ -3887,7 +3889,7 @@ function autoClienteCampos(cliente, boleto = {}) {
 
 async function autoBuscarClienteDoBoleto(boleto) {
   const bd=autoDados(boleto);
-  const clienteId=Number(boleto.cliente_id || bd.clienteId || bd.cliente_id || 0) || 0;
+  const clienteId=String(boleto.cliente_id || bd.clienteId || bd.cliente_id || "").trim();
   if(clienteId){const r=await pool.query("SELECT * FROM clientes WHERE id=$1 LIMIT 1",[clienteId]); if(r.rows[0]) return r.rows[0];}
   const login=autoPrimeiro(boleto,["cliente_login"]) || autoPrimeiro(bd,["login","loginPppoe","clienteLogin","usuario","pppoe"]);
   if(!login) return null;
@@ -4232,7 +4234,7 @@ async function autoExecutarRotinaDiaria() {
       b.dados AS boleto_dados
     FROM clientes c
     JOIN boletos b ON (
-      b.cliente_id=c.id OR (
+      b.cliente_id=c.id::text OR (
         b.cliente_id IS NULL
         AND COALESCE(c.login_pppoe,c.pppoe,c.dados->>'loginPppoe',c.dados->>'login','') <> ''
         AND COALESCE(c.login_pppoe,c.pppoe,c.dados->>'loginPppoe',c.dados->>'login','')=COALESCE(b.cliente_login,b.dados->>'loginPppoe',b.dados->>'login','')

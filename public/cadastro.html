@@ -3259,7 +3259,7 @@ document.addEventListener("DOMContentLoaded", function(){
   }
   function clienteIdCadastro(c){
     c=c || {};
-    return Number(c.id || c.clienteId || c.cliente_id || window.__fibraClienteSelecionado?.id || window.__fibraClienteCadastro?.id || 0) || 0;
+    return String(c.id || c.clienteId || c.cliente_id || window.__fibraClienteSelecionado?.id || window.__fibraClienteCadastro?.id || "").trim();
   }
   function profileCadastro(c){
     return c.profile || c.plano || c.perfil || c.profileServidor || c.planoVelocidade || c.velocidade || "";
