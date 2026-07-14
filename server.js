@@ -2178,9 +2178,44 @@ function efiAddDays(iso, days) {
 }
 
 function efiMoneyCents(v) {
-  const s = String(v || "0").replace(/\./g, "").replace(",", ".").replace(/[^\d.-]/g, "");
+  // A API Efí recebe o valor em centavos. O painel pode enviar tanto
+  // número (2.15) quanto texto brasileiro ("2,15" / "1.234,56").
+  // Nunca remova o ponto de um valor que já chegou como Number,
+  // pois 2.15 viraria 215 e depois 21.500 centavos.
+  if (typeof v === "number") {
+    return Number.isFinite(v) ? Math.round(v * 100) : 0;
+  }
+
+  let s = String(v ?? "").trim().replace(/[R$\s]/g, "");
+  if (!s) return 0;
+
+  const ultimaVirgula = s.lastIndexOf(",");
+  const ultimoPonto = s.lastIndexOf(".");
+
+  if (ultimaVirgula >= 0 && ultimoPonto >= 0) {
+    // O separador que aparece por último é tratado como decimal.
+    if (ultimaVirgula > ultimoPonto) {
+      // Ex.: 1.234,56
+      s = s.replace(/\./g, "").replace(",", ".");
+    } else {
+      // Ex.: 1,234.56
+      s = s.replace(/,/g, "");
+    }
+  } else if (ultimaVirgula >= 0) {
+    // Ex.: 2,15
+    s = s.replace(/\./g, "").replace(",", ".");
+  } else {
+    // Ex.: 2.15 ou 1234.56. Mantém um único ponto decimal.
+    const partes = s.split(".");
+    if (partes.length > 2) {
+      const decimal = partes.pop();
+      s = partes.join("") + "." + decimal;
+    }
+  }
+
+  s = s.replace(/[^\d.-]/g, "");
   const n = Number(s);
-  if (!isFinite(n)) return 0;
+  if (!Number.isFinite(n) || n <= 0) return 0;
   return Math.round(n * 100);
 }
 
