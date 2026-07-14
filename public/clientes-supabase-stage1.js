@@ -163,7 +163,8 @@
       setCampo('cadInterface', primeiro(c,mapa.cadInterface), {criarOpcao:true});
       setCampo('cadConexao', primeiro(c,mapa.cadConexao), {criarOpcao:true});
       if(typeof atualizarResumoCadastro==='function') atualizarResumoCadastro();
-    },80);
+      document.dispatchEvent(new CustomEvent('fibra:resumo-pronto',{detail:c}));
+    },120);
 
     const ident=document.getElementById('cadIdentificador');
     if(ident) ident.textContent='Identificador: '+texto(primeiro(c,['id','identificador','clienteId','cliente_id']) || '--');
@@ -172,6 +173,9 @@
     window.__fibraClienteSelecionado=c;
     window.__fibraClienteCadastro=c;
     if(typeof atualizarResumoCadastro==='function') atualizarResumoCadastro();
+    requestAnimationFrame(()=>setTimeout(()=>{
+      if(typeof atualizarResumoCadastro==='function') atualizarResumoCadastro();
+    },0));
   }
   window.preencherCadastroCompletoSupabase=preencherCadastroCompleto;
 

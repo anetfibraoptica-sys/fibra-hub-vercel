@@ -726,13 +726,17 @@ document.addEventListener("DOMContentLoaded", function(){
   }
 
   function clienteLocal(){
+    var memoria = window.__fibraClienteCadastro || window.__fibraClienteSelecionado;
+    if(memoria && typeof memoria === "object"){
+      return Object.assign({}, memoria.dados || {}, memoria);
+    }
     var keys = ["clienteSelecionadoCompleto","clienteCadastroSelecionado","clienteEditar","clienteOnlineSelecionado"];
     for(var i=0;i<keys.length;i++){
       try{
         var raw = localStorage.getItem(keys[i]);
         if(raw){
           var obj = JSON.parse(raw);
-          if(obj && typeof obj === "object") return obj;
+          if(obj && typeof obj === "object") return Object.assign({}, obj.dados || {}, obj);
         }
       }catch(e){}
     }
@@ -740,9 +744,14 @@ document.addEventListener("DOMContentLoaded", function(){
   }
 
   function pick(obj, names, fallback){
-    for(var i=0;i<names.length;i++){
-      var v = obj[names[i]];
-      if(v !== undefined && v !== null && String(v).trim() !== "") return String(v).trim();
+    var fontes = [obj, obj && obj.dados, obj && obj.cliente, obj && obj.cadastro];
+    for(var f=0;f<fontes.length;f++){
+      var fonte = fontes[f];
+      if(!fonte || typeof fonte !== "object") continue;
+      for(var i=0;i<names.length;i++){
+        var v = fonte[names[i]];
+        if(v !== undefined && v !== null && String(v).trim() !== "") return String(v).trim();
+      }
     }
     return fallback || "";
   }
@@ -840,29 +849,31 @@ document.addEventListener("DOMContentLoaded", function(){
     var login = val(["input[name='login']","input[name='cli_login']","#login","#cadLogin"], pick(c,["login","usuario","loginPppoe","pppoe"], "-"));
     var senha = val(["input[name='senha']","input[name='cli_senha']","#senha","#cadSenha"], pick(c,["senha","password"], "0000"));
     var nome = val(["input[name='nome']","input[name='cli_nome']","#nome","#cadNome"], pick(c,["nome","name","cliente"], "-"));
-    var cpf = val(["input[name='cpf']","input[name='cpfcnpj']","input[name='cli_cgc']","#cpf","#cpfcnpj"], pick(c,["cpf","cpfcnpj","documento"], "-"));
-    var dia = val(["select[name='dia_vencimento']","select[name='cli_diatari']","input[name='dia_vencimento']","#diaVencimento"], pick(c,["diaVencimento","vencimento"], "20"));
+    var cpf = val(["#cadCpf","input[name='cpf']","input[name='cpfcnpj']","input[name='cli_cgc']","#cpf","#cpfcnpj"], pick(c,["cpfCnpj","cpf_cnpj","cpf","cpfcnpj","cnpj","documento"], "-"));
+    var dia = val(["#cadVencimento","select[name='dia_vencimento']","select[name='cli_diatari']","input[name='dia_vencimento']","#diaVencimento"], pick(c,["diaVencimento","dia_vencimento","vencimento"], "20"));
     var prox = proximaFaturaAberta(c, login, cpf);
     var servidor = val(["#cadServidorReceita option:checked","#cadPop option:checked","#cadServidor option:checked","select[name='servidor'] option:checked","select[name='ip_mk'] option:checked"], pick(c,["servidor","server","popServidor"], "-"));
-    var interfaceV = pick(c,["interface","interfaceAtual"], val(["select[name='interface'] option:checked","select[name='interface_id'] option:checked"], "PPPOE"));
-    var ip = pick(c,["ip","ipAtual","address"], "100.127.7.218");
+    var interfaceV = val(["#cadInterface option:checked","#cadInterface","select[name='interface'] option:checked","select[name='interface_id'] option:checked"], pick(c,["interface","interfaceAtual","interface_servidor"], "PPPOE"));
+    var ip = val(["#cadIp"], pick(c,["ip","ipAtual","ip_address","address"], "-"));
     var profile = val(["#cadProfile option:checked","#cadProfile"], pick(c,["profile","planoServidor","perfil"], "--"));
     var servico = pick(c,["servico","service"], "PPP2");
     var tempo = pick(c,["tempo","uptime"], "-");
-    var mac = pick(c,["mac","macAddress"], "FC:40:09:D2:B2:1B");
+    var mac = val(["#cadMac"], pick(c,["mac","macAddress","mac_address","callerId"], "-"));
     var mtu = pick(c,["mtu"], "1480");
     var mru = pick(c,["mru"], "1480");
-    var endereco = pick(c,["endereco","address"], val(["input[name='endereco']","input[name='cli_endereco']"], "-"));
-    var ponto = pick(c,["referencia","pontoReferencia"], val(["input[name='referencia']","input[name='cli_referencia']"], "-"));
-    var bairro = pick(c,["bairro"], val(["input[name='bairro']","input[name='cli_bairro']"], "-"));
-    var cidade = pick(c,["cidade"], val(["input[name='cidade']","input[name='cli_cidade']"], "-"));
-    var estado = pick(c,["estado","uf"], val(["select[name='estado'] option:checked"], "-"));
+    var endereco = val(["#cadEndereco","input[name='endereco']","input[name='cli_endereco']"], pick(c,["endereco","logradouro","address"], "-"));
+    var ponto = val(["#cadReferencia","input[name='referencia']","input[name='cli_referencia']"], pick(c,["referencia","pontoReferencia","ponto_referencia"], "-"));
+    var bairro = val(["#cadBairro","input[name='bairro']","input[name='cli_bairro']"], pick(c,["bairro"], "-"));
+    var cidade = val(["#cadCidade","input[name='cidade']","input[name='cli_cidade']"], pick(c,["cidade","municipio","localidade"], "-"));
+    var estado = val(["#cadUf option:checked","#cadUf","select[name='estado'] option:checked"], pick(c,["estado","uf"], "-"));
     var ibge = pick(c,["ibge"], "1302603");
-    var tel1 = pick(c,["telefone","tel1","fone"], val(["input[name='telefone']","input[name='cli_fone']"], "-"));
-    var tel2 = pick(c,["telefone2","tel2","celular"], val(["input[name='telefone2']","input[name='cli_celular']"], "-"));
+    var tel1 = val(["#cadTelefone1","input[name='telefone']","input[name='cli_fone']"], pick(c,["telefone1","telefone","tel1","fone","celular"], "-"));
+    var tel2 = val(["#cadTelefone2","input[name='telefone2']","input[name='cli_celular']"], pick(c,["telefone2","tel2","celular2"], "-"));
+    var tel3 = val(["#cadTelefone3"], pick(c,["telefone3","tel3","celular3"], "-"));
+    var complemento = val(["#cadComplemento"], pick(c,["complemento"], "-"));
 
-    var plano = pick(c,["plano","planoCobranca"], "Plano 600 MB - Fibra+");
-    var valor = pick(c,["valor","valorPlano"], "R$ 100,00");
+    var plano = val(["#cadProfile option:checked","#cadProfile"], pick(c,["plano","planoCobranca","profile","perfil"], "-"));
+    var valor = pick(c,["valor","valorPlano","valor_mensal","mensalidade"], "R$ 0,00");
 
     card.innerHTML = `
       <div class="resumo-receitanet">
@@ -897,14 +908,14 @@ document.addEventListener("DOMContentLoaded", function(){
           <div class="resumo-field">
             <span class="resumo-value"><b>Status</b><span id="resStatusOnline" class="offline-dot status-offline-real">● Offline</span></span>
             <span class="resumo-value"><b>Serviço:</b> <span id="resServico">${servico}</span></span>
-            <span class="resumo-value"><b>IP:</b> <span id="resIp">-</span></span>
+            <span class="resumo-value"><b>IP:</b> <span id="resIp">${ip}</span></span>
             <span class="resumo-value"><b>Profile Servidor:</b> <span id="resProfile">${profile}</span></span>
             <span class="resumo-value"><b>MTU:</b> ${mtu}</span>
           </div>
           <div class="resumo-field">
             <span class="resumo-value"><b>Login:</b> <span id="resLogin2">${login}</span></span>
             <span class="resumo-value"><b>Tempo:</b> <span id="resTempo">-</span></span>
-            <span class="resumo-value"><b>MAC:</b> <span id="resMac">-</span></span>
+            <span class="resumo-value"><b>MAC:</b> <span id="resMac">${mac}</span></span>
             <span class="resumo-value"><b>Interface:</b> <span id="resInterface">${interfaceV}</span></span>
             <span class="resumo-value"><b>MRU:</b> ${mru}</span>
           </div>
@@ -944,10 +955,10 @@ document.addEventListener("DOMContentLoaded", function(){
             <span class="resumo-label">Bairro</span><span class="resumo-value">${bairro}</span>
             <span class="resumo-label">Estado</span><span class="resumo-value">${estado}</span>
             <span class="resumo-label">Tel1</span><span class="resumo-value">${tel1}</span>
-            <span class="resumo-label">Tel3</span><span class="resumo-value">"</span>
+            <span class="resumo-label">Tel3</span><span class="resumo-value">${tel3}</span>
           </div>
           <div class="resumo-field">
-            <span class="resumo-label">Compl.</span><span class="resumo-value">"</span>
+            <span class="resumo-label">Compl.</span><span class="resumo-value">${complemento}</span>
             <span class="resumo-label">Cidade</span><span class="resumo-value">${cidade}</span>
             <span class="resumo-label">IBGE</span><span class="resumo-value">${ibge}</span>
             <span class="resumo-label">Tel2</span><span class="resumo-value">${tel2}</span>
@@ -962,6 +973,10 @@ document.addEventListener("DOMContentLoaded", function(){
     `;
   }
 
+  window.atualizarResumoCadastro = montarResumoReceitaNet;
+  document.addEventListener("fibra:cliente-carregado", function(){
+    requestAnimationFrame(function(){ setTimeout(montarResumoReceitaNet, 0); });
+  });
   document.addEventListener("DOMContentLoaded", function(){
     montarResumoReceitaNet();
     document.querySelectorAll("input, select, textarea").forEach(function(el){
