@@ -503,9 +503,9 @@ fibraCadastroLimparStoragesSelecao();
       </div>
 
 <div class="cadastro-save-row">
-        <button type="button" id="btnSalvarClienteSupabase" class="save-blue">Gravar no Fibra+ Hub</button>
+        <button type="button" id="btnSalvarClienteSupabase" class="save-blue">Salvar somente no Fibra+ Hub</button>
         <div class="save-servidor-wrap">
-          <button type="button" id="btnSalvarClienteSupabaseMikrotik" class="save-red">Gravar no Fibra+ Hub + Servidor</button>
+          <button type="button" id="btnSalvarClienteSupabaseMikrotik" class="save-red">Salvar no Fibra+ Hub + MikroTik</button>
           <button class="delete-client-btn" onclick="excluirClienteCadastro()">Excluir Cliente</button>
         </div>
         <button class="cancel-btn" onclick="limparCadastroCliente()">Cancelar</button>
@@ -2915,7 +2915,7 @@ document.addEventListener("DOMContentLoaded", function(){
 <script>
 /* ============================================================
    GRAVAR CLIENTE COMPLETO NO MIKROTIK AO SALVAR NO SERVIDOR
-   Ao clicar em "Gravar no Fibra+ Hub + Servidor":
+   Ao clicar em "Salvar no Fibra+ Hub + MikroTik":
    - se PPP Secret existe: atualiza login, senha, profile, service e comentário;
    - se não existe: cria PPP Secret completo.
 ============================================================ */
@@ -4269,6 +4269,10 @@ document.addEventListener("DOMContentLoaded", function(){
     if(btnCompleto){
       btnCompleto.addEventListener("click", ev => {
         ev.preventDefault();
+        const confirmar = window.confirm(
+          "Deseja salvar este cliente no Fibra+ Hub e também criar/atualizar o cadastro no MikroTik?"
+        );
+        if(!confirmar) return;
         executar(true, btnCompleto);
       });
     }
