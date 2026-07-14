@@ -3645,6 +3645,10 @@ document.addEventListener("DOMContentLoaded", function(){
   document.addEventListener("click", function(e){
     const el = e.target.closest("button,a,input[type=button],input[type=submit]");
     if(!el) return;
+    // Os dois botões definitivos do Cadastro já possuem manipuladores próprios.
+    // Ignorá-los aqui evita uma segunda gravação automática no Supabase.
+    if(el.id === "btnSalvarClienteSupabase" || el.id === "btnSalvarClienteSupabaseMikrotik") return;
+
     const txt = norm(el.textContent || el.value || "");
     if(txt.includes("gravar") || txt.includes("salvar") || txt.includes("cadastrar")){
       setTimeout(()=>salvarCliente().then(()=>carregarClientes().catch(()=>{})).catch(err=>alert("Erro ao salvar cliente: "+err.message)), 300);
@@ -4185,11 +4189,17 @@ document.addEventListener("DOMContentLoaded", function(){
     return d;
   }
 
-  function validar(d){
+  function validar(d, comMikrotik){
     if(!d.nome) throw new Error("Informe o nome do cliente.");
     if(!d.loginPppoe) throw new Error("Informe o login PPPoE.");
-    if(!d.servidor) throw new Error("Selecione o servidor/POP.");
-    if(!d.profile) throw new Error("Selecione o profile.");
+    if(!d.senha) throw new Error("Informe a senha PPPoE.");
+
+    // No salvamento somente no Fibra+ Hub, Servidor/POP e profile
+    // não são obrigatórios e nenhuma operação é enviada ao MikroTik.
+    if(comMikrotik){
+      if(!d.servidor) throw new Error("Selecione o servidor/POP.");
+      if(!d.profile) throw new Error("Selecione o profile.");
+    }
   }
 
   async function postJson(url, dados){
@@ -4210,7 +4220,7 @@ document.addEventListener("DOMContentLoaded", function(){
 
     try{
       const dados = coletarCadastro();
-      validar(dados);
+      validar(dados, comMikrotik);
 
       let resposta;
       if(comMikrotik){
