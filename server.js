@@ -3306,39 +3306,167 @@ async function salvarBoletoGeradoSupabase(body, detalhes, conta, nomeConta) {
 }
 
 
+
+function financeiroTextoNormalizado(valor) {
+  return String(valor || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}
+
+function financeiroStatusCancelado(status) {
+  const st = financeiroTextoNormalizado(status);
+  return ["cancelado", "cancelada", "canceled", "cancelled", "estornado", "estornada", "refunded"].includes(st);
+}
+
+function financeiroErroDuplicado(boleto) {
+  const erro = new Error(
+    `Já existe uma cobrança para este ponto${boleto?.vencimento ? ` com vencimento em ${String(boleto.vencimento).slice(0,10)}` : ""}. ` +
+    `Boleto: ${boleto?.numero || boleto?.efi_charge_id || "identificado no Supabase"}.`
+  );
+  erro.codigo = "BOLETO_DUPLICADO";
+  erro.boleto = boleto || null;
+  return erro;
+}
+
+async function financeiroValidarPonto(body) {
+  const clienteId = String(body.clienteId || body.cliente_id || body.idCliente || "").trim();
+  if (!clienteId) throw new Error("Não foi possível identificar o ponto do cliente. Abra o cadastro correto antes de gerar o boleto.");
+
+  const r = await pool.query(`
+    SELECT id, login_pppoe, nome, cpf_cnpj, dados
+    FROM clientes
+    WHERE id::text=$1
+    LIMIT 1
+  `, [clienteId]);
+  const cliente = r.rows[0];
+  if (!cliente) throw new Error("O ponto selecionado não existe mais no Supabase. Atualize o cadastro antes de gerar o boleto.");
+
+  const dados = cliente.dados || {};
+  const loginBanco = String(cliente.login_pppoe || dados.loginPppoe || dados.login || "").trim();
+  const loginInformado = String(body.login || body.loginPppoe || body.clienteLogin || body.usuario || "").trim();
+  if (loginInformado && loginBanco && loginInformado !== loginBanco) {
+    throw new Error("O login PPPoE informado não pertence ao ponto selecionado. Atualize a página e tente novamente.");
+  }
+  return { clienteId, cliente, loginBanco };
+}
+
+async function financeiroBuscarDuplicado(body) {
+  const { clienteId, loginBanco } = await financeiroValidarPonto(body);
+  const vencimento = efiDateISO(body.vencimento || body.dueDate || body.due_date);
+  if (!vencimento) throw new Error("Informe um vencimento válido para gerar o boleto.");
+
+  const categoria = financeiroTextoNormalizado(body.categoria || "Mensalidade");
+  const descricao = financeiroTextoNormalizado(body.descricao || "Boleto gerado pela Efí");
+  const valor = Number(body.valor || body.total || 0) || 0;
+  const mensalidade = categoria.includes("mensalidade") || descricao.includes("mensalidade");
+
+  let r;
+  if (mensalidade) {
+    r = await pool.query(`
+      SELECT *
+      FROM boletos
+      WHERE (cliente_id=$1 OR (cliente_id IS NULL AND $3<>'' AND cliente_login=$3))
+        AND vencimento IS NOT NULL
+        AND date_trunc('month', vencimento::timestamp)=date_trunc('month', $2::date::timestamp)
+        AND (
+          LOWER(COALESCE(categoria,'')) LIKE '%mensalidade%'
+          OR LOWER(COALESCE(descricao,'')) LIKE '%mensalidade%'
+          OR LOWER(COALESCE(dados->>'categoria','')) LIKE '%mensalidade%'
+          OR LOWER(COALESCE(dados->>'descricao','')) LIKE '%mensalidade%'
+        )
+      ORDER BY id DESC
+    `, [clienteId, vencimento, loginBanco]);
+  } else {
+    r = await pool.query(`
+      SELECT *
+      FROM boletos
+      WHERE (cliente_id=$1 OR (cliente_id IS NULL AND $6<>'' AND cliente_login=$6))
+        AND vencimento=$2::date
+        AND ABS(COALESCE(NULLIF(total,0), valor, 0)-$3::numeric) < 0.005
+        AND LOWER(TRIM(COALESCE(categoria,'')))=$4
+        AND LOWER(TRIM(COALESCE(descricao,'')))=$5
+      ORDER BY id DESC
+    `, [clienteId, vencimento, valor, categoria, descricao, loginBanco]);
+  }
+
+  const duplicado = r.rows.find(row =>
+    !financeiroStatusCancelado(row.status) && !financeiroStatusCancelado(row.efi_status)
+  );
+  return duplicado || null;
+}
+
+async function financeiroComTravaDoPonto(body, tarefa) {
+  const clienteId = String(body.clienteId || body.cliente_id || body.idCliente || "").trim();
+  if (!clienteId) throw new Error("Não foi possível identificar o ponto do cliente.");
+  const client = await pool.connect();
+  const chave = `fibrahub:boleto:${clienteId}`;
+  try {
+    await client.query("SELECT pg_advisory_lock(hashtext($1))", [chave]);
+    return await tarefa();
+  } finally {
+    try { await client.query("SELECT pg_advisory_unlock(hashtext($1))", [chave]); } catch (_) {}
+    client.release();
+  }
+}
+
 app.post("/api/efi/boleto/criar", async (req, res) => {
   try {
     const body = req.body || {};
-    const conta = Number(body.conta || 1);
-    const criado = await efiCriarBoletoOneStep(body, conta);
-    const row = await salvarBoletoGeradoSupabase(body, criado.detalhes, conta, criado.cfg.NomeConta || ("Conta Efí " + conta));
+    const resultado = await financeiroComTravaDoPonto(body, async () => {
+      const duplicado = await financeiroBuscarDuplicado(body);
+      if (duplicado) throw financeiroErroDuplicado(duplicado);
+
+      const conta = Number(body.conta || 1);
+      const criado = await efiCriarBoletoOneStep(body, conta);
+      const row = await salvarBoletoGeradoSupabase(body, criado.detalhes, conta, criado.cfg.NomeConta || ("Conta Efí " + conta));
+      return { row, criado };
+    });
 
     return res.json({
       ok: true,
       mensagem: "Boleto criado e registrado na Efí.",
-      boleto: row,
-      efi: criado.detalhes
+      boleto: resultado.row,
+      efi: resultado.criado.detalhes
     });
   } catch (err) {
     console.error("Erro /api/efi/boleto/criar:", err);
-    return res.status(500).json({ ok:false, erro:err.message });
+    return res.status(err.codigo === "BOLETO_DUPLICADO" ? 409 : 500).json({
+      ok:false,
+      erro:err.message,
+      codigo:err.codigo || "",
+      boletoExistente:err.boleto || null
+    });
   }
 });
 
 app.post("/api/efi/carne/criar", async (req, res) => {
   try {
     const body = req.body || {};
-    const conta = Number(body.conta || 1);
     const parcelas = Array.isArray(body.parcelas) ? body.parcelas : [];
     if (!parcelas.length) return res.status(400).json({ ok:false, erro:"Nenhuma parcela informada." });
 
-    const criados = [];
-    for (const parcela of parcelas) {
-      const payload = { ...body, ...parcela, conta };
-      const criado = await efiCriarBoletoOneStep(payload, conta);
-      const row = await salvarBoletoGeradoSupabase(payload, criado.detalhes, conta, criado.cfg.NomeConta || ("Conta Efí " + conta));
-      criados.push({ boleto: row, efi: criado.detalhes });
-    }
+    const criados = await financeiroComTravaDoPonto(body, async () => {
+      const conta = Number(body.conta || 1);
+
+      // Valida todas as parcelas antes de criar a primeira cobrança na Efí.
+      for (const parcela of parcelas) {
+        const payload = { ...body, ...parcela, conta };
+        const duplicado = await financeiroBuscarDuplicado(payload);
+        if (duplicado) throw financeiroErroDuplicado(duplicado);
+      }
+
+      const resultados = [];
+      for (const parcela of parcelas) {
+        const payload = { ...body, ...parcela, conta };
+        const criado = await efiCriarBoletoOneStep(payload, conta);
+        const row = await salvarBoletoGeradoSupabase(payload, criado.detalhes, conta, criado.cfg.NomeConta || ("Conta Efí " + conta));
+        resultados.push({ boleto: row, efi: criado.detalhes });
+      }
+      return resultados;
+    });
 
     return res.json({
       ok: true,
@@ -3348,7 +3476,12 @@ app.post("/api/efi/carne/criar", async (req, res) => {
     });
   } catch (err) {
     console.error("Erro /api/efi/carne/criar:", err);
-    return res.status(500).json({ ok:false, erro:err.message });
+    return res.status(err.codigo === "BOLETO_DUPLICADO" ? 409 : 500).json({
+      ok:false,
+      erro:err.message,
+      codigo:err.codigo || "",
+      boletoExistente:err.boleto || null
+    });
   }
 });
 
