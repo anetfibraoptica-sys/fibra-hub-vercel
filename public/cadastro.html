@@ -694,10 +694,51 @@ fibraCadastroLimparStoragesSelecao();
   </section>
 </section>
 </main></div>
-function consultarCepContato(){ buscarCepAutomatico(); }
-</script><script src="supabase-client.js"></script>
+<script>
+function mascaraCepAutomatico(){
+  var campo = document.getElementById("cadCep");
+  if(!campo) return;
+  var numeros = String(campo.value || "").replace(/\D/g, "").slice(0, 8);
+  campo.value = numeros.length > 5 ? numeros.slice(0, 5) + "-" + numeros.slice(5) : numeros;
+}
+
+async function buscarCepAutomatico(){
+  var campo = document.getElementById("cadCep");
+  if(!campo) return;
+  var cep = String(campo.value || "").replace(/\D/g, "");
+  if(cep.length !== 8) return;
+
+  try{
+    var resposta = await fetch("https://viacep.com.br/ws/" + encodeURIComponent(cep) + "/json/", {cache:"no-store"});
+    if(!resposta.ok) throw new Error("CEP não encontrado");
+    var dados = await resposta.json();
+    if(dados.erro) throw new Error("CEP não encontrado");
+
+    var campos = {
+      cadEndereco: dados.logradouro || "",
+      cadBairro: dados.bairro || "",
+      cadCidade: dados.localidade || "",
+      cadUf: dados.uf || ""
+    };
+    Object.keys(campos).forEach(function(id){
+      var el = document.getElementById(id);
+      if(!el || !campos[id]) return;
+      el.value = campos[id];
+      el.dispatchEvent(new Event("change", {bubbles:true}));
+    });
+    if(typeof atualizarResumoCadastro === "function") atualizarResumoCadastro();
+  }catch(erro){
+    console.warn("Fibra+ Hub: não foi possível consultar o CEP.", erro);
+  }
+}
+
+function consultarCepContato(){
+  return buscarCepAutomatico();
+}
+</script>
+<script src="supabase-client.js"></script>
 <script src="auth-painel.js"></script>
-<script src="app.js"></script>
+<script src="app.js?v=etapa1-resumo-2"></script>
 
 
 
@@ -4227,5 +4268,5 @@ document.addEventListener("DOMContentLoaded", function(){
 })();
 </script>
 
-<script src="clientes-supabase-stage1.js"></script>
+<script src="clientes-supabase-stage1.js?v=etapa1-resumo-2"></script>
 </body></html>

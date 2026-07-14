@@ -1,4 +1,12 @@
 
+/* Compatibilidade imediata do Cadastro: mantém a função global disponível
+   desde o início, enquanto o montador completo do resumo é carregado. */
+window.atualizarResumoCadastro = window.atualizarResumoCadastro || function(){
+  if(typeof window.__fibraMontarResumoCadastro === "function"){
+    return window.__fibraMontarResumoCadastro();
+  }
+};
+
 /* Regra global Fibra+ Hub: bloqueio só após 4 dias de atraso */
 window.FIBRA_DIAS_TOLERANCIA_BLOQUEIO = 4;
 
@@ -973,7 +981,10 @@ document.addEventListener("DOMContentLoaded", function(){
     `;
   }
 
-  window.atualizarResumoCadastro = montarResumoReceitaNet;
+  window.__fibraMontarResumoCadastro = montarResumoReceitaNet;
+  window.atualizarResumoCadastro = function(){
+    return montarResumoReceitaNet();
+  };
   document.addEventListener("fibra:cliente-carregado", function(){
     requestAnimationFrame(function(){ setTimeout(montarResumoReceitaNet, 0); });
   });
