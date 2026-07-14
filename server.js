@@ -151,6 +151,18 @@ function diagnosticoConfigServidor(nomeServidor) {
 }
 
 
+
+function montarComentarioClienteMikrotik(cliente = {}) {
+  const nome = String(cliente.nome || cliente.cadNome || cliente.razaoSocial || "").trim();
+  const cpf = fbFormatarCpf(
+    cliente.cpf || cliente.cpfCnpj || cliente.cpf_cnpj || cliente.cadCpf || ""
+  );
+  const login = String(cliente.login || cliente.loginPppoe || cliente.pppoe || cliente.usuario || "").trim();
+
+  if (nome && cpf) return `${nome}: ${cpf}`;
+  return nome || cpf || login;
+}
+
 async function criarPPPoECliente(cliente) {
   const cfg = servidorConfig(cliente.servidor);
   if (!cfg.host || !cfg.user || !cfg.pass) {
@@ -165,12 +177,7 @@ async function criarPPPoECliente(cliente) {
     throw new Error("Usuário PPPoE ou senha não informado.");
   }
 
-  const comentario = [
-    cliente.nome ? `CLIENTE: ${cliente.nome}` : "",
-    cliente.telefone ? `TEL: ${cliente.telefone}` : "",
-    cliente.servidor ? `SERVIDOR: ${cliente.servidor}` : "",
-    cliente.valor ? `VALOR: ${cliente.valor}` : ""
-  ].filter(Boolean).join(" | ");
+  const comentario = montarComentarioClienteMikrotik(cliente);
 
   const words = [
     "/ppp/secret/add",
@@ -366,12 +373,7 @@ async function criarPPPoEClienteComProfile(cliente) {
   }
 
   const rateLimit = rateLimitPorPlano(plano);
-  const comentario = [
-    cliente.nome ? `CLIENTE: ${cliente.nome}` : "",
-    cliente.telefone ? `TEL: ${cliente.telefone}` : "",
-    cliente.servidor ? `SERVIDOR: ${cliente.servidor}` : "",
-    cliente.valor ? `VALOR: ${cliente.valor}` : ""
-  ].filter(Boolean).join(" | ");
+  const comentario = montarComentarioClienteMikrotik(cliente);
 
   // 1) Primeiro tenta criar o profile/plano.
   // Se já existir, ignora e continua.
@@ -1505,9 +1507,12 @@ app.post("/api/mikrotik/cliente-profile", async (req, res) => {
       if (secret) encontradoPor = login;
     }
 
-    // Comentário usado no PPP Secret e exibido no PPP Active.
-    // Prioriza o CPF/CNPJ do titular; se estiver vazio, usa nome e login como reserva.
-    const comentario = cpf || nome || login;
+    // Comentário padronizado no PPP Secret: NOME COMPLETO: CPF.
+    const comentario = montarComentarioClienteMikrotik({
+      nome,
+      cpf,
+      login
+    });
 
     if (secret && secret[".id"]) {
       const words = [
@@ -1525,7 +1530,7 @@ app.post("/api/mikrotik/cliente-profile", async (req, res) => {
       return res.json({
         ok:true,
         acao:"atualizado",
-        mensagem:"Cliente atualizado no MikroTik: login, senha, profile, service PPPoE e CPF/CNPJ no comentário sincronizados.",
+        mensagem:"Cliente atualizado no MikroTik com o comentário no padrão NOME COMPLETO: CPF.",
         servidor: cfg.key || servidor,
         login,
         loginAnterior: encontradoPor || loginAnterior || login,
@@ -1552,7 +1557,7 @@ app.post("/api/mikrotik/cliente-profile", async (req, res) => {
     return res.json({
       ok:true,
       acao:"criado",
-      mensagem:"Cliente criado no MikroTik com login, senha, profile, service PPPoE e CPF/CNPJ no comentário.",
+      mensagem:"Cliente criado no MikroTik com o comentário no padrão NOME COMPLETO: CPF.",
       servidor: cfg.key || servidor,
       login,
       profile
