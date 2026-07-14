@@ -1081,7 +1081,9 @@ app.post("/api/clientes/:id/bloquear", async (req, res) => {
 
     const cliente = r.rows[0];
     await acaoPPPoECliente(cliente, "bloquear");
-    const up = await pool.query("UPDATE clientes SET status='bloqueado', confianca_ate='' WHERE id=$1 RETURNING *", [req.params.id]);
+    const dadosCliente = cliente.dados && typeof cliente.dados === "object" ? cliente.dados : {};
+    const profileNormal = String(cliente.profile || dadosCliente.profileNormal || cliente.plano || "").trim();
+    const up = await pool.query(`UPDATE clientes SET status='bloqueado', profile='BLOQUEADO', confianca_ate='', dados=COALESCE(dados,'{}'::jsonb) || $1::jsonb, atualizado_em=NOW() WHERE id=$2 RETURNING *`, [JSON.stringify({status:"bloqueado",profile:"BLOQUEADO",profileNormal}), req.params.id]);
 
     res.json({ ok:true, acao:"bloqueado", cliente:up.rows[0] });
   } catch (error) {
@@ -1095,8 +1097,11 @@ app.post("/api/clientes/:id/desbloquear", async (req, res) => {
     if (!r.rows.length) return res.status(404).json({ ok:false, erro:"Cliente não encontrado" });
 
     const cliente = r.rows[0];
-    await acaoPPPoECliente(cliente, "desbloquear");
-    const up = await pool.query("UPDATE clientes SET status='ativo', confianca_ate='' WHERE id=$1 RETURNING *", [req.params.id]);
+    const dadosCliente = cliente.dados && typeof cliente.dados === "object" ? cliente.dados : {};
+    const profileNormal = String(dadosCliente.profileNormal || dadosCliente.profile_normal || cliente.plano || "").trim();
+    const clienteLiberar = {...cliente, profile:profileNormal || cliente.profile};
+    await acaoPPPoECliente(clienteLiberar, "desbloquear");
+    const up = await pool.query(`UPDATE clientes SET status='ativo', profile=$1, confianca_ate='', dados=COALESCE(dados,'{}'::jsonb) || $2::jsonb, atualizado_em=NOW() WHERE id=$3 RETURNING *`, [profileNormal || cliente.profile, JSON.stringify({status:"ativo",profile:profileNormal || cliente.profile,profileNormal:profileNormal || cliente.profile}), req.params.id]);
 
     res.json({ ok:true, acao:"desbloqueado", cliente:up.rows[0] });
   } catch (error) {
@@ -1324,7 +1329,7 @@ app.get("/api/mikrotik/profiles", async (req, res) => {
 ============================================================ */
 app.post("/api/mikrotik/cliente-profile", async (req, res) => {
   try {
-    const body = req.body || {};
+    const body = fbValidarCpfCadastro({ ...(req.body || {}), origem:"Painel Fibra+ Hub" });
 
     // Garantia definitiva: nenhuma alteração no MikroTik ocorre antes
     // de o cliente estar persistido no Supabase.
@@ -1354,7 +1359,7 @@ app.post("/api/mikrotik/cliente-profile", async (req, res) => {
     const profile = String(body.profile || "").trim();
     const nome = String(body.nome || "").trim();
     const telefone = String(body.telefone || "").trim();
-    const cpf = String(body.cpf || "").trim();
+    const cpf = fbFormatarCpf(body.cpf || body.cpfCnpj || "");
 
     if (!servidor || servidor === "-" || servidor === "--" || servidor.toLowerCase().includes("sem servidor")) {
       return res.status(400).json({ ok:false, erro:"Servidor não selecionado." });
@@ -1418,8 +1423,8 @@ app.post("/api/mikrotik/cliente-profile", async (req, res) => {
     }
 
     // Comentário usado no PPP Secret e exibido no PPP Active.
-    // Deve conter somente o nome completo do cliente.
-    const comentario = nome || login;
+    // Prioriza o CPF/CNPJ do titular; se estiver vazio, usa nome e login como reserva.
+    const comentario = cpf || nome || login;
 
     if (secret && secret[".id"]) {
       const words = [
@@ -1437,7 +1442,7 @@ app.post("/api/mikrotik/cliente-profile", async (req, res) => {
       return res.json({
         ok:true,
         acao:"atualizado",
-        mensagem:"Cliente atualizado no MikroTik: login, senha, profile e service PPPoE sincronizados.",
+        mensagem:"Cliente atualizado no MikroTik: login, senha, profile, service PPPoE e CPF/CNPJ no comentário sincronizados.",
         servidor: cfg.key || servidor,
         login,
         loginAnterior: encontradoPor || loginAnterior || login,
@@ -1464,7 +1469,7 @@ app.post("/api/mikrotik/cliente-profile", async (req, res) => {
     return res.json({
       ok:true,
       acao:"criado",
-      mensagem:"Cliente criado no MikroTik com login, senha, profile e service PPPoE.",
+      mensagem:"Cliente criado no MikroTik com login, senha, profile, service PPPoE e CPF/CNPJ no comentário.",
       servidor: cfg.key || servidor,
       login,
       profile
@@ -1540,7 +1545,21 @@ app.post("/api/mikrotik/cliente-acao", async (req, res) => {
     const login = String(body.login || "").trim();
     const acao = String(body.acao || "").trim().toLowerCase();
     const dias = Number(body.dias || 0);
-    const profileCadastro = String(body.profile || body.profileCadastro || "").trim();
+    let profileCadastro = String(body.profile || body.profileCadastro || "").trim();
+    const clienteId = String(body.clienteId || body.cliente_id || "").trim();
+    let clienteBanco = null;
+    try {
+      const consulta = clienteId
+        ? await pool.query("SELECT * FROM clientes WHERE id=$1 LIMIT 1", [clienteId])
+        : await pool.query("SELECT * FROM clientes WHERE login_pppoe=$1 OR dados->>'login'=$1 OR dados->>'loginPppoe'=$1 ORDER BY atualizado_em DESC NULLS LAST LIMIT 1", [login]);
+      clienteBanco = consulta.rows[0] || null;
+      const dadosBanco = clienteBanco && clienteBanco.dados && typeof clienteBanco.dados === "object" ? clienteBanco.dados : {};
+      if (acao !== "bloquear" && (!profileCadastro || String(profileCadastro).toUpperCase() === "BLOQUEADO")) {
+        profileCadastro = String(dadosBanco.profileNormal || dadosBanco.profile_normal || "").trim();
+      }
+    } catch (e) {
+      console.warn("Não foi possível consultar o cadastro para sincronizar o profile:", e.message);
+    }
 
     if (!servidor || servidor === "-" || servidor === "--" || normalizar(servidor).includes("sem servidor")) {
       return res.status(400).json({ ok:false, erro:"Servidor não selecionado." });
@@ -1648,12 +1667,43 @@ app.post("/api/mikrotik/cliente-acao", async (req, res) => {
       mensagem = "Cliente liberado em confiança por " + dias + " dia(s), até " + confiancaAte + ".";
     }
 
+    const profileResultado = acao === "bloquear" ? "BLOQUEADO" : profileCadastro;
+    let profileNormal = profileCadastro;
+    if (clienteBanco) {
+      const dadosBanco = clienteBanco.dados && typeof clienteBanco.dados === "object" ? clienteBanco.dados : {};
+      if (acao === "bloquear") {
+        const atual = String(clienteBanco.profile || "").trim();
+        profileNormal = String(
+          (atual && atual.toUpperCase() !== "BLOQUEADO" ? atual : "") ||
+          dadosBanco.profileNormal || dadosBanco.profile_normal || profileCadastro || ""
+        ).trim();
+      }
+      const statusBanco = acao === "bloquear" ? "bloqueado" : (acao === "confianca" ? "confianca" : "ativo");
+      const complemento = {
+        status:statusBanco,
+        profile:profileResultado,
+        perfil:profileResultado,
+        profileNormal:profileNormal,
+        profileAtualizadoEm:new Date().toISOString()
+      };
+      await pool.query(`
+        UPDATE clientes SET
+          status=$1,
+          profile=$2,
+          confianca_ate=$3,
+          dados=COALESCE(dados,'{}'::jsonb) || $4::jsonb,
+          atualizado_em=NOW()
+        WHERE id=$5
+      `, [statusBanco, profileResultado, confiancaAte || "", JSON.stringify(complemento), clienteBanco.id]);
+    }
+
     return res.json({
       ok:true,
       acao,
       login,
       servidor: cfg.key || servidor,
-      profile: acao === "bloquear" ? "BLOQUEADO" : profileCadastro,
+      profile: profileResultado,
+      profileNormal,
       dias: acao === "confianca" ? dias : null,
       confianca_ate: confiancaAte,
       mensagem
@@ -3495,9 +3545,49 @@ function fbBoletoRow(row){
 }
 
 
+function fbSomenteNumeros(valor) {
+  return String(valor || "").replace(/\D/g, "");
+}
+
+function fbFormatarCpf(valor) {
+  const cpf = fbSomenteNumeros(valor).slice(0, 11);
+  if (cpf.length !== 11) return String(valor || "").trim();
+  return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+}
+
+function fbCpfValido(valor) {
+  const cpf = fbSomenteNumeros(valor);
+  if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
+  let soma = 0;
+  for (let i = 0; i < 9; i++) soma += Number(cpf[i]) * (10 - i);
+  let digito = 11 - (soma % 11);
+  if (digito >= 10) digito = 0;
+  if (digito !== Number(cpf[9])) return false;
+  soma = 0;
+  for (let i = 0; i < 10; i++) soma += Number(cpf[i]) * (11 - i);
+  digito = 11 - (soma % 11);
+  if (digito >= 10) digito = 0;
+  return digito === Number(cpf[10]);
+}
+
+function fbValidarCpfCadastro(body) {
+  const origem = String((body && body.origem) || "").toLowerCase();
+  const cadastroPainel = origem.includes("painel fibra+ hub") || origem.includes("painel fibra hub");
+  if (!cadastroPainel) return body;
+  const informado = body.cpfCnpj || body.cpf_cnpj || body.cpf || body.cadCpf || "";
+  if (!fbSomenteNumeros(informado)) throw new Error("Informe o CPF do cliente.");
+  if (!fbCpfValido(informado)) throw new Error("CPF inválido. Verifique os números informados.");
+  const formatado = fbFormatarCpf(informado);
+  body.cpfCnpj = formatado;
+  body.cpf_cnpj = formatado;
+  body.cpf = formatado;
+  body.cadCpf = formatado;
+  return body;
+}
+
 async function fbSalvarClienteSupabaseUnico(body) {
   await fbEnsureTables();
-  body = body || {};
+  body = fbValidarCpfCadastro(body || {});
   const c = fbClienteFromAny(body);
   if (!c.login_pppoe && !c.nome) throw new Error("Cliente sem login PPPoE ou nome.");
   const idInformado = String(body.id || body.clienteId || body.cliente_id || "").trim();
@@ -3878,8 +3968,11 @@ function autoClienteCampos(cliente, boleto = {}) {
     autoPrimeiro(cd, ["servidor","popServidor","pop","servidorPppoe"]) ||
     autoPrimeiro(bd, ["servidor","popServidor","pop"]);
 
+  const profileAtual = autoPrimeiro(cliente, ["profile"]);
+  const bloqueado = autoTexto(profileAtual).toUpperCase() === "BLOQUEADO" || autoTexto(cliente.status).toLowerCase() === "bloqueado";
   const profile =
-    autoPrimeiro(cliente, ["profile"]) ||
+    (bloqueado ? autoPrimeiro(cd, ["profileNormal","profile_normal","perfilNormal","perfil_normal"]) : "") ||
+    profileAtual ||
     autoPrimeiro(cd, ["profile","perfil","profileServidor","planoVelocidade","velocidade"]) ||
     autoPrimeiro(cliente, ["plano"]) ||
     autoPrimeiro(cd, ["plano"]);
@@ -4060,12 +4153,18 @@ async function autoProcessarPagamento({ chargeId, numero, valorPago, dataPagamen
     await pool.query(`
       UPDATE clientes SET
         status='ativo',
+        profile=$1,
         confianca_ate='',
-        dados=COALESCE(dados,'{}'::jsonb) || $1::jsonb
-      WHERE id=$2
+        dados=COALESCE(dados,'{}'::jsonb) || $2::jsonb,
+        atualizado_em=NOW()
+      WHERE id=$3
     `, [
+      campos.profile,
       JSON.stringify({
         status:"ativo",
+        profile:campos.profile,
+        perfil:campos.profile,
+        profileNormal:campos.profile,
         ultimoDesbloqueioAutomatico:new Date().toISOString(),
         ultimoPagamentoChargeId:autoTexto(chargeId)
       }),
@@ -4112,7 +4211,9 @@ async function autoProcessarBloqueioCliente(cliente, boleto) {
     await pool.query(`
       UPDATE clientes SET
         status='bloqueado',
-        dados=COALESCE(dados,'{}'::jsonb) || $1::jsonb
+        profile='BLOQUEADO',
+        dados=COALESCE(dados,'{}'::jsonb) || $1::jsonb,
+        atualizado_em=NOW()
       WHERE id=$2
     `, [
       JSON.stringify({

@@ -158,6 +158,13 @@
       setCampo(id, primeiro(c,aliases), {criarOpcao:true});
     }
 
+    const cpfCampo=document.getElementById('cadCpf');
+    if(cpfCampo && typeof window.mascararCpfCadastro==='function') window.mascararCpfCadastro(cpfCampo);
+
+    const profileCampo=document.getElementById('cadProfile');
+    const profileNormal=texto(primeiro(c,['profileNormal','profile_normal','perfilNormal','perfil_normal']));
+    if(profileCampo && profileNormal) profileCampo.dataset.profileNormal=profileNormal;
+
     // Aguarda a montagem das opções dependentes do servidor.
     setTimeout(()=>{
       setCampo('cadInterface', primeiro(c,mapa.cadInterface), {criarOpcao:true});

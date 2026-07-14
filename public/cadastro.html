@@ -181,7 +181,7 @@ fibraCadastroLimparStoragesSelecao();
         </div>
         <div class="form-row"><label>Nome</label><input id="cadNome" oninput="atualizarResumoCadastro()" placeholder="Nome completo"></div>
         <div class="form-row two">
-          <div><label>CPF/CNPJ</label><div class="input-action"><input id="cadCpf" oninput="atualizarResumoCadastro()" placeholder="000.000.000-00"><button onclick="consultarDocumento()">Consultar</button></div></div>
+          <div><label>CPF/CNPJ</label><div class="input-action"><input id="cadCpf" inputmode="numeric" maxlength="14" oninput="mascararCpfCadastro(this); atualizarResumoCadastro()" placeholder="000.000.000-00"><button onclick="consultarDocumento()">Consultar</button></div></div>
           <div><label>Data Nascimento</label><input id="cadNascimento" type="date"></div>
         </div>
         <div class="form-row two">
@@ -3027,7 +3027,12 @@ document.addEventListener("DOMContentLoaded", function(){
 
   function servidorAtual(){ return val("cadPop") || val("cadServidorReceita") || ""; }
   function loginAtual(){ return val("cadLogin"); }
-  function profileAtual(){ return val("cadProfile"); }
+  function profileAtual(){
+    const campo = el("cadProfile");
+    const atual = String(campo?.value || "").trim();
+    if(norm(atual) === "bloqueado") return String(campo?.dataset?.profileNormal || "").trim();
+    return atual;
+  }
 
   async function acaoMikrotikCobranca(acao){
     const servidor = servidorAtual();
@@ -3075,7 +3080,10 @@ document.addEventListener("DOMContentLoaded", function(){
     const resp = await fetch("/api/mikrotik/cliente-acao", {
       method: "POST",
       headers: {"Content-Type":"application/json"},
-      body: JSON.stringify({servidor, login, acao, dias, profile})
+      body: JSON.stringify({
+        servidor, login, acao, dias, profile,
+        clienteId: window.__fibraClienteCadastro?.id || window.__fibraClienteSelecionado?.id || ""
+      })
     });
 
     const json = await resp.json();
@@ -3089,6 +3097,30 @@ document.addEventListener("DOMContentLoaded", function(){
       alert(json.mensagem || "Ação realizada no MikroTik.");
     }
 
+    const campoProfile = el("cadProfile");
+    if(campoProfile){
+      if(acao === "bloquear"){
+        if(profile) campoProfile.dataset.profileNormal = profile;
+        let opt = Array.from(campoProfile.options || []).find(o => norm(o.value) === "bloqueado");
+        if(!opt){ opt = new Option("BLOQUEADO", "BLOQUEADO", true, true); campoProfile.add(opt); }
+        campoProfile.value = "BLOQUEADO";
+      }else if(json.profile){
+        campoProfile.value = json.profile;
+        campoProfile.dataset.profileNormal = json.profile;
+      }
+      campoProfile.dispatchEvent(new Event("input", {bubbles:true}));
+      campoProfile.dispatchEvent(new Event("change", {bubbles:true}));
+    }
+
+    if(window.__fibraClienteCadastro){
+      window.__fibraClienteCadastro.profile = json.profile || (acao === "bloquear" ? "BLOQUEADO" : profile);
+      window.__fibraClienteCadastro.status = acao === "bloquear" ? "bloqueado" : (acao === "confianca" ? "confianca" : "ativo");
+      window.__fibraClienteCadastro.dados = Object.assign({}, window.__fibraClienteCadastro.dados || {}, {
+        profileNormal: json.profileNormal || profile || campoProfile?.dataset?.profileNormal || ""
+      });
+    }
+
+    if(typeof window.atualizarResumoCadastro === "function") window.atualizarResumoCadastro();
     if(typeof window.atualizarStatusRealCliente === "function"){
       setTimeout(window.atualizarStatusRealCliente, 1200);
     }
@@ -3101,6 +3133,9 @@ document.addEventListener("DOMContentLoaded", function(){
   window.liberarClienteMikrotik = function(){ return acaoMikrotikCobranca("liberar"); };
   window.confiancaClienteMikrotik = function(){ return acaoMikrotikCobranca("confianca"); };
   window.desbloquearClientePorPagamentoMikrotik = function(){ return acaoMikrotikCobranca("pagamento"); };
+  // Compatibilidade com os botões já existentes na aba Cobrança.
+  window.bloquearClienteCadastro = window.bloquearClienteMikrotik;
+  window.liberarClienteCadastro = window.liberarClienteMikrotik;
 
   function detectarAcaoBotao(botao){
     const texto = norm(botao.textContent || botao.value || botao.title || "");
@@ -4189,10 +4224,56 @@ document.addEventListener("DOMContentLoaded", function(){
     return d;
   }
 
+  function somenteNumeros(v){ return String(v || "").replace(/\D/g, ""); }
+
+  function formatarCpf(v){
+    const n = somenteNumeros(v).slice(0, 11);
+    return n
+      .replace(/^(\d{3})(\d)/, "$1.$2")
+      .replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
+      .replace(/\.(\d{3})(\d)/, ".$1-$2");
+  }
+
+  function cpfValido(v){
+    const cpf = somenteNumeros(v);
+    if(cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
+    let soma = 0;
+    for(let i=0; i<9; i++) soma += Number(cpf[i]) * (10-i);
+    let dig = 11 - (soma % 11);
+    if(dig >= 10) dig = 0;
+    if(dig !== Number(cpf[9])) return false;
+    soma = 0;
+    for(let i=0; i<10; i++) soma += Number(cpf[i]) * (11-i);
+    dig = 11 - (soma % 11);
+    if(dig >= 10) dig = 0;
+    return dig === Number(cpf[10]);
+  }
+
+  window.mascararCpfCadastro = function(campo){
+    const el = campo && campo.target ? campo.target : campo;
+    if(!el) return "";
+    el.value = formatarCpf(el.value);
+    return el.value;
+  };
+
+  window.consultarDocumento = function(){
+    const campo = $("cadCpf");
+    const cpf = formatarCpf(campo?.value || "");
+    if(campo) campo.value = cpf;
+    if(!cpf){ alert("Informe o CPF do cliente."); campo?.focus(); return false; }
+    if(!cpfValido(cpf)){ alert("CPF inválido. Verifique os números informados."); campo?.focus(); return false; }
+    alert("CPF válido: " + cpf);
+    return true;
+  };
+
   function validar(d, comMikrotik){
     if(!d.nome) throw new Error("Informe o nome do cliente.");
     if(!d.loginPppoe) throw new Error("Informe o login PPPoE.");
     if(!d.senha) throw new Error("Informe a senha PPPoE.");
+    d.cpfCnpj = formatarCpf(d.cpfCnpj);
+    d.cadCpf = d.cpfCnpj;
+    if(!d.cpfCnpj) throw new Error("Informe o CPF do cliente.");
+    if(!cpfValido(d.cpfCnpj)) throw new Error("CPF inválido. Verifique os números informados.");
 
     // No salvamento somente no Fibra+ Hub, Servidor/POP e profile
     // não são obrigatórios e nenhuma operação é enviada ao MikroTik.
