@@ -583,6 +583,7 @@ document.addEventListener("fibra:supabase-sync", function(){
   async function carregarBoletosCliente(){
     const c = clienteAtual();
     const params = new URLSearchParams({
+      cliente_id: c.id || c.clienteId || c.cliente_id || "",
       login: c.loginPppoe || c.login || "",
       cpf: c.cpfCnpj || c.cpf || "",
       nome: c.nome || ""

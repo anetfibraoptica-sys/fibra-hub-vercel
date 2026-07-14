@@ -3257,6 +3257,10 @@ document.addEventListener("DOMContentLoaded", function(){
   function cliente(){
     try{ return typeof clienteDoCadastro === "function" ? (clienteDoCadastro() || {}) : {}; }catch(e){ return {}; }
   }
+  function clienteIdCadastro(c){
+    c=c || {};
+    return Number(c.id || c.clienteId || c.cliente_id || window.__fibraClienteSelecionado?.id || window.__fibraClienteCadastro?.id || 0) || 0;
+  }
   function profileCadastro(c){
     return c.profile || c.plano || c.perfil || c.profileServidor || c.planoVelocidade || c.velocidade || "";
   }
@@ -3400,6 +3404,8 @@ document.addEventListener("DOMContentLoaded", function(){
 
     const boleto = {
       numero: Date.now(),
+      clienteId: clienteIdCadastro(c),
+      cliente_id: clienteIdCadastro(c),
       login: loginCadastro(c),
       loginPppoe: loginCadastro(c),
       clienteLogin: loginCadastro(c),
@@ -3461,6 +3467,8 @@ document.addEventListener("DOMContentLoaded", function(){
     }
 
     const payload = {
+      clienteId: clienteIdCadastro(c),
+      cliente_id: clienteIdCadastro(c),
       login: loginCadastro(c),
       loginPppoe: loginCadastro(c),
       clienteLogin: loginCadastro(c),
@@ -3569,6 +3577,9 @@ document.addEventListener("DOMContentLoaded", function(){
     c.telefone1 = c.telefone1 || c.telefone || c.celular || field("telefone1") || field("telefone") || field("celular");
     c.servidor = c.servidor || c.popServidor || c.pop || field("servidor") || field("popServidor");
     c.profile = c.profile || c.perfil || c.planoVelocidade || c.plano || field("profile") || field("perfil") || field("plano");
+    c.id = c.id || c.clienteId || c.cliente_id || window.__fibraClienteSelecionado?.id || window.__fibraClienteCadastro?.id || 0;
+    c.clienteId = c.clienteId || c.id || 0;
+    c.cliente_id = c.cliente_id || c.id || 0;
     return c;
   }
   window.fibraClienteAtualSeguro = clienteAtual;
@@ -3602,6 +3613,7 @@ document.addEventListener("DOMContentLoaded", function(){
   async function carregarBoletosCliente(){
     const c = clienteAtual();
     const params = new URLSearchParams({
+      cliente_id: c.id || c.clienteId || c.cliente_id || window.__fibraClienteSelecionado?.id || window.__fibraClienteCadastro?.id || "",
       login: c.loginPppoe || c.login || "",
       cpf: c.cpfCnpj || c.cpf || "",
       nome: c.nome || ""
@@ -3809,6 +3821,7 @@ document.addEventListener("DOMContentLoaded", function(){
     }
 
     const params = new URLSearchParams({
+      cliente_id: c.id || c.clienteId || c.cliente_id || window.__fibraClienteSelecionado?.id || window.__fibraClienteCadastro?.id || "",
       login: c.login,
       cpf: c.cpf,
       nome: c.nome

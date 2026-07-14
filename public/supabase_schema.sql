@@ -142,3 +142,7 @@ drop policy if exists "fibrahub_servidores_anon_all" on public.servidores;
 create policy "fibrahub_servidores_anon_all" on public.servidores for all to anon using (true) with check (true);
 drop policy if exists "fibrahub_logs_anon_all" on public.logs;
 create policy "fibrahub_logs_anon_all" on public.logs for all to anon using (true) with check (true);
+
+-- Etapa 2: boleto vinculado ao ponto/cadastro específico
+ALTER TABLE boletos ADD COLUMN IF NOT EXISTS cliente_id BIGINT;
+CREATE INDEX IF NOT EXISTS idx_boletos_cliente_id ON boletos(cliente_id);

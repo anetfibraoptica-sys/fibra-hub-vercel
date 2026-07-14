@@ -2976,6 +2976,7 @@ async function salvarBoletoGeradoSupabase(body, detalhes, conta, nomeConta) {
   await efiGarantirTabela();
 
   await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS numero TEXT;");
+  await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS cliente_id BIGINT;");
   await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS cliente_login TEXT;");
   await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS cliente_nome TEXT;");
   await pool.query("ALTER TABLE boletos ADD COLUMN IF NOT EXISTS cpf_cnpj TEXT;");
@@ -3001,7 +3002,13 @@ async function salvarBoletoGeradoSupabase(body, detalhes, conta, nomeConta) {
   const chargeId = String(detalhes.charge_id || "");
   const numero = String(body.numero || chargeId || Date.now());
   const valor = Number(body.valor || body.total || 0) || 0;
-  const login = String(body.login || body.loginPppoe || body.clienteLogin || body.usuario || "");
+  const login = String(body.login || body.loginPppoe || body.clienteLogin || body.usuario || "").trim();
+  let clienteId = Number(body.clienteId || body.cliente_id || body.idCliente || 0) || 0;
+  if (!clienteId && login) {
+    const clienteExato = await pool.query(`SELECT id FROM clientes WHERE login_pppoe=$1 OR dados->>'loginPppoe'=$1 OR dados->>'login'=$1 ORDER BY id DESC LIMIT 1`, [login]);
+    clienteId = Number(clienteExato.rows[0]?.id || 0) || 0;
+  }
+  if (!clienteId) throw new Error("Não foi possível identificar o ponto do cliente. Abra o cadastro correto antes de gerar o boleto.");
   const nome = String(body.nome || body.cliente || body.cliente_nome || "");
   const cpf = String(body.cpfCnpj || body.cpf || body.cpf_cnpj || body.documento || "");
   const vencimento = efiDateISO(body.vencimento || body.dueDate || body.due_date) || null;
@@ -3010,6 +3017,8 @@ async function salvarBoletoGeradoSupabase(body, detalhes, conta, nomeConta) {
   const dados = {
     ...body,
     numero,
+    clienteId,
+    cliente_id: clienteId,
     login,
     loginPppoe: login,
     clienteLogin: login,
@@ -3041,6 +3050,7 @@ async function salvarBoletoGeradoSupabase(body, detalhes, conta, nomeConta) {
   let r = await pool.query(`
     UPDATE boletos SET
       numero=$1,
+      cliente_id=$18,
       cliente_login=$2,
       cliente_nome=$3,
       cpf_cnpj=$4,
@@ -3082,17 +3092,18 @@ async function salvarBoletoGeradoSupabase(body, detalhes, conta, nomeConta) {
     chargeId,
     detalhes.situacao_efi || "Registrado na Efí",
     nomeConta || "",
-    JSON.stringify(dados)
+    JSON.stringify(dados),
+    clienteId
   ]);
 
   if (!r.rows[0]) {
     r = await pool.query(`
       INSERT INTO boletos
-        (numero, cliente_login, cliente_nome, cpf_cnpj, categoria, descricao, emissao, vencimento,
+        (numero, cliente_id, cliente_login, cliente_nome, cpf_cnpj, categoria, descricao, emissao, vencimento,
          valor, total, valor_pago, status, linha_digitavel, pix, link_pdf,
          efi_charge_id, efi_status, efi_conta_nome, dados, origem, atualizado_em, criado_em)
       VALUES
-        ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,0,'pendente',$11,$12,$13,$14,$15,$16,$17,'Painel Fibra+ Hub Efí',NOW(),NOW())
+        ($1,$18,$2,$3,$4,$5,$6,$7,$8,$9,$10,0,'pendente',$11,$12,$13,$14,$15,$16,$17,'Painel Fibra+ Hub Efí',NOW(),NOW())
       RETURNING *;
     `, [
       numero,
@@ -3111,7 +3122,8 @@ async function salvarBoletoGeradoSupabase(body, detalhes, conta, nomeConta) {
       chargeId,
       detalhes.situacao_efi || "Registrado na Efí",
       nomeConta || "",
-      JSON.stringify(dados)
+      JSON.stringify(dados),
+      clienteId
     ]);
   }
 
@@ -3390,6 +3402,7 @@ async function fbEnsureTables(){
     "ALTER TABLE clientes ADD COLUMN IF NOT EXISTS servidor TEXT;",
     "ALTER TABLE clientes ADD COLUMN IF NOT EXISTS profile TEXT;",
     "ALTER TABLE clientes ADD COLUMN IF NOT EXISTS dados JSONB;",
+    "ALTER TABLE boletos ADD COLUMN IF NOT EXISTS cliente_id BIGINT;",
     "ALTER TABLE boletos ADD COLUMN IF NOT EXISTS cliente_login TEXT;",
     "ALTER TABLE boletos ADD COLUMN IF NOT EXISTS cliente_nome TEXT;",
     "ALTER TABLE boletos ADD COLUMN IF NOT EXISTS cpf_cnpj TEXT;",
@@ -3402,6 +3415,16 @@ async function fbEnsureTables(){
     "ALTER TABLE boletos ADD COLUMN IF NOT EXISTS dados JSONB;"
   ];
   for(const sql of alters) await pool.query(sql);
+  await pool.query("CREATE INDEX IF NOT EXISTS idx_boletos_cliente_id ON boletos(cliente_id);");
+  await pool.query(`
+    UPDATE boletos b
+    SET cliente_id=c.id
+    FROM clientes c
+    WHERE b.cliente_id IS NULL
+      AND COALESCE(b.cliente_login,b.dados->>'loginPppoe',b.dados->>'login','') <> ''
+      AND COALESCE(b.cliente_login,b.dados->>'loginPppoe',b.dados->>'login','')
+        = COALESCE(c.login_pppoe,c.dados->>'loginPppoe',c.dados->>'login','')
+  `);
 }
 function fbClienteRow(r){
   const bruto = r.dados && typeof r.dados === "object" ? r.dados : {};
@@ -3428,6 +3451,8 @@ function fbBoletoRow(row){
   return {
     ...d,
     id: row.id,
+    clienteId: Number(row.cliente_id || d.clienteId || d.cliente_id || 0) || null,
+    cliente_id: Number(row.cliente_id || d.cliente_id || d.clienteId || 0) || null,
     numero: row.numero,
     login: row.cliente_login || d.login || d.loginPppoe || d.clienteLogin || "",
     loginPppoe: row.cliente_login || d.loginPppoe || d.login || "",
@@ -3470,67 +3495,19 @@ function fbBoletoRow(row){
 
 async function fbSalvarClienteSupabaseUnico(body) {
   await fbEnsureTables();
-
-  const c = fbClienteFromAny(body || {});
-  if (!c.login_pppoe && !c.cpf_cnpj && !c.nome) {
-    throw new Error("Cliente sem login, CPF/CNPJ ou nome.");
-  }
-
-  const existente = await pool.query(`
-    SELECT id
-    FROM clientes
-    WHERE
-      ($1 <> '' AND login_pppoe=$1)
-      OR ($2 <> '' AND regexp_replace(COALESCE(cpf_cnpj,''),'\\D','','g')=$2)
-    ORDER BY atualizado_em DESC NULLS LAST, criado_em DESC NULLS LAST
-    LIMIT 1
-  `, [c.login_pppoe, c.cpf_cnpj]);
-
+  body = body || {};
+  const c = fbClienteFromAny(body);
+  if (!c.login_pppoe && !c.nome) throw new Error("Cliente sem login PPPoE ou nome.");
+  const idInformado = Number(body.id || body.clienteId || body.cliente_id || 0) || 0;
+  let existente = { rows: [] };
+  if (idInformado) existente = await pool.query("SELECT id FROM clientes WHERE id=$1 LIMIT 1", [idInformado]);
+  else if (c.login_pppoe) existente = await pool.query(`SELECT id FROM clientes WHERE login_pppoe=$1 OR dados->>'loginPppoe'=$1 OR dados->>'login'=$1 ORDER BY atualizado_em DESC NULLS LAST, criado_em DESC NULLS LAST LIMIT 1`, [c.login_pppoe]);
   let r;
   if (existente.rows[0]) {
-    r = await pool.query(`
-      UPDATE clientes SET
-        login_pppoe=$1,
-        nome=$2,
-        cpf_cnpj=$3,
-        telefone=$4,
-        plano=$5,
-        servidor=$6,
-        profile=$7,
-        dados=COALESCE(dados,'{}'::jsonb) || $8::jsonb,
-        atualizado_em=NOW()
-      WHERE id=$9
-      RETURNING *
-    `, [
-      c.login_pppoe,
-      c.nome,
-      c.cpf_cnpj,
-      c.telefone,
-      c.plano,
-      c.servidor,
-      c.profile,
-      JSON.stringify({...body, origem: body.origem || "Painel Fibra+ Hub"}),
-      existente.rows[0].id
-    ]);
+    r = await pool.query(`UPDATE clientes SET login_pppoe=$1,nome=$2,cpf_cnpj=$3,telefone=$4,plano=$5,servidor=$6,profile=$7,dados=COALESCE(dados,'{}'::jsonb) || $8::jsonb,atualizado_em=NOW() WHERE id=$9 RETURNING *`, [c.login_pppoe,c.nome,c.cpf_cnpj,c.telefone,c.plano,c.servidor,c.profile,JSON.stringify({...body,origem:body.origem || "Painel Fibra+ Hub"}),existente.rows[0].id]);
   } else {
-    r = await pool.query(`
-      INSERT INTO clientes
-        (login_pppoe,nome,cpf_cnpj,telefone,plano,servidor,profile,dados,atualizado_em,criado_em)
-      VALUES
-        ($1,$2,$3,$4,$5,$6,$7,$8,NOW(),NOW())
-      RETURNING *
-    `, [
-      c.login_pppoe,
-      c.nome,
-      c.cpf_cnpj,
-      c.telefone,
-      c.plano,
-      c.servidor,
-      c.profile,
-      JSON.stringify({...body, origem: body.origem || "Painel Fibra+ Hub"})
-    ]);
+    r = await pool.query(`INSERT INTO clientes (login_pppoe,nome,cpf_cnpj,telefone,plano,servidor,profile,dados,atualizado_em,criado_em) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW(),NOW()) RETURNING *`, [c.login_pppoe,c.nome,c.cpf_cnpj,c.telefone,c.plano,c.servidor,c.profile,JSON.stringify({...body,origem:body.origem || "Painel Fibra+ Hub"})]);
   }
-
   return fbClienteRow(r.rows[0]);
 }
 
@@ -3563,29 +3540,14 @@ app.get("/api/clientes", async (req,res)=>{
 app.get("/api/boletos/cliente", async (req,res)=>{
   try{
     await fbEnsureTables();
-    const login = String(req.query.login || req.query.loginPppoe || "").trim();
-    const cpf = fbOnlyDigits(req.query.cpf || req.query.cpfCnpj || req.query.documento || "");
-    const nome = String(req.query.nome || "").trim().toLowerCase();
-
-    const r = await pool.query(`
-      SELECT * FROM boletos
-      WHERE
-        ($1<>'' AND cliente_login=$1)
-        OR ($2<>'' AND regexp_replace(COALESCE(cpf_cnpj,''),'\\D','','g')=$2)
-        OR ($3<>'' AND lower(COALESCE(cliente_nome,''))=$3)
-        OR (
-          dados IS NOT NULL AND (
-            ($1<>'' AND (dados->>'login'=$1 OR dados->>'loginPppoe'=$1 OR dados->>'clienteLogin'=$1))
-            OR ($2<>'' AND regexp_replace(COALESCE(dados->>'cpfCnpj',dados->>'cpf',dados->>'documento',''),'\\D','','g')=$2)
-          )
-        )
-      ORDER BY vencimento ASC NULLS LAST, id DESC
-    `,[login,cpf,nome]);
+    const clienteId=Number(req.query.cliente_id || req.query.clienteId || req.query.id || 0) || 0;
+    const login=String(req.query.login || req.query.loginPppoe || "").trim();
+    let r;
+    if(clienteId) r=await pool.query(`SELECT * FROM boletos WHERE cliente_id=$1 OR (cliente_id IS NULL AND $2<>'' AND cliente_login=$2) ORDER BY vencimento ASC NULLS LAST,id DESC`,[clienteId,login]);
+    else if(login) r=await pool.query(`SELECT * FROM boletos WHERE cliente_login=$1 OR (dados IS NOT NULL AND (dados->>'login'=$1 OR dados->>'loginPppoe'=$1 OR dados->>'clienteLogin'=$1)) ORDER BY vencimento ASC NULLS LAST,id DESC`,[login]);
+    else return res.status(400).json({ok:false,erro:"Informe o ID do cadastro ou o login PPPoE do ponto."});
     res.json({ok:true,total:r.rows.length,boletos:r.rows.map(fbBoletoRow)});
-  }catch(err){
-    console.error("Erro /api/boletos/cliente:", err);
-    res.status(500).json({ok:false, erro:err.message});
-  }
+  }catch(err){console.error("Erro /api/boletos/cliente:",err);res.status(500).json({ok:false,erro:err.message});}
 });
 
 app.get("/api/boletos", async (req,res)=>{
@@ -3924,33 +3886,12 @@ function autoClienteCampos(cliente, boleto = {}) {
 }
 
 async function autoBuscarClienteDoBoleto(boleto) {
-  const bd = autoDados(boleto);
-  const login =
-    autoPrimeiro(boleto, ["cliente_login"]) ||
-    autoPrimeiro(bd, ["login","loginPppoe","clienteLogin","usuario","pppoe"]);
-
-  const cpf = autoDigitos(
-    autoPrimeiro(boleto, ["cpf_cnpj"]) ||
-    autoPrimeiro(bd, ["cpfCnpj","cpf","cnpj","documento"])
-  );
-
-  const nome =
-    autoPrimeiro(boleto, ["cliente_nome"]) ||
-    autoPrimeiro(bd, ["nome","cliente","nomeCliente"]);
-
-  const r = await pool.query(`
-    SELECT *
-    FROM clientes
-    WHERE
-      ($1 <> '' AND (
-        login_pppoe=$1 OR pppoe=$1 OR dados->>'login'=$1 OR dados->>'loginPppoe'=$1
-      ))
-      OR ($2 <> '' AND regexp_replace(COALESCE(cpf_cnpj,cpf,dados->>'cpfCnpj',dados->>'cpf',''),'\\D','','g')=$2)
-      OR ($3 <> '' AND lower(COALESCE(nome,dados->>'nome',dados->>'cliente',''))=lower($3))
-    ORDER BY id DESC
-    LIMIT 1
-  `, [login, cpf, nome]);
-
+  const bd=autoDados(boleto);
+  const clienteId=Number(boleto.cliente_id || bd.clienteId || bd.cliente_id || 0) || 0;
+  if(clienteId){const r=await pool.query("SELECT * FROM clientes WHERE id=$1 LIMIT 1",[clienteId]); if(r.rows[0]) return r.rows[0];}
+  const login=autoPrimeiro(boleto,["cliente_login"]) || autoPrimeiro(bd,["login","loginPppoe","clienteLogin","usuario","pppoe"]);
+  if(!login) return null;
+  const r=await pool.query(`SELECT * FROM clientes WHERE login_pppoe=$1 OR pppoe=$1 OR dados->>'login'=$1 OR dados->>'loginPppoe'=$1 ORDER BY id DESC LIMIT 1`,[login]);
   return r.rows[0] || null;
 }
 
@@ -4281,6 +4222,7 @@ async function autoExecutarRotinaDiaria() {
     SELECT DISTINCT ON (c.id)
       c.*,
       b.id AS boleto_id,
+      b.cliente_id AS boleto_cliente_id,
       b.numero AS boleto_numero,
       b.cliente_login AS boleto_login,
       b.cliente_nome AS boleto_cliente_nome,
@@ -4290,13 +4232,11 @@ async function autoExecutarRotinaDiaria() {
       b.dados AS boleto_dados
     FROM clientes c
     JOIN boletos b ON (
-      (COALESCE(c.login_pppoe,c.pppoe,c.dados->>'loginPppoe',c.dados->>'login','') <> ''
-       AND COALESCE(c.login_pppoe,c.pppoe,c.dados->>'loginPppoe',c.dados->>'login','')
-         = COALESCE(b.cliente_login,b.dados->>'loginPppoe',b.dados->>'login',''))
-      OR
-      (regexp_replace(COALESCE(c.cpf_cnpj,c.cpf,c.dados->>'cpfCnpj',c.dados->>'cpf',''),'\\D','','g') <> ''
-       AND regexp_replace(COALESCE(c.cpf_cnpj,c.cpf,c.dados->>'cpfCnpj',c.dados->>'cpf',''),'\\D','','g')
-         = regexp_replace(COALESCE(b.cpf_cnpj,b.dados->>'cpfCnpj',b.dados->>'cpf',''),'\\D','','g'))
+      b.cliente_id=c.id OR (
+        b.cliente_id IS NULL
+        AND COALESCE(c.login_pppoe,c.pppoe,c.dados->>'loginPppoe',c.dados->>'login','') <> ''
+        AND COALESCE(c.login_pppoe,c.pppoe,c.dados->>'loginPppoe',c.dados->>'login','')=COALESCE(b.cliente_login,b.dados->>'loginPppoe',b.dados->>'login','')
+      )
     )
     WHERE
       lower(COALESCE(b.status,'pendente')) NOT IN ('pago','paid','cancelado','canceled')
@@ -4316,6 +4256,7 @@ async function autoExecutarRotinaDiaria() {
   for (const row of candidatos.rows) {
     const boleto = {
       id:row.boleto_id,
+      cliente_id:row.boleto_cliente_id,
       numero:row.boleto_numero,
       cliente_login:row.boleto_login,
       cliente_nome:row.boleto_cliente_nome,
