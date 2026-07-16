@@ -2067,6 +2067,11 @@ window.fibraStatusBoleto = function(b){
     c.telefone2 = c.telefone2 || c.telefone2 || c.telefone_secundario || c.cadTelefone2 || '';
     c.cadTelefone1 = c.cadTelefone1 || c.telefone1 || '';
     c.cadTelefone2 = c.cadTelefone2 || c.telefone2 || '';
+    c.cadNascimento = c.cadNascimento || c.nascimento || c.dataNascimento || c.data_nascimento || c.dtNascimento || '';
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(c.cadNascimento)) {
+      const [d,m,a]=c.cadNascimento.split('/');
+      c.cadNascimento=`${a}-${m}-${d}`;
+    }
     return c;
   }
 
