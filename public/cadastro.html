@@ -1952,7 +1952,7 @@ function cancelarBoletoSelecionado(){excluirBoletoSelecionado();}
       if(typeof clienteDoCadastro === "function") return clienteDoCadastro() || {};
     }catch(e){}
     try{
-      return JSON.parse(localStorage.getItem("clienteSelecionadoCompleto") || "{}");
+      return JSON.parse(null || "{}");
     }catch(e){}
     return {};
   }

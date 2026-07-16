@@ -568,11 +568,8 @@ function abrirClienteCadastro(login){
     return loginC === normalizarTexto(l) || nomeC === normalizarTexto(l);
   });
 
-  if(l) localStorage.setItem("clienteEditarLogin", l);
-  if(cliente){
-    localStorage.setItem("clienteSelecionadoCompleto", JSON.stringify(cliente));
-    localStorage.setItem("clienteCadastroSelecionado", JSON.stringify(cliente));
-  }
+  if(l) if(cliente){
+    }
 
   window.location.href = "cadastro.html?id=" + encodeURIComponent((cliente&&cliente.id)||"") + "&t=" + Date.now();
 }
@@ -637,11 +634,6 @@ window.addEventListener("pageshow", function(){
     }
 
     const login = primeiro(cliente, ["loginPppoe","login","usuario","user","name","pppoe"]) || primeiro(cliente, ["nome","cliente","razaoSocial"]);
-
-    localStorage.setItem("clienteSelecionadoCompleto", JSON.stringify(cliente));
-    localStorage.setItem("clienteCadastroSelecionado", JSON.stringify(cliente));
-    localStorage.setItem("clienteEditar", JSON.stringify(cliente));
-    localStorage.setItem("clienteEditarLogin", login);
 
     window.location.href = "cadastro.html?id=" + encodeURIComponent((cliente&&cliente.id)||"") + "&t=" + Date.now();
   });
