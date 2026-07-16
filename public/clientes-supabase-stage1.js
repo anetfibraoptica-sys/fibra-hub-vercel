@@ -22,8 +22,8 @@
     const j=await api('/api/clientes/salvar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(cliente||{})});
     return j.cliente;
   }
-  function chave(c={}){ return c.id || c.loginPppoe || c.login || c.cpfCnpj || c.cpf || c.nome || ''; }
-  function abrir(c){ location.href='cadastro.html?cliente='+encodeURIComponent(typeof c==='object'?chave(c):c); }
+  function chave(c={}){ return c.id || ''; }
+  function abrir(c){ const v=(typeof c==='object'?(c.id||''):c); location.href='cadastro.html?id='+encodeURIComponent(v); }
   window.FibraClientesStage1={listar,buscar,salvar,abrir};
   window.abrirClienteCadastro=abrir;
 
@@ -194,8 +194,8 @@
     if(novo==='1' || novo==='true') return null;
 
     const valor=
-      params.get('cliente') ||
       params.get('id') ||
+      params.get('cliente') ||
       params.get('login') ||
       params.get('editar') ||
       params.get('edit');
