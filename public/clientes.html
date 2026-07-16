@@ -574,7 +574,7 @@ function abrirClienteCadastro(login){
     localStorage.setItem("clienteCadastroSelecionado", JSON.stringify(cliente));
   }
 
-  window.location.href = "cadastro.html?cliente=" + encodeURIComponent(l) + "&t=" + Date.now();
+  window.location.href = "cadastro.html?id=" + encodeURIComponent(cliente?.id || l) + "&t=" + Date.now();
 }
 
 window.addEventListener("pageshow", function(){
@@ -643,7 +643,7 @@ window.addEventListener("pageshow", function(){
     localStorage.setItem("clienteEditar", JSON.stringify(cliente));
     localStorage.setItem("clienteEditarLogin", login);
 
-    window.location.href = "cadastro.html?cliente=" + encodeURIComponent(login) + "&t=" + Date.now();
+    window.location.href = "cadastro.html?id=" + encodeURIComponent(cliente.id || login) + "&t=" + Date.now();
   });
 })();
 </script>
@@ -785,7 +785,7 @@ document.addEventListener("fibra:supabase-sync", function(){
   }
 
   window.abrirClienteCadastro = function(chave){
-    location.href = "cadastro.html?cliente=" + encodeURIComponent(decodeURIComponent(chave || ""));
+    location.href = "cadastro.html?id=" + encodeURIComponent(decodeURIComponent(chave || ""));
   };
 
   document.addEventListener("DOMContentLoaded", carregarSupabaseUnico);
