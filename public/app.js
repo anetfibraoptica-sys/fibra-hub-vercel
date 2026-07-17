@@ -159,7 +159,7 @@ async function carregarClienteDetalhes(){
     const telefone=fibraPrimeiroValor(c,["telefone1","telefone","celular","fone"]);
     const endereco=fibraPrimeiroValor(c,["endereco","logradouro","rua"]);
     box.innerHTML=`
-      <div class="grid-2">
+      <div class="cliente-detalhes-layout">
         <section class="panel"><h3>Dados do Cliente</h3><p><b>Login:</b> ${fibraEscapeHtml(login||"--")}</p><p><b>Nome:</b> ${fibraEscapeHtml(nome||"--")}</p><p><b>Telefone:</b> ${fibraEscapeHtml(telefone||"--")}</p><p><b>Endereço:</b> ${fibraEscapeHtml(endereco||"--")}</p><p><b>Status:</b> ${fibraEscapeHtml(c.status||"--")}</p></section>
         <section class="cliente-detalhes-resumo-mobile" aria-label="Resumo do cliente">
           <div class="cliente-resumo-card"><small>Status</small><strong>${fibraEscapeHtml(c.status||"--")}</strong></div>
