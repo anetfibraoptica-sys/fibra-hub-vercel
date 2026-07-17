@@ -6308,3 +6308,45 @@ body{
     width:100% !important;
   }
 }
+
+
+/* ===== AJUSTE PONTUAL: RESUMO EM DADOS DO CLIENTE NO CELULAR ===== */
+.cliente-detalhes-resumo-mobile{
+  display:none;
+}
+@media (max-width:900px){
+  .cliente-detalhes-resumo-mobile{
+    display:grid !important;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:10px;
+    margin:0 0 14px;
+    width:100%;
+  }
+  .cliente-resumo-card{
+    min-width:0;
+    padding:13px 12px;
+    border-radius:13px;
+    border:1px solid var(--line);
+    background:linear-gradient(180deg,rgba(17,27,45,.96),rgba(13,24,41,.98));
+    box-shadow:0 8px 22px rgba(0,0,0,.18);
+  }
+  .cliente-resumo-card small{
+    display:block;
+    margin-bottom:5px;
+    color:var(--muted);
+    font-size:11px;
+    font-weight:800;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+  }
+  .cliente-resumo-card strong{
+    display:block;
+    color:var(--text);
+    font-size:14px;
+    line-height:1.25;
+    overflow-wrap:anywhere;
+  }
+}
+@media (max-width:390px){
+  .cliente-detalhes-resumo-mobile{grid-template-columns:1fr;}
+}

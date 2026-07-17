@@ -161,6 +161,12 @@ async function carregarClienteDetalhes(){
     box.innerHTML=`
       <div class="grid-2">
         <section class="panel"><h3>Dados do Cliente</h3><p><b>Login:</b> ${fibraEscapeHtml(login||"--")}</p><p><b>Nome:</b> ${fibraEscapeHtml(nome||"--")}</p><p><b>Telefone:</b> ${fibraEscapeHtml(telefone||"--")}</p><p><b>Endereço:</b> ${fibraEscapeHtml(endereco||"--")}</p><p><b>Status:</b> ${fibraEscapeHtml(c.status||"--")}</p></section>
+        <section class="cliente-detalhes-resumo-mobile" aria-label="Resumo do cliente">
+          <div class="cliente-resumo-card"><small>Status</small><strong>${fibraEscapeHtml(c.status||"--")}</strong></div>
+          <div class="cliente-resumo-card"><small>Plano</small><strong>${fibraEscapeHtml(plano||"--")}</strong></div>
+          <div class="cliente-resumo-card"><small>Servidor</small><strong>${fibraEscapeHtml(fibraNomeServidor(servidor)||"--")}</strong></div>
+          <div class="cliente-resumo-card"><small>Login PPPoE</small><strong>${fibraEscapeHtml(login||"--")}</strong></div>
+        </section>
         <section class="panel"><h3>Conexão PPPoE</h3><p><b>Servidor:</b> ${fibraEscapeHtml(fibraNomeServidor(servidor)||"--")}</p><p><b>Plano/Profile:</b> ${fibraEscapeHtml(plano||"--")}</p><p><b>IP:</b> ${fibraEscapeHtml(ip||"--")}</p><p><b>MAC/Caller ID:</b> ${fibraEscapeHtml(mac||"--")}</p><p><b>Tempo conectado:</b> ${fibraEscapeHtml(uptime||"--")}</p></section>
       </div><section class="panel"><h3>Ações</h3><button onclick="location.href='cadastro.html?id=${encodeURIComponent(c.id||chave)}'">Abrir no Cadastro</button> <button onclick="history.back()">Voltar</button></section>`;
   }catch(e){ box.innerHTML='<section class="panel"><h3>Cliente não encontrado</h3><p>'+fibraEscapeHtml(e.message)+'</p></section>'; }
