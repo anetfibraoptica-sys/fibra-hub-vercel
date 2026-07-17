@@ -3507,8 +3507,56 @@ app.post("/api/boletos/baixa-manual", async (req, res) => {
       return res.status(404).json({ ok:false, erro:"Boleto não encontrado." });
     }
 
+    const chargeId = autoTexto(boleto.efi_charge_id);
+    const dadosBoleto = boleto.dados && typeof boleto.dados === "object" ? boleto.dados : {};
+    const conta = Number(body.conta || body.contaEfi || dadosBoleto.contaEfi || 1) || 1;
+    let cancelamentoEfi = { aplicavel:false, cancelado:false };
+
+    // Uma baixa manual representa pagamento recebido fora da Efí. Para evitar que
+    // a cobrança continue aberta, cancela primeiro na Efí e só então libera o cliente.
+    if (chargeId) {
+      const cfg = await efiCarregarConfig(conta);
+      if (!cfg || !cfg.ClientId || !cfg.ClientSecret) {
+        return res.status(400).json({
+          ok:false,
+          erro:"Conta Efí não configurada. A baixa manual não foi realizada e o cliente permaneceu bloqueado.",
+          conta
+        });
+      }
+
+      const cancelamento = await efiRequest(
+        "/v1/charge/" + encodeURIComponent(chargeId) + "/cancel",
+        cfg,
+        { method:"PUT", body:{} }
+      );
+
+      const respostaEfi = cancelamento.json || cancelamento.raw;
+      const statusAtual = String(
+        efiGet(cancelamento.json, ["data.status", "status", "error_description", "message"]) || ""
+      ).toLowerCase();
+      const jaCancelado = statusAtual.includes("cancel") || statusAtual.includes("canceled");
+
+      if (!cancelamento.ok && !jaCancelado) {
+        return res.status(409).json({
+          ok:false,
+          erro:"A Efí não permitiu cancelar a cobrança. A baixa manual não foi realizada e o cliente permaneceu bloqueado.",
+          efi_status:cancelamento.status,
+          efi_resposta:respostaEfi
+        });
+      }
+
+      cancelamentoEfi = {
+        aplicavel:true,
+        cancelado:true,
+        jaCancelado:!cancelamento.ok && jaCancelado,
+        chargeId,
+        conta,
+        resposta:respostaEfi
+      };
+    }
+
     const resultado = await autoProcessarPagamento({
-      chargeId:autoTexto(boleto.efi_charge_id),
+      chargeId,
       numero,
       valorPago:body.valorPago || body.valor_pago || body.valor || boleto.total || boleto.valor,
       dataPagamento:body.dataPagamento || new Date().toISOString().slice(0,10),
@@ -3516,9 +3564,30 @@ app.post("/api/boletos/baixa-manual", async (req, res) => {
       eventoChave:"baixa-manual:" + numero + ":" + Date.now()
     });
 
+    if (cancelamentoEfi.cancelado) {
+      await pool.query(`
+        UPDATE boletos SET
+          efi_status='Cancelado na Efí por baixa manual',
+          dados=COALESCE(dados,'{}'::jsonb) || $1::jsonb,
+          atualizado_em=NOW()
+        WHERE id=$2
+      `, [
+        JSON.stringify({
+          efiStatus:"Cancelado na Efí por baixa manual",
+          efiCancelado:true,
+          efiCanceladoEm:new Date().toISOString(),
+          efiChargeId:chargeId
+        }),
+        boleto.id
+      ]);
+    }
+
     return res.json({
       ok:true,
-      mensagem:"Baixa manual registrada e cliente processado no MikroTik.",
+      mensagem:cancelamentoEfi.cancelado
+        ? "Cobrança cancelada na Efí, baixa manual registrada e cliente liberado no MikroTik."
+        : "Baixa manual registrada e cliente processado no MikroTik.",
+      cancelamentoEfi,
       automacao:resultado
     });
   } catch (err) {
