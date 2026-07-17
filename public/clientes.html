@@ -568,8 +568,11 @@ function abrirClienteCadastro(login){
     return loginC === normalizarTexto(l) || nomeC === normalizarTexto(l);
   });
 
-  if(l) if(cliente){
-    }
+  if(l) /*removed*/(, l);
+  if(cliente){
+    /*removed*/(, JSON.stringify(cliente));
+    /*removed*/(, JSON.stringify(cliente));
+  }
 
   window.location.href = "cadastro.html?id=" + encodeURIComponent((cliente&&cliente.id)||"") + "&t=" + Date.now();
 }
@@ -634,6 +637,11 @@ window.addEventListener("pageshow", function(){
     }
 
     const login = primeiro(cliente, ["loginPppoe","login","usuario","user","name","pppoe"]) || primeiro(cliente, ["nome","cliente","razaoSocial"]);
+
+    /*removed*/(, JSON.stringify(cliente));
+    /*removed*/(, JSON.stringify(cliente));
+    /*removed*/(, JSON.stringify(cliente));
+    /*removed*/(, login);
 
     window.location.href = "cadastro.html?id=" + encodeURIComponent((cliente&&cliente.id)||"") + "&t=" + Date.now();
   });

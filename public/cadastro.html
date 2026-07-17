@@ -4333,7 +4333,7 @@ document.addEventListener("DOMContentLoaded", function(){
       history.replaceState(
         null,
         "",
-        "cadastro.html?cliente=" + encodeURIComponent(chave)
+        "cadastro.html?id=" + encodeURIComponent(chave)
       );
 
       document.dispatchEvent(new CustomEvent("fibra:cliente-salvo", {
