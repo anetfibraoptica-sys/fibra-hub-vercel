@@ -4597,8 +4597,8 @@ async function autoExecutarRotinaDiaria() {
     JOIN boletos b ON (
       b.cliente_id=c.id::text OR (
         b.cliente_id IS NULL
-        AND COALESCE(c.login_pppoe,c.pppoe,c.dados->>'loginPppoe',c.dados->>'login','') <> ''
-        AND COALESCE(c.login_pppoe,c.pppoe,c.dados->>'loginPppoe',c.dados->>'login','')=COALESCE(b.cliente_login,b.dados->>'loginPppoe',b.dados->>'login','')
+        AND COALESCE(c.login_pppoe,c.dados->>'loginPppoe',c.dados->>'login','') <> ''
+        AND COALESCE(c.login_pppoe,c.dados->>'loginPppoe',c.dados->>'login','')=COALESCE(b.cliente_login,b.dados->>'loginPppoe',b.dados->>'login','')
       )
     )
     WHERE
