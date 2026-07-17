@@ -6190,3 +6190,42 @@ body{
   .table-wrap table.responsive-cards td{grid-template-columns:1fr!important;gap:3px!important}
   .topbar h1{font-size:19px!important}
 }
+
+/* ===== CORREÇÃO MENU MÓVEL ROLÁVEL ===== */
+@media (max-width: 900px){
+  .sidebar,
+  aside.sidebar,
+  nav.sidebar,
+  .menu-lateral{
+    top:0 !important;
+    bottom:0 !important;
+    height:100dvh !important;
+    max-height:100dvh !important;
+    overflow-y:auto !important;
+    overflow-x:hidden !important;
+    -webkit-overflow-scrolling:touch !important;
+    overscroll-behavior-y:contain !important;
+    touch-action:pan-y !important;
+    padding-bottom:calc(32px + env(safe-area-inset-bottom)) !important;
+    scrollbar-gutter:stable !important;
+  }
+
+  .sidebar .nav,
+  aside.sidebar .nav,
+  .menu-lateral .nav{
+    display:block !important;
+    min-height:max-content !important;
+    padding-bottom:24px !important;
+  }
+
+  body.menu-open{
+    overflow:hidden !important;
+    touch-action:none !important;
+  }
+
+  body.menu-open .sidebar,
+  body.menu-open aside.sidebar,
+  body.menu-open .menu-lateral{
+    touch-action:pan-y !important;
+  }
+}
