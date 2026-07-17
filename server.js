@@ -4,6 +4,7 @@ const cors = require("cors");
 const http = require("http");
 const { Server } = require("socket.io");
 const { Pool } = require("pg");
+const crypto = require("crypto");
 
 const net = require("net");
 
@@ -196,12 +197,107 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*", methods: ["GET", "POST"] } });
 
-app.use(cors());
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, "public")));
 
 const TOKEN = process.env.PANEL_TOKEN || "fibra2026";
+const SESSION_SECRET = String(process.env.SESSION_SECRET || process.env.CRON_SECRET || "").trim();
+const SESSION_COOKIE = "fibrahub_session";
+const SESSION_TTL_SECONDS = 12 * 60 * 60;
+
+function parseCookies(req) {
+  const out = {};
+  String(req.headers.cookie || "").split(";").forEach(part => {
+    const i = part.indexOf("=");
+    if (i > 0) out[decodeURIComponent(part.slice(0, i).trim())] = decodeURIComponent(part.slice(i + 1).trim());
+  });
+  return out;
+}
+
+function base64url(value) {
+  return Buffer.from(value).toString("base64url");
+}
+
+function signSession(payload) {
+  if (!SESSION_SECRET) throw new Error("SESSION_SECRET não configurado na Vercel.");
+  const body = base64url(JSON.stringify(payload));
+  const sig = crypto.createHmac("sha256", SESSION_SECRET).update(body).digest("base64url");
+  return `${body}.${sig}`;
+}
+
+function readSession(req) {
+  try {
+    if (!SESSION_SECRET) return null;
+    const token = parseCookies(req)[SESSION_COOKIE];
+    if (!token || !token.includes(".")) return null;
+    const [body, sig] = token.split(".");
+    const expected = crypto.createHmac("sha256", SESSION_SECRET).update(body).digest("base64url");
+    const a = Buffer.from(sig); const b = Buffer.from(expected);
+    if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
+    const payload = JSON.parse(Buffer.from(body, "base64url").toString("utf8"));
+    if (!payload.exp || Date.now() >= payload.exp * 1000) return null;
+    return payload;
+  } catch (_) { return null; }
+}
+
+function setSessionCookie(res, token) {
+  const secure = process.env.NODE_ENV === "production" || Boolean(process.env.VERCEL);
+  res.setHeader("Set-Cookie", `${SESSION_COOKIE}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${SESSION_TTL_SECONDS}${secure ? "; Secure" : ""}`);
+}
+
+function clearSessionCookie(res) {
+  const secure = process.env.NODE_ENV === "production" || Boolean(process.env.VERCEL);
+  res.setHeader("Set-Cookie", `${SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${secure ? "; Secure" : ""}`);
+}
+
+function requireSession(req, res, next) {
+  const session = readSession(req);
+  if (!session) return res.status(401).json({ ok:false, erro:"Sessão inválida ou expirada." });
+  req.sessionUser = session;
+  next();
+}
+
+function hasPermission(user, permission) {
+  if (!permission) return true;
+  if (user && (user.super_admin || String(user.funcao || "").toLowerCase().includes("superadmin"))) return true;
+  return Boolean(user && user.permissoes && user.permissoes[permission]);
+}
+
+function requirePermission(permission) {
+  return (req, res, next) => {
+    if (!hasPermission(req.sessionUser, permission)) return res.status(403).json({ ok:false, erro:"Usuário sem permissão para esta ação." });
+    next();
+  };
+}
+
+const PUBLIC_PAGES = new Set(["/", "/index.html", "/login.html", "/favicon.svg", "/style.css", "/00-fix-definitivo.js", "/supabase-client.js", "/auth-painel.js"]);
+app.use((req, res, next) => {
+  if (req.method !== "GET" || req.path.startsWith("/api/") || req.path.startsWith("/socket.io/") || req.path.startsWith("/remoto/")) return next();
+  if (PUBLIC_PAGES.has(req.path)) return next();
+  if (/\.(html)$/i.test(req.path) && !readSession(req)) return res.redirect("/login.html");
+  next();
+});
+
+app.use(express.static(path.join(__dirname, "public")));
+
+app.use("/api", (req, res, next) => {
+  const publicApi = req.path.startsWith("/auth/") || req.path === "/status" || req.path === "/login-teste" || req.path === "/login" || req.path.startsWith("/efi/webhook") || req.path.startsWith("/cron/") || req.path === "/update";
+  if (publicApi) return next();
+  return requireSession(req, res, next);
+});
+
+app.use("/api", (req,res,next) => {
+  if (!req.sessionUser) return next();
+  let permission = null;
+  if (req.method === "DELETE") permission = "excluir";
+  else if (req.path === "/boletos/baixa-manual") permission = "baixa";
+  else if (req.path.startsWith("/efi/salvar-config") || req.path.startsWith("/efi/testar-conexao")) permission = "configuracoes";
+  else if (req.path.startsWith("/mikrotik/") || /\/(bloquear|desbloquear|confianca)$/.test(req.path)) permission = "mikrotik";
+  else if (req.method !== "GET" && req.path.startsWith("/clientes")) permission = "cadastro";
+  if (permission && !hasPermission(req.sessionUser, permission)) return res.status(403).json({ok:false,erro:"Usuário sem permissão para esta ação."});
+  next();
+});
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
@@ -536,41 +632,66 @@ app.get("/", (req,res)=>res.sendFile(path.join(__dirname,"public","index.html"))
 
 
 app.get("/api/login-teste", (req, res) => {
-  res.json({ ok: true, login: "admin/admin ativo" });
+  res.json({ ok: true, login: "autenticação segura por cookie ativa", sessionSecretConfigurado: Boolean(SESSION_SECRET) });
 });
 
-
-app.post("/api/login", async (req, res) => {
+app.post("/api/auth/login", async (req, res) => {
   try {
-    const body = req.body || {};
-    const usuario = String(body.usuario || body.login || body.user || "").trim();
-    const senha = String(body.senha || body.password || body.pass || "").trim();
+    if (!SESSION_SECRET) return res.status(503).json({ ok:false, erro:"SESSION_SECRET não configurado na Vercel." });
+    const usuario = String(req.body?.usuario || "").trim().toLowerCase();
+    const senha = String(req.body?.senha || "");
+    if (!usuario || !senha) return res.status(400).json({ ok:false, erro:"Informe usuário e senha." });
+    const senhaHash = crypto.createHash("sha256").update(senha, "utf8").digest("hex");
+    const r = await pool.query(`SELECT id,nome,usuario,senha_hash,funcao,status,permissoes,COALESCE(super_admin,false) super_admin FROM public.usuarios_painel WHERE lower(usuario)=lower($1) LIMIT 1`, [usuario]);
+    const row = r.rows[0];
+    if (!row || String(row.status || "").toLowerCase() !== "ativo") return res.status(401).json({ ok:false, erro:"Usuário ou senha inválidos." });
+    const a = Buffer.from(String(row.senha_hash || "")); const b = Buffer.from(senhaHash);
+    if (a.length !== b.length || !crypto.timingSafeEqual(a,b)) return res.status(401).json({ ok:false, erro:"Usuário ou senha inválidos." });
+    const now = Math.floor(Date.now()/1000);
+    const usuarioSeguro = { id:row.id, nome:row.nome, usuario:row.usuario, funcao:row.funcao, permissoes:row.permissoes || {}, super_admin:Boolean(row.super_admin) };
+    setSessionCookie(res, signSession({ ...usuarioSeguro, iat:now, exp:now+SESSION_TTL_SECONDS }));
+    await pool.query("UPDATE public.usuarios_painel SET ultimo_acesso=now() WHERE id=$1", [row.id]).catch(()=>{});
+    await pool.query(`INSERT INTO public.auditoria_painel(usuario_id,usuario_nome,usuario_login,acao,entidade,entidade_id,dados) VALUES($1,$2,$3,'login','usuarios_painel',$4,$5::jsonb)`, [row.id,row.nome,row.usuario,String(row.id),JSON.stringify({ip:req.headers["x-forwarded-for"] || req.socket.remoteAddress || ""})]).catch(()=>{});
+    res.json({ ok:true, usuario:usuarioSeguro });
+  } catch (error) { res.status(500).json({ ok:false, erro:error.message }); }
+});
 
-    if (usuario === "admin" && senha === "admin") {
-      return res.json({
-        ok: true,
-        token: "fibra-admin",
-        usuario: { usuario: "admin", nome: "Administrador", tipo: "admin" }
-      });
-    }
+app.get("/api/auth/me", requireSession, (req,res) => res.json({ok:true, usuario:req.sessionUser}));
+app.post("/api/auth/logout", (req,res) => { clearSessionCookie(res); res.json({ok:true}); });
 
-    try {
-      const r = await pool.query(
-        "SELECT * FROM usuarios WHERE usuario=$1 AND senha=$2 LIMIT 1",
-        [usuario, senha]
-      );
+// Compatibilidade: o login antigo agora também cria a sessão segura.
+app.post("/api/login", async (req,res,next) => {
+  req.url = "/api/auth/login";
+  next();
+});
 
-      if (r.rows.length) {
-        return res.json({ ok: true, token: "fibra-admin", usuario: r.rows[0] });
-      }
-    } catch (e) {
-      console.log("Login banco ignorado:", e.message);
-    }
+app.get("/api/usuarios-painel", requireSession, requirePermission("usuarios"), async (req,res) => {
+  try {
+    const r = await pool.query(`SELECT id,nome,usuario,funcao,status,permissoes,COALESCE(super_admin,false) super_admin,ultimo_acesso,criado_em,atualizado_em FROM public.usuarios_painel ORDER BY nome`);
+    res.json({ok:true, usuarios:r.rows});
+  } catch(e) { res.status(500).json({ok:false, erro:e.message}); }
+});
 
-    return res.status(401).json({ ok: false, erro: "Usuário ou senha inválidos" });
-  } catch (error) {
-    res.status(500).json({ ok: false, erro: error.message });
-  }
+app.post("/api/auditoria-painel", requireSession, async (req,res) => {
+  try {
+    const d=req.body?.dados||{};
+    await pool.query(`INSERT INTO public.auditoria_painel(usuario_id,usuario_nome,usuario_login,acao,entidade,entidade_id,cliente_login,cliente_nome,valor,dados) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb)`, [req.sessionUser.id||null,req.sessionUser.nome||null,req.sessionUser.usuario||null,String(req.body?.acao||""),String(req.body?.entidade||""),String(req.body?.entidade_id||""),d.cliente_login||d.login||null,d.cliente_nome||d.nome||null,d.valor!==undefined?Number(d.valor||0):null,JSON.stringify(d)]);
+    res.json({ok:true});
+  } catch(e) { res.status(500).json({ok:false,erro:e.message}); }
+});
+
+app.post("/api/usuarios-painel", requireSession, requirePermission("usuarios"), async (req,res) => {
+  try {
+    const nome=String(req.body?.nome||"").trim(), usuario=String(req.body?.usuario||"").trim().toLowerCase(), senha=String(req.body?.senha||""), funcao=String(req.body?.funcao||"Atendimento"), status=String(req.body?.status||"ativo").toLowerCase();
+    if(!nome || !usuario) return res.status(400).json({ok:false,erro:"Nome e usuário são obrigatórios."});
+    if(senha && senha.length<4) return res.status(400).json({ok:false,erro:"A senha precisa ter pelo menos 4 caracteres."});
+    const permissoes=req.body?.permissoes||{};
+    const hash=senha ? crypto.createHash("sha256").update(senha,"utf8").digest("hex") : null;
+    const q=hash ? `INSERT INTO public.usuarios_painel(nome,usuario,senha_hash,funcao,status,permissoes,atualizado_em) VALUES($1,$2,$3,$4,$5,$6::jsonb,now()) ON CONFLICT(usuario) DO UPDATE SET nome=excluded.nome,senha_hash=excluded.senha_hash,funcao=excluded.funcao,status=excluded.status,permissoes=excluded.permissoes,atualizado_em=now() RETURNING id,nome,usuario,funcao,status,permissoes` : `UPDATE public.usuarios_painel SET nome=$1,funcao=$4,status=$5,permissoes=$6::jsonb,atualizado_em=now() WHERE usuario=$2 RETURNING id,nome,usuario,funcao,status,permissoes`;
+    const r=await pool.query(q,[nome,usuario,hash,funcao,status,JSON.stringify(permissoes)]);
+    if(!r.rows[0]) return res.status(400).json({ok:false,erro:"Para criar um usuário novo, informe uma senha."});
+    res.json({ok:true,usuario:r.rows[0]});
+  } catch(e) { res.status(500).json({ok:false,erro:e.message}); }
 });
 
 

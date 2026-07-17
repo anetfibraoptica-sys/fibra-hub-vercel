@@ -23,30 +23,19 @@
     <input id="usuario" autocomplete="username" placeholder="Usuário">
     <input id="senha" type="password" autocomplete="current-password" placeholder="Senha">
     <button onclick="entrar()">Entrar</button>
-    <p>Usuário padrão: <b>admin</b> / Senha: <b>admin</b></p><p id="msg" class="msg"></p>
+    <p>Use seu usuário cadastrado no painel.</p><p id="msg" class="msg"></p>
   </div>
 <script>
-function marcarLogin(usuario){
-  localStorage.setItem('fibra_logado','sim');
-  localStorage.setItem('fibraLogado','1');
-  localStorage.setItem('fibra_token','fibra-admin');
-  localStorage.setItem('fibra_usuario',usuario||'admin');
-  localStorage.setItem('usuarioLogado',usuario||'admin');
-}
 async function entrar(){
   const u=document.getElementById('usuario').value.trim();
-  const s=document.getElementById('senha').value.trim();
+  const s=document.getElementById('senha').value;
   const msg=document.getElementById('msg');
   if(!u || !s){msg.textContent='Informe usuário e senha.';return;}
-  if(u==='admin' && s==='admin'){
-    marcarLogin('admin'); window.location.href='dashboard.html'; return;
-  }
   try{
-    const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({usuario:u,senha:s,login:u,password:s})});
-    const d=await r.json();
-    if(d.ok){marcarLogin(u);window.location.href='dashboard.html';return;}
-    msg.textContent=d.erro||'Usuário ou senha inválidos.';
-  }catch(e){msg.textContent='Erro no login. Use admin/admin para acesso inicial.';}
+    msg.textContent='Verificando acesso...';
+    await FibraAuth.login(u,s);
+    window.location.replace('/dashboard.html');
+  }catch(e){ msg.textContent=e.message || 'Usuário ou senha inválidos.'; }
 }
 document.addEventListener('keydown',e=>{if(e.key==='Enter')entrar();});
 </script>

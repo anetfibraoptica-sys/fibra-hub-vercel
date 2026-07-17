@@ -64,8 +64,8 @@ Regra: ${r.diasConfig} dias`))">Atualizar status pelos boletos</button>
 </section></main></div>
 
 <script>
-function protegerPagina(){ if(!localStorage.getItem("fibraLogado")){} }
-function sair(){ localStorage.removeItem("fibraLogado"); location.href="login.html"; }
+
+function sair(){ return FibraAuth.sair(); }
 function abrirMenu(){ document.body.classList.add("menu-open"); const s=document.querySelector(".sidebar"); if(s)s.classList.add("open"); const o=document.querySelector(".overlay"); if(o)o.classList.add("active"); }
 function fecharMenu(){ document.body.classList.remove("menu-open"); const s=document.querySelector(".sidebar"); if(s){s.classList.remove("open");s.classList.remove("active");} const o=document.querySelector(".overlay"); if(o){o.classList.remove("active");o.classList.remove("open");} }
 function iniciarSocket(){ const el=document.getElementById("liveStatus"); if(el){el.textContent="ONLINE";el.className="badge badge-live";} }
