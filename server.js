@@ -165,7 +165,7 @@ function montarComentarioClienteMikrotik(cliente = {}) {
 }
 
 async function criarPPPoECliente(cliente) {
-  const cfg = servidorConfig(cliente.servidor);
+  const cfg = servidorConfig(servidorCliente(cliente));
   if (!cfg.host || !cfg.user || !cfg.pass) {
     throw new Error("Variáveis do MikroTik não configuradas no Render para " + cfg.key);
   }
@@ -455,7 +455,7 @@ function rateLimitPorPlano(plano) {
 }
 
 async function criarPPPoEClienteComProfile(cliente) {
-  const cfg = servidorConfig(cliente.servidor);
+  const cfg = servidorConfig(servidorCliente(cliente));
   if (!cfg.host || !cfg.user || !cfg.pass) {
     throw new Error("Variáveis do MikroTik não configuradas no Render para " + cfg.key);
   }
@@ -532,12 +532,12 @@ function parseRouterosRows(sentences) {
 
 
 async function consultarStatusMikroTik(cliente) {
-  const cfg = servidorConfig(cliente.servidor);
+  const cfg = servidorConfig(servidorCliente(cliente));
   if (!cfg.host || !cfg.user || !cfg.pass) {
     throw new Error("Variáveis do MikroTik não configuradas para " + cfg.key);
   }
 
-  const usuario = String(cliente.pppoe || "").trim();
+  const usuario = loginPPPoECliente(cliente);
   if (!usuario) {
     return { status: "nao_provisionado", texto: "⚫ Não provisionado", detalhe: "Cliente sem usuário PPPoE." };
   }
@@ -846,6 +846,82 @@ app.post("/api/clientes", async (req, res) => {
 
 
 
+
+function dadosClienteObjeto(cliente) {
+  if (!cliente) return {};
+  if (cliente.dados && typeof cliente.dados === "object") return cliente.dados;
+  try { return JSON.parse(cliente.dados || "{}"); } catch (_) { return {}; }
+}
+
+function loginPPPoECliente(cliente) {
+  const d = dadosClienteObjeto(cliente);
+  return String(
+    cliente.login_pppoe || cliente.login || cliente.pppoe ||
+    d.loginPppoe || d.login_pppoe || d.login || d.cadLogin || ""
+  ).trim();
+}
+
+function servidorCliente(cliente) {
+  const d = dadosClienteObjeto(cliente);
+  return String(cliente.servidor || cliente.pop_servidor || d.popServidor || d.servidor || d.cadPop || "").trim();
+}
+
+function ipInternoEquipamentoCliente(cliente) {
+  const d = dadosClienteObjeto(cliente);
+  const candidatos = [
+    cliente.ip_interno, cliente.ip_equipamento, cliente.gateway, cliente.ip,
+    d.ipInterno, d.ipEquipamento, d.routerIp, d.gateway, d.cadIp, d.ip
+  ];
+  for (const valor of candidatos) {
+    const ip = String(valor || "").trim().replace(/^https?:\/\//i, "").split('/')[0];
+    if (/^(?:\d{1,3}\.){3}\d{1,3}(?::\d+)?$/.test(ip)) return ip;
+  }
+  return "192.168.1.1";
+}
+
+function urlsAdministracao(ip, preferirHttps) {
+  const host = String(ip || "").trim();
+  if (!host) return [];
+  const https = [`https://${host}`, `https://${host}:8443`];
+  const http = [`http://${host}`, `http://${host}:8080`];
+  return preferirHttps ? [...https, ...http] : [...http, ...https];
+}
+
+
+app.get("/api/clientes/:id/acesso-equipamento", async (req, res) => {
+  try {
+    const r = await pool.query("SELECT * FROM clientes WHERE id=$1", [req.params.id]);
+    if (!r.rows.length) return res.status(404).json({ ok:false, erro:"Cliente não encontrado." });
+
+    const cliente = r.rows[0];
+    const login = loginPPPoECliente(cliente);
+    const servidor = servidorCliente(cliente);
+    if (!login) return res.status(400).json({ ok:false, erro:"Cliente sem login PPPoE cadastrado." });
+    if (!servidor) return res.status(400).json({ ok:false, erro:"Cliente sem servidor/POP cadastrado." });
+
+    const acesso = await consultarIpPPPoECliente(cliente);
+    const ipInterno = ipInternoEquipamentoCliente(cliente);
+
+    return res.json({
+      ok: true,
+      cliente_id: cliente.id,
+      nome: cliente.nome || dadosClienteObjeto(cliente).nome || "",
+      login_pppoe: login,
+      servidor,
+      online: Boolean(acesso.online),
+      ip_atual: acesso.ip || "",
+      ip_interno: ipInterno,
+      uptime: acesso.uptime || "",
+      mac: acesso.caller_id || "",
+      remoto: acesso.online ? urlsAdministracao(acesso.ip, false) : [],
+      interno: urlsAdministracao(ipInterno, true),
+      aviso: "O navegador do técnico precisa ter rota pela VPN até o IP informado e a administração web deve estar habilitada no equipamento."
+    });
+  } catch (error) {
+    return res.status(500).json({ ok:false, erro:error.message });
+  }
+});
+
 app.get("/api/clientes/:id/acesso-remoto", async (req, res) => {
   try {
     const r = await pool.query("SELECT * FROM clientes WHERE id=$1", [req.params.id]);
@@ -870,12 +946,12 @@ app.get("/api/clientes/:id/acesso-remoto", async (req, res) => {
 
 
 async function obterIpAtualCliente(cliente) {
-  const cfg = servidorConfig(cliente.servidor);
+  const cfg = servidorConfig(servidorCliente(cliente));
   if (!cfg.host || !cfg.user || !cfg.pass) {
     throw new Error("Variáveis do MikroTik não configuradas para " + cfg.key);
   }
 
-  const usuario = String(cliente.pppoe || "").trim();
+  const usuario = loginPPPoECliente(cliente);
   if (!usuario) throw new Error("Cliente sem usuário PPPoE.");
 
   const activeResp = await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
@@ -990,12 +1066,12 @@ app.get("/api/clientes/:id/status-mikrotik", async (req, res) => {
 
 
 async function consultarIpPPPoECliente(cliente) {
-  const cfg = servidorConfig(cliente.servidor);
+  const cfg = servidorConfig(servidorCliente(cliente));
   if (!cfg.host || !cfg.user || !cfg.pass) {
     throw new Error("Variáveis do MikroTik não configuradas para " + cfg.key);
   }
 
-  const usuario = String(cliente.pppoe || "").trim();
+  const usuario = loginPPPoECliente(cliente);
   if (!usuario) {
     return { online: false, ip: "", erro: "Cliente sem usuário PPPoE." };
   }

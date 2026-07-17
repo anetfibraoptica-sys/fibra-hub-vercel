@@ -1144,3 +1144,85 @@ document.addEventListener("DOMContentLoaded", function(){
   });
 })();
 
+
+/* ============================================================
+   ACESSO GENÉRICO AO EQUIPAMENTO DO CLIENTE PELA VPN
+   Usa o IP PPPoE atual no MikroTik e o IP interno cadastrado.
+============================================================ */
+(function(){
+  function idClienteAtual(){
+    const p = new URLSearchParams(location.search);
+    return String(p.get('id') || p.get('cliente') || '').trim();
+  }
+
+  async function dadosAcesso(){
+    const id = idClienteAtual();
+    if(!id) throw new Error('Abra um cliente salvo antes de acessar o equipamento.');
+    const r = await fetch('/api/clientes/' + encodeURIComponent(id) + '/acesso-equipamento', {
+      credentials:'same-origin', cache:'no-store'
+    });
+    const j = await r.json().catch(()=>({}));
+    if(!r.ok || !j.ok) throw new Error(j.erro || 'Não foi possível consultar o equipamento.');
+    return j;
+  }
+
+  function abrirUrl(url){
+    const w = window.open(url, '_blank', 'noopener');
+    if(!w) location.href = url;
+  }
+
+  document.addEventListener('click', async function(ev){
+    const remoto = ev.target.closest('.btn-remoto');
+    const interno = ev.target.closest('.btn-interno');
+    const diagnostico = ev.target.closest('.btn-diagnostico');
+    const monitoramento = ev.target.closest('.btn-monitoramento');
+    if(!remoto && !interno && !diagnostico && !monitoramento) return;
+    ev.preventDefault();
+
+    try{
+      const d = await dadosAcesso();
+
+      if(remoto){
+        if(!d.online || !d.remoto || !d.remoto.length){
+          throw new Error('Cliente offline ou sem IP PPPoE ativo no MikroTik.');
+        }
+        const usarHttps = confirm('IP atual: ' + d.ip_atual + '\n\nOK: abrir por HTTPS\nCancelar: abrir por HTTP');
+        const url = usarHttps ? ('https://' + d.ip_atual) : ('http://' + d.ip_atual);
+        abrirUrl(url);
+        return;
+      }
+
+      if(interno){
+        const atual = d.ip_interno || '192.168.1.1';
+        const informado = prompt('IP interno do roteador:', atual);
+        if(!informado) return;
+        const limpo = informado.trim().replace(/^https?:\/\//i,'').replace(/\/$/,'');
+        abrirUrl('https://' + limpo);
+        return;
+      }
+
+      if(diagnostico){
+        alert([
+          'Cliente: ' + (d.nome || '--'),
+          'PPPoE: ' + (d.login_pppoe || '--'),
+          'Servidor: ' + (d.servidor || '--'),
+          'Status: ' + (d.online ? 'ONLINE' : 'OFFLINE'),
+          'IP atual: ' + (d.ip_atual || '--'),
+          'IP interno: ' + (d.ip_interno || '--'),
+          'Uptime: ' + (d.uptime || '--'),
+          'MAC/Caller ID: ' + (d.mac || '--'),
+          '',
+          d.aviso || ''
+        ].join('\n'));
+        return;
+      }
+
+      if(monitoramento){
+        const q = new URLSearchParams({login:d.login_pppoe || '', servidor:d.servidor || '', cliente_id:d.cliente_id || ''});
+        location.href = 'monitoramento.html?' + q.toString();
+      }
+    }catch(e){
+      alert(e.message || String(e));
+    }
+  });
+})();
