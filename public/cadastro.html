@@ -4,7 +4,7 @@
 <script src="supabase-only.js"></script>
 <script src="00-fix-definitivo.js"></script>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cadastro de Cliente - Fibra+ Hub</title><link rel="stylesheet" href="style.css?v=20260717-1940">
+  <title>Cadastro de Cliente - Fibra+ Hub</title><link rel="stylesheet" href="style.css?v=20260717-2035">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -188,6 +188,84 @@
     height: 24px !important;
     min-width: 24px !important;
     min-height: 24px !important;
+  }
+}
+</style>
+
+
+<style id="cobranca-mobile-alinhamento-estrutural">
+@media screen and (max-width: 700px) {
+  body .cadastro-form-card #tab-cobranca,
+  body .cadastro-form-card #tab-cobranca .cobranca-receitanet-exato,
+  body .cadastro-form-card #tab-cobranca .cobranca-form-grid,
+  body .cadastro-form-card #tab-cobranca .campo {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  body .cadastro-form-card #tab-cobranca .input-com-botao {
+    display: grid !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    gap: 0 !important;
+    align-items: stretch !important;
+    overflow: hidden !important;
+    border-radius: 8px !important;
+    box-sizing: border-box !important;
+  }
+
+  body .cadastro-form-card #tab-cobranca .cobranca-confianca-row {
+    grid-template-columns: minmax(0, 1fr) 104px !important;
+  }
+  body .cadastro-form-card #tab-cobranca .cobranca-bloqueio-row {
+    grid-template-columns: minmax(0, 1fr) 90px 78px !important;
+  }
+  body .cadastro-form-card #tab-cobranca .cobranca-cancelamento-row {
+    grid-template-columns: minmax(0, 1fr) 48px !important;
+  }
+
+  body .cadastro-form-card #tab-cobranca .input-com-botao > input {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: 48px !important;
+    min-height: 48px !important;
+    max-height: 48px !important;
+    margin: 0 !important;
+    padding: 0 12px !important;
+    border-radius: 8px 0 0 8px !important;
+    box-sizing: border-box !important;
+  }
+
+  body .cadastro-form-card #tab-cobranca .input-com-botao > button {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: 48px !important;
+    min-height: 48px !important;
+    max-height: 48px !important;
+    margin: 0 !important;
+    padding: 0 8px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+    font-size: 14px !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+    border-radius: 0 !important;
+  }
+  body .cadastro-form-card #tab-cobranca .cobranca-confianca-row > button:last-child,
+  body .cadastro-form-card #tab-cobranca .cobranca-bloqueio-row > button:last-child,
+  body .cadastro-form-card #tab-cobranca .cobranca-cancelamento-row > button:last-child {
+    border-radius: 0 8px 8px 0 !important;
+  }
+  body .cadastro-form-card #tab-cobranca .cobranca-cancelamento-row > .info-btn {
+    padding: 0 !important;
+    font-size: 16px !important;
   }
 }
 </style>
@@ -441,7 +519,7 @@ function fibraCadastroLimparStoragesSelecao(){
 
             <div class="campo">
               <label>Liberação em Confiança</label>
-              <div class="input-com-botao">
+              <div class="input-com-botao cobranca-confianca-row">
                 <input id="cadLiberacaoConfianca" type="date">
                 <button type="button" id="btnLiberarConfianca" onclick="liberarClienteConfianca()">Confiança</button>
               </div>
@@ -449,7 +527,7 @@ function fibraCadastroLimparStoragesSelecao(){
 
             <div class="campo">
               <label>Bloqueio</label>
-              <div class="input-com-botao">
+              <div class="input-com-botao cobranca-bloqueio-row">
                 <input id="cadBloqueio" type="date">
                 <button type="button" id="btnBloquearCliente" onclick="bloquearClienteCadastro()">Bloquear</button>
                 <button type="button" id="btnLiberarCliente" onclick="liberarClienteCadastro()">Liberar</button>
@@ -459,7 +537,7 @@ function fibraCadastroLimparStoragesSelecao(){
 
             <div class="campo">
               <label>Data de Cancelamento</label>
-              <div class="input-com-botao">
+              <div class="input-com-botao cobranca-cancelamento-row">
                 <input id="cadCancelamento" type="date">
                 <button type="button" class="info-btn">i</button>
               </div>
