@@ -912,6 +912,10 @@ app.get("/api/clientes/buscar", async (req, res) => {
     if (!chave) return res.status(400).json({ok:false, erro:"Chave do cliente não informada."});
 
     const somenteDigitos = chave.replace(/\D/g, "");
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(chave)) {
+      const rId = await pool.query("SELECT * FROM clientes WHERE id::text=$1 LIMIT 1",[chave]);
+      if (rId.rows[0]) return res.json({ok:true, cliente:fbClienteRow(rId.rows[0])});
+    }
     const r = await pool.query(`
       SELECT *
       FROM clientes
