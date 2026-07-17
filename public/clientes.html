@@ -200,7 +200,7 @@
             </div>
             <table class="clientes-receita-table">
               <thead>
-                <tr class="linha-clicavel" onclick="abrirClienteCadastro(encodeURIComponent(primeiroValor(c, ['loginPppoe','login','usuario','user','name','pppoe','nome','cliente','razaoSocial'])))">
+                <tr class="linha-clicavel" onclick="abrirClienteCadastro(encodeURIComponent(c.id || ''))" ['loginPppoe','login','usuario','user','name','pppoe','nome','cliente','razaoSocial'])))">
                   <th class="status-col"></th>
                   <th>Login</th>
                   <th>Nome</th>
@@ -558,23 +558,19 @@ function filtrarClientesReceitaNet(){
   });
   renderizarClientesReceitaNet(filtrados);
 }
-function abrirClienteCadastro(login){
-  const l = decodeURIComponent(login || "");
-  const lista = window.__clientesReceitaNet || getClientesBase();
+function abrirClienteCadastro(idCliente){
+  const id = decodeURIComponent(idCliente || "");
 
-  const cliente = lista.find(c => {
-    const loginC = normalizarTexto(primeiroValor(c, ["loginPppoe","login","usuario","user","name","pppoe"]));
-    const nomeC = normalizarTexto(primeiroValor(c, ["nome","cliente","razaoSocial"]));
-    return loginC === normalizarTexto(l) || nomeC === normalizarTexto(l);
-  });
-
-  if(l) localStorage.setItem("clienteEditarLogin", l);
-  if(cliente){
-    localStorage.setItem("clienteSelecionadoCompleto", JSON.stringify(cliente));
-    localStorage.setItem("clienteCadastroSelecionado", JSON.stringify(cliente));
+  if(!id){
+    console.error("ID do cliente não informado");
+    return;
   }
 
-  window.location.href = "cadastro.html?id=" + encodeURIComponent((cliente&&cliente.id)||"") + "&t=" + Date.now();
+  window.location.href =
+    "cadastro.html?id=" +
+    encodeURIComponent(id) +
+    "&t=" +
+    Date.now();
 }
 
 window.addEventListener("pageshow", function(){
