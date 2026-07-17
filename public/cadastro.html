@@ -1952,7 +1952,7 @@ function cancelarBoletoSelecionado(){excluirBoletoSelecionado();}
       if(typeof clienteDoCadastro === "function") return clienteDoCadastro() || {};
     }catch(e){}
     try{
-      return JSON.parse(null || "{}");
+      return JSON.parse(localStorage.getItem("clienteSelecionadoCompleto") || "{}");
     }catch(e){}
     return {};
   }
@@ -4333,7 +4333,7 @@ document.addEventListener("DOMContentLoaded", function(){
       history.replaceState(
         null,
         "",
-        "cadastro.html?id=" + encodeURIComponent(chave)
+        "cadastro.html?cliente=" + encodeURIComponent(chave)
       );
 
       document.dispatchEvent(new CustomEvent("fibra:cliente-salvo", {

@@ -99,13 +99,13 @@ async function fibraFetchJson(path){
   try{return JSON.parse(t)}catch(e){return {ok:false, erro:t||r.statusText}}
 }
 function abrirClienteOnline(cliente){
-  /*removed*/(, JSON.stringify(cliente || {}));
-  /*removed*/(, cliente.login || cliente.usuario || cliente.name || cliente.nome || "");
+  localStorage.setItem("clienteOnlineSelecionado", JSON.stringify(cliente || {}));
+  localStorage.setItem("clienteEditarLogin", cliente.login || cliente.usuario || cliente.name || cliente.nome || "");
   window.location.href = "cliente.html";
 }
 function fibraAbrirClienteImportado(c){
-  /*removed*/(, JSON.stringify(c || {}));
-  /*removed*/(, fibraChaveCliente(c));
+  localStorage.setItem("clienteSelecionadoCompleto", JSON.stringify(c || {}));
+  localStorage.setItem("clienteEditarLogin", fibraChaveCliente(c));
   window.location.href = "cliente.html";
 }
 
@@ -141,9 +141,9 @@ function carregarClienteSelecionadoNoCadastro(){
         return false;
     }
   let c=null;
-  try{ const salvo=null; if(salvo) c=JSON.parse(salvo); }catch(e){}
+  try{ const salvo=localStorage.getItem("clienteSelecionadoCompleto"); if(salvo) c=JSON.parse(salvo); }catch(e){}
   if(!c){
-    const login=String(null||"").toLowerCase().trim();
+    const login=String(localStorage.getItem("clienteEditarLogin")||"").toLowerCase().trim();
     if(login) c=fibraGetClientesImportados().find(x=>fibraChaveCliente(x)===login);
   }
   if(!c) return false;
@@ -169,9 +169,9 @@ function carregarClienteDetalhes(){
   const box=document.getElementById("clienteDetalhes");
   if(!box) return;
   let c=null;
-  try{ const a=null; if(a) c=JSON.parse(a); }catch(e){}
-  if(!c){ try{ const a=null; if(a) c=JSON.parse(a); }catch(e){} }
-  if(!c){ const login=String(null||"").toLowerCase().trim(); if(login) c=fibraGetClientesImportados().find(x=>fibraChaveCliente(x)===login); }
+  try{ const a=localStorage.getItem("clienteOnlineSelecionado"); if(a) c=JSON.parse(a); }catch(e){}
+  if(!c){ try{ const a=localStorage.getItem("clienteSelecionadoCompleto"); if(a) c=JSON.parse(a); }catch(e){} }
+  if(!c){ const login=String(localStorage.getItem("clienteEditarLogin")||"").toLowerCase().trim(); if(login) c=fibraGetClientesImportados().find(x=>fibraChaveCliente(x)===login); }
   if(!c){ box.innerHTML='<section class="panel"><h3>Cliente não selecionado</h3><p>Volte para a lista de clientes e clique em um cliente.</p></section>'; return; }
   const login=fibraPrimeiroValor(c,["login","usuario","name","loginPppoe","pppoe"]);
   const nome=fibraPrimeiroValor(c,["nome","cliente","razaoSocial"]) || login;
@@ -186,7 +186,7 @@ function carregarClienteDetalhes(){
     <div class="grid-2">
       <section class="panel"><h3>Dados do Cliente</h3><p><b>Login:</b> ${fibraEscapeHtml(login||"--")}</p><p><b>Nome:</b> ${fibraEscapeHtml(nome||"--")}</p><p><b>Telefone:</b> ${fibraEscapeHtml(telefone||"--")}</p><p><b>Endereço:</b> ${fibraEscapeHtml(endereco||"--")}</p><p><b>Status:</b> 🟢 Online/Importado</p></section>
       <section class="panel"><h3>Conexão PPPoE</h3><p><b>Servidor:</b> ${fibraEscapeHtml(fibraNomeServidor(servidor)||"--")}</p><p><b>Plano/Profile:</b> ${fibraEscapeHtml(plano||"--")}</p><p><b>IP:</b> ${fibraEscapeHtml(ip||"--")}</p><p><b>MAC/Caller ID:</b> ${fibraEscapeHtml(mac||"--")}</p><p><b>Tempo conectado:</b> ${fibraEscapeHtml(uptime||"--")}</p></section>
-    </div><section class="panel"><h3>Ações</h3><button onclick="/*removed*/(, JSON.stringify(JSON.parse(null||null||'{}'))); location.href='cadastro.html'">Abrir no Cadastro</button> <button onclick="history.back()">Voltar</button></section>`;
+    </div><section class="panel"><h3>Ações</h3><button onclick="localStorage.setItem('clienteSelecionadoCompleto', JSON.stringify(JSON.parse(localStorage.getItem('clienteOnlineSelecionado')||localStorage.getItem('clienteSelecionadoCompleto')||'{}'))); location.href='cadastro.html'">Abrir no Cadastro</button> <button onclick="history.back()">Voltar</button></section>`;
 }
 
 function fibraGarantirSecaoOnline(){
@@ -288,19 +288,19 @@ function fibraLocalizarClienteSelecionado(){
   let c = null;
 
   try{
-    c = JSON.parse(null || "null");
+    c = JSON.parse(localStorage.getItem("clienteSelecionadoCompleto") || "null");
   }catch(e){}
 
   if(!c){
     try{
-      c = JSON.parse(null || "null");
+      c = JSON.parse(localStorage.getItem("clienteCadastroSelecionado") || "null");
     }catch(e){}
   }
 
   const params = new URLSearchParams(location.search);
   const busca = fibraNorm(
     params.get("cliente") ||
-    null ||
+    localStorage.getItem("clienteEditarLogin") ||
     ""
   );
 
