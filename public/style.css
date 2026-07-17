@@ -6465,3 +6465,18 @@ body{
     grid-template-columns:1fr !important;
   }
 }
+
+/* Ajuste pontual: centraliza o resumo existente no celular */
+@media (max-width: 600px){
+  body .cadastro-layout-receita > aside.cadastro-resumo-card,
+  body .cadastro-layout-receita > .cadastro-resumo-card.resumo-receitanet-completo{
+    width:calc(100% - 24px) !important;
+    max-width:560px !important;
+    margin:0 auto !important;
+    justify-self:center !important;
+    align-self:start !important;
+    left:auto !important;
+    right:auto !important;
+    transform:none !important;
+  }
+}
