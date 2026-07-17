@@ -482,15 +482,16 @@ function renderizarClientesReceitaNet(clientes){
     const nome = primeiroValor(c, ["nome","cliente","razaoSocial"]) || login || "--";
     const endereco = montarEnderecoCliente(c);
     const contato = montarContatoCliente(c);
-    return `
-      <tr onclick="abrirClienteCadastro('${encodeURIComponent(login)}')">
-        <td class="status-col">${statusIconeCliente(c)}</td>
-        <td class="login-col">${login || "--"}</td>
-        <td class="nome-col">${nome}</td>
-        <td class="endereco-col">${endereco || "--"}</td>
-        <td class="contato-col">${contato}</td>
-      </tr>
-    `;
+    return 
+return `
+  <tr onclick="abrirClienteCadastro('${encodeURIComponent(c.id || "")}')">
+    <td class="status-col">${statusIconeCliente(c)}</td>
+    <td class="login-col">${login || "--"}</td>
+    <td class="nome-col">${nome}</td>
+    <td class="endereco-col">${endereco || "--"}</td>
+    <td class="contato-col">${contato}</td>
+  </tr>
+`;
   }).join("");
 }
 function alternarBuscaClientes(forcarAbertura){
