@@ -531,14 +531,56 @@ function textoStatusClienteParaFiltro(c){
 
 function clienteCorrespondeFiltroStatus(c, filtro){
   if(!filtro || filtro === "todos") return true;
-  const cancelado = ehCancelado(c);
-  const isento = !cancelado && ehIsento(c);
-  const confianca = !cancelado && !isento && confiancaValida(c);
-  const bloqueado = !cancelado && !isento && !confianca && clienteEstaBloqueadoParaFiltro(c);
-  const texto = textoStatusClienteParaFiltro(c);
 
-  if(filtro === "ativos") return !cancelado && !isento && !bloqueado;
-  if(filtro === "nao-ativados") return texto.includes("nao ativ") || texto.includes("inativo") || texto.includes("aguardando ativ");
+  // Os clientes podem vir com campos normalizados no topo ou dentro de `dados`.
+  const dados = c && typeof c.dados === "object" && c.dados ? c.dados : {};
+  const cliente = Object.assign({}, dados, c || {});
+  const texto = textoStatusClienteParaFiltro(cliente);
+
+  const temValor = campos => campos.some(campo => {
+    const valor = cliente[campo];
+    return valor !== undefined && valor !== null && String(valor).trim() !== "" && String(valor).trim() !== "0000-00-00";
+  });
+
+  const cancelado = texto.includes("cancel") || texto.includes("encerrado") ||
+    temValor(["cancelamento","dataCancelamento","dtCancelamento","cli_dtcancelamento"]);
+
+  const isento = !cancelado && (
+    texto.includes("isento") || texto.includes("nao cobrar") ||
+    normalizarTexto(cliente.statusCobranca || cliente.cobranca || cliente.tipoCobranca || "") === "n"
+  );
+
+  const valorConfianca = primeiroValor(cliente, [
+    "liberacaoConfianca","liberadoConfianca","liberado","dataLiberacaoConfianca",
+    "cli_liberado","confianca","liberacao","cadLiberacaoConfianca"
+  ]);
+  let confianca = false;
+  if(valorConfianca){
+    const valor = String(valorConfianca).trim();
+    let data = null;
+    let match = valor.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if(match) data = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), 23, 59, 59);
+    if(!data){
+      match = valor.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+      if(match) data = new Date(Number(match[3]), Number(match[2]) - 1, Number(match[1]), 23, 59, 59);
+    }
+    if(!data){
+      const tentativa = new Date(valor);
+      if(!Number.isNaN(tentativa.getTime())) data = tentativa;
+    }
+    if(data){
+      const hoje = new Date();
+      hoje.setHours(0,0,0,0);
+      confianca = data >= hoje;
+    }
+  }
+  confianca = !cancelado && !isento && confianca;
+
+  const bloqueado = !cancelado && !isento && !confianca && clienteEstaBloqueadoParaFiltro(cliente);
+  const naoAtivado = texto.includes("nao ativ") || texto.includes("inativo") || texto.includes("aguardando ativ");
+
+  if(filtro === "ativos") return !cancelado && !isento && !bloqueado && !naoAtivado;
+  if(filtro === "nao-ativados") return naoAtivado;
   if(filtro === "bloqueados") return bloqueado;
   if(filtro === "cancelados") return cancelado && !texto.includes("acordo");
   if(filtro === "isentos") return isento;
