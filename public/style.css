@@ -6959,3 +6959,93 @@ body{
     border-radius:0 !important;
   }
 }
+
+
+/* ===== CORREÇÃO REAL DOS BOTÕES DO CADASTRO NO CELULAR =====
+   Seletores exatos e cache-busting no cadastro.html. */
+@media screen and (max-width: 600px){
+  body .cadastro-form-card .input-action{
+    display:grid !important;
+    grid-template-columns:minmax(0,1fr) auto !important;
+    align-items:stretch !important;
+    width:100% !important;
+  }
+
+  body .cadastro-form-card .input-action > input{
+    width:100% !important;
+    min-width:0 !important;
+    height:44px !important;
+    min-height:44px !important;
+    border-radius:8px 0 0 8px !important;
+  }
+
+  body .cadastro-form-card .input-action > button{
+    width:auto !important;
+    min-width:44px !important;
+    max-width:88px !important;
+    height:44px !important;
+    min-height:44px !important;
+    padding:0 10px !important;
+    margin:0 !important;
+    font-size:13px !important;
+    line-height:1 !important;
+    border-radius:0 8px 8px 0 !important;
+  }
+
+  body .cadastro-form-card #cadSenha + button,
+  body .cadastro-form-card button.email-btn{
+    width:44px !important;
+    min-width:44px !important;
+    max-width:44px !important;
+    padding:0 !important;
+    font-size:15px !important;
+  }
+
+  body .cadastro-form-card #cadCpf + button{
+    width:88px !important;
+    min-width:88px !important;
+    max-width:88px !important;
+    padding:0 8px !important;
+    font-size:13px !important;
+  }
+
+  body .cadastro-form-card .cadastro-save-row{
+    display:flex !important;
+    flex-direction:column !important;
+    gap:8px !important;
+    width:100% !important;
+    margin:14px 0 12px !important;
+  }
+
+  body .cadastro-form-card .save-servidor-wrap{
+    display:flex !important;
+    flex-direction:column !important;
+    gap:8px !important;
+    width:100% !important;
+  }
+
+  body .cadastro-form-card #btnSalvarClienteSupabase,
+  body .cadastro-form-card #btnSalvarClienteSupabaseMikrotik,
+  body .cadastro-form-card .delete-client-btn,
+  body .cadastro-form-card .cancel-btn{
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    width:100% !important;
+    height:42px !important;
+    min-height:42px !important;
+    max-height:42px !important;
+    padding:0 12px !important;
+    margin:0 !important;
+    font-size:14px !important;
+    line-height:1 !important;
+    white-space:nowrap !important;
+    overflow:hidden !important;
+    text-overflow:ellipsis !important;
+    border-radius:8px !important;
+  }
+
+  body .cadastro-receita-page{
+    padding-bottom:calc(130px + env(safe-area-inset-bottom)) !important;
+  }
+}
