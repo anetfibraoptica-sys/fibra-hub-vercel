@@ -1951,9 +1951,6 @@ function cancelarBoletoSelecionado(){excluirBoletoSelecionado();}
     try{
       if(typeof clienteDoCadastro === "function") return clienteDoCadastro() || {};
     }catch(e){}
-    try{
-      return JSON.parse(localStorage.getItem("clienteSelecionadoCompleto") || "{}");
-    }catch(e){}
     return {};
   }
   function getBoletosGlobais(){
