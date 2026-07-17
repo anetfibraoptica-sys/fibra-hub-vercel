@@ -4,7 +4,7 @@
 <script src="supabase-only.js"></script>
 <script src="00-fix-definitivo.js"></script>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cadastro de Cliente - Fibra+ Hub</title><link rel="stylesheet" href="style.css?v=20260717-2035">
+  <title>Cadastro de Cliente - Fibra+ Hub</title><link rel="stylesheet" href="style.css?v=20260717-2048">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -77,9 +77,9 @@
     box-sizing: border-box !important;
     width: 100% !important;
     min-width: 0 !important;
-    height: 48px !important;
-    min-height: 48px !important;
-    max-height: 48px !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    max-height: 44px !important;
     padding: 0 14px !important;
     font-size: 16px !important;
     line-height: 48px !important;
@@ -111,9 +111,9 @@
   body .cadastro-form-card .telefone-row > input {
     width: 100% !important;
     min-width: 0 !important;
-    height: 48px !important;
-    min-height: 48px !important;
-    max-height: 48px !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    max-height: 44px !important;
     border-radius: 8px 0 0 8px !important;
   }
   body .cadastro-form-card .input-action > button,
@@ -218,10 +218,10 @@
   }
 
   body .cadastro-form-card #tab-cobranca .cobranca-confianca-row {
-    grid-template-columns: minmax(0, 1fr) 104px !important;
+    grid-template-columns: minmax(0, 1fr) 82px !important;
   }
   body .cadastro-form-card #tab-cobranca .cobranca-bloqueio-row {
-    grid-template-columns: minmax(0, 1fr) 90px 78px !important;
+    grid-template-columns: minmax(0, 1fr) 72px 64px !important;
   }
   body .cadastro-form-card #tab-cobranca .cobranca-cancelamento-row {
     grid-template-columns: minmax(0, 1fr) 48px !important;
@@ -253,7 +253,7 @@
     align-items: center !important;
     justify-content: center !important;
     box-sizing: border-box !important;
-    font-size: 14px !important;
+    font-size: 12px !important;
     line-height: 1 !important;
     white-space: nowrap !important;
     border-radius: 0 !important;
@@ -265,7 +265,15 @@
   }
   body .cadastro-form-card #tab-cobranca .cobranca-cancelamento-row > .info-btn {
     padding: 0 !important;
-    font-size: 16px !important;
+    font-size: 15px !important;
+  }
+
+  body .cadastro-form-card #tab-cobranca #btnLiberarConfianca,
+  body .cadastro-form-card #tab-cobranca #btnBloquearCliente,
+  body .cadastro-form-card #tab-cobranca #btnLiberarCliente {
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+    letter-spacing: 0 !important;
   }
 }
 </style>
