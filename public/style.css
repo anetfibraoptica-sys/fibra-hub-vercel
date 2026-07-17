@@ -6673,3 +6673,184 @@ body{
     padding:10px !important;
   }
 }
+
+/* ===== CADASTRO MOBILE COMPACTO — AJUSTE VISUAL PONTUAL =====
+   Atua apenas em cadastro.html no celular. */
+@media (max-width: 600px){
+  body .cadastro-receita-page{
+    padding:4px 10px 88px !important;
+  }
+
+  body .cadastro-layout-receita > .cadastro-form-card{
+    padding:8px !important;
+    border-radius:10px !important;
+  }
+
+  body .cadastro-form-card .form-row,
+  body .cadastro-form-card .campo{
+    margin-bottom:7px !important;
+  }
+
+  body .cadastro-form-card .form-row.two,
+  body .cadastro-form-card .form-row.three,
+  body .cadastro-form-card .form-row.four{
+    gap:7px !important;
+  }
+
+  body .cadastro-form-card label,
+  body .cadastro-form-card .campo > label{
+    font-size:13px !important;
+    line-height:1.15 !important;
+    margin-bottom:4px !important;
+  }
+
+  body .cadastro-form-card input,
+  body .cadastro-form-card select{
+    height:40px !important;
+    min-height:40px !important;
+    padding:7px 10px !important;
+    font-size:14px !important;
+    border-radius:7px !important;
+  }
+
+  body .cadastro-form-card textarea{
+    min-height:72px !important;
+    height:72px !important;
+    padding:8px 10px !important;
+    font-size:14px !important;
+    border-radius:7px !important;
+  }
+
+  body .cadastro-form-card .input-action,
+  body .cadastro-form-card .input-com-botao,
+  body .cadastro-form-card .cep-row,
+  body .cadastro-form-card .endereco-row,
+  body .cadastro-form-card .referencia-row,
+  body .cadastro-form-card .telefone-row{
+    display:flex !important;
+    grid-template-columns:none !important;
+    gap:0 !important;
+    align-items:stretch !important;
+  }
+
+  body .cadastro-form-card .input-action input,
+  body .cadastro-form-card .input-com-botao input,
+  body .cadastro-form-card .cep-row input,
+  body .cadastro-form-card .endereco-row input,
+  body .cadastro-form-card .referencia-row input,
+  body .cadastro-form-card .telefone-row input{
+    height:40px !important;
+    min-height:40px !important;
+    border-radius:7px 0 0 7px !important;
+  }
+
+  body .cadastro-form-card .input-action button,
+  body .cadastro-form-card .input-com-botao button,
+  body .cadastro-form-card .cep-row button,
+  body .cadastro-form-card .endereco-row button,
+  body .cadastro-form-card .referencia-row button,
+  body .cadastro-form-card .telefone-row button{
+    height:40px !important;
+    min-height:40px !important;
+    min-width:42px !important;
+    max-width:108px !important;
+    padding:0 10px !important;
+    font-size:13px !important;
+    border-radius:0 7px 7px 0 !important;
+  }
+
+  body .cadastro-form-card .email-btn,
+  body .cadastro-form-card .map-btn,
+  body .cadastro-form-card .pin-btn,
+  body .cadastro-form-card .whats-btn{
+    width:44px !important;
+    min-width:44px !important;
+    max-width:44px !important;
+  }
+
+  body .cadastro-form-card .cadastro-tabs{
+    margin:-8px -8px 8px !important;
+  }
+
+  body .cadastro-form-card .cadastro-tabs .tab,
+  body .cadastro-form-card .cadastro-tabs .tab-search{
+    height:38px !important;
+    min-height:38px !important;
+    font-size:12px !important;
+  }
+
+  body .cadastro-form-card .cadastro-save-row button,
+  body .cadastro-form-card .save-servidor-wrap button{
+    min-height:42px !important;
+    padding:8px 10px !important;
+    font-size:14px !important;
+  }
+
+  body .cadastro-layout-receita > aside.cadastro-resumo-card,
+  body .cadastro-layout-receita > .cadastro-resumo-card.resumo-receitanet-completo{
+    width:100% !important;
+    padding:10px 12px 18px !important;
+    text-align:left !important;
+  }
+
+  body .cadastro-resumo-card .resumo-title h3,
+  body .cadastro-resumo-card .resumo-section h4{
+    text-align:left !important;
+    font-size:20px !important;
+    line-height:1.2 !important;
+    margin:10px 0 8px !important;
+  }
+
+  body .cadastro-resumo-card .resumo-top-grid,
+  body .cadastro-resumo-card .resumo-servidor-grid,
+  body .cadastro-resumo-card .contato-resumo-grid{
+    display:grid !important;
+    grid-template-columns:1fr 1fr !important;
+    gap:8px 12px !important;
+    text-align:left !important;
+  }
+
+  body .cadastro-resumo-card .resumo-top-grid > div,
+  body .cadastro-resumo-card .resumo-servidor-grid > div,
+  body .cadastro-resumo-card .contato-resumo-grid > div{
+    min-width:0 !important;
+    padding:5px 0 !important;
+    text-align:left !important;
+  }
+
+  body .cadastro-resumo-card b,
+  body .cadastro-resumo-card strong{
+    font-size:12px !important;
+  }
+
+  body .cadastro-resumo-card span,
+  body .cadastro-resumo-card td,
+  body .cadastro-resumo-card th{
+    font-size:12px !important;
+    line-height:1.35 !important;
+    overflow-wrap:anywhere !important;
+  }
+
+  body .cadastro-resumo-card .mini-table th,
+  body .cadastro-resumo-card .mini-table td{
+    padding:7px 5px !important;
+  }
+
+  body .cadastro-resumo-card .resumo-section{
+    padding:8px 0 !important;
+    margin:0 !important;
+  }
+
+  body .cadastro-resumo-card .dados-contato-resumo .contato-resumo-grid > div:has(span:empty),
+  body .cadastro-resumo-card .dados-contato-resumo .contato-resumo-grid > div:has(span[data-empty="true"]){
+    display:none !important;
+  }
+}
+
+@media (max-width: 380px){
+  body .cadastro-resumo-card .resumo-top-grid,
+  body .cadastro-resumo-card .resumo-servidor-grid,
+  body .cadastro-resumo-card .contato-resumo-grid{
+    grid-template-columns:1fr !important;
+  }
+}
