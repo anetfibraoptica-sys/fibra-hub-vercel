@@ -6229,3 +6229,29 @@ body{
     touch-action:pan-y !important;
   }
 }
+
+/* ===== AJUSTE PONTUAL: ESPAÇAMENTO DA LISTA DE CLIENTES NO CELULAR ===== */
+@media (max-width: 600px){
+  .clientes-receita-table tbody tr{
+    height:auto !important;
+  }
+
+  .clientes-receita-table tbody td{
+    padding-top:3px !important;
+    padding-bottom:3px !important;
+    line-height:1.15 !important;
+    vertical-align:middle !important;
+  }
+
+  .clientes-receita-table .nome-col{
+    line-height:1.15 !important;
+  }
+
+  .clientes-receita-table .endereco-col,
+  .clientes-receita-table .contato-col{
+    display:table-cell !important;
+    overflow:hidden !important;
+    text-overflow:ellipsis !important;
+    white-space:nowrap !important;
+  }
+}
