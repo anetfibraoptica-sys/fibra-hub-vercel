@@ -90,6 +90,55 @@
 }
 </style>
 
+
+<style>
+/* Correção definitiva e isolada: resumo de clientes no celular */
+.mobile-clientes-resumo{display:none;}
+@media (max-width:900px){
+  .mobile-clientes-resumo{
+    display:block !important;
+    width:100% !important;
+    max-width:100% !important;
+    margin:0 0 12px !important;
+    padding:10px !important;
+    background:#1f2937 !important;
+    border:1px solid #374151 !important;
+    border-radius:12px !important;
+    position:relative !important;
+    z-index:2 !important;
+    visibility:visible !important;
+    opacity:1 !important;
+  }
+  .mobile-clientes-resumo-titulo{
+    color:#fff !important;
+    font-size:15px !important;
+    font-weight:800 !important;
+    margin:0 0 8px !important;
+  }
+  .mobile-clientes-resumo-grid{
+    display:grid !important;
+    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+    gap:7px !important;
+    width:100% !important;
+  }
+  .mobile-clientes-resumo .status-card{
+    display:flex !important;
+    min-height:58px !important;
+    padding:7px !important;
+    border-radius:8px !important;
+    flex-direction:column !important;
+    align-items:center !important;
+    justify-content:center !important;
+    color:#fff !important;
+    font-size:11px !important;
+    font-weight:800 !important;
+    border:0 !important;
+  }
+  .mobile-clientes-resumo .status-card b{font-size:17px !important;margin-top:3px !important;}
+  .mobile-clientes-resumo .status-card.total{grid-column:1/-1 !important;}
+}
+</style>
+
 </head>
 <body onload="protegerPagina(); iniciarSocket(); carregarClientesReceitaNet();"><div class="sidebar-overlay" onclick="fecharMenuLateral()"></div>
 <button id="mobileMenuBtn" class="mobile-menu-btn" type="button" onclick="abrirMenuLateral()">☰ Menu</button>
@@ -138,6 +187,22 @@
 
     <section class="clientes-receita-wrapper">
       <div class="clientes-page-title">Consulta de Clientes</div>
+
+      <section class="mobile-clientes-resumo" aria-label="Resumo de clientes">
+        <div class="mobile-clientes-resumo-titulo">Resumo de Clientes</div>
+        <div class="mobile-clientes-resumo-grid">
+          <div class="status-card blue card-filtro-clientes mobile-card-filtro" data-filtro-status="ativos" data-sync-contador="qtdAtivos" role="button" tabindex="0"><span>Ativos</span><b>0</b></div>
+          <div class="status-card navy card-filtro-clientes mobile-card-filtro" data-filtro-status="nao-ativados" data-sync-contador="qtdNaoAtivos" role="button" tabindex="0"><span>Não Ativados</span><b>0</b></div>
+          <div class="status-card red card-filtro-clientes mobile-card-filtro" data-filtro-status="bloqueados" data-sync-contador="qtdBloqueados" role="button" tabindex="0"><span>Bloqueados</span><b>0</b></div>
+          <div class="status-card dark card-filtro-clientes mobile-card-filtro" data-filtro-status="cancelados" data-sync-contador="qtdCancelados" role="button" tabindex="0"><span>Cancelados</span><b>0</b></div>
+          <div class="status-card orange total card-filtro-clientes mobile-card-filtro" data-filtro-status="todos" data-sync-contador="qtdTotal" role="button" tabindex="0"><span>TOTAL DE CLIENTES</span><b>0</b></div>
+          <div class="status-card amber card-filtro-clientes mobile-card-filtro" data-filtro-status="visada" data-sync-contador="qtdVisada" role="button" tabindex="0"><span>Visada</span><b>0</b></div>
+          <div class="status-card pink card-filtro-clientes mobile-card-filtro" data-filtro-status="isentos" data-sync-contador="qtdIsentos" role="button" tabindex="0"><span>Isentos</span><b>0</b></div>
+          <div class="status-card coral card-filtro-clientes mobile-card-filtro" data-filtro-status="pai-controle" data-sync-contador="qtdPaiControle" role="button" tabindex="0"><span>Pai Controle</span><b>0</b></div>
+          <div class="status-card green card-filtro-clientes mobile-card-filtro" data-filtro-status="confianca" data-sync-contador="qtdConfianca" role="button" tabindex="0"><span>Liberados Confiança</span><b>0</b></div>
+          <div class="status-card black card-filtro-clientes mobile-card-filtro" data-filtro-status="cancelados-acordo" data-sync-contador="qtdCanceladosAcordo" role="button" tabindex="0"><span>Cancelados com Acordos</span><b>0</b></div>
+        </div>
+      </section>
 
       <div class="clientes-receita-grid">
         <aside class="clientes-filtros-receita">
@@ -636,7 +701,22 @@ function filtrarClientesReceitaNet(){
   renderizarClientesReceitaNet(filtrados);
 }
 
+function sincronizarContadoresResumoMobile(){
+  document.querySelectorAll(".mobile-card-filtro[data-sync-contador]").forEach(card => {
+    const origem = document.getElementById(card.dataset.syncContador);
+    const destino = card.querySelector("b");
+    if(origem && destino) destino.textContent = origem.textContent || "0";
+  });
+}
+
 document.addEventListener("DOMContentLoaded", function(){
+  sincronizarContadoresResumoMobile();
+  const alvosContadores = ["qtdAtivos","qtdNaoAtivos","qtdBloqueados","qtdCancelados","qtdTotal","qtdVisada","qtdIsentos","qtdPaiControle","qtdConfianca","qtdCanceladosAcordo"]
+    .map(id => document.getElementById(id)).filter(Boolean);
+  if(alvosContadores.length){
+    const obsResumo = new MutationObserver(sincronizarContadoresResumoMobile);
+    alvosContadores.forEach(el => obsResumo.observe(el,{childList:true,subtree:true,characterData:true}));
+  }
   document.querySelectorAll(".card-filtro-clientes").forEach(card => {
     const acionar = () => ativarFiltroStatusClientes(card.dataset.filtroStatus || "todos");
     card.addEventListener("click", acionar);
