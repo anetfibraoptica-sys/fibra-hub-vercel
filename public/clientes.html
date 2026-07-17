@@ -482,8 +482,7 @@ function renderizarClientesReceitaNet(clientes){
     const nome = primeiroValor(c, ["nome","cliente","razaoSocial"]) || login || "--";
     const endereco = montarEnderecoCliente(c);
     const contato = montarContatoCliente(c);
-    return 
-return `
+   return `
   <tr onclick="abrirClienteCadastro('${encodeURIComponent(c.id || "")}')">
     <td class="status-col">${statusIconeCliente(c)}</td>
     <td class="login-col">${login || "--"}</td>
