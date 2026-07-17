@@ -483,7 +483,7 @@ function renderizarClientesReceitaNet(clientes){
     const endereco = montarEnderecoCliente(c);
     const contato = montarContatoCliente(c);
    return `
-  <tr onclick="abrirClienteCadastro('${encodeURIComponent(c.id || "")}')">
+  <tr data-id="${c.id || ''}" onclick="abrirClienteCadastro('${encodeURIComponent(c.id || "")}')">
     <td class="status-col">${statusIconeCliente(c)}</td>
     <td class="login-col">${login || "--"}</td>
     <td class="nome-col">${nome}</td>
@@ -606,17 +606,15 @@ window.addEventListener("pageshow", function(){
     return Array.from(tr.querySelectorAll("td")).map(td => td.textContent.trim()).filter(Boolean).join(" ").toLowerCase();
   }
 
-  function encontrarClientePelaLinha(tr){
-    const lista = window.__clientesReceitaNet || baseClientes();
-    const texto = textoLinha(tr);
+function encontrarClientePelaLinha(tr){
+  const id = tr.dataset.id;
 
-    return lista.find(c => {
-      const login = norm(primeiro(c, ["loginPppoe","login","usuario","user","name","pppoe"]));
-      const nome = norm(primeiro(c, ["nome","cliente","razaoSocial"]));
-      const cpf = norm(primeiro(c, ["cpfCnpj","cpf","cnpj","documento"]));
-      return (login && texto.includes(login)) || (nome && texto.includes(nome)) || (cpf && texto.includes(cpf));
-    });
-  }
+  if(!id) return null;
+
+  const lista = window.__clientesReceitaNet || [];
+
+  return lista.find(c => String(c.id) === String(id));
+}
 
   document.addEventListener("click", function(e){
     const tr = e.target.closest("tbody tr");
