@@ -6256,9 +6256,9 @@ body{
   }
 }
 
-/* Aba Clientes: card Bloqueados clicável */
-#cardBloqueados{cursor:pointer;user-select:none;transition:transform .15s ease,box-shadow .15s ease,filter .15s ease;}
-#cardBloqueados:hover{filter:brightness(1.04);box-shadow:0 6px 16px rgba(0,0,0,.18);}
-#cardBloqueados:active{transform:scale(.98);}
-#cardBloqueados:focus-visible{outline:3px solid rgba(127,29,29,.85);outline-offset:-5px;}
-#cardBloqueados.filtro-ativo{box-shadow:0 0 0 3px #991b1b;}
+/* Aba Clientes: cards de contadores clicáveis */
+.card-filtro-clientes{cursor:pointer;user-select:none;transition:transform .15s ease,box-shadow .15s ease,filter .15s ease;border-color:transparent !important;}
+.card-filtro-clientes:hover{filter:brightness(1.04);box-shadow:0 6px 16px rgba(0,0,0,.18);}
+.card-filtro-clientes:active{transform:scale(.98);}
+.card-filtro-clientes:focus-visible{outline:3px solid rgba(15,23,42,.45);outline-offset:-5px;}
+.card-filtro-clientes.filtro-ativo{box-shadow:inset 0 0 0 3px rgba(255,255,255,.45),0 5px 14px rgba(0,0,0,.2);border-color:transparent !important;}

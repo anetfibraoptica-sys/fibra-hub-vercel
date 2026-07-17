@@ -147,16 +147,16 @@
           </div>
 
           <div class="filtros-status-grid">
-            <div class="status-card blue"><span>Ativos</span><b id="qtdAtivos">0</b></div>
-            <div class="status-card navy"><span>Não Ativados</span><b id="qtdNaoAtivos">0</b></div>
-            <div class="status-card red status-card-bloqueados" id="cardBloqueados" role="button" tabindex="0" aria-label="Mostrar somente clientes bloqueados" title="Mostrar somente clientes bloqueados"><span>Bloqueados</span><b id="qtdBloqueados">0</b></div>
-            <div class="status-card dark"><span>Cancelados</span><b id="qtdCancelados">0</b></div>
-            <div class="status-card orange total"><span>TOTAL DE CLIENTES</span><b id="qtdTotal">0</b></div>
-            <div class="status-card amber"><span>Visada</span><b>0</b></div>
-            <div class="status-card pink"><span>Isentos</span><b id="qtdIsentos">0</b></div>
-            <div class="status-card coral"><span>Pai Controle</span><b>0</b></div>
-            <div class="status-card green"><span>Liberados Confiança</span><b>0</b></div>
-            <div class="status-card black"><span>Cancelados com Acordos</span><b>0</b></div>
+            <div class="status-card blue card-filtro-clientes" data-filtro-status="ativos" role="button" tabindex="0" aria-label="Mostrar somente clientes ativos" title="Mostrar somente clientes ativos"><span>Ativos</span><b id="qtdAtivos">0</b></div>
+            <div class="status-card navy card-filtro-clientes" data-filtro-status="nao-ativados" role="button" tabindex="0" aria-label="Mostrar somente clientes não ativados" title="Mostrar somente clientes não ativados"><span>Não Ativados</span><b id="qtdNaoAtivos">0</b></div>
+            <div class="status-card red status-card-bloqueados card-filtro-clientes" id="cardBloqueados" data-filtro-status="bloqueados" role="button" tabindex="0" aria-label="Mostrar somente clientes bloqueados" title="Mostrar somente clientes bloqueados"><span>Bloqueados</span><b id="qtdBloqueados">0</b></div>
+            <div class="status-card dark card-filtro-clientes" data-filtro-status="cancelados" role="button" tabindex="0" aria-label="Mostrar somente clientes cancelados" title="Mostrar somente clientes cancelados"><span>Cancelados</span><b id="qtdCancelados">0</b></div>
+            <div class="status-card orange total card-filtro-clientes" data-filtro-status="todos" role="button" tabindex="0" aria-label="Mostrar todos os clientes" title="Mostrar todos os clientes"><span>TOTAL DE CLIENTES</span><b id="qtdTotal">0</b></div>
+            <div class="status-card amber card-filtro-clientes" data-filtro-status="visada" role="button" tabindex="0" aria-label="Mostrar somente clientes em visada" title="Mostrar somente clientes em visada"><span>Visada</span><b id="qtdVisada">0</b></div>
+            <div class="status-card pink card-filtro-clientes" data-filtro-status="isentos" role="button" tabindex="0" aria-label="Mostrar somente clientes isentos" title="Mostrar somente clientes isentos"><span>Isentos</span><b id="qtdIsentos">0</b></div>
+            <div class="status-card coral card-filtro-clientes" data-filtro-status="pai-controle" role="button" tabindex="0" aria-label="Mostrar somente clientes Pai Controle" title="Mostrar somente clientes Pai Controle"><span>Pai Controle</span><b id="qtdPaiControle">0</b></div>
+            <div class="status-card green card-filtro-clientes" data-filtro-status="confianca" role="button" tabindex="0" aria-label="Mostrar somente clientes liberados em confiança" title="Mostrar somente clientes liberados em confiança"><span>Liberados Confiança</span><b id="qtdConfianca">0</b></div>
+            <div class="status-card black card-filtro-clientes" data-filtro-status="cancelados-acordo" role="button" tabindex="0" aria-label="Mostrar somente cancelados com acordos" title="Mostrar somente cancelados com acordos"><span>Cancelados com Acordos</span><b id="qtdCanceladosAcordo">0</b></div>
           </div>
 
           <div class="filtro-form">
@@ -521,10 +521,40 @@ function clienteEstaBloqueadoParaFiltro(c){
   return textoStatus.includes("bloque") || textoStatus.includes("suspens") || textoStatus.includes("cortado") || temDataBloqueio;
 }
 
-function ativarFiltroBloqueados(){
-  window.__filtroStatusClientes = "bloqueados";
-  const card = document.getElementById("cardBloqueados");
-  if(card) card.classList.add("filtro-ativo");
+function textoStatusClienteParaFiltro(c){
+  return normalizarTexto([
+    primeiroValor(c, ["status","situacao","statusCobranca","cli_status","estadoCliente","status_cliente","cobranca"]),
+    primeiroValor(c, ["perfil","profile","cadProfile"]),
+    primeiroValor(c, ["categoria","tipoCliente","grupo","classe"])
+  ].filter(Boolean).join(" "));
+}
+
+function clienteCorrespondeFiltroStatus(c, filtro){
+  if(!filtro || filtro === "todos") return true;
+  const cancelado = ehCancelado(c);
+  const isento = !cancelado && ehIsento(c);
+  const confianca = !cancelado && !isento && confiancaValida(c);
+  const bloqueado = !cancelado && !isento && !confianca && clienteEstaBloqueadoParaFiltro(c);
+  const texto = textoStatusClienteParaFiltro(c);
+
+  if(filtro === "ativos") return !cancelado && !isento && !bloqueado;
+  if(filtro === "nao-ativados") return texto.includes("nao ativ") || texto.includes("inativo") || texto.includes("aguardando ativ");
+  if(filtro === "bloqueados") return bloqueado;
+  if(filtro === "cancelados") return cancelado && !texto.includes("acordo");
+  if(filtro === "isentos") return isento;
+  if(filtro === "confianca") return confianca;
+  if(filtro === "visada") return texto.includes("visada");
+  if(filtro === "pai-controle") return texto.includes("pai controle") || texto.includes("pai-controle");
+  if(filtro === "cancelados-acordo") return cancelado && texto.includes("acordo");
+  return true;
+}
+
+function ativarFiltroStatusClientes(filtro){
+  window.__filtroStatusClientes = filtro === "todos" ? "" : filtro;
+  document.querySelectorAll(".card-filtro-clientes").forEach(card => {
+    const ativo = card.dataset.filtroStatus === filtro || (filtro === "todos" && card.dataset.filtroStatus === "todos");
+    card.classList.toggle("filtro-ativo", ativo);
+  });
   filtrarClientesReceitaNet();
 }
 
@@ -537,6 +567,7 @@ function filtrarClientesReceitaNet(){
   const nome = normalizarTexto(document.getElementById("filtroNome")?.value || "");
   const endereco = normalizarTexto(document.getElementById("filtroEndereco")?.value || "");
   const venc = String(document.getElementById("filtroVencimento")?.value || "");
+  const filtroStatus = window.__filtroStatusClientes || "";
   const filtrados = clientes.filter(c=>{
     const loginTxt = normalizarTexto(primeiroValor(c, ["loginPppoe","login","usuario","user","pppoe"]));
     const nomeTxt = normalizarTexto(primeiroValor(c, ["nome","cliente","razaoSocial"]));
@@ -553,8 +584,7 @@ function filtrarClientesReceitaNet(){
     const geralNumeros = geralTxt.replace(/\D/g, "");
     const correspondeBuscaGeral = !buscaGeral || geralTxt.includes(buscaGeral) || (buscaNumeros.length >= 3 && geralNumeros.includes(buscaNumeros));
     const vencTxt = String(primeiroValor(c, ["vencimento","diaVencimento","dia_do_vencimento"]));
-    const correspondeStatus = window.__filtroStatusClientes !== "bloqueados" || clienteEstaBloqueadoParaFiltro(c);
-    return correspondeStatus &&
+    return clienteCorrespondeFiltroStatus(c, filtroStatus) &&
            correspondeBuscaGeral &&
            (!login || loginTxt.includes(login)) &&
            (!nome || nomeTxt.includes(nome)) &&
@@ -565,14 +595,15 @@ function filtrarClientesReceitaNet(){
 }
 
 document.addEventListener("DOMContentLoaded", function(){
-  const card = document.getElementById("cardBloqueados");
-  if(!card) return;
-  card.addEventListener("click", ativarFiltroBloqueados);
-  card.addEventListener("keydown", function(evento){
-    if(evento.key === "Enter" || evento.key === " "){
-      evento.preventDefault();
-      ativarFiltroBloqueados();
-    }
+  document.querySelectorAll(".card-filtro-clientes").forEach(card => {
+    const acionar = () => ativarFiltroStatusClientes(card.dataset.filtroStatus || "todos");
+    card.addEventListener("click", acionar);
+    card.addEventListener("keydown", function(evento){
+      if(evento.key === "Enter" || evento.key === " "){
+        evento.preventDefault();
+        acionar();
+      }
+    });
   });
 });
 
