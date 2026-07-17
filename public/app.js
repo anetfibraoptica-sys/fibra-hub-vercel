@@ -168,7 +168,7 @@ async function carregarClienteDetalhes(){
 function fibraGarantirSecaoOnline(){
   if(document.getElementById("fibraOnlineSeparado")) return;
   const pagina=window.location.pathname.split('/').pop();
-  if(!["clientes.html","dashboard.html","servidores.html","pppoe.html"].includes(pagina)) return;
+  if(!["dashboard.html","servidores.html","pppoe.html"].includes(pagina)) return;
   const main=document.querySelector("main .content") || document.querySelector("main") || document.body;
   const sec=document.createElement("section");
   sec.id="fibraOnlineSeparado";
