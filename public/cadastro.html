@@ -275,6 +275,85 @@
   }
 }
 </style>
+
+<style id="dados-contato-mobile-alinhamento-final">
+@media screen and (max-width: 700px) {
+  /* Somente Dados Pessoais e Contato */
+  #tab-dados .input-action,
+  #tab-contato .cep-row,
+  #tab-contato .endereco-row,
+  #tab-contato .referencia-row,
+  #tab-contato .telefone-row {
+    display: grid !important;
+    grid-template-columns: minmax(0,1fr) auto !important;
+    align-items: center !important;
+    gap: 0 !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  #tab-dados .input-action > input,
+  #tab-contato .cep-row > input,
+  #tab-contato .endereco-row > input,
+  #tab-contato .referencia-row > input,
+  #tab-contato .telefone-row > input {
+    height: 44px !important;
+    min-height: 44px !important;
+    max-height: 44px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    border-radius: 8px 0 0 8px !important;
+  }
+  #tab-dados .input-action > button,
+  #tab-contato .cep-row > button,
+  #tab-contato .endereco-row > button,
+  #tab-contato .referencia-row > button,
+  #tab-contato .telefone-row > button {
+    box-sizing: border-box !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    max-height: 44px !important;
+    margin: 0 !important;
+    padding: 0 12px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    line-height: 1 !important;
+    font-size: 15px !important;
+    border-radius: 0 8px 8px 0 !important;
+    align-self: center !important;
+  }
+  #tab-dados .senha-action-btn,
+  #tab-dados .email-btn,
+  #tab-contato .map-btn,
+  #tab-contato .pin-btn,
+  #tab-contato .whats-btn {
+    width: 48px !important;
+    min-width: 48px !important;
+    max-width: 48px !important;
+    padding: 0 !important;
+  }
+  #tab-dados .cpf-consultar-btn {
+    width: 94px !important;
+    min-width: 94px !important;
+    max-width: 94px !important;
+  }
+  #tab-contato .cep-consultar-btn {
+    width: 116px !important;
+    min-width: 116px !important;
+    max-width: 116px !important;
+  }
+  #tab-contato .whats-btn {
+    color: #fff !important;
+    background: #25D366 !important;
+  }
+  #tab-contato .whats-btn svg {
+    display: block !important;
+    width: 23px !important;
+    height: 23px !important;
+  }
+}
+</style>
 </head>
 <body onload="protegerPagina(); iniciarSocket(); carregarCadastroClienteHub();">
 
@@ -383,18 +462,18 @@ function fibraCadastroLimparStoragesSelecao(){
       <div id="tab-dados" class="tab-content active">
         <div class="form-row two">
           <div><label>Login</label><input id="cadLogin" oninput="atualizarResumoCadastro()" placeholder="login@pop"></div>
-          <div><label>Senha</label><div class="input-action"><input id="cadSenha" oninput="atualizarResumoCadastro()" placeholder="senha"><button onclick="gerarSenha()">!</button></div></div>
+          <div><label>Senha</label><div class="input-action"><input id="cadSenha" oninput="atualizarResumoCadastro()" placeholder="senha"><button type="button" class="senha-action-btn" onclick="gerarSenha()">!</button></div></div>
         </div>
         <div class="form-row"><label>Nome</label><input id="cadNome" oninput="atualizarResumoCadastro()" placeholder="Nome completo"></div>
         <div class="form-row two">
-          <div><label>CPF/CNPJ</label><div class="input-action"><input id="cadCpf" inputmode="numeric" maxlength="14" oninput="mascararCpfCadastro(this); atualizarResumoCadastro()" placeholder="000.000.000-00"><button onclick="consultarDocumento()">Consultar</button></div></div>
+          <div><label>CPF/CNPJ</label><div class="input-action"><input id="cadCpf" inputmode="numeric" maxlength="14" oninput="mascararCpfCadastro(this); atualizarResumoCadastro()" placeholder="000.000.000-00"><button type="button" class="cpf-consultar-btn" onclick="consultarDocumento()">Consultar</button></div></div>
           <div><label>Data Nascimento</label><input id="cadNascimento" type="date"></div>
         </div>
         <div class="form-row two">
           <div><label>RG/Inscrição Estadual</label><input id="cadRg" oninput="atualizarResumoCadastro()"></div>
           <div><label>Indicador da Inscrição Estadual</label><select id="cadIndicadorIe"><option>Não Contribuinte</option><option>Contribuinte ICMS</option><option>Isento</option></select></div>
         </div>
-        <div class="form-row email-row"><label>Email</label><div class="input-action"><input id="cadEmail" oninput="atualizarResumoCadastro()"><button class="email-btn">✉</button></div></div>
+        <div class="form-row email-row"><label>Email</label><div class="input-action"><input id="cadEmail" oninput="atualizarResumoCadastro()"><button type="button" class="email-btn" aria-label="Enviar e-mail">✉</button></div></div>
       </div>
 
       <div id="tab-contato" class="tab-content">
@@ -404,7 +483,7 @@ function fibraCadastroLimparStoragesSelecao(){
               <label>CEP</label>
               <div class="cep-row">
                 <input id="cadCep" placeholder="00000-000" maxlength="9" oninput="mascaraCepAutomatico()" onblur="buscarCepAutomatico()">
-                <button type="button" onclick="buscarCepAutomatico()">Consultar CEP</button>
+                <button type="button" class="cep-consultar-btn" onclick="buscarCepAutomatico()">Consultar CEP</button>
               </div>
               <small id="resultadoCepAutomatico" class="cep-status"></small>
             </div>
@@ -485,7 +564,7 @@ function fibraCadastroLimparStoragesSelecao(){
               <label>Telefone 1</label>
               <div class="telefone-row">
                 <input id="cadTelefone1" oninput="atualizarResumoCadastro()" placeholder="(92) 99999-9999">
-                <button type="button" class="whats-btn">☘</button>
+                <button type="button" class="whats-btn" aria-label="Abrir WhatsApp"><svg viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path fill="currentColor" d="M19.11 17.48c-.27-.14-1.6-.79-1.85-.88-.25-.09-.43-.14-.61.14-.18.27-.7.88-.86 1.06-.16.18-.32.2-.59.07-.27-.14-1.15-.42-2.19-1.35-.81-.72-1.36-1.61-1.52-1.88-.16-.27-.02-.42.12-.55.12-.12.27-.32.41-.48.14-.16.18-.27.27-.45.09-.18.05-.34-.02-.48-.07-.14-.61-1.47-.84-2.01-.22-.53-.45-.46-.61-.47h-.52c-.18 0-.48.07-.73.34-.25.27-.95.93-.95 2.26s.98 2.62 1.11 2.8c.14.18 1.92 2.93 4.65 4.11.65.28 1.16.45 1.56.58.66.21 1.25.18 1.72.11.52-.08 1.6-.65 1.83-1.29.23-.63.23-1.18.16-1.29-.07-.11-.25-.18-.52-.32z"/><path fill="currentColor" d="M16.03 3.2c-7.08 0-12.82 5.73-12.82 12.8 0 2.26.59 4.46 1.71 6.39L3.1 29l6.76-1.77a12.83 12.83 0 0 0 6.16 1.57h.01c7.07 0 12.82-5.73 12.82-12.8 0-3.42-1.34-6.63-3.76-9.05A12.76 12.76 0 0 0 16.03 3.2zm0 23.44h-.01a10.65 10.65 0 0 1-5.43-1.49l-.39-.23-4.01 1.05 1.07-3.9-.25-.4a10.61 10.61 0 0 1-1.63-5.67c0-5.88 4.79-10.66 10.68-10.66 2.85 0 5.53 1.11 7.55 3.12a10.58 10.58 0 0 1 3.13 7.54c0 5.88-4.79 10.66-10.68 10.66z"/></svg></button>
               </div>
               <p class="telefone-note">O número de telefone do cliente é necessário para a emissão da nota fiscal.</p>
             </div>
