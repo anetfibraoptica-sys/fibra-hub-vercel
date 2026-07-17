@@ -149,7 +149,7 @@
           <div class="filtros-status-grid">
             <div class="status-card blue"><span>Ativos</span><b id="qtdAtivos">0</b></div>
             <div class="status-card navy"><span>Não Ativados</span><b id="qtdNaoAtivos">0</b></div>
-            <div class="status-card red"><span>Bloqueados</span><b id="qtdBloqueados">0</b></div>
+            <div class="status-card red status-card-bloqueados" id="cardBloqueados" role="button" tabindex="0" aria-label="Mostrar somente clientes bloqueados" title="Mostrar somente clientes bloqueados"><span>Bloqueados</span><b id="qtdBloqueados">0</b></div>
             <div class="status-card dark"><span>Cancelados</span><b id="qtdCancelados">0</b></div>
             <div class="status-card orange total"><span>TOTAL DE CLIENTES</span><b id="qtdTotal">0</b></div>
             <div class="status-card amber"><span>Visada</span><b>0</b></div>
@@ -512,6 +512,22 @@ document.addEventListener("keydown", function(evento){
   if(caixa && caixa.classList.contains("aberta")) alternarBuscaClientes(false);
 });
 
+function clienteEstaBloqueadoParaFiltro(c){
+  const textoStatus = normalizarTexto(primeiroValor(c, ["status","situacao","statusCobranca","cli_status","estadoCliente","status_cliente","cobranca"]) || "");
+  const temDataBloqueio = ["bloqueio","dataBloqueio","dtBloqueio","cli_bloqueado"].some(k => {
+    const v = c && c[k];
+    return v !== undefined && v !== null && String(v).trim() !== "" && String(v).trim() !== "0000-00-00";
+  });
+  return textoStatus.includes("bloque") || textoStatus.includes("suspens") || textoStatus.includes("cortado") || temDataBloqueio;
+}
+
+function ativarFiltroBloqueados(){
+  window.__filtroStatusClientes = "bloqueados";
+  const card = document.getElementById("cardBloqueados");
+  if(card) card.classList.add("filtro-ativo");
+  filtrarClientesReceitaNet();
+}
+
 function filtrarClientesReceitaNet(){
   const clientes = window.__clientesReceitaNet || getClientesBase();
   const buscaOriginal = document.getElementById("buscaGeralClientes")?.value || "";
@@ -537,7 +553,9 @@ function filtrarClientesReceitaNet(){
     const geralNumeros = geralTxt.replace(/\D/g, "");
     const correspondeBuscaGeral = !buscaGeral || geralTxt.includes(buscaGeral) || (buscaNumeros.length >= 3 && geralNumeros.includes(buscaNumeros));
     const vencTxt = String(primeiroValor(c, ["vencimento","diaVencimento","dia_do_vencimento"]));
-    return correspondeBuscaGeral &&
+    const correspondeStatus = window.__filtroStatusClientes !== "bloqueados" || clienteEstaBloqueadoParaFiltro(c);
+    return correspondeStatus &&
+           correspondeBuscaGeral &&
            (!login || loginTxt.includes(login)) &&
            (!nome || nomeTxt.includes(nome)) &&
            (!endereco || endTxt.includes(endereco)) &&
@@ -545,6 +563,19 @@ function filtrarClientesReceitaNet(){
   });
   renderizarClientesReceitaNet(filtrados);
 }
+
+document.addEventListener("DOMContentLoaded", function(){
+  const card = document.getElementById("cardBloqueados");
+  if(!card) return;
+  card.addEventListener("click", ativarFiltroBloqueados);
+  card.addEventListener("keydown", function(evento){
+    if(evento.key === "Enter" || evento.key === " "){
+      evento.preventDefault();
+      ativarFiltroBloqueados();
+    }
+  });
+});
+
 function abrirClienteCadastro(idCliente){
   const id = decodeURIComponent(idCliente || "");
 

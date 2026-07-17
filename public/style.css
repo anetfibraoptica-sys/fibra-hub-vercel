@@ -6255,3 +6255,10 @@ body{
     white-space:nowrap !important;
   }
 }
+
+/* Aba Clientes: card Bloqueados clicável */
+#cardBloqueados{cursor:pointer;user-select:none;transition:transform .15s ease,box-shadow .15s ease,filter .15s ease;}
+#cardBloqueados:hover{filter:brightness(1.04);box-shadow:0 6px 16px rgba(0,0,0,.18);}
+#cardBloqueados:active{transform:scale(.98);}
+#cardBloqueados:focus-visible{outline:3px solid rgba(255,255,255,.95);outline-offset:-5px;}
+#cardBloqueados.filtro-ativo{box-shadow:0 0 0 3px #fff,0 0 0 6px #c72a35;}
