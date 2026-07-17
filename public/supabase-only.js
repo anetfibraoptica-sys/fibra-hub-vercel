@@ -1,86 +1,53 @@
-
-/* Fibra+ Hub — Supabase como fonte única */
+/* Fibra+ Hub — clientes com Supabase como fonte única */
 (function(){
-  const chavesDados = new Set([
-    "clientes","clientesReceitaNet","fibra_clientes","clientes_importados",
-    "clienteSelecionadoCompleto","clienteCadastroSelecionado","clienteEditar",
-    "clienteEditarLogin","clienteOnlineSelecionado",
-    "boletos","titulos","cobrancas","fibra_boletos","boletosImportados",
-    "ultimaImportacaoReceitaNet","ultimaImportacaoBoletosReceitaNet",
-    "fibra_configuracoes","efi_contas","fibraEfiConfig","fibraEfiCobrancas"
-  ]);
+  "use strict";
 
-  const memoria = Object.create(null);
-  const originalGet = Storage.prototype.getItem;
-  const originalSet = Storage.prototype.setItem;
-  const originalRemove = Storage.prototype.removeItem;
+  async function api(url, options={}){
+    const resposta = await fetch(url, {cache:"no-store", ...options});
+    const json = await resposta.json().catch(()=>({}));
+    if(!resposta.ok || json.ok === false) throw new Error(json.erro || `Falha HTTP ${resposta.status}`);
+    return json;
+  }
 
-  // Remove dados legados persistidos por versões anteriores. A memória abaixo
-  // serve apenas como buffer temporário durante a tela atual.
-  chavesDados.forEach(chave => {
-    try{ originalRemove.call(localStorage, chave); }catch(e){}
-    try{ originalRemove.call(sessionStorage, chave); }catch(e){}
-  });
-
-  Storage.prototype.getItem = function(chave){
-    if(chavesDados.has(String(chave))){
-      return Object.prototype.hasOwnProperty.call(memoria, chave) ? memoria[chave] : null;
-    }
-    return originalGet.call(this, chave);
-  };
-
-  Storage.prototype.setItem = function(chave, valor){
-    if(chavesDados.has(String(chave))){
-      memoria[chave] = String(valor);
-      return;
-    }
-    return originalSet.call(this, chave, valor);
-  };
-
-  Storage.prototype.removeItem = function(chave){
-    if(chavesDados.has(String(chave))){
-      delete memoria[chave];
-      return;
-    }
-    return originalRemove.call(this, chave);
-  };
+  function atualizarCache(lista){
+    const clientes = Array.isArray(lista) ? lista : [];
+    window.__fibraClientesSupabase = clientes;
+    window.__clientesReceitaNet = clientes;
+    return clientes;
+  }
 
   window.FibraSupabaseOnly = {
     async listarClientes(){
-      const r = await fetch("/api/clientes", {cache:"no-store"});
-      const j = await r.json();
-      if(!r.ok || !j.ok) throw new Error(j.erro || "Erro ao carregar clientes.");
-      return Array.isArray(j.clientes) ? j.clientes : [];
+      const json = await api("/api/clientes");
+      return atualizarCache(json.clientes);
     },
-
     async buscarCliente(chave){
-      const r = await fetch("/api/clientes/buscar?chave=" + encodeURIComponent(chave), {cache:"no-store"});
-      const j = await r.json();
-      if(!r.ok || !j.ok) throw new Error(j.erro || "Cliente não encontrado.");
-      return j.cliente;
+      const json = await api("/api/clientes/buscar?chave=" + encodeURIComponent(chave));
+      return json.cliente;
     },
-
     async salvarCliente(dados){
-      const r = await fetch("/api/clientes/salvar", {
+      const json = await api("/api/clientes/salvar", {
         method:"POST",
         headers:{"Content-Type":"application/json"},
-        body:JSON.stringify(dados)
+        body:JSON.stringify(dados || {})
       });
-      const j = await r.json();
-      if(!r.ok || !j.ok) throw new Error(j.erro || "Erro ao salvar cliente.");
-      return j.cliente;
+      const atual = atualizarCache(window.__fibraClientesSupabase);
+      const cliente = json.cliente;
+      const indice = atual.findIndex(c => String(c.id || "") === String(cliente.id || ""));
+      if(indice >= 0) atual[indice] = cliente; else atual.unshift(cliente);
+      return cliente;
     },
-
+    async salvarClientes(lista){
+      const clientes = Array.isArray(lista) ? lista : [];
+      const salvos = [];
+      for(const cliente of clientes) salvos.push(await this.salvarCliente(cliente));
+      return salvos;
+    },
     abrirCadastro(cliente){
-      const chave =
-        cliente?.id ||
-        cliente?.loginPppoe ||
-        cliente?.login ||
-        cliente?.cpfCnpj ||
-        cliente?.cpf ||
-        cliente?.nome ||
-        "";
-      location.href = "cadastro.html?cliente=" + encodeURIComponent(chave);
-    }
+      const chave = typeof cliente === "object" ? cliente?.id : cliente;
+      location.href = "cadastro.html?id=" + encodeURIComponent(chave || "");
+    },
+    cache(){ return atualizarCache(window.__fibraClientesSupabase); },
+    atualizarCache
   };
 })();

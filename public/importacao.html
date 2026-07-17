@@ -101,7 +101,7 @@ async function importarReceitaNetHub(ev){
 
   let clientes = [];
   try{
-    clientes = JSON.parse(localStorage.getItem("clientes") || localStorage.getItem("clientesReceitaNet") || localStorage.getItem("fibra_clientes") || "[]");
+    clientes = Array.isArray(window.__fibraClientesSupabase) ? [...window.__fibraClientesSupabase] : [];
   }catch(e){
     clientes = [];
   }
@@ -129,20 +129,10 @@ async function importarReceitaNetHub(ev){
   let final = Array.from(mapa.values());
 
   // Salva em todos os nomes usados pelo painel para evitar falha por chave diferente.
-  localStorage.setItem("clientes", JSON.stringify(final));
-  localStorage.setItem("clientesReceitaNet", JSON.stringify(final));
-  localStorage.setItem("fibra_clientes", JSON.stringify(final));
-  localStorage.setItem("clientes_importados", JSON.stringify(final));
+  window.__fibraClientesSupabase = Array.isArray(final) ? final : [];
+  window.__clientesReceitaNet = window.__fibraClientesSupabase;
   try{ if(window.FibraDB){ resultadoImportacao.innerHTML += "<br>☁ Salvando clientes no Supabase..."; await FibraDB.salvarClientes(final); resultadoImportacao.innerHTML += "<br>✅ Clientes salvos no Supabase."; } }
   catch(e){ resultadoImportacao.innerHTML += "<br>⚠ Erro Supabase: " + e.message; }
-  localStorage.setItem("ultimaImportacaoReceitaNet", JSON.stringify({
-    arquivo: file.name,
-    encontrados: imp.length,
-    novos,
-    atualizados,
-    total: final.length,
-    data: new Date().toISOString()
-  }));
 
   if(typeof impEncontrados !== "undefined") impEncontrados.textContent = imp.length;
   if(typeof impNovos !== "undefined") impNovos.textContent = novos;
@@ -164,17 +154,11 @@ async function importarReceitaNetHub(ev){
 
 function renderPreview(){let tb=previewImportacao;if(!previewHub.length){tb.innerHTML='<tr><td colspan="8">Nenhum arquivo importado ainda.</td></tr>';return}tb.innerHTML=previewHub.map(c=>`<tr><td>${c.loginPppoe||"--"}</td><td>${c.nome||"--"}</td><td>${c.cpfCnpj||"--"}</td><td>${c.telefone1||"--"}</td><td>${c.endereco||"--"}</td><td>${c.plano||"--"}</td><td>${c.diaVencimento||"--"}</td><td>${popNome(c.popServidor)}</td></tr>`).join("");}
 function iniciarImportacaoHub(){
-  try{
-    const base = localStorage.getItem("clientes") || localStorage.getItem("clientesReceitaNet") || localStorage.getItem("fibra_clientes") || "[]";
-    impTotalClientes.textContent = (JSON.parse(base) || []).length;
-  }catch(e){}
+  const lista = window.__fibraClientesSupabase || [];
+  if(typeof impTotalClientes !== "undefined") impTotalClientes.textContent = Array.isArray(lista) ? lista.length : 0;
 }
-function limparBaseClientesHub(){
-  if(confirm("Limpar todos os clientes salvos localmente?")){
-    ["clientes","clientesReceitaNet","fibra_clientes","clientes_importados","ultimaImportacaoReceitaNet"].forEach(k=>localStorage.removeItem(k));
-    alert("Base local limpa.");
-    location.reload();
-  }
+async function limparBaseClientesHub(){
+  alert("A exclusão em massa de clientes deve ser feita no Supabase para evitar perda acidental.");
 }
 
 /* ============================================================
@@ -338,7 +322,7 @@ function bMesmoCliente(c,b){
 }
 function atualizarClientesPorBoletos(listaBoletos){
   let clientes=[];
-  try{clientes=JSON.parse(localStorage.getItem("clientes")||"[]")}catch(e){clientes=[]}
+  clientes = Array.isArray(window.__fibraClientesSupabase) ? [...window.__fibraClientesSupabase] : [];
   if(!Array.isArray(clientes))clientes=[];
   let ativos=0,bloqueados=0,preservados=0;
   const hoje=new Date().toISOString().slice(0,10);
@@ -356,10 +340,8 @@ function atualizarClientesPorBoletos(listaBoletos){
       return {...c,status:"ativo",bloqueio:"",cli_bloqueado:"",statusAtualizadoPorBoletos:true,atualizadoEm:new Date().toISOString()};
     }
   });
-  localStorage.setItem("clientes",JSON.stringify(clientes));
-  localStorage.setItem("clientesReceitaNet",JSON.stringify(clientes));
-  localStorage.setItem("fibra_clientes",JSON.stringify(clientes));
-  localStorage.setItem("clientes_importados",JSON.stringify(clientes));
+  window.__fibraClientesSupabase = Array.isArray(clientes) ? clientes : [];
+  window.__clientesReceitaNet = window.__fibraClientesSupabase;
   return {ativos,bloqueados,preservados,total:clientes.length};
 }
 async function importarBoletosReceitaNetHub(ev){
@@ -451,7 +433,7 @@ function fbMesmoCliente(c,b){
 }
 function vincularBoletosNosClientesFibra(listaBoletos){
   let clientes = [];
-  try{ clientes = JSON.parse(localStorage.getItem("clientes") || "[]"); }catch(e){ clientes = []; }
+  clientes = Array.isArray(window.__fibraClientesSupabase) ? [...window.__fibraClientesSupabase] : [];
   if(!Array.isArray(clientes)) clientes = [];
 
   const boletos = Array.isArray(listaBoletos) ? listaBoletos : [];
@@ -483,11 +465,8 @@ function vincularBoletosNosClientesFibra(listaBoletos){
       atualizadoEm: new Date().toISOString()
     };
   });
-
-  localStorage.setItem("clientes", JSON.stringify(clientes));
-  localStorage.setItem("clientesReceitaNet", JSON.stringify(clientes));
-  localStorage.setItem("fibra_clientes", JSON.stringify(clientes));
-  localStorage.setItem("clientes_importados", JSON.stringify(clientes));
+  window.__fibraClientesSupabase = Array.isArray(clientes) ? clientes : [];
+  window.__clientesReceitaNet = window.__fibraClientesSupabase;
 
   return {clientes: clientes.length, vinculados};
 }
@@ -909,7 +888,7 @@ window.importarReceitaNetHub = async function(ev){
     const rows = fsParseCsv(text);
     const clientes = rows.map(fsClienteFromRow).filter(Boolean);
     if(!clientes.length) throw new Error("Nenhum cliente encontrado no arquivo.");
-    ["clientes","clientesReceitaNet","fibra_clientes","clientes_importados"].forEach(k => localStorage.setItem(k, JSON.stringify(clientes)));
+    window.__fibraClientesSupabase = Array.isArray(clientes) ? clientes : []; window.__clientesReceitaNet = window.__fibraClientesSupabase;
     if(box) box.innerHTML = `Encontrados ${clientes.length} clientes.<br>☁ Salvando no Supabase...`;
     await fsSalvarClientesSupabase(clientes);
     if(box) box.innerHTML += `<br>✅ Clientes salvos no Supabase: ${clientes.length}`;
@@ -1092,7 +1071,7 @@ function fibraMesmoClienteBoleto(c,b){
 
 window.atualizarClientesPorBoletos = function(listaBoletos){
   let clientes = [];
-  try{ clientes = JSON.parse(localStorage.getItem("clientes") || "[]"); }catch(e){ clientes = []; }
+  clientes = Array.isArray(window.__fibraClientesSupabase) ? [...window.__fibraClientesSupabase] : [];
   if(!Array.isArray(clientes)) clientes = [];
 
   const boletos = Array.isArray(listaBoletos) ? listaBoletos : [];
@@ -1135,7 +1114,7 @@ window.atualizarClientesPorBoletos = function(listaBoletos){
     };
   });
 
-  ["clientes","clientesReceitaNet","fibra_clientes","clientes_importados"].forEach(k => localStorage.setItem(k, JSON.stringify(clientes)));
+  window.__fibraClientesSupabase = Array.isArray(clientes) ? clientes : []; window.__clientesReceitaNet = window.__fibraClientesSupabase;
 
   if(window.FibraDB){
     FibraDB.salvarClientes(clientes).catch(e => console.warn("Erro ao salvar status no Supabase:", e.message));

@@ -240,18 +240,8 @@ function primeiroValor(c, campos){
   return "";
 }
 function getClientesBase(){
-  const chaves = ["clientes", "clientesReceitaNet", "fibra_clientes", "clientes_importados"];
-  for(const chave of chaves){
-    try{
-      const raw = localStorage.getItem(chave);
-      if(!raw) continue;
-      const lista = JSON.parse(raw);
-      if(Array.isArray(lista) && lista.length){
-        return lista;
-      }
-    }catch(e){}
-  }
-  return [];
+  const lista = window.__fibraClientesSupabase || window.__clientesReceitaNet || [];
+  return Array.isArray(lista) ? lista : [];
 }
 function statusIconeCliente(c){
   const status = normalizarTexto(primeiroValor(c, ["status","situacao","statusCobranca","cli_status","estadoCliente","status_cliente","cobranca"]) || "");
@@ -460,11 +450,8 @@ function mostrarStatusImportacao(clientes){
   }
   if(!info) return;
 
-  let ultima = null;
-  try{ ultima = JSON.parse(localStorage.getItem("ultimaImportacaoReceitaNet") || "null"); }catch(e){}
-
   if(clientes.length){
-    info.innerHTML = `Clientes carregados: <b>${clientes.length}</b>` + (ultima ? ` | Última importação: ${ultima.arquivo || "--"}` : "");
+    info.innerHTML = `Clientes carregados do Supabase: <b>${clientes.length}</b>`;
   }else{
     info.innerHTML = `Nenhum cliente importado encontrado. Vá em <b>Importação</b>, selecione o CSV do ReceitaNet e aguarde a mensagem "Importação concluída".`;
   }
@@ -590,16 +577,8 @@ window.addEventListener("pageshow", function(){
   }
 
   function baseClientes(){
-    const chaves = ["clientes", "clientesReceitaNet", "fibra_clientes", "clientes_importados"];
-    for(const chave of chaves){
-      try{
-        const raw = localStorage.getItem(chave);
-        if(!raw) continue;
-        const lista = JSON.parse(raw);
-        if(Array.isArray(lista) && lista.length) return lista;
-      }catch(e){}
-    }
-    return [];
+    const lista = window.__fibraClientesSupabase || window.__clientesReceitaNet || [];
+    return Array.isArray(lista) ? lista : [];
   }
 
   function textoLinha(tr){
@@ -629,13 +608,6 @@ function encontrarClientePelaLinha(tr){
       alert("Não consegui identificar este cliente. Reimporte o arquivo ou me envie um print da linha.");
       return;
     }
-
-    const login = primeiro(cliente, ["loginPppoe","login","usuario","user","name","pppoe"]) || primeiro(cliente, ["nome","cliente","razaoSocial"]);
-
-    localStorage.setItem("clienteSelecionadoCompleto", JSON.stringify(cliente));
-    localStorage.setItem("clienteCadastroSelecionado", JSON.stringify(cliente));
-    localStorage.setItem("clienteEditar", JSON.stringify(cliente));
-    localStorage.setItem("clienteEditarLogin", login);
 
     window.location.href = "cadastro.html?id=" + encodeURIComponent((cliente&&cliente.id)||"") + "&t=" + Date.now();
   });

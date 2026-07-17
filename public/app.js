@@ -82,7 +82,8 @@ function fibraSetCampo(ids, valor){
   ids.forEach(id => { const el=document.getElementById(id); if(el) el.value = valor || ""; });
 }
 function fibraGetClientesImportados(){
-  try{ const a=JSON.parse(localStorage.getItem("clientes") || "[]"); return Array.isArray(a)?a:[]; }catch(e){ return []; }
+  const lista = window.__fibraClientesSupabase || window.__clientesReceitaNet || [];
+  return Array.isArray(lista) ? lista : [];
 }
 function fibraChaveCliente(c){
   return String(fibraPrimeiroValor(c,["loginPppoe","login","usuario","user","name","pppoe"]) || fibraPrimeiroValor(c,["nome","cliente","razaoSocial"])).toLowerCase().trim();
@@ -99,14 +100,12 @@ async function fibraFetchJson(path){
   try{return JSON.parse(t)}catch(e){return {ok:false, erro:t||r.statusText}}
 }
 function abrirClienteOnline(cliente){
-  localStorage.setItem("clienteOnlineSelecionado", JSON.stringify(cliente || {}));
-  localStorage.setItem("clienteEditarLogin", cliente.login || cliente.usuario || cliente.name || cliente.nome || "");
-  window.location.href = "cliente.html";
+  const chave = cliente?.id || cliente?.login || cliente?.usuario || cliente?.name || cliente?.nome || "";
+  window.location.href = "cliente.html?cliente=" + encodeURIComponent(chave);
 }
 function fibraAbrirClienteImportado(c){
-  localStorage.setItem("clienteSelecionadoCompleto", JSON.stringify(c || {}));
-  localStorage.setItem("clienteEditarLogin", fibraChaveCliente(c));
-  window.location.href = "cliente.html";
+  const chave = c?.id || c?.loginPppoe || c?.login || c?.cpfCnpj || c?.nome || "";
+  window.location.href = "cliente.html?cliente=" + encodeURIComponent(chave);
 }
 
 function cadastroDeveAbrirLimpo(){
@@ -137,58 +136,35 @@ function cadastroDeveAbrirLimpo(){
 }
 
 function carregarClienteSelecionadoNoCadastro(){
-    if(cadastroDeveAbrirLimpo()){
-        return false;
-    }
-  let c=null;
-  try{ const salvo=localStorage.getItem("clienteSelecionadoCompleto"); if(salvo) c=JSON.parse(salvo); }catch(e){}
-  if(!c){
-    const login=String(localStorage.getItem("clienteEditarLogin")||"").toLowerCase().trim();
-    if(login) c=fibraGetClientesImportados().find(x=>fibraChaveCliente(x)===login);
-  }
-  if(!c) return false;
-  fibraSetCampo(["cadLogin","pppoe"], fibraPrimeiroValor(c,["loginPppoe","login","usuario","user","name","pppoe"]));
-  fibraSetCampo(["cadSenha","senha"], fibraPrimeiroValor(c,["senhaPppoe","senha","password"]));
-  fibraSetCampo(["cadNome","nome"], fibraPrimeiroValor(c,["nome","cliente","razaoSocial"]));
-  fibraSetCampo(["cadCpf","cpf"], fibraPrimeiroValor(c,["cpfCnpj","cpf","cnpj","documento"]));
-  fibraSetCampo(["cadEmail","email"], fibraPrimeiroValor(c,["email","e_mail"]));
-  fibraSetCampo(["cadTelefone1","telefone"], fibraPrimeiroValor(c,["telefone1","telefone","celular","fone"]));
-  fibraSetCampo(["cadEndereco","endereco"], fibraPrimeiroValor(c,["endereco","logradouro","rua"]));
-  fibraSetCampo(["cadBairro","bairro"], fibraPrimeiroValor(c,["bairro"]));
-  fibraSetCampo(["cadCep","cep"], fibraPrimeiroValor(c,["cep"]));
-  fibraSetCampo(["cadPlano","plano"], fibraPrimeiroValor(c,["plano","profile"]));
-  fibraSetCampo(["cadValor","valor"], fibraPrimeiroValor(c,["valorMensal","valor"]));
-  fibraSetCampo(["cadPop","servidorCliente"], fibraPrimeiroValor(c,["popServidor","servidor","pop"]));
-  fibraSetCampo(["cadIp"], fibraPrimeiroValor(c,["ip","address"]));
-  fibraSetCampo(["cadMac"], fibraPrimeiroValor(c,["mac","callerId","caller-id"]));
-  if(typeof atualizarResumoCadastro === "function") atualizarResumoCadastro();
-  return true;
+  // O cadastro é carregado de forma assíncrona por clientes-supabase-stage1.js.
+  return false;
 }
-
-function carregarClienteDetalhes(){
+async function carregarClienteDetalhes(){
   const box=document.getElementById("clienteDetalhes");
   if(!box) return;
-  let c=null;
-  try{ const a=localStorage.getItem("clienteOnlineSelecionado"); if(a) c=JSON.parse(a); }catch(e){}
-  if(!c){ try{ const a=localStorage.getItem("clienteSelecionadoCompleto"); if(a) c=JSON.parse(a); }catch(e){} }
-  if(!c){ const login=String(localStorage.getItem("clienteEditarLogin")||"").toLowerCase().trim(); if(login) c=fibraGetClientesImportados().find(x=>fibraChaveCliente(x)===login); }
-  if(!c){ box.innerHTML='<section class="panel"><h3>Cliente não selecionado</h3><p>Volte para a lista de clientes e clique em um cliente.</p></section>'; return; }
-  const login=fibraPrimeiroValor(c,["login","usuario","name","loginPppoe","pppoe"]);
-  const nome=fibraPrimeiroValor(c,["nome","cliente","razaoSocial"]) || login;
-  const servidor=fibraPrimeiroValor(c,["servidor","pop","popServidor"]);
-  const ip=fibraPrimeiroValor(c,["ip","address"]);
-  const mac=fibraPrimeiroValor(c,["mac","callerId","caller-id"]);
-  const uptime=fibraPrimeiroValor(c,["uptime"]);
-  const plano=fibraPrimeiroValor(c,["plano","profile"]) || "PPPoE";
-  const telefone=fibraPrimeiroValor(c,["telefone1","telefone","celular","fone"]);
-  const endereco=fibraPrimeiroValor(c,["endereco","logradouro","rua"]);
-  box.innerHTML=`
-    <div class="grid-2">
-      <section class="panel"><h3>Dados do Cliente</h3><p><b>Login:</b> ${fibraEscapeHtml(login||"--")}</p><p><b>Nome:</b> ${fibraEscapeHtml(nome||"--")}</p><p><b>Telefone:</b> ${fibraEscapeHtml(telefone||"--")}</p><p><b>Endereço:</b> ${fibraEscapeHtml(endereco||"--")}</p><p><b>Status:</b> 🟢 Online/Importado</p></section>
-      <section class="panel"><h3>Conexão PPPoE</h3><p><b>Servidor:</b> ${fibraEscapeHtml(fibraNomeServidor(servidor)||"--")}</p><p><b>Plano/Profile:</b> ${fibraEscapeHtml(plano||"--")}</p><p><b>IP:</b> ${fibraEscapeHtml(ip||"--")}</p><p><b>MAC/Caller ID:</b> ${fibraEscapeHtml(mac||"--")}</p><p><b>Tempo conectado:</b> ${fibraEscapeHtml(uptime||"--")}</p></section>
-    </div><section class="panel"><h3>Ações</h3><button onclick="localStorage.setItem('clienteSelecionadoCompleto', JSON.stringify(JSON.parse(localStorage.getItem('clienteOnlineSelecionado')||localStorage.getItem('clienteSelecionadoCompleto')||'{}'))); location.href='cadastro.html'">Abrir no Cadastro</button> <button onclick="history.back()">Voltar</button></section>`;
+  const params=new URLSearchParams(location.search);
+  const chave=params.get("cliente") || params.get("id") || params.get("login") || "";
+  if(!chave){ box.innerHTML='<section class="panel"><h3>Cliente não selecionado</h3><p>Volte para a lista de clientes e clique em um cliente.</p></section>'; return; }
+  try{
+    const c = window.FibraSupabaseOnly
+      ? await FibraSupabaseOnly.buscarCliente(chave)
+      : await (await fetch('/api/clientes/buscar?chave='+encodeURIComponent(chave),{cache:'no-store'})).json().then(j=>j.cliente);
+    const login=fibraPrimeiroValor(c,["login","usuario","name","loginPppoe","pppoe"]);
+    const nome=fibraPrimeiroValor(c,["nome","cliente","razaoSocial"]) || login;
+    const servidor=fibraPrimeiroValor(c,["servidor","pop","popServidor"]);
+    const ip=fibraPrimeiroValor(c,["ip","address"]);
+    const mac=fibraPrimeiroValor(c,["mac","callerId","caller-id"]);
+    const uptime=fibraPrimeiroValor(c,["uptime"]);
+    const plano=fibraPrimeiroValor(c,["plano","profile"]) || "PPPoE";
+    const telefone=fibraPrimeiroValor(c,["telefone1","telefone","celular","fone"]);
+    const endereco=fibraPrimeiroValor(c,["endereco","logradouro","rua"]);
+    box.innerHTML=`
+      <div class="grid-2">
+        <section class="panel"><h3>Dados do Cliente</h3><p><b>Login:</b> ${fibraEscapeHtml(login||"--")}</p><p><b>Nome:</b> ${fibraEscapeHtml(nome||"--")}</p><p><b>Telefone:</b> ${fibraEscapeHtml(telefone||"--")}</p><p><b>Endereço:</b> ${fibraEscapeHtml(endereco||"--")}</p><p><b>Status:</b> ${fibraEscapeHtml(c.status||"--")}</p></section>
+        <section class="panel"><h3>Conexão PPPoE</h3><p><b>Servidor:</b> ${fibraEscapeHtml(fibraNomeServidor(servidor)||"--")}</p><p><b>Plano/Profile:</b> ${fibraEscapeHtml(plano||"--")}</p><p><b>IP:</b> ${fibraEscapeHtml(ip||"--")}</p><p><b>MAC/Caller ID:</b> ${fibraEscapeHtml(mac||"--")}</p><p><b>Tempo conectado:</b> ${fibraEscapeHtml(uptime||"--")}</p></section>
+      </div><section class="panel"><h3>Ações</h3><button onclick="location.href='cadastro.html?id=${encodeURIComponent(c.id||chave)}'">Abrir no Cadastro</button> <button onclick="history.back()">Voltar</button></section>`;
+  }catch(e){ box.innerHTML='<section class="panel"><h3>Cliente não encontrado</h3><p>'+fibraEscapeHtml(e.message)+'</p></section>'; }
 }
-
 function fibraGarantirSecaoOnline(){
   if(document.getElementById("fibraOnlineSeparado")) return;
   const pagina=window.location.pathname.split('/').pop();
@@ -234,16 +210,8 @@ document.addEventListener('DOMContentLoaded',()=>{ setTimeout(()=>{ fibraCarrega
 
 /* Compatibilidade base de clientes importados ReceitaNet */
 function fibraGetBaseClientesImportados(){
-  const chaves = ["clientes", "clientesReceitaNet", "fibra_clientes", "clientes_importados"];
-  for(const chave of chaves){
-    try{
-      const raw = localStorage.getItem(chave);
-      if(!raw) continue;
-      const lista = JSON.parse(raw);
-      if(Array.isArray(lista) && lista.length) return lista;
-    }catch(e){}
-  }
-  return [];
+  const lista = window.__fibraClientesSupabase || window.__clientesReceitaNet || [];
+  return Array.isArray(lista) ? lista : [];
 }
 
 
@@ -272,49 +240,21 @@ function fibraSet(ids, valor){
 }
 
 function fibraClientesBase(){
-  const chaves = ["clientes", "clientesReceitaNet", "fibra_clientes", "clientes_importados"];
-  for(const chave of chaves){
-    try{
-      const raw = localStorage.getItem(chave);
-      if(!raw) continue;
-      const lista = JSON.parse(raw);
-      if(Array.isArray(lista) && lista.length) return lista;
-    }catch(e){}
-  }
-  return [];
+  const lista = window.__fibraClientesSupabase || window.__clientesReceitaNet || [];
+  return Array.isArray(lista) ? lista : [];
 }
 
 function fibraLocalizarClienteSelecionado(){
-  let c = null;
-
-  try{
-    c = JSON.parse(localStorage.getItem("clienteSelecionadoCompleto") || "null");
-  }catch(e){}
-
-  if(!c){
-    try{
-      c = JSON.parse(localStorage.getItem("clienteCadastroSelecionado") || "null");
-    }catch(e){}
-  }
-
   const params = new URLSearchParams(location.search);
-  const busca = fibraNorm(
-    params.get("cliente") ||
-    localStorage.getItem("clienteEditarLogin") ||
-    ""
-  );
-
-  if((!c || !Object.keys(c).length) && busca){
-    c = fibraClientesBase().find(x => {
-      const login = fibraNorm(fibraCampo(x, ["loginPppoe","login","usuario","user","name","pppoe"]));
-      const nome = fibraNorm(fibraCampo(x, ["nome","cliente","razaoSocial"]));
-      return login === busca || nome === busca;
-    });
-  }
-
-  return c;
+  const busca = fibraNorm(params.get("id") || params.get("cliente") || params.get("login") || "");
+  if(!busca) return null;
+  return fibraClientesBase().find(x => {
+    const id = fibraNorm(x && x.id);
+    const login = fibraNorm(fibraCampo(x, ["loginPppoe","login","usuario","user","name","pppoe"]));
+    const nome = fibraNorm(fibraCampo(x, ["nome","cliente","razaoSocial"]));
+    return id === busca || login === busca || nome === busca;
+  }) || null;
 }
-
 function fibraPreencherCadastroClienteSelecionado(){
   const c = fibraLocalizarClienteSelecionado();
   if(!c) return false;

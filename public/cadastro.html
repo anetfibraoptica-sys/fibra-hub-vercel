@@ -83,28 +83,9 @@ function fibraCadastroEhNovo(){
 }
 
 function fibraCadastroLimparStoragesSelecao(){
-  if(!fibraCadastroEhNovo()) return;
-
-  [
-    "clienteSelecionadoCompleto",
-    "clienteCadastroSelecionado",
-    "clienteEditar",
-    "clienteOnlineSelecionado",
-    "clienteEditarLogin",
-    "clienteSelecionado",
-    "clienteAtual",
-    "fibraClienteAtual",
-    "ultimoClienteSelecionado",
-    "clienteConsultaSelecionado",
-    "clienteDetalhes",
-    "clienteClicado"
-  ].forEach(function(k){
-    try{ localStorage.removeItem(k); }catch(e){}
-    try{ sessionStorage.removeItem(k); }catch(e){}
-  });
+  // Seleção de cliente é definida exclusivamente pelos parâmetros da URL/Supabase.
 }
 
-fibraCadastroLimparStoragesSelecao();
 </script>
 <div class="sidebar-overlay" onclick="fecharMenuLateral()"></div>
 <button id="mobileMenuBtn" class="mobile-menu-btn" type="button" onclick="abrirMenuLateral()">☰ Menu</button>
@@ -1951,9 +1932,6 @@ function cancelarBoletoSelecionado(){excluirBoletoSelecionado();}
     try{
       if(typeof clienteDoCadastro === "function") return clienteDoCadastro() || {};
     }catch(e){}
-    try{
-      return JSON.parse(localStorage.getItem("clienteSelecionadoCompleto") || "{}");
-    }catch(e){}
     return {};
   }
   function getBoletosGlobais(){
@@ -1999,23 +1977,12 @@ function cancelarBoletoSelecionado(){excluirBoletoSelecionado();}
     localStorage.setItem("titulos", JSON.stringify(lista));
     localStorage.setItem("cobrancas", JSON.stringify(lista));
 
-    // Atualiza também dentro do cliente atual
+    // Mantém a vinculação de boletos no cadastro atual e persiste o cliente no Supabase.
     const c = clienteAtual();
-    let clientes = [];
-    try{ clientes = JSON.parse(localStorage.getItem("clientes") || "[]"); }catch(e){ clientes = []; }
-    if(!Array.isArray(clientes)) clientes = [];
-
-    const kc = keyCliente(c);
-    if(kc){
-      clientes = clientes.map(cli => {
-        if(keyCliente(cli) !== kc) return cli;
-        const boletosCliente = lista.filter(b => mesmoCliente(cli,b));
-        return {...cli, boletos: boletosCliente, qtdBoletos: boletosCliente.length, atualizadoEm: new Date().toISOString()};
-      });
-      localStorage.setItem("clientes", JSON.stringify(clientes));
-      localStorage.setItem("clientesReceitaNet", JSON.stringify(clientes));
-      localStorage.setItem("fibra_clientes", JSON.stringify(clientes));
-      localStorage.setItem("clientes_importados", JSON.stringify(clientes));
+    const boletosCliente = lista.filter(b => mesmoCliente(c,b));
+    if((c.id || keyCliente(c)) && window.FibraSupabaseOnly){
+      FibraSupabaseOnly.salvarCliente({...c, boletos:boletosCliente, qtdBoletos:boletosCliente.length, atualizadoEm:new Date().toISOString()})
+        .catch(e => console.warn("Erro ao vincular boletos ao cliente no Supabase:", e.message));
     }
   };
 })();
