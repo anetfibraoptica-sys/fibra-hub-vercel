@@ -6262,3 +6262,49 @@ body{
 .card-filtro-clientes:active{transform:scale(.98);}
 .card-filtro-clientes:focus-visible{outline:3px solid rgba(15,23,42,.45);outline-offset:-5px;}
 .card-filtro-clientes.filtro-ativo{box-shadow:inset 0 0 0 3px rgba(255,255,255,.45),0 5px 14px rgba(0,0,0,.2);border-color:transparent !important;}
+
+/* ===== CORREÇÃO PONTUAL: CARDS E RESUMO DE CLIENTES VISÍVEIS NO CELULAR ===== */
+@media (max-width: 900px){
+  .clientes-receita-grid{
+    display:grid !important;
+    grid-template-columns:1fr !important;
+  }
+
+  .clientes-filtros-receita{
+    display:block !important;
+    visibility:visible !important;
+    opacity:1 !important;
+    width:100% !important;
+    max-width:100% !important;
+    overflow:visible !important;
+    order:0 !important;
+  }
+
+  .filtros-head,
+  .filtros-status-grid,
+  .filtro-form{
+    display:flex !important;
+    visibility:visible !important;
+    opacity:1 !important;
+  }
+
+  .filtros-head{
+    flex-direction:row !important;
+  }
+
+  .filtros-status-grid{
+    display:grid !important;
+    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+    width:100% !important;
+  }
+
+  .filtros-status-grid .status-card{
+    display:flex !important;
+    min-width:0 !important;
+  }
+
+  .filtro-form{
+    flex-direction:column !important;
+    width:100% !important;
+  }
+}
