@@ -3,7 +3,7 @@
 <head>
 <script src="supabase-only.js"></script>
 <script src="00-fix-definitivo.js"></script>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Cadastro de Cliente - Fibra+ Hub</title><link rel="stylesheet" href="style.css?v=20260717-2048">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -193,23 +193,18 @@
 </style>
 
 
-<style id="cobranca-mobile-alinhamento-estrutural">
+<style id="cobranca-mobile-alinhamento-final-unico">
 @media screen and (max-width: 700px) {
-  body .cadastro-form-card #tab-cobranca,
-  body .cadastro-form-card #tab-cobranca .cobranca-receitanet-exato,
-  body .cadastro-form-card #tab-cobranca .cobranca-form-grid,
-  body .cadastro-form-card #tab-cobranca .campo {
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 0 !important;
-    box-sizing: border-box !important;
-  }
-
-  body .cadastro-form-card #tab-cobranca .input-com-botao {
+  body .cadastro-form-card #tab-cobranca .cobranca-confianca-row,
+  body .cadastro-form-card #tab-cobranca .cobranca-bloqueio-row,
+  body .cadastro-form-card #tab-cobranca .cobranca-cancelamento-row {
     display: grid !important;
     width: 100% !important;
     max-width: 100% !important;
     min-width: 0 !important;
+    height: 44px !important;
+    margin: 0 !important;
+    padding: 0 !important;
     gap: 0 !important;
     align-items: stretch !important;
     overflow: hidden !important;
@@ -218,37 +213,46 @@
   }
 
   body .cadastro-form-card #tab-cobranca .cobranca-confianca-row {
-    grid-template-columns: minmax(0, 1fr) 82px !important;
+    grid-template-columns: minmax(0, 1fr) 88px !important;
   }
+
   body .cadastro-form-card #tab-cobranca .cobranca-bloqueio-row {
     grid-template-columns: minmax(0, 1fr) 72px 64px !important;
   }
+
   body .cadastro-form-card #tab-cobranca .cobranca-cancelamento-row {
-    grid-template-columns: minmax(0, 1fr) 48px !important;
+    grid-template-columns: minmax(0, 1fr) 44px !important;
   }
 
-  body .cadastro-form-card #tab-cobranca .input-com-botao > input {
+  body .cadastro-form-card #tab-cobranca .cobranca-confianca-row > input,
+  body .cadastro-form-card #tab-cobranca .cobranca-bloqueio-row > input,
+  body .cadastro-form-card #tab-cobranca .cobranca-cancelamento-row > input {
     width: 100% !important;
     min-width: 0 !important;
-    max-width: none !important;
-    height: 48px !important;
-    min-height: 48px !important;
-    max-height: 48px !important;
+    max-width: 100% !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    max-height: 44px !important;
     margin: 0 !important;
-    padding: 0 12px !important;
+    padding: 0 10px !important;
+    font-size: 16px !important;
+    line-height: 44px !important;
     border-radius: 8px 0 0 8px !important;
     box-sizing: border-box !important;
   }
 
-  body .cadastro-form-card #tab-cobranca .input-com-botao > button {
+  body .cadastro-form-card #tab-cobranca #btnLiberarConfianca,
+  body .cadastro-form-card #tab-cobranca #btnBloquearCliente,
+  body .cadastro-form-card #tab-cobranca #btnLiberarCliente,
+  body .cadastro-form-card #tab-cobranca .cobranca-cancelamento-row > .info-btn {
     width: 100% !important;
     min-width: 0 !important;
-    max-width: none !important;
-    height: 48px !important;
-    min-height: 48px !important;
-    max-height: 48px !important;
+    max-width: 100% !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    max-height: 44px !important;
     margin: 0 !important;
-    padding: 0 8px !important;
+    padding: 0 4px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
@@ -257,27 +261,20 @@
     line-height: 1 !important;
     white-space: nowrap !important;
     border-radius: 0 !important;
-  }
-  body .cadastro-form-card #tab-cobranca .cobranca-confianca-row > button:last-child,
-  body .cadastro-form-card #tab-cobranca .cobranca-bloqueio-row > button:last-child,
-  body .cadastro-form-card #tab-cobranca .cobranca-cancelamento-row > button:last-child {
-    border-radius: 0 8px 8px 0 !important;
-  }
-  body .cadastro-form-card #tab-cobranca .cobranca-cancelamento-row > .info-btn {
-    padding: 0 !important;
-    font-size: 15px !important;
+    transform: none !important;
   }
 
   body .cadastro-form-card #tab-cobranca #btnLiberarConfianca,
-  body .cadastro-form-card #tab-cobranca #btnBloquearCliente,
-  body .cadastro-form-card #tab-cobranca #btnLiberarCliente {
-    padding-left: 4px !important;
-    padding-right: 4px !important;
-    letter-spacing: 0 !important;
+  body .cadastro-form-card #tab-cobranca #btnLiberarCliente,
+  body .cadastro-form-card #tab-cobranca .cobranca-cancelamento-row > .info-btn {
+    border-radius: 0 8px 8px 0 !important;
+  }
+
+  body .cadastro-form-card #tab-cobranca #btnBloquearCliente {
+    border-radius: 0 !important;
   }
 }
 </style>
-
 </head>
 <body onload="protegerPagina(); iniciarSocket(); carregarCadastroClienteHub();">
 
@@ -2521,6 +2518,9 @@ document.addEventListener("fibra:supabase-sync", carregarContasEfiNoCadastro);
    ABAS DO CADASTRO - FUNÇÃO ÚNICA
 ============================================================ */
 function abrirTabCadastro(nome){
+  try{ if(document.activeElement && /^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName)) document.activeElement.blur(); }catch(e){}
+  document.documentElement.scrollLeft = 0;
+  document.body.scrollLeft = 0;
   document.querySelectorAll(".cadastro-tabs .tab").forEach(function(btn){
     btn.classList.remove("active");
     btn.classList.remove("tab-active");
