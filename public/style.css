@@ -6854,3 +6854,108 @@ body{
     grid-template-columns:1fr !important;
   }
 }
+
+/* ===== CADASTRO MOBILE — BOTÕES EM TAMANHO PADRÃO =====
+   Ajuste pontual solicitado: somente botões de cadastro.html no celular. */
+@media (max-width: 600px){
+  body .cadastro-form-card button{
+    box-sizing:border-box !important;
+    min-height:38px !important;
+    height:38px !important;
+    padding:0 12px !important;
+    font-size:13px !important;
+    line-height:1 !important;
+    border-radius:7px !important;
+    display:inline-flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    white-space:nowrap !important;
+  }
+
+  body .cadastro-form-card .input-action,
+  body .cadastro-form-card .input-com-botao,
+  body .cadastro-form-card .cep-row,
+  body .cadastro-form-card .endereco-row,
+  body .cadastro-form-card .referencia-row,
+  body .cadastro-form-card .telefone-row{
+    width:100% !important;
+    min-width:0 !important;
+  }
+
+  body .cadastro-form-card .input-action input,
+  body .cadastro-form-card .input-com-botao input,
+  body .cadastro-form-card .cep-row input,
+  body .cadastro-form-card .endereco-row input,
+  body .cadastro-form-card .referencia-row input,
+  body .cadastro-form-card .telefone-row input{
+    flex:1 1 auto !important;
+    width:auto !important;
+    min-width:0 !important;
+  }
+
+  body .cadastro-form-card .input-action button,
+  body .cadastro-form-card .input-com-botao button,
+  body .cadastro-form-card .cep-row button,
+  body .cadastro-form-card .endereco-row button,
+  body .cadastro-form-card .referencia-row button,
+  body .cadastro-form-card .telefone-row button{
+    flex:0 0 auto !important;
+    width:auto !important;
+    min-width:42px !important;
+    max-width:92px !important;
+    height:40px !important;
+    min-height:40px !important;
+    padding:0 10px !important;
+    border-radius:0 7px 7px 0 !important;
+  }
+
+  body .cadastro-form-card .input-action button:not(.email-btn):not(.map-btn):not(.pin-btn):not(.whats-btn){
+    min-width:76px !important;
+  }
+
+  body .cadastro-form-card .input-action button:first-of-type:last-child[onclick*="gerarSenha"]{
+    width:44px !important;
+    min-width:44px !important;
+    max-width:44px !important;
+    padding:0 !important;
+  }
+
+  body .cadastro-form-card .email-btn,
+  body .cadastro-form-card .map-btn,
+  body .cadastro-form-card .pin-btn,
+  body .cadastro-form-card .whats-btn,
+  body .cadastro-form-card .info-btn{
+    width:44px !important;
+    min-width:44px !important;
+    max-width:44px !important;
+    padding:0 !important;
+    font-size:16px !important;
+  }
+
+  body .cadastro-form-card .cadastro-save-row button,
+  body .cadastro-form-card .save-servidor-wrap button,
+  body .cadastro-form-card .save-blue,
+  body .cadastro-form-card .save-red,
+  body .cadastro-form-card .delete-client-btn,
+  body .cadastro-form-card .cancel-btn{
+    width:100% !important;
+    max-width:100% !important;
+    min-height:44px !important;
+    height:auto !important;
+    padding:11px 14px !important;
+    font-size:14px !important;
+    line-height:1.2 !important;
+    white-space:normal !important;
+    border-radius:8px !important;
+  }
+
+  body .cadastro-form-card .cadastro-tabs .tab,
+  body .cadastro-form-card .cadastro-tabs .tab-search{
+    width:auto !important;
+    min-width:max-content !important;
+    height:38px !important;
+    min-height:38px !important;
+    padding:0 12px !important;
+    border-radius:0 !important;
+  }
+}
