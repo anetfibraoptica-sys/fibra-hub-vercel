@@ -1,0 +1,26 @@
+<!DOCTYPE html><html lang="pt-BR"><head>
+<script src="00-fix-definitivo.js"></script><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Monitoramento - Fibra+ Hub</title><link rel="stylesheet" href="style.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+</head><body onload="protegerPagina(); carregarDashboard(); iniciarSocket();"><div class="sidebar-overlay" onclick="fecharMenuLateral()"></div>
+<button id="mobileMenuBtn" class="mobile-menu-btn" type="button" onclick="abrirMenuLateral()">☰ Menu</button>
+<div id="mobileMenuOverlay" class="mobile-menu-overlay" onclick="closeMobileMenu()"></div><div class="mobile-top"><button class="menu-btn" onclick="abrirMenuLateral()">☰</button><div><div class="logo-wrap"><div class="brand"><span class="fibra">Fibra</span><span class="brand-dot"></span><span class="plus">+</span></div><div class="slogan">HUB DE CONTROLE</div></div></div></div><div class="layout"><div class="overlay" onclick="fecharMenu()"></div><aside class="sidebar"><div class="logo-wrap"><div class="brand"><span class="fibra">Fibra</span><span class="brand-dot"></span><span class="plus">+</span></div><div class="slogan">HUB DE CONTROLE</div></div><nav class="nav"><a href="dashboard.html" class=""><span class="icon">🏠</span>Dashboard</a>
+<a href="clientes.html" class=""><span class="icon">👤</span>Clientes</a>
+<a href="cadastro.html?novo=1" class=""><span class="icon">👥</span>Cadastrar Cliente</a>
+<a href="importacao.html"><span class="icon">⬆️</span>Importação</a>
+<a href="financeiro.html" class=""><span class="icon">▤</span>Financeiro</a>
+<a href="chamados.html" class=""><span class="icon">🔧</span>Chamados</a>
+<a href="relatorios.html" class=""><span class="icon">▥</span>Relatórios</a>
+<a href="planos.html" class=""><span class="icon">▦</span>Planos</a>
+<a href="usuarios.html" class=""><span class="icon">👥</span>Usuários</a>
+<a href="configuracoes.html" class=""><span class="icon"></span>Configurações</a>
+<a href="backup.html" class=""><span class="icon">☁</span>Backup</a><a href="#" onclick="sair()"><span class="icon">↪</span></a></nav></aside><main class="main"><header class="topbar"><h1>Monitoramento</h1><div class="topbar-right"><span id="liveStatus" class="badge badge-off">CONECTANDO</span><span class="badge">2 Servidores</span><span class="badge">Administrador</span></div></header><section class="content"><section class="cards"><div class="card"><div class="card-icon bg-green">✅</div><small>Status Geral</small><h2 id="mkStatus">Aguardando</h2></div><div class="card"><div class="card-icon bg-blue">📡</div><small>Servidores Online</small><h2 id="servidoresOnline">0/2</h2></div><div class="card"><div class="card-icon bg-blue">👥</div><small>PPPoE Total</small><h2 id="pppoeTotal">0</h2></div><div class="card"><div class="card-icon bg-green">💰</div><small>Receita</small><h2 id="receitaTotal">R$ 0,00</h2></div></section><section class="grid-2"><div class="panel"><h3>Gráfico ao vivo - Total dos 2 servidores</h3><div class="chart-legend"><span><i class="dot dot-blue"></i>Download</span><span><i class="dot dot-green"></i>Upload</span></div><canvas id="graficoTempoReal" class="real-chart"></canvas><div style="display:flex;gap:35px;justify-content:center;margin-top:14px;font-weight:800;flex-wrap:wrap"><span>⬇️ Download: <span id="downloadTexto">0 Mbps</span></span><span>⬆️ Upload: <span id="uploadTexto">0 Mbps</span></span></div></div><div class="panel"><h3>Resumo Geral</h3><p><b>Nome:</b> <span id="mkNome">--</span></p><p><b>Modo:</b> <span id="mkUptime">--</span></p><p><b>Última atualização:</b> <span id="mkAtualizado">Aguardando envio</span></p><button onclick="carregarDashboard()">Atualizar Painel</button></div></section><section class="panel"><h3>Clientes PPPoE Online - Todos os servidores</h3><div class="table-wrap"><table><thead><tr><th>Cliente</th><th>Servidor</th><th>Plano</th><th>IP</th><th>Tempo</th><th>Status</th></tr></thead><tbody id="clientesTabela"><tr><td colspan="6">Aguardando clientes online...</td></tr></tbody></table></div></section><div class="footer"><span>© 2026 Fibra+</span><span>Hub com 2 servidores MikroTik</span></div></section></main></div><script src="supabase-client.js"></script>
+<script src="auth-painel.js"></script>
+<script src="app.js"></script>
+<script src="pppoe-stable.js"></script>
+<script src="pppoe-search.js"></script>
+<script src="bloqueio-configuravel.js"></script>
+<script src="mobile-responsive.js"></script>
+</body></html>

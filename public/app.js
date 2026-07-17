@@ -1,0 +1,1146 @@
+
+/* Compatibilidade imediata do Cadastro: mantém a função global disponível
+   desde o início, enquanto o montador completo do resumo é carregado. */
+window.atualizarResumoCadastro = window.atualizarResumoCadastro || function(){
+  if(typeof window.__fibraMontarResumoCadastro === "function"){
+    return window.__fibraMontarResumoCadastro();
+  }
+};
+
+/* Regra global Fibra+ Hub: bloqueio só após 4 dias de atraso */
+window.FIBRA_DIAS_TOLERANCIA_BLOQUEIO = 4;
+
+
+/* Fix número BR para campos input number */
+function fibraSetValorCampo(id, valor){
+  const el = document.getElementById(id);
+  if(!el) return;
+  let v = String(valor ?? "");
+  if(el.type === "number") v = v.replace(/\./g, "").replace(",", ".");
+  el.value = v;
+}
+
+
+/* ============================================================
+   AJUSTE: REMOVER GRÁFICO EM TEMPO REAL
+   Mantém dashboard, clientes online e atualização dos dados,
+   mas impede a criação/exibição do canvas graficoTempoReal.
+============================================================ */
+(function(){
+  function removerGraficoTempoReal(){
+    const canvas = document.getElementById("graficoTempoReal");
+    if(canvas){
+      const bloco = canvas.closest(".panel") || canvas.parentElement;
+      if(bloco) bloco.remove();
+    }
+
+    document.querySelectorAll(".panel").forEach(panel => {
+      const titulo = (panel.querySelector("h3")?.textContent || "").toLowerCase();
+      if(titulo.includes("gráfico ao vivo") || titulo.includes("grafico ao vivo")){
+        panel.remove();
+      }
+    });
+  }
+
+  window.garantirGrafico = function(){
+    removerGraficoTempoReal();
+  };
+
+  window.desenharGraficoFibra = function(){
+    removerGraficoTempoReal();
+  };
+
+  window.fibraGraficoPermitido = function(){
+    return false;
+  };
+
+  document.addEventListener("DOMContentLoaded", removerGraficoTempoReal);
+  setTimeout(removerGraficoTempoReal, 500);
+  setTimeout(removerGraficoTempoReal, 1500);
+})();
+
+
+/* ============================================================
+   FIBRA HUB - CORREÇÃO FINAL LIMPA
+   - Login reconhece fibra_logado e fibraLogado.
+   - Clientes importados continuam na lista.
+   - Clientes PPPoE online aparecem em seção separada.
+   - Clique em cliente abre os dados.
+============================================================ */
+
+function fibraEscapeHtml(v){
+  return String(v ?? "").replace(/[&<>"']/g, s => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[s]));
+}
+function fibraPrimeiroValor(c, campos){
+  for(const campo of campos){
+    const v = c && c[campo];
+    if(v !== undefined && v !== null && String(v).trim() !== "") return String(v).trim();
+  }
+  return "";
+}
+function fibraSetCampo(ids, valor){
+  ids.forEach(id => { const el=document.getElementById(id); if(el) el.value = valor || ""; });
+}
+function fibraGetClientesImportados(){
+  const lista = window.__fibraClientesSupabase || window.__clientesReceitaNet || [];
+  return Array.isArray(lista) ? lista : [];
+}
+function fibraChaveCliente(c){
+  return String(fibraPrimeiroValor(c,["loginPppoe","login","usuario","user","name","pppoe"]) || fibraPrimeiroValor(c,["nome","cliente","razaoSocial"])).toLowerCase().trim();
+}
+function fibraNomeServidor(chave){
+  const k=String(chave||"").toLowerCase();
+  if(k.includes("arm")) return "Armando Mendes";
+  if(k.includes("col")) return "Colônia Antônio Aleixo";
+  return chave || "Servidor";
+}
+async function fibraFetchJson(path){
+  const r = await fetch(path, { cache:"no-store" });
+  const t = await r.text();
+  try{return JSON.parse(t)}catch(e){return {ok:false, erro:t||r.statusText}}
+}
+function abrirClienteOnline(cliente){
+  const chave = cliente?.id || cliente?.login || cliente?.usuario || cliente?.name || cliente?.nome || "";
+  window.location.href = "cliente.html?cliente=" + encodeURIComponent(chave);
+}
+function fibraAbrirClienteImportado(c){
+  const chave = c?.id || c?.loginPppoe || c?.login || c?.cpfCnpj || c?.nome || "";
+  window.location.href = "cliente.html?cliente=" + encodeURIComponent(chave);
+}
+
+function cadastroDeveAbrirLimpo(){
+    const path = location.pathname.toLowerCase();
+    if(!path.includes("cadastro")) return false;
+
+    const url = new URL(location.href);
+
+    // Se vier com dados claros de edição, pode carregar o cliente.
+    const temEdicao =
+        url.searchParams.has("id") ||
+        url.searchParams.has("login") ||
+        url.searchParams.has("cliente") ||
+        url.searchParams.has("editar") ||
+        url.searchParams.has("edit");
+
+    // cadastro.html?novo=1 sempre abre limpo.
+    if(url.searchParams.get("novo") === "1" || url.searchParams.get("novo") === "true"){
+        return true;
+    }
+
+    // Cadastro aberto direto pelo menu, sem parâmetros, deve abrir limpo.
+    if(!temEdicao){
+        return true;
+    }
+
+    return false;
+}
+
+function carregarClienteSelecionadoNoCadastro(){
+  // O cadastro é carregado de forma assíncrona por clientes-supabase-stage1.js.
+  return false;
+}
+async function carregarClienteDetalhes(){
+  const box=document.getElementById("clienteDetalhes");
+  if(!box) return;
+  const params=new URLSearchParams(location.search);
+  const chave=params.get("cliente") || params.get("id") || params.get("login") || "";
+  if(!chave){ box.innerHTML='<section class="panel"><h3>Cliente não selecionado</h3><p>Volte para a lista de clientes e clique em um cliente.</p></section>'; return; }
+  try{
+    const c = window.FibraSupabaseOnly
+      ? await FibraSupabaseOnly.buscarCliente(chave)
+      : await (await fetch('/api/clientes/buscar?chave='+encodeURIComponent(chave),{cache:'no-store'})).json().then(j=>j.cliente);
+    const login=fibraPrimeiroValor(c,["login","usuario","name","loginPppoe","pppoe"]);
+    const nome=fibraPrimeiroValor(c,["nome","cliente","razaoSocial"]) || login;
+    const servidor=fibraPrimeiroValor(c,["servidor","pop","popServidor"]);
+    const ip=fibraPrimeiroValor(c,["ip","address"]);
+    const mac=fibraPrimeiroValor(c,["mac","callerId","caller-id"]);
+    const uptime=fibraPrimeiroValor(c,["uptime"]);
+    const plano=fibraPrimeiroValor(c,["plano","profile"]) || "PPPoE";
+    const telefone=fibraPrimeiroValor(c,["telefone1","telefone","celular","fone"]);
+    const endereco=fibraPrimeiroValor(c,["endereco","logradouro","rua"]);
+    box.innerHTML=`
+      <div class="cliente-detalhes-layout">
+        <section class="panel"><h3>Dados do Cliente</h3><p><b>Login:</b> ${fibraEscapeHtml(login||"--")}</p><p><b>Nome:</b> ${fibraEscapeHtml(nome||"--")}</p><p><b>Telefone:</b> ${fibraEscapeHtml(telefone||"--")}</p><p><b>Endereço:</b> ${fibraEscapeHtml(endereco||"--")}</p><p><b>Status:</b> ${fibraEscapeHtml(c.status||"--")}</p><div class="cliente-detalhes-resumo-mobile" aria-label="Resumo do cliente"><div class="cliente-resumo-card"><small>Status</small><strong>${fibraEscapeHtml(c.status||"--")}</strong></div><div class="cliente-resumo-card"><small>Plano</small><strong>${fibraEscapeHtml(plano||"--")}</strong></div><div class="cliente-resumo-card"><small>Servidor</small><strong>${fibraEscapeHtml(fibraNomeServidor(servidor)||"--")}</strong></div><div class="cliente-resumo-card"><small>Login PPPoE</small><strong>${fibraEscapeHtml(login||"--")}</strong></div></div></section>
+        <section class="panel"><h3>Conexão PPPoE</h3><p><b>Servidor:</b> ${fibraEscapeHtml(fibraNomeServidor(servidor)||"--")}</p><p><b>Plano/Profile:</b> ${fibraEscapeHtml(plano||"--")}</p><p><b>IP:</b> ${fibraEscapeHtml(ip||"--")}</p><p><b>MAC/Caller ID:</b> ${fibraEscapeHtml(mac||"--")}</p><p><b>Tempo conectado:</b> ${fibraEscapeHtml(uptime||"--")}</p></section>
+      </div><section class="panel"><h3>Ações</h3><button onclick="location.href='cadastro.html?id=${encodeURIComponent(c.id||chave)}'">Abrir no Cadastro</button> <button onclick="history.back()">Voltar</button></section>`;
+  }catch(e){ box.innerHTML='<section class="panel"><h3>Cliente não encontrado</h3><p>'+fibraEscapeHtml(e.message)+'</p></section>'; }
+}
+function fibraGarantirSecaoOnline(){
+  if(document.getElementById("fibraOnlineSeparado")) return;
+  const pagina=window.location.pathname.split('/').pop();
+  if(!["dashboard.html","servidores.html","pppoe.html"].includes(pagina)) return;
+  const main=document.querySelector("main .content") || document.querySelector("main") || document.body;
+  const sec=document.createElement("section");
+  sec.id="fibraOnlineSeparado";
+  sec.className="panel";
+  sec.innerHTML=`<h2>Servidores</h2><div id="fibraResumoServidores" class="servers-grid servidores-apenas-cards"></div>`;
+  main.appendChild(sec);
+}
+function fibraCardServidor(nome, ok, total, erro){
+  return `<div class="server-card ${ok?'online':'offline'} servidor-card-centralizado">
+    <div class="servidor-card-conteudo">
+      <h3>${fibraEscapeHtml(nome)} 🟢</h3>
+      <b>${total || 0}</b>
+      <span>Clientes 🟢</span>
+    </div>
+    ${erro ? `<p class="server-error">${fibraEscapeHtml(erro)}</p>` : ''}
+  </div>`;
+}
+
+async function fibraCarregarOnlineSeparado(){
+  fibraGarantirSecaoOnline();
+  const resumo=document.getElementById("fibraResumoServidores");
+  if(!resumo) return;
+  try{
+    const dados=await fibraFetchJson('/api/online');
+    const arm=dados?.servidores?.armando||{};
+    const col=dados?.servidores?.colonia||{};
+    resumo.innerHTML =
+      fibraCardServidor('Armando Mendes', !!arm.ok, arm.total || (arm.clientes || []).length, arm.erro) +
+      fibraCardServidor('Colônia Antônio Aleixo', !!col.ok, col.total || (col.clientes || []).length, col.erro);
+  }catch(e){
+    resumo.innerHTML =
+      fibraCardServidor('Armando Mendes', false, 0, e.message) +
+      fibraCardServidor('Colônia Antônio Aleixo', false, 0, e.message);
+  }
+}
+
+document.addEventListener('DOMContentLoaded',()=>{ setTimeout(()=>{ fibraCarregarOnlineSeparado(); if(!cadastroDeveAbrirLimpo()){carregarClienteSelecionadoNoCadastro();} },500); });
+
+
+/* Compatibilidade base de clientes importados ReceitaNet */
+function fibraGetBaseClientesImportados(){
+  const lista = window.__fibraClientesSupabase || window.__clientesReceitaNet || [];
+  return Array.isArray(lista) ? lista : [];
+}
+
+
+
+/* ============================================================
+   CORREÇÃO: AO CLICAR EM CLIENTES, ABRIR CADASTRO PREENCHIDO
+============================================================ */
+
+function fibraNorm(v){
+  return String(v || "").toLowerCase().trim();
+}
+
+function fibraCampo(c, campos){
+  for(const campo of campos){
+    const v = c && c[campo];
+    if(v !== undefined && v !== null && String(v).trim() !== "") return String(v).trim();
+  }
+  return "";
+}
+
+function fibraSet(ids, valor){
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.value = valor || "";
+  });
+}
+
+function fibraClientesBase(){
+  const lista = window.__fibraClientesSupabase || window.__clientesReceitaNet || [];
+  return Array.isArray(lista) ? lista : [];
+}
+
+function fibraLocalizarClienteSelecionado(){
+  const params = new URLSearchParams(location.search);
+  const busca = fibraNorm(params.get("id") || params.get("cliente") || params.get("login") || "");
+  if(!busca) return null;
+  return fibraClientesBase().find(x => {
+    const id = fibraNorm(x && x.id);
+    const login = fibraNorm(fibraCampo(x, ["loginPppoe","login","usuario","user","name","pppoe"]));
+    const nome = fibraNorm(fibraCampo(x, ["nome","cliente","razaoSocial"]));
+    return id === busca || login === busca || nome === busca;
+  }) || null;
+}
+function fibraPreencherCadastroClienteSelecionado(){
+  const c = fibraLocalizarClienteSelecionado();
+  if(!c) return false;
+
+  // Dados pessoais
+  fibraSet(["cadNome","nome","clienteNome"], fibraCampo(c, ["nome","cliente","razaoSocial","name"]));
+  fibraSet(["cadCpf","cpf","documento"], fibraCampo(c, ["cpfCnpj","cpf","cnpj","documento"]));
+  fibraSet(["cadRg","rg"], fibraCampo(c, ["rgIe","rg","ie"]));
+  fibraSet(["cadNascimento","nascimento"], fibraCampo(c, ["dataNascimento","nascimento"]));
+  fibraSet(["cadEmail","email"], fibraCampo(c, ["email","e_mail"]));
+  fibraSet(["cadTelefone1","telefone","telefone1"], fibraCampo(c, ["telefone1","telefone","celular","fone"]));
+  fibraSet(["cadTelefone2","telefone2"], fibraCampo(c, ["telefone2","celular2","fone2"]));
+  fibraSet(["cadTelefone3","telefone3"], fibraCampo(c, ["telefone3","celular3","fone3"]));
+
+  // Endereço
+  fibraSet(["cadCep","cep"], fibraCampo(c, ["cep"]));
+  fibraSet(["cadEndereco","endereco","logradouro"], fibraCampo(c, ["endereco","logradouro","rua"]));
+  fibraSet(["cadNumero","numero"], fibraCampo(c, ["numero","num"]));
+  fibraSet(["cadReferencia","referencia"], fibraCampo(c, ["referencia","pontoReferencia"]));
+  fibraSet(["cadComplemento","complemento"], fibraCampo(c, ["complemento"]));
+  fibraSet(["cadBairro","bairro"], fibraCampo(c, ["bairro"]));
+  fibraSet(["cadCidade","cidade"], fibraCampo(c, ["cidade","localidade"]) || "Manaus");
+  fibraSet(["cadUf","uf"], fibraCampo(c, ["uf","estado"]) || "AM");
+
+  // Acesso PPPoE / plano
+  fibraSet(["cadLogin","login","loginPppoe"], fibraCampo(c, ["loginPppoe","login","usuario","user","name","pppoe"]));
+  fibraSet(["cadSenha","senha","senhaPppoe"], fibraCampo(c, ["senhaPppoe","senha","password"]));
+  fibraSet(["cadPlano","plano"], fibraCampo(c, ["plano","profile"]));
+  fibraSet(["cadValor","valor"], fibraCampo(c, ["valorMensal","valor","mensalidade"]));
+  fibraSet(["cadVencimento","vencimento"], fibraCampo(c, ["diaVencimento","vencimento"]));
+  fibraSet(["cadPop","servidor"], fibraCampo(c, ["popServidor","servidor","servidorReceita"]));
+  fibraSet(["cadIp","ip"], fibraCampo(c, ["ip","address"]));
+  fibraSet(["cadMac","mac"], fibraCampo(c, ["mac","callerId","caller-id"]));
+  fibraSet(["cadProfile","profile"], fibraCampo(c, ["profile","plano"]));
+  fibraSet(["cadObservacao","observacao"], fibraCampo(c, ["observacao","observacoes"]));
+
+  const titulo = document.querySelector(".topbar h1, h1");
+  if(titulo && location.pathname.includes("cadastro")) titulo.textContent = "Cadastro de Cliente - Editando";
+
+  const aviso = document.getElementById("cadastroClienteCarregado");
+  if(aviso){
+    aviso.innerHTML = "Cliente carregado da aba Clientes.";
+  }else{
+    const form = document.querySelector("form") || document.querySelector("main") || document.body;
+    const div = document.createElement("div");
+    div.id = "cadastroClienteCarregado";
+    div.className = "import-status-clientes";
+    div.innerHTML = "Cliente carregado da aba Clientes.";
+    form.prepend(div);
+  }
+
+  if(typeof atualizarResumoCadastro === "function") atualizarResumoCadastro();
+  return true;
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  if(location.pathname.endsWith("cadastro.html")){
+    setTimeout(fibraPreencherCadastroClienteSelecionado, 300);
+  }
+});
+
+
+/* Menu mobile - abrir/fechar abas no celular */
+function toggleMobileMenu(){
+  const sidebar = document.querySelector(".sidebar, aside, nav.sidebar, .menu-lateral");
+  const overlay = document.getElementById("mobileMenuOverlay");
+  if(sidebar){
+    sidebar.classList.toggle("open");
+    sidebar.classList.toggle("mobile-open");
+  }
+  if(overlay){
+    overlay.classList.toggle("show");
+  }
+}
+
+function closeMobileMenu(){
+  const sidebar = document.querySelector(".sidebar, aside, nav.sidebar, .menu-lateral");
+  const overlay = document.getElementById("mobileMenuOverlay");
+  if(sidebar){
+    sidebar.classList.remove("open");
+    sidebar.classList.remove("mobile-open");
+  }
+  if(overlay){
+    overlay.classList.remove("show");
+  }
+    if (typeof window.atualizarStatusRealCliente === "function") { setTimeout(window.atualizarStatusRealCliente, 100); }
+  }
+
+  document.addEventListener("DOMContentLoaded", function(){
+  const sidebar = document.querySelector(".sidebar, aside, nav.sidebar, .menu-lateral");
+  if(sidebar){
+    sidebar.querySelectorAll("a, button").forEach(function(el){
+      el.addEventListener("click", function(){
+        if(window.innerWidth <= 768){
+          setTimeout(closeMobileMenu, 150);
+        }
+      });
+    });
+  }
+});
+
+
+
+
+
+
+
+
+
+
+
+/* Botão azul de 3 linhas abre a lateral/menu */
+function abrirMenu(){
+  const sidebar = document.querySelector(".sidebar, aside, nav.sidebar, .menu-lateral");
+  const overlay = document.getElementById("menuOverlay") || document.getElementById("mobileMenuOverlay");
+
+  if(sidebar){
+    sidebar.classList.add("open");
+    sidebar.classList.add("mobile-open");
+  }
+
+  if(overlay){
+    overlay.classList.add("show");
+  }
+}
+
+function fecharMenu(){
+  const sidebar = document.querySelector(".sidebar, aside, nav.sidebar, .menu-lateral");
+  const overlay = document.getElementById("menuOverlay") || document.getElementById("mobileMenuOverlay");
+
+  if(sidebar){
+    sidebar.classList.remove("open");
+    sidebar.classList.remove("mobile-open");
+  }
+
+  if(overlay){
+    overlay.classList.remove("show");
+  }
+}
+
+function alternarMenu(){
+  const sidebar = document.querySelector(".sidebar, aside, nav.sidebar, .menu-lateral");
+  if(!sidebar) return;
+
+  if(sidebar.classList.contains("open") || sidebar.classList.contains("mobile-open")){
+    fecharMenu();
+  }else{
+    abrirMenu();
+  }
+}
+
+document.addEventListener("DOMContentLoaded", function(){
+  // Garante que o botão azul de 3 linhas chame abrirMenu.
+  document.querySelectorAll(".menu-btn, #menuBtn, .hamburger, .btn-menu").forEach(function(btn){
+    btn.onclick = function(e){
+      e.preventDefault();
+      abrirMenu();
+    };
+  });
+
+  // Fecha lateral ao tocar fora.
+  const overlay = document.getElementById("menuOverlay") || document.getElementById("mobileMenuOverlay");
+  if(overlay){
+    overlay.onclick = fecharMenu;
+  }
+
+  // Fecha no celular depois de tocar em uma opção do menu.
+  const sidebar = document.querySelector(".sidebar, aside, nav.sidebar, .menu-lateral");
+  if(sidebar){
+    sidebar.querySelectorAll("a").forEach(function(link){
+      link.addEventListener("click", function(){
+        if(window.innerWidth <= 768){
+          setTimeout(fecharMenu, 150);
+        }
+      });
+    });
+  }
+});
+
+
+
+/* FIX FINAL: botão azul de 3 linhas abre a lateral */
+function encontrarSidebarFibra(){
+  return document.querySelector(".sidebar") ||
+         document.querySelector("aside") ||
+         document.querySelector("nav") ||
+         document.querySelector(".menu-lateral");
+}
+
+function abrirMenuLateral(){
+  const sidebar = encontrarSidebarFibra();
+  const overlay = document.querySelector(".sidebar-overlay");
+
+  if(sidebar){
+    sidebar.classList.add("sidebar-aberta");
+    sidebar.classList.add("open");
+    sidebar.style.left = "0";
+    sidebar.style.transform = "translateX(0)";
+    sidebar.style.display = "block";
+    sidebar.style.visibility = "visible";
+  }
+
+  if(overlay){
+    overlay.classList.add("show");
+    overlay.style.display = "block";
+  }
+}
+
+function fecharMenuLateral(){
+  const sidebar = encontrarSidebarFibra();
+  const overlay = document.querySelector(".sidebar-overlay");
+
+  if(sidebar){
+    sidebar.classList.remove("sidebar-aberta");
+    sidebar.classList.remove("open");
+    if(window.innerWidth <= 768){
+      sidebar.style.left = "-290px";
+      sidebar.style.transform = "translateX(-100%)";
+    }
+  }
+
+  if(overlay){
+    overlay.classList.remove("show");
+    overlay.style.display = "none";
+  }
+}
+
+// Mantém compatibilidade com botão antigo onclick="abrirMenu()"
+function abrirMenu(){
+  abrirMenuLateral();
+}
+
+document.addEventListener("DOMContentLoaded", function(){
+  document.querySelectorAll(".menu-btn, #menuBtn, .hamburger, .btn-menu").forEach(function(btn){
+    btn.onclick = function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      abrirMenuLateral();
+    };
+  });
+
+  const sidebar = encontrarSidebarFibra();
+  if(sidebar){
+    sidebar.querySelectorAll("a").forEach(function(a){
+      a.addEventListener("click", function(){
+        if(window.innerWidth <= 768) setTimeout(fecharMenuLateral, 150);
+      });
+    });
+  }
+});
+
+
+/* FIX DEFINITIVO - botão azul 3 linhas abre menu lateral */
+(function(){
+  function sidebar(){ return document.querySelector('aside.sidebar') || document.querySelector('.sidebar') || document.querySelector('aside'); }
+  function overlay(){ return document.querySelector('.overlay') || document.querySelector('.sidebar-overlay'); }
+  window.abrirMenu = window.abrirMenuLateral = function(){
+    document.body.classList.add('menu-open');
+    const s = sidebar(); if(s){ s.classList.add('open','mobile-open','sidebar-aberta'); }
+    const o = overlay(); if(o){ o.classList.add('show','active'); }
+  };
+  window.fecharMenu = window.fecharMenuLateral = function(){
+    document.body.classList.remove('menu-open');
+    const s = sidebar(); if(s){ s.classList.remove('open','mobile-open','sidebar-aberta'); }
+    const o = overlay(); if(o){ o.classList.remove('show','active'); }
+  };
+  document.addEventListener('click', function(e){
+    const btn = e.target.closest('.menu-btn, #menuBtn, .hamburger, .btn-menu');
+    if(btn){ e.preventDefault(); e.stopPropagation(); window.abrirMenu(); }
+    const ov = e.target.closest('.overlay, .sidebar-overlay');
+    if(ov){ window.fecharMenu(); }
+  }, true);
+})();
+
+
+/* FIX seguro: botão azul abre menu lateral sem esconder páginas */
+function fibraSidebar(){
+  return document.querySelector(".sidebar") ||
+         document.querySelector("aside.sidebar") ||
+         document.querySelector("nav.sidebar") ||
+         document.querySelector(".menu-lateral");
+}
+
+function abrirMenuLateral(){
+  const sidebar = fibraSidebar();
+  if(sidebar){
+    sidebar.classList.add("open");
+    sidebar.classList.add("mobile-open");
+    sidebar.classList.add("sidebar-aberta");
+    sidebar.style.display = "block";
+    sidebar.style.visibility = "visible";
+    sidebar.style.opacity = "1";
+    if(window.innerWidth <= 768){
+      sidebar.style.left = "0";
+      sidebar.style.transform = "translateX(0)";
+    }
+  }
+  const overlay = document.querySelector(".sidebar-overlay");
+  if(overlay){
+    overlay.classList.add("show");
+    overlay.style.display = "block";
+  }
+}
+
+function fecharMenuLateral(){
+  const sidebar = fibraSidebar();
+  if(sidebar){
+    sidebar.classList.remove("open");
+    sidebar.classList.remove("mobile-open");
+    sidebar.classList.remove("sidebar-aberta");
+    if(window.innerWidth <= 768){
+      sidebar.style.left = "-290px";
+      sidebar.style.transform = "translateX(-100%)";
+    }
+  }
+  const overlay = document.querySelector(".sidebar-overlay");
+  if(overlay){
+    overlay.classList.remove("show");
+    overlay.style.display = "none";
+  }
+}
+
+function abrirMenu(){
+  abrirMenuLateral();
+}
+
+document.addEventListener("DOMContentLoaded", function(){
+  // Garante que nada fique oculto por erro de script anterior.
+  document.querySelectorAll("main,.main-content,.content,.container").forEach(function(el){
+    el.style.visibility = "visible";
+    el.style.opacity = "1";
+  });
+
+  document.querySelectorAll(".menu-btn,#menuBtn,.hamburger,.btn-menu").forEach(function(btn){
+    btn.onclick = function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      abrirMenuLateral();
+      return false;
+    };
+  });
+});
+
+
+
+/* REMOVER APENAS ABAS OLT/OLTNET/ADMINISTRATIVO/NOTAS FISCAIS */
+document.addEventListener("DOMContentLoaded", function(){
+  const nomesRemover = ["OLT", "OLTNET", "ADMINISTRATIVO", "DADOS NOTAS FISCAIS", "NOTAS FISCAIS"];
+  document.querySelectorAll("button, a, .tab, .tab-btn, .cadastro-tab").forEach(function(el){
+    const txt = (el.textContent || "").replace(/\s+/g, " ").trim().toUpperCase();
+    if(nomesRemover.includes(txt)){
+      el.remove();
+    }
+  });
+
+  ["tab-olt","tab-oltnet","tab-administrativo","tab-admin","tab-notas","tab-notas-fiscais","tab-notasfiscais","tab-fiscais","tab-nfe"].forEach(function(id){
+    const el = document.getElementById(id);
+    if(el) el.remove();
+  });
+});
+
+
+
+/* MENU LATERAL AJUSTE REAL - reforço sem alterar layout interno */
+(function(){
+  function ajustarMenuLateralReal(){
+    if (window.innerWidth <= 900) return;
+
+    var sidebar = document.querySelector('.sidebar');
+    var main = document.querySelector('.main');
+    var layout = document.querySelector('.layout') || document.querySelector('.app') || document.querySelector('.wrapper');
+
+    if (sidebar){
+      sidebar.style.width = '235px';
+      sidebar.style.minWidth = '235px';
+      sidebar.style.maxWidth = '235px';
+      sidebar.style.flexBasis = '235px';
+      sidebar.style.boxSizing = 'border-box';
+    }
+
+    if (main){
+      main.style.marginLeft = '235px';
+      main.style.width = 'calc(100vw - 235px)';
+      main.style.maxWidth = 'calc(100vw - 235px)';
+    }
+
+    if (layout){
+      layout.style.gridTemplateColumns = '235px minmax(0, 1fr)';
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', ajustarMenuLateralReal);
+  window.addEventListener('resize', ajustarMenuLateralReal);
+  setTimeout(ajustarMenuLateralReal, 300);
+})();
+
+
+
+/* ============================================================
+   RESUMO LATERAL DIREITA RECEITANET
+   Monta o resumo no mesmo padrão visual do ReceitaNet,
+   mantendo na lateral direita.
+============================================================ */
+(function(){
+  function qs(sel){ return document.querySelector(sel); }
+  function val(selectors, fallback){
+    for (var i=0;i<selectors.length;i++){
+      var el = qs(selectors[i]);
+      if(!el) continue;
+      var v = "";
+      if ("value" in el) v = el.value;
+      else v = el.textContent;
+      v = (v || "").trim();
+      if(v) return v;
+    }
+    return fallback || "";
+  }
+
+  function clienteLocal(){
+    var memoria = window.__fibraClienteCadastro || window.__fibraClienteSelecionado;
+    if(memoria && typeof memoria === "object"){
+      return Object.assign({}, memoria.dados || {}, memoria);
+    }
+    var keys = ["clienteSelecionadoCompleto","clienteCadastroSelecionado","clienteEditar","clienteOnlineSelecionado"];
+    for(var i=0;i<keys.length;i++){
+      try{
+        var raw = localStorage.getItem(keys[i]);
+        if(raw){
+          var obj = JSON.parse(raw);
+          if(obj && typeof obj === "object") return Object.assign({}, obj.dados || {}, obj);
+        }
+      }catch(e){}
+    }
+    return {};
+  }
+
+  function pick(obj, names, fallback){
+    var fontes = [obj, obj && obj.dados, obj && obj.cliente, obj && obj.cadastro];
+    for(var f=0;f<fontes.length;f++){
+      var fonte = fontes[f];
+      if(!fonte || typeof fonte !== "object") continue;
+      for(var i=0;i<names.length;i++){
+        var v = fonte[names[i]];
+        if(v !== undefined && v !== null && String(v).trim() !== "") return String(v).trim();
+      }
+    }
+    return fallback || "";
+  }
+
+
+  function moedaBR(v){
+    var n = Number(String(v || "0").replace(/\./g,"").replace(",",".").replace(/[^\d.-]/g,""));
+    if(!isFinite(n)) n = 0;
+    return n.toLocaleString("pt-BR", {style:"currency", currency:"BRL"});
+  }
+
+  function dataBR(v){
+    if(!v) return "";
+    var s = String(v).trim();
+    var m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if(m) return m[3] + "/" + m[2] + "/" + m[1];
+    m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+    if(m) return s.slice(0,10);
+    return s;
+  }
+
+  function proximaFaturaAberta(c, login, cpf){
+    var candidatos = [];
+
+    function addLista(lista){
+      if(Array.isArray(lista)) candidatos = candidatos.concat(lista);
+    }
+
+    addLista(c.boletos);
+    addLista(c.faturas);
+    addLista(c.titulos);
+
+    try{ addLista(JSON.parse(localStorage.getItem("boletos") || "[]")); }catch(e){}
+    try{ addLista(JSON.parse(localStorage.getItem("fibra_boletos") || "[]")); }catch(e){}
+    try{ addLista(JSON.parse(localStorage.getItem("boletosImportados") || "[]")); }catch(e){}
+
+    var loginN = String(login || "").toLowerCase().trim();
+    var cpfN = String(cpf || "").replace(/\D/g,"");
+
+    var hoje = new Date();
+    hoje.setHours(0,0,0,0);
+
+    function get(b, ks){
+      for(var i=0;i<ks.length;i++){
+        if(b && b[ks[i]] !== undefined && b[ks[i]] !== null && String(b[ks[i]]).trim() !== "") return String(b[ks[i]]).trim();
+      }
+      return "";
+    }
+
+    function parseData(v){
+      if(!v) return null;
+      var s = String(v).trim();
+      var m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if(m) return new Date(Number(m[1]), Number(m[2])-1, Number(m[3]));
+      m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+      if(m) return new Date(Number(m[3]), Number(m[2])-1, Number(m[1]));
+      var d = new Date(s);
+      return isNaN(d.getTime()) ? null : d;
+    }
+
+    var abertas = candidatos.filter(function(b){
+      var st = get(b, ["status","situacao","estado"]).toLowerCase();
+      if(st.includes("pago") || st.includes("baixado") || st.includes("cancel")) return false;
+
+      var bLogin = get(b, ["cliente_login","login","loginPppoe","usuario","pppoe"]).toLowerCase().trim();
+      var bCpf = get(b, ["cpf_cnpj","cpfCnpj","cpf","documento"]).replace(/\D/g,"");
+
+      if(loginN && bLogin && bLogin !== loginN) return false;
+      if(cpfN && bCpf && bCpf !== cpfN) return false;
+
+      if(loginN && !bLogin && cpfN && !bCpf) return false;
+      return true;
+    }).sort(function(a,b){
+      var da = parseData(get(a, ["vencimento","dataVencimento","dueDate","venc"]));
+      var db = parseData(get(b, ["vencimento","dataVencimento","dueDate","venc"]));
+      return (da ? da.getTime() : 9999999999999) - (db ? db.getTime() : 9999999999999);
+    });
+
+    if(!abertas.length) return "Nenhuma fatura disponível";
+
+    var f = abertas[0];
+    var venc = get(f, ["vencimento","dataVencimento","dueDate","venc"]);
+    var valor = get(f, ["total","valor","valor_boleto","amount"]);
+    var numero = get(f, ["numero","id","nossoNumero","titulo"]);
+
+    return venc ? dataBR(venc) : "Fatura em aberto";
+  }
+
+  function montarResumoReceitaNet(){
+    var card = document.querySelector(".cadastro-resumo-card");
+    if(!card) return;
+
+    var c = clienteLocal();
+
+    var login = val(["input[name='login']","input[name='cli_login']","#login","#cadLogin"], pick(c,["login","usuario","loginPppoe","pppoe"], "-"));
+    var senha = val(["input[name='senha']","input[name='cli_senha']","#senha","#cadSenha"], pick(c,["senha","password"], "0000"));
+    var nome = val(["input[name='nome']","input[name='cli_nome']","#nome","#cadNome"], pick(c,["nome","name","cliente"], "-"));
+    var cpf = val(["#cadCpf","input[name='cpf']","input[name='cpfcnpj']","input[name='cli_cgc']","#cpf","#cpfcnpj"], pick(c,["cpfCnpj","cpf_cnpj","cpf","cpfcnpj","cnpj","documento"], "-"));
+    var dia = val(["#cadVencimento","select[name='dia_vencimento']","select[name='cli_diatari']","input[name='dia_vencimento']","#diaVencimento"], pick(c,["diaVencimento","dia_vencimento","vencimento"], "20"));
+    var prox = proximaFaturaAberta(c, login, cpf);
+    var servidor = val(["#cadServidorReceita option:checked","#cadPop option:checked","#cadServidor option:checked","select[name='servidor'] option:checked","select[name='ip_mk'] option:checked"], pick(c,["servidor","server","popServidor"], "-"));
+    var interfaceV = val(["#cadInterface option:checked","#cadInterface","select[name='interface'] option:checked","select[name='interface_id'] option:checked"], pick(c,["interface","interfaceAtual","interface_servidor"], "PPPOE"));
+    var ip = val(["#cadIp"], pick(c,["ip","ipAtual","ip_address","address"], "-"));
+    var profile = val(["#cadProfile option:checked","#cadProfile"], pick(c,["profile","planoServidor","perfil"], "--"));
+    var servico = pick(c,["servico","service"], "PPP2");
+    var tempo = pick(c,["tempo","uptime"], "-");
+    var mac = val(["#cadMac"], pick(c,["mac","macAddress","mac_address","callerId"], "-"));
+    var mtu = pick(c,["mtu"], "1480");
+    var mru = pick(c,["mru"], "1480");
+    var endereco = val(["#cadEndereco","input[name='endereco']","input[name='cli_endereco']"], pick(c,["endereco","logradouro","address"], "-"));
+    var ponto = val(["#cadReferencia","input[name='referencia']","input[name='cli_referencia']"], pick(c,["referencia","pontoReferencia","ponto_referencia"], "-"));
+    var bairro = val(["#cadBairro","input[name='bairro']","input[name='cli_bairro']"], pick(c,["bairro"], "-"));
+    var cidade = val(["#cadCidade","input[name='cidade']","input[name='cli_cidade']"], pick(c,["cidade","municipio","localidade"], "-"));
+    var estado = val(["#cadUf option:checked","#cadUf","select[name='estado'] option:checked"], pick(c,["estado","uf"], "-"));
+    var ibge = pick(c,["ibge"], "1302603");
+    var tel1 = val(["#cadTelefone1","input[name='telefone']","input[name='cli_fone']"], pick(c,["telefone1","telefone","tel1","fone","celular"], "-"));
+    var tel2 = val(["#cadTelefone2","input[name='telefone2']","input[name='cli_celular']"], pick(c,["telefone2","tel2","celular2"], "-"));
+    var tel3 = val(["#cadTelefone3"], pick(c,["telefone3","tel3","celular3"], "-"));
+    var complemento = val(["#cadComplemento"], pick(c,["complemento"], "-"));
+
+    var plano = val(["#cadProfile option:checked","#cadProfile"], pick(c,["plano","planoCobranca","profile","perfil"], "-"));
+    var valor = pick(c,["valor","valorPlano","valor_mensal","mensalidade"], "R$ 0,00");
+
+    card.innerHTML = `
+      <div class="resumo-receitanet">
+        <div class="resumo-header">
+          <h2 class="resumo-titulo">Resumo</h2>
+          <div class="resumo-help">?</div>
+        </div>
+
+        <div class="resumo-grid">
+          <div class="resumo-field"><span class="resumo-label">Login</span><span class="resumo-value">✓ ${login}</span></div>
+          <div class="resumo-field"><span class="resumo-label">Senha</span><span class="resumo-value">${senha}</span></div>
+          <div class="resumo-field"><span class="resumo-label">Nome</span><span class="resumo-value">${nome}</span></div>
+          <div class="resumo-field"><span class="resumo-label">CPF/CNPJ</span><span class="resumo-value">${cpf}</span></div>
+          <div class="resumo-field"><span class="resumo-label">Dia do Vencimento</span><span class="resumo-value">${dia}</span></div>
+          <div class="resumo-field"><span class="resumo-label">Próxima Fatura Aberta</span><span class="resumo-value">${prox}</span></div>
+        </div>
+
+        <div class="resumo-section-title">Servidor</div>
+        <div class="resumo-grid">
+          <div class="resumo-field"><span class="resumo-label">SERVIDOR</span><span id="resServidor" class="resumo-value">${servidor}</span></div>
+          <div class="resumo-field"><span class="resumo-label">INTERFACE</span><span class="resumo-value">${interfaceV}</span></div>
+          <div class="resumo-field"><span class="resumo-label">ELEMENTO DE REDE</span><span class="resumo-value">Conexão<br>PPPOE</span></div>
+          <div class="resumo-field"><span class="resumo-label">IP ATUAL</span><span class="resumo-value">Profile<br>${profile}</span></div>
+        </div>
+
+        <div class="resumo-oltnet">OLTNET</div>
+        <span class="badge-nao-identificado">Não Identificado</span>
+
+        <hr class="resumo-separador">
+
+        <div class="resumo-grid">
+          <div class="resumo-field">
+            <span class="resumo-value"><b>Status</b><span id="resStatusOnline" class="offline-dot status-offline-real">● Offline</span></span>
+            <span class="resumo-value"><b>Serviço:</b> <span id="resServico">${servico}</span></span>
+            <span class="resumo-value"><b>IP:</b> <span id="resIp">${ip}</span></span>
+            <span class="resumo-value"><b>Profile Servidor:</b> <span id="resProfile">${profile}</span></span>
+            <span class="resumo-value"><b>MTU:</b> ${mtu}</span>
+          </div>
+          <div class="resumo-field">
+            <span class="resumo-value"><b>Login:</b> <span id="resLogin2">${login}</span></span>
+            <span class="resumo-value"><b>Tempo:</b> <span id="resTempo">-</span></span>
+            <span class="resumo-value"><b>MAC:</b> <span id="resMac">${mac}</span></span>
+            <span class="resumo-value"><b>Interface:</b> <span id="resInterface">${interfaceV}</span></span>
+            <span class="resumo-value"><b>MRU:</b> ${mru}</span>
+          </div>
+        </div>
+
+        <div class="resumo-btns">
+          <a class="resumo-btn btn-remoto" href="#">Configurar Equipamento - Remoto</a>
+          <a class="resumo-btn btn-interno" href="#">Configurar Equipamento - Interno&nbsp;&nbsp;&nbsp; HTTPS</a>
+          <a class="resumo-btn btn-diagnostico" href="#">Diagnosticar Cliente</a>
+          <a class="resumo-btn btn-monitoramento" href="#">Monitoramento em Tempo Real</a>
+        </div>
+
+        <hr class="resumo-separador">
+
+        <div class="resumo-section-title">Plano de Cobrança</div>
+        <table class="resumo-table">
+          <thead><tr><th>PLANO</th><th>VALOR UN</th><th>QTDADE</th></tr></thead>
+          <tbody><tr class="destaque"><td>${plano}</td><td>${valor}</td><td>1</td></tr></tbody>
+        </table>
+        <div class="resumo-total">Total: ${valor}</div>
+
+        <hr class="resumo-separador">
+
+        <div class="resumo-section-title">Estoque</div>
+        <table class="resumo-table">
+          <thead><tr><th>PRODUTO</th><th>QT.</th><th>UN</th><th>VALOR</th><th>DATA</th></tr></thead>
+          <tbody><tr><td>Nenhum Produto</td><td></td><td></td><td></td><td></td></tr></tbody>
+        </table>
+
+        <hr class="resumo-separador">
+
+        <div class="resumo-section-title">Dados de Contato</div>
+        <div class="resumo-grid">
+          <div class="resumo-field">
+            <span class="resumo-label">Endereço</span><span class="resumo-value">${endereco}</span>
+            <span class="resumo-label">Ponto de Ref.</span><span class="resumo-value">${ponto}</span>
+            <span class="resumo-label">Bairro</span><span class="resumo-value">${bairro}</span>
+            <span class="resumo-label">Estado</span><span class="resumo-value">${estado}</span>
+            <span class="resumo-label">Tel1</span><span class="resumo-value">${tel1}</span>
+            <span class="resumo-label">Tel3</span><span class="resumo-value">${tel3}</span>
+          </div>
+          <div class="resumo-field">
+            <span class="resumo-label">Compl.</span><span class="resumo-value">${complemento}</span>
+            <span class="resumo-label">Cidade</span><span class="resumo-value">${cidade}</span>
+            <span class="resumo-label">IBGE</span><span class="resumo-value">${ibge}</span>
+            <span class="resumo-label">Tel2</span><span class="resumo-value">${tel2}</span>
+          </div>
+        </div>
+
+        <hr class="resumo-separador">
+
+        <div class="resumo-section-title">Sistema Pai Controle</div>
+        <span class="pai-status">Desativado</span>
+      </div>
+    `;
+  }
+
+  window.__fibraMontarResumoCadastro = montarResumoReceitaNet;
+  window.atualizarResumoCadastro = function(){
+    return montarResumoReceitaNet();
+  };
+  document.addEventListener("fibra:cliente-carregado", function(){
+    requestAnimationFrame(function(){ setTimeout(montarResumoReceitaNet, 0); });
+  });
+  document.addEventListener("DOMContentLoaded", function(){
+    montarResumoReceitaNet();
+    document.querySelectorAll("input, select, textarea").forEach(function(el){
+      el.addEventListener("input", function(ev){
+        if(ev && ev.target && ev.target.id === "cadProfile") return;
+        montarResumoReceitaNet();
+      });
+      el.addEventListener("change", function(ev){
+        if(ev && ev.target && ev.target.id === "cadProfile") return;
+        montarResumoReceitaNet();
+      });
+    });
+  });
+  window.addEventListener("storage", montarResumoReceitaNet);
+})();
+
+
+
+
+
+
+/* ============================================================
+   DASHBOARD FINANCEIRO
+   Receita = recebido no mês.
+   Recebimento do Mês = previsão mensal dos clientes cobrados.
+   Em Aberto = previsão - recebido.
+============================================================ */
+(function(){
+  function moedaBR(valor){
+    valor = Number(valor || 0);
+    return valor.toLocaleString("pt-BR", {style:"currency", currency:"BRL"});
+  }
+
+  function normalizar(v){
+    return String(v || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
+  }
+
+  function num(v){
+    if(v === undefined || v === null || v === "") return 0;
+    if(typeof v === "number") return isNaN(v) ? 0 : v;
+    let s = String(v).trim();
+    s = s.replace(/[R$\s]/g, "");
+    if(s.includes(",") && s.includes(".")){
+      s = s.replace(/\./g, "").replace(",", ".");
+    }else if(s.includes(",")){
+      s = s.replace(",", ".");
+    }
+    const n = Number(s);
+    return isNaN(n) ? 0 : n;
+  }
+
+  function primeiro(obj, campos){
+    for(const c of campos){
+      if(obj && obj[c] !== undefined && obj[c] !== null && String(obj[c]).trim() !== ""){
+        return obj[c];
+      }
+    }
+    return "";
+  }
+
+  function getClientes(){
+    const chaves = ["clientes", "clientesReceitaNet", "fibra_clientes", "clientes_importados"];
+    for(const chave of chaves){
+      try{
+        const lista = JSON.parse(localStorage.getItem(chave) || "[]");
+        if(Array.isArray(lista)) return lista;
+      }catch(e){}
+    }
+    return [];
+  }
+
+  function getPagamentos(){
+    const chaves = ["pagamentos", "recebimentos", "financeiroPagamentos", "fibra_pagamentos", "lancamentosFinanceiros"];
+    for(const chave of chaves){
+      try{
+        const lista = JSON.parse(localStorage.getItem(chave) || "[]");
+        if(Array.isArray(lista)) return lista;
+      }catch(e){}
+    }
+    return [];
+  }
+
+  function dataNoMesAtual(v){
+    if(!v) return false;
+    const d = new Date(v);
+    if(isNaN(d.getTime())) return false;
+    const hoje = new Date();
+    return d.getMonth() === hoje.getMonth() && d.getFullYear() === hoje.getFullYear();
+  }
+
+  function clienteCancelado(c){
+    const s = normalizar(primeiro(c, ["status","situacao","statusCobranca","cli_status","estadoCliente","status_cliente","cobranca"]));
+    const cancel = primeiro(c, ["cancelamento","dataCancelamento","dtCancelamento","cli_dtcancelamento"]);
+    return s.includes("cancel") || s.includes("encerrado") || !!String(cancel || "").trim();
+  }
+
+  function clienteIsento(c){
+    const s = normalizar(primeiro(c, ["status","situacao","statusCobranca","cli_boleto","boleto","cobranca","tipoCobranca"]));
+    return s.includes("isento") || s === "n" || s === "nao cobrar";
+  }
+
+  function valorCliente(c){
+    return num(primeiro(c, [
+      "valorMensal",
+      "valor",
+      "mensalidade",
+      "valorPlano",
+      "planoValor",
+      "valor_plano",
+      "cli_valor",
+      "preco",
+      "price"
+    ]));
+  }
+
+  function valorPagamento(p){
+    return num(primeiro(p, ["valor","valorPago","pago","recebido","total","amount"]));
+  }
+
+  function pagamentoRecebidoNoMes(p){
+    const status = normalizar(primeiro(p, ["status","situacao","estado","tipo"]));
+    const data = primeiro(p, ["dataPagamento","pagamento","recebidoEm","dataRecebimento","data","createdAt"]);
+    const pago = status.includes("pago") || status.includes("receb") || status.includes("baixado") || p.pago === true || p.recebido === true;
+
+    if(!pago && status) return false;
+    if(data) return dataNoMesAtual(data);
+
+    // Se não existir data, considera como receita atual apenas se estiver marcado como pago/recebido.
+    return pago;
+  }
+
+  function calcularFinanceiroDashboard(){
+    const clientes = getClientes();
+
+    const recebimentoMes = clientes
+      .filter(c => !clienteCancelado(c) && !clienteIsento(c))
+      .reduce((soma, c) => soma + valorCliente(c), 0);
+
+    const pagamentos = getPagamentos();
+    let receita = pagamentos
+      .filter(pagamentoRecebidoNoMes)
+      .reduce((soma, p) => soma + valorPagamento(p), 0);
+
+    // Compatibilidade: se não existir lista financeira, tenta somar clientes marcados como pagos no mês.
+    if(!pagamentos.length){
+      receita = clientes
+        .filter(c => {
+          const s = normalizar(primeiro(c, ["statusPagamento","statusFinanceiro","pagamentoStatus","situacaoPagamento","cobranca"]));
+          return s.includes("pago") || s.includes("receb") || s.includes("baixado");
+        })
+        .reduce((soma, c) => soma + valorCliente(c), 0);
+    }
+
+    
+    function getBoletos(){
+      const chaves = ["boletos", "titulos", "cobrancas", "financeiroBoletos", "contasReceber", "lancamentosFinanceiros"];
+      for(const chave of chaves){
+        try{
+          const lista = JSON.parse(localStorage.getItem(chave) || "[]");
+          if(Array.isArray(lista) && lista.length) return lista;
+        }catch(e){}
+      }
+      return [];
+    }
+
+    function boletoPago(b){
+      const s = normalizar(primeiro(b, ["status","situacao","estado","baixa","pagamentoStatus"]));
+      return s.includes("pago") || s.includes("baixado") || s.includes("receb") || b.pago === true || b.recebido === true;
+    }
+
+    function boletoCancelado(b){
+      const s = normalizar(primeiro(b, ["status","situacao","estado"]));
+      return s.includes("cancel") || s.includes("estornado");
+    }
+
+    let boletosAbertos = getBoletos()
+      .filter(b => !boletoPago(b) && !boletoCancelado(b))
+      .length;
+
+    // Compatibilidade: se não houver lista de boletos, usa clientes cobrados sem pagamento como previsão de boletos abertos.
+    if(!getBoletos().length){
+      boletosAbertos = clientes.filter(c => !clienteCancelado(c) && !clienteIsento(c)).length;
+    }
+
+    const emAberto = Math.max(recebimentoMes - receita, 0);
+
+    const set = (id, valor) => {
+      const el = document.getElementById(id);
+      if(el) el.textContent = moedaBR(valor);
+    };
+
+    set("receitaTotal", receita);
+    set("recebimentoMesTotal", recebimentoMes);
+    set("emAbertoTotal", emAberto);
+    const boletosEl = document.getElementById("boletosAbertosTotal");
+    if(boletosEl) boletosEl.textContent = boletosAbertos;
+  }
+
+  const antiga = window.carregarDashboard;
+  window.carregarDashboard = function(){
+    if(typeof antiga === "function"){
+      try{ antiga.apply(this, arguments); }catch(e){}
+    }
+    calcularFinanceiroDashboard();
+  };
+
+  document.addEventListener("DOMContentLoaded", function(){
+    setTimeout(calcularFinanceiroDashboard, 100);
+    setTimeout(calcularFinanceiroDashboard, 800);
+  });
+})();
+

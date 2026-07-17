@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<script src="supabase-only.js"></script>
+<script src="00-fix-definitivo.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clientes - Fibra+ Hub</title>
+  <link rel="stylesheet" href="style.css">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+<script src="supabase-client.js"></script>
+<script src="auth-painel.js"></script>
+
+<style>
+/* Pesquisa compacta da tela Clientes: apenas a lupa fica visível inicialmente. */
+.clientes-table-title.clientes-table-title-busca{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+.clientes-busca-compacta{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  min-width:38px;
+}
+.clientes-busca-compacta input{
+  width:0;
+  min-width:0;
+  height:36px;
+  padding:0;
+  border:0;
+  opacity:0;
+  pointer-events:none;
+  color:#fff;
+  background:#071a38;
+  transition:width .2s ease, opacity .16s ease, padding .2s ease, border-color .2s ease;
+}
+.clientes-busca-compacta.aberta input{
+  width:260px;
+  padding:0 12px;
+  border:1px solid rgba(255,255,255,.24);
+  border-right:0;
+  border-radius:7px 0 0 7px;
+  opacity:1;
+  pointer-events:auto;
+  outline:none;
+}
+.clientes-busca-compacta.aberta input:focus{
+  border-color:#5aa4ff;
+  box-shadow:0 0 0 2px rgba(90,164,255,.18);
+}
+.clientes-busca-btn{
+  width:38px;
+  height:36px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  flex:0 0 38px;
+  padding:0;
+  border:1px solid rgba(255,255,255,.22);
+  border-radius:7px;
+  color:#fff;
+  background:#0b4fc5;
+  cursor:pointer;
+}
+.clientes-busca-compacta.aberta .clientes-busca-btn{
+  border-radius:0 7px 7px 0;
+}
+.clientes-busca-btn:hover,
+.clientes-busca-btn:focus-visible{
+  background:#1464e8;
+  outline:none;
+}
+.clientes-busca-btn svg{
+  width:19px;
+  height:19px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:2.2;
+  stroke-linecap:round;
+}
+@media (max-width:700px){
+  .clientes-busca-compacta.aberta input{width:min(52vw,190px)}
+}
+</style>
+
+
+<style>
+/* Correção definitiva e isolada: resumo de clientes no celular */
+.mobile-clientes-resumo{display:none;}
+@media (max-width:900px){
+  .mobile-clientes-resumo{
+    display:block !important;
+    width:100% !important;
+    max-width:100% !important;
+    margin:0 0 12px !important;
+    padding:10px !important;
+    background:#1f2937 !important;
+    border:1px solid #374151 !important;
+    border-radius:12px !important;
+    position:relative !important;
+    z-index:2 !important;
+    visibility:visible !important;
+    opacity:1 !important;
+  }
+  .mobile-clientes-resumo-titulo{
+    color:#fff !important;
+    font-size:15px !important;
+    font-weight:800 !important;
+    margin:0 0 8px !important;
+  }
+  .mobile-clientes-resumo-grid{
+    display:grid !important;
+    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+    gap:7px !important;
+    width:100% !important;
+  }
+  .mobile-clientes-resumo .status-card{
+    display:flex !important;
+    min-height:58px !important;
+    padding:7px !important;
+    border-radius:8px !important;
+    flex-direction:column !important;
+    align-items:center !important;
+    justify-content:center !important;
+    color:#fff !important;
+    font-size:11px !important;
+    font-weight:800 !important;
+    border:0 !important;
+  }
+  .mobile-clientes-resumo .status-card b{font-size:17px !important;margin-top:3px !important;}
+  .mobile-clientes-resumo .status-card.total{grid-column:1/-1 !important;}
+}
+</style>
+
+</head>
+<body onload="protegerPagina(); iniciarSocket(); carregarClientesReceitaNet();"><div class="sidebar-overlay" onclick="fecharMenuLateral()"></div>
+<button id="mobileMenuBtn" class="mobile-menu-btn" type="button" onclick="abrirMenuLateral()">☰ Menu</button>
+<div id="mobileMenuOverlay" class="mobile-menu-overlay" onclick="closeMobileMenu()"></div>
+<div class="mobile-top">
+  <button class="menu-btn" onclick="abrirMenuLateral()">☰</button>
+  <div class="logo-wrap">
+    <div class="brand"><span class="fibra">Fibra</span><span class="brand-dot"></span><span class="plus">+</span></div>
+    <div class="slogan">HUB DE CONTROLE</div>
+  </div>
+</div>
+
+<div class="layout">
+  <div class="overlay" onclick="fecharMenu()"></div>
+  <aside class="sidebar">
+    <div class="logo-wrap">
+      <div class="brand"><span class="fibra">Fibra</span><span class="brand-dot"></span><span class="plus">+</span></div>
+      <div class="slogan">HUB DE CONTROLE</div>
+    </div>
+    <nav class="nav">
+      <a href="dashboard.html"><span class="icon">🏠</span>Dashboard</a>
+      <a href="clientes.html" class="active"><span class="icon">👤</span>Clientes</a>
+      <a href="cadastro.html?novo=1"><span class="icon">👥</span>Cadastrar Cliente</a>
+      <a href="importacao.html"><span class="icon">⬆️</span>Importação</a>
+<a href="financeiro.html"><span class="icon">▤</span>Financeiro Efí</a>
+      <a href="chamados.html"><span class="icon">🔧</span>Chamados</a>
+      <a href="relatorios.html"><span class="icon">▥</span>Relatórios</a>
+      <a href="planos.html"><span class="icon">▦</span>Planos</a>
+      <a href="usuarios.html"><span class="icon">👥</span>Usuários</a>
+      <a href="configuracoes.html"><span class="icon"></span>Configurações</a>
+      <a href="backup.html"><span class="icon">☁</span>Backup</a>
+      <a href="#" onclick="sair()"><span class="icon">↪</span></a>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <header class="topbar clientes-topbar-receita">
+<div class="topbar-right">
+        <span class="user-dot"></span>
+        <b></b>
+        <b></b>
+        <a href="#" onclick="sair()"></a>
+        <span></span>
+      </div>
+    </header>
+
+    <section class="clientes-receita-wrapper">
+      <div class="clientes-page-title">Consulta de Clientes</div>
+
+      <section class="mobile-clientes-resumo" aria-label="Resumo de clientes">
+        <div class="mobile-clientes-resumo-titulo">Resumo de Clientes</div>
+        <div class="mobile-clientes-resumo-grid">
+          <div class="status-card blue card-filtro-clientes mobile-card-filtro" data-filtro-status="ativos" data-sync-contador="qtdAtivos" role="button" tabindex="0"><span>Ativos</span><b>0</b></div>
+          <div class="status-card navy card-filtro-clientes mobile-card-filtro" data-filtro-status="nao-ativados" data-sync-contador="qtdNaoAtivos" role="button" tabindex="0"><span>Não Ativados</span><b>0</b></div>
+          <div class="status-card red card-filtro-clientes mobile-card-filtro" data-filtro-status="bloqueados" data-sync-contador="qtdBloqueados" role="button" tabindex="0"><span>Bloqueados</span><b>0</b></div>
+          <div class="status-card dark card-filtro-clientes mobile-card-filtro" data-filtro-status="cancelados" data-sync-contador="qtdCancelados" role="button" tabindex="0"><span>Cancelados</span><b>0</b></div>
+          <div class="status-card orange total card-filtro-clientes mobile-card-filtro" data-filtro-status="todos" data-sync-contador="qtdTotal" role="button" tabindex="0"><span>TOTAL DE CLIENTES</span><b>0</b></div>
+          <div class="status-card amber card-filtro-clientes mobile-card-filtro" data-filtro-status="visada" data-sync-contador="qtdVisada" role="button" tabindex="0"><span>Visada</span><b>0</b></div>
+          <div class="status-card pink card-filtro-clientes mobile-card-filtro" data-filtro-status="isentos" data-sync-contador="qtdIsentos" role="button" tabindex="0"><span>Isentos</span><b>0</b></div>
+          <div class="status-card coral card-filtro-clientes mobile-card-filtro" data-filtro-status="pai-controle" data-sync-contador="qtdPaiControle" role="button" tabindex="0"><span>Pai Controle</span><b>0</b></div>
+          <div class="status-card green card-filtro-clientes mobile-card-filtro" data-filtro-status="confianca" data-sync-contador="qtdConfianca" role="button" tabindex="0"><span>Liberados Confiança</span><b>0</b></div>
+          <div class="status-card black card-filtro-clientes mobile-card-filtro" data-filtro-status="cancelados-acordo" data-sync-contador="qtdCanceladosAcordo" role="button" tabindex="0"><span>Cancelados com Acordos</span><b>0</b></div>
+        </div>
+      </section>
+
+      <div class="clientes-receita-grid">
+        <aside class="clientes-filtros-receita">
+          <div class="filtros-head">
+            <span>Filtros</span>
+            <a href="cadastro.html?novo=1">Novo Cliente</a>
+          </div>
+
+          <div class="filtros-status-grid">
+            <div class="status-card blue card-filtro-clientes" data-filtro-status="ativos" role="button" tabindex="0" aria-label="Mostrar somente clientes ativos" title="Mostrar somente clientes ativos"><span>Ativos</span><b id="qtdAtivos">0</b></div>
+            <div class="status-card navy card-filtro-clientes" data-filtro-status="nao-ativados" role="button" tabindex="0" aria-label="Mostrar somente clientes não ativados" title="Mostrar somente clientes não ativados"><span>Não Ativados</span><b id="qtdNaoAtivos">0</b></div>
+            <div class="status-card red status-card-bloqueados card-filtro-clientes" id="cardBloqueados" data-filtro-status="bloqueados" role="button" tabindex="0" aria-label="Mostrar somente clientes bloqueados" title="Mostrar somente clientes bloqueados"><span>Bloqueados</span><b id="qtdBloqueados">0</b></div>
+            <div class="status-card dark card-filtro-clientes" data-filtro-status="cancelados" role="button" tabindex="0" aria-label="Mostrar somente clientes cancelados" title="Mostrar somente clientes cancelados"><span>Cancelados</span><b id="qtdCancelados">0</b></div>
+            <div class="status-card orange total card-filtro-clientes" data-filtro-status="todos" role="button" tabindex="0" aria-label="Mostrar todos os clientes" title="Mostrar todos os clientes"><span>TOTAL DE CLIENTES</span><b id="qtdTotal">0</b></div>
+            <div class="status-card amber card-filtro-clientes" data-filtro-status="visada" role="button" tabindex="0" aria-label="Mostrar somente clientes em visada" title="Mostrar somente clientes em visada"><span>Visada</span><b id="qtdVisada">0</b></div>
+            <div class="status-card pink card-filtro-clientes" data-filtro-status="isentos" role="button" tabindex="0" aria-label="Mostrar somente clientes isentos" title="Mostrar somente clientes isentos"><span>Isentos</span><b id="qtdIsentos">0</b></div>
+            <div class="status-card coral card-filtro-clientes" data-filtro-status="pai-controle" role="button" tabindex="0" aria-label="Mostrar somente clientes Pai Controle" title="Mostrar somente clientes Pai Controle"><span>Pai Controle</span><b id="qtdPaiControle">0</b></div>
+            <div class="status-card green card-filtro-clientes" data-filtro-status="confianca" role="button" tabindex="0" aria-label="Mostrar somente clientes liberados em confiança" title="Mostrar somente clientes liberados em confiança"><span>Liberados Confiança</span><b id="qtdConfianca">0</b></div>
+            <div class="status-card black card-filtro-clientes" data-filtro-status="cancelados-acordo" role="button" tabindex="0" aria-label="Mostrar somente cancelados com acordos" title="Mostrar somente cancelados com acordos"><span>Cancelados com Acordos</span><b id="qtdCanceladosAcordo">0</b></div>
+          </div>
+
+          <div class="filtro-form">
+            <label>Tipo de Filtros</label>
+            <select id="filtroTipo">
+              <option>Estático (padrão)</option>
+            </select>
+
+            <div class="radio-row">
+              <label><input type="radio" name="tipoPessoa"> Física</label>
+              <label><input type="radio" name="tipoPessoa"> Jurídica</label>
+            </div>
+
+            <label>Dia de Vencimento</label>
+            <select id="filtroVencimento" onchange="filtrarClientesReceitaNet()">
+              <option value="">TODOS</option>
+            </select>
+
+            <label>Login</label>
+            <input id="filtroLogin" oninput="filtrarClientesReceitaNet()">
+
+            <label>Nome</label>
+            <input id="filtroNome" oninput="filtrarClientesReceitaNet()">
+
+            <label>Endereço</label>
+            <input id="filtroEndereco" oninput="filtrarClientesReceitaNet()">
+          </div>
+        </aside>
+
+        <section class="clientes-lista-receita">
+          <div class="clientes-breadcrumb">🏠 Principal / 👥 Consulta de Clientes</div>
+          <div class="clientes-table-card receita-exato">
+            <div class="clientes-table-title clientes-table-title-busca">
+              <span>Clientes</span>
+              <div id="clientesBuscaCompacta" class="clientes-busca-compacta">
+                <input id="buscaGeralClientes" type="search" placeholder="Pesquisar cliente..." aria-label="Pesquisar clientes" autocomplete="off" oninput="filtrarClientesReceitaNet()">
+                <button class="clientes-busca-btn" type="button" onclick="alternarBuscaClientes()" aria-label="Abrir pesquisa de clientes" title="Pesquisar clientes">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
+                </button>
+              </div>
+            </div>
+            <table class="clientes-receita-table">
+              <thead>
+                <tr class="linha-clicavel" onclick="abrirClienteCadastro(encodeURIComponent(c.id || ''))" ['loginPppoe','login','usuario','user','name','pppoe','nome','cliente','razaoSocial'])))">
+                  <th class="status-col"></th>
+                  <th>Login</th>
+                  <th>Nome</th>
+                  <th>Endereço</th>
+                  <th>Contato</th>
+                </tr>
+              </thead>
+              <tbody id="listaClientesReceita">
+                <tr class="linha-clicavel" onclick="abrirClienteCadastro(encodeURIComponent(primeiroValor(c, ['loginPppoe','login','usuario','user','name','pppoe','nome','cliente','razaoSocial'])))"><td colspan="5">Carregando clientes...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </section>
+  </main>
+</div>
+window.addEventListener("pageshow", function(){
+  carregarClientesReceitaNet();
+});
+</script>
+<script src="app.js">
+window.addEventListener("pageshow", function(){
+  carregarClientesReceitaNet();
+});
+</script>
+<script>
+function normalizarTexto(v){
+  return String(v || "").toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g,"");
+}
+function primeiroValor(c, campos){
+  for(const campo of campos){
+    if(c && c[campo] !== undefined && c[campo] !== null && String(c[campo]).trim() !== ""){
+      return String(c[campo]).trim();
+    }
+  }
+  return "";
+}
+function getClientesBase(){
+  const lista = window.__fibraClientesSupabase || window.__clientesReceitaNet || [];
+  return Array.isArray(lista) ? lista : [];
+}
+function statusIconeCliente(c){
+  const status = normalizarTexto(primeiroValor(c, ["status","situacao","statusCobranca","cli_status","estadoCliente","status_cliente","cobranca"]) || "");
+  const bloqueio = primeiroValor(c, ["bloqueio","dataBloqueio","dtBloqueio","cli_bloqueado"]) || "";
+  const cancelamento = primeiroValor(c, ["cancelamento","dataCancelamento","dtCancelamento","cli_dtcancelamento"]) || "";
+  const confiancaRaw = primeiroValor(c, ["liberacaoConfianca","liberadoConfianca","liberado","dataLiberacaoConfianca","cli_liberado","confianca","liberacao"]) || "";
+
+  function parseData(v){
+    if(!v) return null;
+    v = String(v).trim();
+    if(!v || v === "0000-00-00") return null;
+    let m = v.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if(m) return new Date(Number(m[1]), Number(m[2])-1, Number(m[3]), 23, 59, 59);
+    m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+    if(m) return new Date(Number(m[3]), Number(m[2])-1, Number(m[1]), 23, 59, 59);
+    const d = new Date(v);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  function confiancaValida(){
+    const d = parseData(confiancaRaw);
+    if(!d) return false;
+    const hoje = new Date();
+    hoje.setHours(0,0,0,0);
+    return d >= hoje;
+  }
+
+  if(status.includes("cancel") || status.includes("encerrado") || String(cancelamento).trim()){
+    return '<span class="cliente-status bloqueado">♟</span>';
+  }
+
+  if(confiancaValida()){
+    return '<span class="cliente-status ativo">✓</span>';
+  }
+
+  if(status.includes("bloque") || status.includes("suspens") || status.includes("cortado") || String(bloqueio).trim()){
+    return '<span class="cliente-status bloqueado">♟</span>';
+  }
+
+  return '<span class="cliente-status ativo">✓</span>';
+}
+function montarEnderecoCliente(c){
+  const endereco = primeiroValor(c, ["endereco","logradouro","rua"]);
+  const numero = primeiroValor(c, ["numero"]);
+  const complemento = primeiroValor(c, ["complemento"]);
+  const bairro = primeiroValor(c, ["bairro"]);
+  const cidade = primeiroValor(c, ["cidade","localidade"]) || "Manaus";
+  const uf = primeiroValor(c, ["uf","estado"]) || "AM";
+  const cep = primeiroValor(c, ["cep"]);
+  const linha1 = [endereco, numero, complemento].filter(Boolean).join(", ");
+  const linha2 = [bairro].filter(Boolean).join("");
+  const linha3 = [cidade, uf].filter(Boolean).join("/");
+  const linha4 = cep ? "CEP: " + cep : "";
+  return [linha1, linha2, linha3, linha4].filter(Boolean).join("<br>");
+}
+function montarContatoCliente(c){
+  const telefones = [
+    primeiroValor(c, ["telefone1","telefone","celular","fone"]),
+    primeiroValor(c, ["telefone2","celular2","fone2"]),
+    primeiroValor(c, ["telefone3","celular3","fone3"])
+  ].filter(Boolean);
+  const email = primeiroValor(c, ["email","e_mail"]);
+  return [...telefones, email].filter(Boolean).join("<br>") || "--";
+}
+function preencherVencimentos(){
+  const sel = document.getElementById("filtroVencimento");
+  if(!sel || sel.dataset.ok) return;
+  for(let i=1;i<=30;i++){
+    const op = document.createElement("option");
+    op.value = String(i);
+    op.textContent = String(i);
+    sel.appendChild(op);
+  }
+  sel.dataset.ok = "1";
+}
+function atualizarContadores(clientes){
+  clientes = Array.isArray(clientes) ? clientes : [];
+  const total = clientes.length;
+
+  function texto(c, campos){
+    return normalizarTexto(primeiroValor(c, campos) || "");
+  }
+
+  function valorCampo(c, campos){
+    return primeiroValor(c, campos) || "";
+  }
+
+  function temData(c, campos){
+    return campos.some(k => {
+      const v = c && c[k];
+      return v !== undefined && v !== null && String(v).trim() !== "" && String(v).trim() !== "0000-00-00";
+    });
+  }
+
+  function parseData(v){
+    if(!v) return null;
+    v = String(v).trim();
+    if(!v || v === "0000-00-00") return null;
+
+    let m = v.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if(m) return new Date(Number(m[1]), Number(m[2])-1, Number(m[3]), 23, 59, 59);
+
+    m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+    if(m) return new Date(Number(m[3]), Number(m[2])-1, Number(m[1]), 23, 59, 59);
+
+    const d = new Date(v);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  function ehCancelado(c){
+    const s = texto(c, ["status","situacao","statusCobranca","cli_status","estadoCliente","status_cliente","cobranca"]);
+    return (
+      s.includes("cancel") ||
+      s.includes("encerrado") ||
+      temData(c, ["cancelamento","dataCancelamento","dtCancelamento","cli_dtcancelamento"])
+    );
+  }
+
+  function ehIsento(c){
+    const s = texto(c, ["status","situacao","statusCobranca","cli_boleto","boleto","cobranca","tipoCobranca"]);
+    return (
+      s.includes("isento") ||
+      s === "n" ||
+      s === "nao cobrar" ||
+      s === "não cobrar"
+    );
+  }
+
+  function confiancaValida(c){
+    const raw = valorCampo(c, [
+      "liberacaoConfianca",
+      "liberadoConfianca",
+      "liberado",
+      "dataLiberacaoConfianca",
+      "cli_liberado",
+      "confianca",
+      "liberacao"
+    ]);
+    const d = parseData(raw);
+    if(!d) return false;
+
+    const hoje = new Date();
+    hoje.setHours(0,0,0,0);
+
+    return d >= hoje;
+  }
+
+  function ehBloqueado(c){
+    const s = texto(c, ["status","situacao","statusCobranca","cli_status","estadoCliente","status_cliente","cobranca"]);
+    return (
+      s.includes("bloque") ||
+      s.includes("suspens") ||
+      s.includes("cortado") ||
+      temData(c, ["bloqueio","dataBloqueio","dtBloqueio","cli_bloqueado"])
+    );
+  }
+
+  /*
+    Prioridade:
+    1. Cancelado
+    2. Isento
+    3. Liberação em Confiança válida = Ativo
+    4. Bloqueado
+    5. Ativo
+
+    Quando a confiança vencer, se ainda houver bloqueio, volta para Bloqueados.
+  */
+  const cancel = clientes.filter(c => ehCancelado(c)).length;
+  const isentos = clientes.filter(c => !ehCancelado(c) && ehIsento(c)).length;
+  const confianca = clientes.filter(c => !ehCancelado(c) && !ehIsento(c) && confiancaValida(c)).length;
+  const bloq = clientes.filter(c => !ehCancelado(c) && !ehIsento(c) && !confiancaValida(c) && ehBloqueado(c)).length;
+  const ativos = Math.max(total - cancel - isentos - bloq, 0);
+
+  const set = (id, valor) => {
+    const el = document.getElementById(id);
+    if(el) el.textContent = valor;
+  };
+
+  set("qtdAtivos", ativos);
+  set("qtdBloqueados", bloq);
+  set("qtdCancelados", cancel);
+  set("qtdIsentos", isentos);
+  set("qtdTotal", total);
+  set("qtdNaoAtivos", 0);
+
+  ["qtdConfianca","qtdLiberadosConfianca","qtdLiberacaoConfianca"].forEach(id => set(id, confianca));
+}
+function carregarClientesReceitaNet(){
+  preencherVencimentos();
+  const clientes = getClientesBase();
+  window.__clientesReceitaNet = clientes;
+  atualizarContadores(clientes);
+  renderizarClientesReceitaNet(clientes);
+  mostrarStatusImportacao(clientes);
+}
+function mostrarStatusImportacao(clientes){
+  let info = document.getElementById("statusImportacaoClientes");
+  if(!info){
+    const card = document.querySelector(".clientes-table-card");
+    if(card){
+      info = document.createElement("div");
+      info.id = "statusImportacaoClientes";
+      info.className = "import-status-clientes";
+      card.insertBefore(info, card.querySelector("table"));
+    }
+  }
+  if(!info) return;
+
+  if(clientes.length){
+    info.innerHTML = `Clientes carregados do Supabase: <b>${clientes.length}</b>`;
+  }else{
+    info.innerHTML = `Nenhum cliente importado encontrado. Vá em <b>Importação</b>, selecione o CSV do ReceitaNet e aguarde a mensagem "Importação concluída".`;
+  }
+}
+
+function renderizarClientesReceitaNet(clientes){
+  const tbody = document.getElementById("listaClientesReceita");
+  if(!tbody) return;
+  if(!clientes.length){
+    tbody.innerHTML = '<tr><td colspan="5" class="sem-clientes">Nenhum cliente importado encontrado. Importe o CSV na aba Importação.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = clientes.map(c=>{
+    const login = primeiroValor(c, ["loginPppoe","login","usuario","user"]);
+    const nome = primeiroValor(c, ["nome","cliente","razaoSocial"]) || login || "--";
+    const endereco = montarEnderecoCliente(c);
+    const contato = montarContatoCliente(c);
+   return `
+  <tr data-id="${c.id || ''}" onclick="abrirClienteCadastro('${encodeURIComponent(c.id || "")}')">
+    <td class="status-col">${statusIconeCliente(c)}</td>
+    <td class="login-col">${login || "--"}</td>
+    <td class="nome-col">${nome}</td>
+    <td class="endereco-col">${endereco || "--"}</td>
+    <td class="contato-col">${contato}</td>
+  </tr>
+`;
+  }).join("");
+}
+function alternarBuscaClientes(forcarAbertura){
+  const caixa = document.getElementById("clientesBuscaCompacta");
+  const campo = document.getElementById("buscaGeralClientes");
+  if(!caixa || !campo) return;
+
+  const abrir = typeof forcarAbertura === "boolean"
+    ? forcarAbertura
+    : !caixa.classList.contains("aberta");
+
+  if(abrir){
+    caixa.classList.add("aberta");
+    const botao = caixa.querySelector("button");
+    if(botao) botao.setAttribute("aria-label", "Fechar pesquisa de clientes");
+    setTimeout(()=>campo.focus(), 30);
+    return;
+  }
+
+  caixa.classList.remove("aberta");
+  const botao = caixa.querySelector("button");
+  if(botao) botao.setAttribute("aria-label", "Abrir pesquisa de clientes");
+  if(campo.value){
+    campo.value = "";
+    filtrarClientesReceitaNet();
+  }
+}
+
+document.addEventListener("keydown", function(evento){
+  if(evento.key !== "Escape") return;
+  const caixa = document.getElementById("clientesBuscaCompacta");
+  if(caixa && caixa.classList.contains("aberta")) alternarBuscaClientes(false);
+});
+
+function clienteEstaBloqueadoParaFiltro(c){
+  const textoStatus = normalizarTexto(primeiroValor(c, ["status","situacao","statusCobranca","cli_status","estadoCliente","status_cliente","cobranca"]) || "");
+  const temDataBloqueio = ["bloqueio","dataBloqueio","dtBloqueio","cli_bloqueado"].some(k => {
+    const v = c && c[k];
+    return v !== undefined && v !== null && String(v).trim() !== "" && String(v).trim() !== "0000-00-00";
+  });
+  return textoStatus.includes("bloque") || textoStatus.includes("suspens") || textoStatus.includes("cortado") || temDataBloqueio;
+}
+
+function textoStatusClienteParaFiltro(c){
+  return normalizarTexto([
+    primeiroValor(c, ["status","situacao","statusCobranca","cli_status","estadoCliente","status_cliente","cobranca"]),
+    primeiroValor(c, ["perfil","profile","cadProfile"]),
+    primeiroValor(c, ["categoria","tipoCliente","grupo","classe"])
+  ].filter(Boolean).join(" "));
+}
+
+function clienteCorrespondeFiltroStatus(c, filtro){
+  if(!filtro || filtro === "todos") return true;
+
+  // Os clientes podem vir com campos normalizados no topo ou dentro de `dados`.
+  const dados = c && typeof c.dados === "object" && c.dados ? c.dados : {};
+  const cliente = Object.assign({}, dados, c || {});
+  const texto = textoStatusClienteParaFiltro(cliente);
+
+  const temValor = campos => campos.some(campo => {
+    const valor = cliente[campo];
+    return valor !== undefined && valor !== null && String(valor).trim() !== "" && String(valor).trim() !== "0000-00-00";
+  });
+
+  const cancelado = texto.includes("cancel") || texto.includes("encerrado") ||
+    temValor(["cancelamento","dataCancelamento","dtCancelamento","cli_dtcancelamento"]);
+
+  const isento = !cancelado && (
+    texto.includes("isento") || texto.includes("nao cobrar") ||
+    normalizarTexto(cliente.statusCobranca || cliente.cobranca || cliente.tipoCobranca || "") === "n"
+  );
+
+  const valorConfianca = primeiroValor(cliente, [
+    "liberacaoConfianca","liberadoConfianca","liberado","dataLiberacaoConfianca",
+    "cli_liberado","confianca","liberacao","cadLiberacaoConfianca"
+  ]);
+  let confianca = false;
+  if(valorConfianca){
+    const valor = String(valorConfianca).trim();
+    let data = null;
+    let match = valor.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if(match) data = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), 23, 59, 59);
+    if(!data){
+      match = valor.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+      if(match) data = new Date(Number(match[3]), Number(match[2]) - 1, Number(match[1]), 23, 59, 59);
+    }
+    if(!data){
+      const tentativa = new Date(valor);
+      if(!Number.isNaN(tentativa.getTime())) data = tentativa;
+    }
+    if(data){
+      const hoje = new Date();
+      hoje.setHours(0,0,0,0);
+      confianca = data >= hoje;
+    }
+  }
+  confianca = !cancelado && !isento && confianca;
+
+  const bloqueado = !cancelado && !isento && !confianca && clienteEstaBloqueadoParaFiltro(cliente);
+  const naoAtivado = texto.includes("nao ativ") || texto.includes("inativo") || texto.includes("aguardando ativ");
+
+  if(filtro === "ativos") return !cancelado && !isento && !bloqueado && !naoAtivado;
+  if(filtro === "nao-ativados") return naoAtivado;
+  if(filtro === "bloqueados") return bloqueado;
+  if(filtro === "cancelados") return cancelado && !texto.includes("acordo");
+  if(filtro === "isentos") return isento;
+  if(filtro === "confianca") return confianca;
+  if(filtro === "visada") return texto.includes("visada");
+  if(filtro === "pai-controle") return texto.includes("pai controle") || texto.includes("pai-controle");
+  if(filtro === "cancelados-acordo") return cancelado && texto.includes("acordo");
+  return true;
+}
+
+function ativarFiltroStatusClientes(filtro){
+  window.__filtroStatusClientes = filtro === "todos" ? "" : filtro;
+  document.querySelectorAll(".card-filtro-clientes").forEach(card => {
+    const ativo = card.dataset.filtroStatus === filtro || (filtro === "todos" && card.dataset.filtroStatus === "todos");
+    card.classList.toggle("filtro-ativo", ativo);
+  });
+  filtrarClientesReceitaNet();
+}
+
+function filtrarClientesReceitaNet(){
+  const clientes = window.__clientesReceitaNet || getClientesBase();
+  const buscaOriginal = document.getElementById("buscaGeralClientes")?.value || "";
+  const buscaGeral = normalizarTexto(buscaOriginal);
+  const buscaNumeros = String(buscaOriginal).replace(/\D/g, "");
+  const login = normalizarTexto(document.getElementById("filtroLogin")?.value || "");
+  const nome = normalizarTexto(document.getElementById("filtroNome")?.value || "");
+  const endereco = normalizarTexto(document.getElementById("filtroEndereco")?.value || "");
+  const venc = String(document.getElementById("filtroVencimento")?.value || "");
+  const filtroStatus = window.__filtroStatusClientes || "";
+  const filtrados = clientes.filter(c=>{
+    const loginTxt = normalizarTexto(primeiroValor(c, ["loginPppoe","login","usuario","user","pppoe"]));
+    const nomeTxt = normalizarTexto(primeiroValor(c, ["nome","cliente","razaoSocial"]));
+    const cpfTxt = normalizarTexto(primeiroValor(c, ["cpfCnpj","cpf_cnpj","cpf","cnpj","documento"]));
+    const contatoTxt = normalizarTexto([
+      primeiroValor(c, ["telefone1","telefone","celular","fone"]),
+      primeiroValor(c, ["telefone2","celular2","fone2"]),
+      primeiroValor(c, ["telefone3","celular3","fone3"]),
+      primeiroValor(c, ["email","e_mail"])
+    ].filter(Boolean).join(" "));
+    const endTxt = normalizarTexto(montarEnderecoCliente(c).replace(/<br>/g," "));
+    const dadosCompletosTxt = normalizarTexto(JSON.stringify(c || {}));
+    const geralTxt = [loginTxt, nomeTxt, cpfTxt, contatoTxt, endTxt, dadosCompletosTxt].join(" ");
+    const geralNumeros = geralTxt.replace(/\D/g, "");
+    const correspondeBuscaGeral = !buscaGeral || geralTxt.includes(buscaGeral) || (buscaNumeros.length >= 3 && geralNumeros.includes(buscaNumeros));
+    const vencTxt = String(primeiroValor(c, ["vencimento","diaVencimento","dia_do_vencimento"]));
+    return clienteCorrespondeFiltroStatus(c, filtroStatus) &&
+           correspondeBuscaGeral &&
+           (!login || loginTxt.includes(login)) &&
+           (!nome || nomeTxt.includes(nome)) &&
+           (!endereco || endTxt.includes(endereco)) &&
+           (!venc || vencTxt === venc);
+  });
+  renderizarClientesReceitaNet(filtrados);
+}
+
+function sincronizarContadoresResumoMobile(){
+  document.querySelectorAll(".mobile-card-filtro[data-sync-contador]").forEach(card => {
+    const origem = document.getElementById(card.dataset.syncContador);
+    const destino = card.querySelector("b");
+    if(origem && destino) destino.textContent = origem.textContent || "0";
+  });
+}
+
+document.addEventListener("DOMContentLoaded", function(){
+  sincronizarContadoresResumoMobile();
+  const alvosContadores = ["qtdAtivos","qtdNaoAtivos","qtdBloqueados","qtdCancelados","qtdTotal","qtdVisada","qtdIsentos","qtdPaiControle","qtdConfianca","qtdCanceladosAcordo"]
+    .map(id => document.getElementById(id)).filter(Boolean);
+  if(alvosContadores.length){
+    const obsResumo = new MutationObserver(sincronizarContadoresResumoMobile);
+    alvosContadores.forEach(el => obsResumo.observe(el,{childList:true,subtree:true,characterData:true}));
+  }
+  document.querySelectorAll(".card-filtro-clientes").forEach(card => {
+    const acionar = () => ativarFiltroStatusClientes(card.dataset.filtroStatus || "todos");
+    card.addEventListener("click", acionar);
+    card.addEventListener("keydown", function(evento){
+      if(evento.key === "Enter" || evento.key === " "){
+        evento.preventDefault();
+        acionar();
+      }
+    });
+  });
+});
+
+function abrirClienteCadastro(idCliente){
+  const id = decodeURIComponent(idCliente || "");
+
+  if(!id){
+    console.error("ID do cliente não informado");
+    return;
+  }
+
+  window.location.href =
+    "cadastro.html?id=" +
+    encodeURIComponent(id) +
+    "&t=" +
+    Date.now();
+}
+
+window.addEventListener("pageshow", function(){
+  carregarClientesReceitaNet();
+});
+</script>
+
+<script>
+(function(){
+  function norm(v){ return String(v || "").toLowerCase().trim(); }
+
+  function primeiro(c, campos){
+    for(const k of campos){
+      if(c && c[k] !== undefined && c[k] !== null && String(c[k]).trim() !== "") return String(c[k]).trim();
+    }
+    return "";
+  }
+
+  function baseClientes(){
+    const lista = window.__fibraClientesSupabase || window.__clientesReceitaNet || [];
+    return Array.isArray(lista) ? lista : [];
+  }
+
+  function textoLinha(tr){
+    return Array.from(tr.querySelectorAll("td")).map(td => td.textContent.trim()).filter(Boolean).join(" ").toLowerCase();
+  }
+
+function encontrarClientePelaLinha(tr){
+  const id = tr.dataset.id;
+
+  if(!id) return null;
+
+  const lista = window.__clientesReceitaNet || [];
+
+  return lista.find(c => String(c.id) === String(id));
+}
+
+  document.addEventListener("click", function(e){
+    const tr = e.target.closest("tbody tr");
+    if(!tr) return;
+
+    // Ignora linhas vazias, carregando ou mensagens.
+    const t = tr.textContent.toLowerCase();
+    if(t.includes("carregando") || t.includes("nenhum cliente")) return;
+
+    const cliente = encontrarClientePelaLinha(tr);
+    if(!cliente) {
+      alert("Não consegui identificar este cliente. Reimporte o arquivo ou me envie um print da linha.");
+      return;
+    }
+
+    window.location.href = "cadastro.html?id=" + encodeURIComponent((cliente&&cliente.id)||"") + "&t=" + Date.now();
+  });
+})();
+</script>
+
+
+<script>
+document.addEventListener("fibra:supabase-sync", function(){
+  if(typeof carregarClientes === "function") try{carregarClientes();}catch(e){}
+  if(typeof renderClientes === "function") try{renderClientes();}catch(e){}
+  if(typeof renderizarClientes === "function") try{renderizarClientes();}catch(e){}
+});
+</script>
+
+<script src="bloqueio-configuravel.js"></script>
+
+<script>
+/* SUPABASE FINAL CLIENTES BOLETOS */
+(function(){
+  function norm(v){ return String(v || "").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim(); }
+  function field(id){
+    const el = document.getElementById(id) || document.querySelector(`[name="${id}"]`);
+    return el ? String(el.value || "").trim() : "";
+  }
+  function clienteAtual(){
+    let c = {};
+    try{ if(typeof clienteDoCadastro === "function") c = clienteDoCadastro() || {}; }catch(e){}
+    document.querySelectorAll("input,select,textarea").forEach(el=>{
+      const id = el.id || el.name;
+      if(id && String(el.value || "").trim() !== "") c[id] = el.value;
+    });
+    c.loginPppoe = c.loginPppoe || c.login_pppoe || c.login || c.usuario || c.pppoe || field("loginPppoe") || field("login") || field("usuario");
+    c.login = c.login || c.loginPppoe;
+    c.nome = c.nome || c.cliente || c.nomeCliente || c.razaoSocial || field("nome") || field("nomeCliente");
+    c.cpfCnpj = c.cpfCnpj || c.cpf_cnpj || c.cpf || c.cnpj || c.documento || field("cpfCnpj") || field("cpf") || field("cnpj");
+    c.telefone1 = c.telefone1 || c.telefone || c.celular || field("telefone1") || field("telefone") || field("celular");
+    c.servidor = c.servidor || c.popServidor || c.pop || field("servidor") || field("popServidor");
+    c.profile = c.profile || c.perfil || c.planoVelocidade || c.plano || field("profile") || field("perfil") || field("plano");
+    return c;
+  }
+  window.fibraClienteAtualSeguro = clienteAtual;
+
+  async function salvarCliente(){
+    const c = clienteAtual();
+    if(!(c.loginPppoe || c.login || c.cpfCnpj || c.cpf || c.nome)) return null;
+    const resp = await fetch("/api/clientes/salvar", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify(c)
+    });
+    const json = await resp.json();
+    if(!resp.ok || !json.ok) throw new Error(json.erro || "Erro ao salvar cliente.");
+    return json.cliente;
+  }
+  window.fibraSalvarClienteAtualSupabase = salvarCliente;
+
+  async function carregarClientes(){
+    const resp = await fetch("/api/clientes", {cache:"no-store"});
+    const json = await resp.json();
+    if(!resp.ok || !json.ok) throw new Error(json.erro || "Erro ao carregar clientes.");
+    window.__fibraClientesSupabase = json.clientes || [];
+    if(typeof renderClientes === "function") renderClientes(window.__fibraClientesSupabase);
+    if(typeof renderizarClientes === "function") renderizarClientes(window.__fibraClientesSupabase);
+    if(typeof atualizarTabelaClientes === "function") atualizarTabelaClientes(window.__fibraClientesSupabase);
+    return window.__fibraClientesSupabase;
+  }
+  window.fibraCarregarClientesSupabase = carregarClientes;
+
+  async function carregarBoletosCliente(){
+    const c = clienteAtual();
+    const params = new URLSearchParams({
+      cliente_id: c.id || c.clienteId || c.cliente_id || "",
+      login: c.loginPppoe || c.login || "",
+      cpf: c.cpfCnpj || c.cpf || "",
+      nome: c.nome || ""
+    });
+    const resp = await fetch("/api/boletos/cliente?" + params.toString(), {cache:"no-store"});
+    const json = await resp.json();
+    if(!resp.ok || !json.ok) throw new Error(json.erro || "Erro ao carregar boletos.");
+    window.__fibraBoletosClienteSupabase = json.boletos || [];
+    return window.__fibraBoletosClienteSupabase;
+  }
+  window.fibraCarregarBoletosClienteSupabase = carregarBoletosCliente;
+  window.fibraGetBoletosStorage = function(){ return window.__fibraBoletosClienteSupabase || []; };
+  window.fibraSalvarBoletosStorage = function(lista){ window.__fibraBoletosClienteSupabase = Array.isArray(lista) ? lista : []; };
+  window.fibraBoletosClienteAtual = function(){ return window.__fibraBoletosClienteSupabase || []; };
+  window.fibraRecarregarBoletosAposEfi = async function(){
+    await carregarBoletosCliente();
+    if(typeof renderizarBoletosCliente === "function") renderizarBoletosCliente();
+  };
+
+  window.abrirModalBoletosCliente = async function(){
+    const modal = document.getElementById("modalBoletosCliente");
+    if(modal){ modal.classList.add("aberto"); modal.setAttribute("aria-hidden","false"); }
+    const tbody = document.getElementById("tbodyBoletosCliente");
+    if(tbody) tbody.innerHTML='<tr><td colspan="6">Carregando boletos do Supabase...</td></tr>';
+    try{ await window.fibraRecarregarBoletosAposEfi(); }
+    catch(e){ if(tbody) tbody.innerHTML='<tr><td colspan="6">Erro ao carregar boletos: '+e.message+'</td></tr>'; }
+  };
+
+  document.addEventListener("click", function(e){
+    const el = e.target.closest("button,a,input[type=button],input[type=submit]");
+    if(!el) return;
+    const txt = norm(el.textContent || el.value || "");
+    if(txt.includes("gravar") || txt.includes("salvar") || txt.includes("cadastrar")){
+      setTimeout(()=>salvarCliente().then(()=>carregarClientes().catch(()=>{})).catch(err=>alert("Erro ao salvar cliente: "+err.message)), 300);
+    }
+  }, true);
+
+  if(location.pathname.toLowerCase().includes("clientes")){
+    document.addEventListener("DOMContentLoaded", ()=>setTimeout(()=>carregarClientes().catch(e=>console.warn(e.message)), 600));
+  }
+})();
+</script>
+
+
+<script>
+/* LISTA DE CLIENTES DIRETO DO SUPABASE */
+(function(){
+  async function carregarSupabaseUnico(){
+    try{
+      const lista = await FibraSupabaseOnly.listarClientes();
+      window.__fibraClientesSupabase = lista;
+      window.__clientesReceitaNet = lista;
+
+      if(typeof renderizarClientesReceitaNet === "function"){
+        renderizarClientesReceitaNet(lista);
+      }else if(typeof renderizarClientes === "function"){
+        renderizarClientes(lista);
+      }else if(typeof renderClientes === "function"){
+        renderClientes(lista);
+      }
+      return lista;
+    }catch(e){
+      console.error(e);
+      const tbody = document.querySelector("tbody");
+      if(tbody) tbody.innerHTML = `<tr><td colspan="5">Erro ao carregar clientes do Supabase: ${e.message}</td></tr>`;
+      return [];
+    }
+  }
+
+  window.abrirClienteCadastro = function(chave){
+    location.href = "cadastro.html?id=" + encodeURIComponent(decodeURIComponent(chave || ""));
+  };
+
+  document.addEventListener("DOMContentLoaded", carregarSupabaseUnico);
+  window.addEventListener("pageshow", carregarSupabaseUnico);
+})();
+</script>
+
+<script>
+/* CONTADORES CLIENTES SUPABASE - IDS REAIS */
+(function(){
+  async function carregarClientesEContadores(){
+    try{
+      const resp = await fetch("/api/clientes", {cache:"no-store"});
+      const json = await resp.json();
+
+      if(!resp.ok || !json.ok){
+        throw new Error(json.erro || "Erro ao carregar clientes.");
+      }
+
+      const lista = Array.isArray(json.clientes) ? json.clientes : [];
+
+      window.__fibraClientesSupabase = lista;
+      window.__clientesReceitaNet = lista;
+
+      // Usa a função original da própria página, que já conhece
+      // os status ativo, bloqueado, cancelado e isento.
+      if(typeof atualizarContadores === "function"){
+        atualizarContadores(lista);
+      }else{
+        const total = lista.length;
+        const bloqueados = lista.filter(c => {
+          const status = String(
+            c.status || c.situacao || c.statusCobranca || ""
+          ).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+
+          return status.includes("bloque") ||
+            Boolean(c.dataBloqueio || c.data_bloqueio);
+        }).length;
+
+        const ativos = Math.max(0, total - bloqueados);
+
+        const set = (id, valor) => {
+          const el = document.getElementById(id);
+          if(el) el.textContent = String(valor);
+        };
+
+        set("qtdTotal", total);
+        set("qtdBloqueados", bloqueados);
+        set("qtdAtivos", ativos);
+      }
+
+      // Mantém a tabela sincronizada com a mesma lista.
+      if(typeof renderizarClientesReceitaNet === "function"){
+        renderizarClientesReceitaNet(lista);
+      }
+
+      if(typeof mostrarStatusImportacao === "function"){
+        mostrarStatusImportacao(lista);
+      }
+    }catch(e){
+      console.warn("Erro ao carregar clientes e contadores:", e.message);
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", function(){
+    setTimeout(carregarClientesEContadores, 100);
+  });
+
+  window.addEventListener("pageshow", function(){
+    setTimeout(carregarClientesEContadores, 100);
+  });
+
+  window.fibraRecarregarClientesEContadores = carregarClientesEContadores;
+})();
+</script>
+
+<script src="clientes-supabase-stage1.js"></script>
+<script src="mobile-responsive.js"></script>
+</body>
+</html>
