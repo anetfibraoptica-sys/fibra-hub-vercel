@@ -1209,8 +1209,8 @@ document.addEventListener("DOMContentLoaded", function(){
           throw new Error('Não foi encontrada uma porta de acesso do equipamento.');
         }
         let url = '';
-        if(teste.acesso.protocol === 'https') url = 'https://' + teste.ip + (teste.acesso.porta !== 443 ? ':' + teste.acesso.porta : '');
-        else if(teste.acesso.protocol === 'winbox') url = 'http://' + teste.ip + ':' + teste.acesso.porta;
+        if((teste.acesso.protocol || teste.acesso.protocolo) === 'https') url = 'https://' + teste.ip + (teste.acesso.porta !== 443 ? ':' + teste.acesso.porta : '');
+        else if((teste.acesso.protocol || teste.acesso.protocolo) === 'winbox') url = 'http://' + teste.ip + ':' + teste.acesso.porta;
         else url = 'http://' + teste.ip + (teste.acesso.porta !== 80 ? ':' + teste.acesso.porta : '');
         abaRemota.opener = null;
         abaRemota.location.replace(url);
