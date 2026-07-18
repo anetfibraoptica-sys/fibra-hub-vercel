@@ -952,13 +952,30 @@ app.get("/api/clientes/:id/testar-acesso-remoto", async (req, res) => {
     if (!r.rows.length) return res.status(404).json({ok:false, erro:"Cliente não encontrado"});
     const acesso = await consultarIpPPPoECliente(r.rows[0]);
     if (!acesso.online || !acesso.ip) return res.json({ok:false, erro:"Cliente offline"});
-    const encontrado = await testarPortasAcesso(acesso.ip, [
+    let encontrado = await testarPortasAcesso(acesso.ip, [
       {port:443, protocol:"https"},
       {port:8443, protocol:"https"},
       {port:80, protocol:"http"},
       {port:8080, protocol:"http"},
       {port:8291, protocol:"winbox"}
     ]);
+
+    // Fallback: quando o backend estiver fora da VPN (ex.: Vercel),
+    // usa o proprio MikroTik para validar o acesso do cliente.
+    if (!encontrado && acesso.cfg) {
+      for (const item of [
+        {port:443, protocol:"https", url:p=>`https://${acesso.ip}:${p}`},
+        {port:8443, protocol:"https", url:p=>`https://${acesso.ip}:${p}`},
+        {port:80, protocol:"http", url:p=>`http://${acesso.ip}:${p}`},
+        {port:8080, protocol:"http", url:p=>`http://${acesso.ip}:${p}`}
+      ]) {
+        try {
+          await fetchViaMikroTik(acesso.cfg, item.url(item.port));
+          encontrado = {porta:item.port, protocol:item.protocol};
+          break;
+        } catch(e) {}
+      }
+    }
     return res.json({ok:!!encontrado, ip:acesso.ip, acesso:encontrado});
   } catch(e) {
     return res.status(500).json({ok:false, erro:e.message});
