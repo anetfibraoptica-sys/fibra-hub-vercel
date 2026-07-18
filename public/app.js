@@ -1203,31 +1203,25 @@ document.addEventListener("DOMContentLoaded", function(){
           if(abaRemota) abaRemota.close();
           throw new Error('Cliente offline ou sem IP PPPoE ativo no MikroTik.');
         }
-        const teste = await fetch('/api/clientes/' + encodeURIComponent(idClienteAtual()) + '/testar-acesso-remoto', {credentials:'same-origin', cache:'no-store'});
-        const acesso = await teste.json().catch(()=>({}));
-        if(!acesso.ok || !acesso.encontrado){
+        const teste = await fetch('/api/clientes/' + encodeURIComponent(d.cliente_id) + '/testar-acesso-remoto', {credentials:'same-origin', cache:'no-store'}).then(r=>r.json());
+        if(!teste.ok || !teste.acesso){
           if(abaRemota) abaRemota.close();
           throw new Error('Não foi encontrada uma porta de acesso do equipamento.');
         }
         let url = '';
-        if(acesso.protocolo === 'https') url = 'https://' + acesso.ip + ':' + acesso.porta;
-        else if(acesso.protocolo === 'http') url = 'http://' + acesso.ip + ':' + acesso.porta;
-        else if(acesso.protocolo === 'winbox') url = 'winbox://' + acesso.ip;
-        if(!url){
-          if(abaRemota) abaRemota.close();
-          throw new Error('Acesso encontrado sem endereço válido.');
-        }
+        if(teste.acesso.protocol === 'https') url = 'https://' + teste.ip + (teste.acesso.porta !== 443 ? ':' + teste.acesso.porta : '');
+        else if(teste.acesso.protocol === 'winbox') url = 'http://' + teste.ip + ':' + teste.acesso.porta;
+        else url = 'http://' + teste.ip + (teste.acesso.porta !== 80 ? ':' + teste.acesso.porta : '');
         abaRemota.opener = null;
         abaRemota.location.replace(url);
         return;
       }
 
       if(interno){
-        const atual = d.ip_interno || '192.168.1.1';
-        const informado = prompt('IP interno do roteador:', atual);
-        if(!informado) return;
-        const limpo = informado.trim().replace(/^https?:\/\//i,'').replace(/\/$/,'');
-        abrirUrl('https://' + limpo);
+        const teste = await fetch('/api/clientes/' + encodeURIComponent(d.cliente_id) + '/testar-acesso-interno', {credentials:'same-origin', cache:'no-store'}).then(r=>r.json());
+        if(!teste.ok || !teste.acesso) throw new Error('Não foi encontrado acesso HTTPS interno do equipamento.');
+        const url = 'https://' + teste.ip + (teste.acesso.porta !== 443 ? ':' + teste.acesso.porta : '');
+        abrirUrl(url);
         return;
       }
 
