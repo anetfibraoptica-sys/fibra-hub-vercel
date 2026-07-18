@@ -990,7 +990,7 @@ app.get("/api/clientes/:id/testar-acesso-remoto", async (req, res) => {
         // Equipamentos web costumam responder com redirecionamento para login (301/302)
         // Isso confirma que a porta está aberta e o equipamento está acessível.
         const msg = String(e && e.message ? e.message : e);
-        if (/status\\s*30[12378]|302|301|Location:/i.test(msg)) {
+        if (/status\s*30[12378]|302|301|Location:|login\.html/i.test(msg)) {
           return res.json({ok:true, ip:acesso.ip, acesso:{porta:item.port, protocolo:item.protocol}, url:item.url});
         }
       }
@@ -1087,7 +1087,7 @@ async function fetchViaMikroTik(cfg, url) {
 
     // RouterOS pode retornar erro 301/302/401/403 quando o equipamento existe.
     // Esses retornos confirmam que a porta está aberta.
-    if (/status[^0-9]*(301|302|401|403)|Location|login\.html/i.test(texto)) {
+    if (/status\s*[^0-9]*(301|302|401|403)|302|301|401|403|Location|login\.html/i.test(texto)) {
       return { ok: true, row };
     }
 
@@ -1095,7 +1095,7 @@ async function fetchViaMikroTik(cfg, url) {
     return { ok: !!(conteudo && String(conteudo).trim().length > 5), row, data: conteudo };
   } catch (e) {
     const msg = String(e && e.message ? e.message : e);
-    if (/status[^0-9]*(301|302|401|403)|Location|login\.html/i.test(msg)) {
+    if (/status\s*[^0-9]*(301|302|401|403)|302|301|401|403|Location|login\.html/i.test(msg)) {
       return { ok: true, erro: msg };
     }
     throw e;
