@@ -973,6 +973,11 @@ app.get("/api/clientes/:id/testar-acesso-remoto", async (req, res) => {
       {port:8080, protocol:"http", url:`http://${acesso.ip}:8080`}
     ];
 
+    // Porta cadastrada: abre diretamente sem depender do diagnóstico HTTP.
+    if (portaCadastrada) {
+      return res.json({ok:true, ip:acesso.ip, acesso:{porta:portaCadastrada, protocolo:"http"}, url:`http://${acesso.ip}:${portaCadastrada}`});
+    }
+
     for (const item of portas) {
       try {
         console.log("[DIAG REMOTO] testando", item.url);
