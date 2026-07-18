@@ -1047,7 +1047,8 @@ async function obterIpAtualCliente(cliente) {
     cfg,
     pppoe: usuario,
     uptime: active.uptime || "",
-    caller_id: active["caller-id"] || ""
+    caller_id: active["caller-id"] || "",
+    cfg: cfg
   };
 }
 
