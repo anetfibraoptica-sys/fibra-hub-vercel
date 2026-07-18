@@ -965,9 +965,9 @@ app.get("/api/clientes/:id/testar-acesso-remoto", async (req, res) => {
     for (const item of portas) {
       try {
         console.log("[DIAG REMOTO] testando", item.url);
-        const html = await fetchViaMikroTik(acesso.cfg, item.url);
-        console.log("[DIAG REMOTO] retorno", String(html).slice(0,120));
-        if (html && String(html).trim().length > 5) {
+        const teste = await fetchViaMikroTik(acesso.cfg, item.url);
+        console.log("[DIAG REMOTO] retorno", JSON.stringify(teste).slice(0,200));
+        if (teste.ok) {
           return res.json({ok:true, ip:acesso.ip, acesso:{porta:item.port, protocolo:item.protocol}, url:item.url});
         }
       } catch(e) {
@@ -1057,16 +1057,33 @@ async function obterIpAtualCliente(cliente) {
 }
 
 async function fetchViaMikroTik(cfg, url) {
-  const resp = await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
-    "/tool/fetch",
-    `=url=${url}`,
-    "=output=user",
-    "=as-value="
-  ]], 20000);
+  try {
+    const resp = await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+      "/tool/fetch",
+      `=url=${url}`,
+      "=output=user",
+      "=as-value="
+    ]], 20000);
 
-  const rows = parseRouterosRows(resp);
-  const row = rows[0] || {};
-  return row.data || row.contents || row["data"] || "";
+    const rows = parseRouterosRows(resp);
+    const row = rows[0] || {};
+    const texto = JSON.stringify(row);
+
+    // RouterOS pode retornar erro 301/302/401/403 quando o equipamento existe.
+    // Esses retornos confirmam que a porta está aberta.
+    if (/status[^0-9]*(301|302|401|403)|Location|login\.html/i.test(texto)) {
+      return { ok: true, row };
+    }
+
+    const conteudo = row.data || row.contents || row["data"] || "";
+    return { ok: !!(conteudo && String(conteudo).trim().length > 5), row, data: conteudo };
+  } catch (e) {
+    const msg = String(e && e.message ? e.message : e);
+    if (/status[^0-9]*(301|302|401|403)|Location|login\.html/i.test(msg)) {
+      return { ok: true, erro: msg };
+    }
+    throw e;
+  }
 }
 
 
