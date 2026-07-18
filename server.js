@@ -957,12 +957,12 @@ app.get("/api/clientes/:id/testar-acesso-remoto", async (req, res) => {
 
     // Primeiro usa a porta cadastrada do equipamento quando existir.
     // O diagnóstico fica apenas como fallback.
+    // A porta de acesso do equipamento fica cadastrada no campo acesso_remoto.
+    // Exemplos aceitos: 8080, :8080, http://ip:8080
+    const acessoCadastrado = String(r.rows[0].acesso_remoto || "");
+    const portaExtraida = acessoCadastrado.match(/:(\d{2,5})/);
     const portaCadastrada = Number(
-      r.rows[0].porta_acesso ||
-      r.rows[0].porta ||
-      r.rows[0].porta_http ||
-      r.rows[0].porta_web ||
-      0
+      portaExtraida ? portaExtraida[1] : (acessoCadastrado.match(/^\d{2,5}$/) || [0])[0]
     );
     const portas = portaCadastrada ? [
       {port: portaCadastrada, protocol:"http", url:`http://${acesso.ip}:${portaCadastrada}`}
