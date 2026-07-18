@@ -951,6 +951,8 @@ app.get("/api/clientes/:id/testar-acesso-remoto", async (req, res) => {
     const r = await pool.query("SELECT * FROM clientes WHERE id=$1", [req.params.id]);
     if (!r.rows.length) return res.status(404).json({ok:false, erro:"Cliente não encontrado"});
     const acesso = await obterIpAtualCliente(r.rows[0]);
+    console.log("[DIAG REMOTO] cliente", req.params.id);
+    console.log("[DIAG REMOTO] acesso retornado", JSON.stringify({ ip: acesso.ip, cfg: !!acesso.cfg, pppoe: acesso.pppoe }));
     if (!acesso.ip) return res.json({ok:false, erro:"Cliente offline"});
 
     const portas = [
@@ -962,7 +964,9 @@ app.get("/api/clientes/:id/testar-acesso-remoto", async (req, res) => {
 
     for (const item of portas) {
       try {
+        console.log("[DIAG REMOTO] testando", item.url);
         const html = await fetchViaMikroTik(acesso.cfg, item.url);
+        console.log("[DIAG REMOTO] retorno", String(html).slice(0,120));
         if (html && String(html).trim().length > 5) {
           return res.json({ok:true, ip:acesso.ip, acesso:{porta:item.port, protocolo:item.protocol}, url:item.url});
         }
