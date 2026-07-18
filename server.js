@@ -955,7 +955,18 @@ app.get("/api/clientes/:id/testar-acesso-remoto", async (req, res) => {
     console.log("[DIAG REMOTO] acesso retornado", JSON.stringify({ ip: acesso.ip, cfg: !!acesso.cfg, pppoe: acesso.pppoe }));
     if (!acesso.ip) return res.json({ok:false, erro:"Cliente offline"});
 
-    const portas = [
+    // Primeiro usa a porta cadastrada do equipamento quando existir.
+    // O diagnóstico fica apenas como fallback.
+    const portaCadastrada = Number(
+      r.rows[0].porta_acesso ||
+      r.rows[0].porta ||
+      r.rows[0].porta_http ||
+      r.rows[0].porta_web ||
+      0
+    );
+    const portas = portaCadastrada ? [
+      {port: portaCadastrada, protocol:"http", url:`http://${acesso.ip}:${portaCadastrada}`}
+    ] : [
       {port:443, protocol:"https", url:`https://${acesso.ip}`},
       {port:8443, protocol:"https", url:`https://${acesso.ip}:8443`},
       {port:80, protocol:"http", url:`http://${acesso.ip}`},
