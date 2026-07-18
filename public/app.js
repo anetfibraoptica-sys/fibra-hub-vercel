@@ -1167,8 +1167,10 @@ document.addEventListener("DOMContentLoaded", function(){
   }
 
   function abrirUrl(url){
-    const w = window.open(url, '_blank', 'noopener');
-    if(!w) location.href = url;
+    const w = window.open(url, '_blank', 'noopener,noreferrer');
+    if(!w){
+      alert('O navegador bloqueou a nova aba. Libere pop-ups para este painel e tente novamente.');
+    }
   }
 
   document.addEventListener('click', async function(ev){
@@ -1179,16 +1181,32 @@ document.addEventListener("DOMContentLoaded", function(){
     if(!remoto && !interno && !diagnostico && !monitoramento) return;
     ev.preventDefault();
 
+    // O botão remoto abre a aba imediatamente, antes da consulta à API.
+    // Isso evita o bloqueio de pop-up causado pela espera assíncrona.
+    const abaRemota = remoto ? window.open('about:blank', '_blank') : null;
+    if(remoto && !abaRemota){
+      alert('O navegador bloqueou a nova aba. Libere pop-ups para este painel e tente novamente.');
+      return;
+    }
+    if(abaRemota){
+      try{
+        abaRemota.document.title = 'Abrindo equipamento...';
+        abaRemota.document.body.innerHTML = '<p style="font-family:Arial,sans-serif;padding:24px">Consultando o IP atual do cliente...</p>';
+      }catch(e){}
+    }
+
     try{
       const d = await dadosAcesso();
 
       if(remoto){
         if(!d.online || !d.remoto || !d.remoto.length){
+          if(abaRemota) abaRemota.close();
           throw new Error('Cliente offline ou sem IP PPPoE ativo no MikroTik.');
         }
         const usarHttps = confirm('IP atual: ' + d.ip_atual + '\n\nOK: abrir por HTTPS\nCancelar: abrir por HTTP');
         const url = usarHttps ? ('https://' + d.ip_atual) : ('http://' + d.ip_atual);
-        abrirUrl(url);
+        abaRemota.opener = null;
+        abaRemota.location.replace(url);
         return;
       }
 
@@ -1222,6 +1240,9 @@ document.addEventListener("DOMContentLoaded", function(){
         location.href = 'monitoramento.html?' + q.toString();
       }
     }catch(e){
+      if(abaRemota && !abaRemota.closed){
+        try{ abaRemota.close(); }catch(_){}
+      }
       alert(e.message || String(e));
     }
   });
