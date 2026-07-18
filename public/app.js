@@ -1204,14 +1204,24 @@ document.addEventListener("DOMContentLoaded", function(){
           throw new Error('Cliente offline ou sem IP PPPoE ativo no MikroTik.');
         }
         const teste = await fetch('/api/clientes/' + encodeURIComponent(d.cliente_id) + '/testar-acesso-remoto', {credentials:'same-origin', cache:'no-store'}).then(r=>r.json());
-        if(!teste.ok || !teste.acesso){
+
+        // Aceita URL encontrada pelo diagnóstico ou monta pela informação cadastrada.
+        // Evita bloquear o acesso quando o equipamento responde corretamente, mas o teste HTTP não retorna corpo.
+        let url = teste.url || '';
+        if(!url && d.remoto && d.remoto.length){
+          const cadastrado = String(d.acesso_remoto || d.remoto || '').match(/:(\d{2,5})/);
+          if(cadastrado) url = 'http://' + d.remoto + ':' + cadastrado[1];
+        }
+        if(!teste.ok && !url && !teste.acesso){
           if(abaRemota) abaRemota.close();
           throw new Error('Não foi encontrada uma porta de acesso do equipamento.');
         }
-        let url = '';
-        if((teste.acesso.protocol || teste.acesso.protocolo) === 'https') url = 'https://' + teste.ip + (teste.acesso.porta !== 443 ? ':' + teste.acesso.porta : '');
-        else if((teste.acesso.protocol || teste.acesso.protocolo) === 'winbox') url = 'http://' + teste.ip + ':' + teste.acesso.porta;
-        else url = 'http://' + teste.ip + (teste.acesso.porta !== 80 ? ':' + teste.acesso.porta : '');
+        if(!url && teste.acesso){
+          const protocolo = teste.acesso.protocol || teste.acesso.protocolo;
+          if(protocolo === 'https') url = 'https://' + teste.ip + (teste.acesso.porta !== 443 ? ':' + teste.acesso.porta : '');
+          else if(protocolo === 'winbox') url = 'http://' + teste.ip + ':' + teste.acesso.porta;
+          else url = 'http://' + teste.ip + (teste.acesso.porta !== 80 ? ':' + teste.acesso.porta : '');
+        }
         abaRemota.opener = null;
         abaRemota.location.replace(url);
         return;
