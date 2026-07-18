@@ -1207,7 +1207,11 @@ document.addEventListener("DOMContentLoaded", function(){
 
         // Aceita URL encontrada pelo diagnóstico ou monta pela informação cadastrada.
         // Evita bloquear o acesso quando o equipamento responde corretamente, mas o teste HTTP não retorna corpo.
-        let url = teste.url || '';
+        let url = '';
+        // Usa somente uma URL válida. Nunca aceita listas concatenadas.
+        if (typeof teste.url === 'string' && /^https?:\/\/[^,\s]+$/i.test(teste.url.trim())) {
+          url = teste.url.trim();
+        }
 
         // Normaliza respostas com listas de tentativas e pega somente um IP válido.
         // Evita abrir URLs concatenadas como:
@@ -1220,15 +1224,19 @@ document.addEventListener("DOMContentLoaded", function(){
           const porta = origemPorta ? origemPorta[1] : '';
           if(porta) url = 'http://' + remotoIp + ':' + porta;
         }
-        if(!teste.ok && !url && !teste.acesso){
-          if(abaRemota) abaRemota.close();
-          throw new Error('Não foi encontrada uma porta de acesso do equipamento.');
-        }
         if(!url && teste.acesso){
-          const protocolo = teste.acesso.protocol || teste.acesso.protocolo;
-          if(protocolo === 'https') url = 'https://' + teste.ip + (teste.acesso.porta !== 443 ? ':' + teste.acesso.porta : '');
-          else if(protocolo === 'winbox') url = 'http://' + teste.ip + ':' + teste.acesso.porta;
-          else url = 'http://' + teste.ip + (teste.acesso.porta !== 80 ? ':' + teste.acesso.porta : '');
+          const protocolo = teste.acesso.protocol || teste.acesso.protocolo || 'http';
+          const porta = teste.acesso.porta || teste.acesso.port;
+          if(teste.ip && porta){
+            url = protocolo === 'https'
+              ? 'https://' + teste.ip + (Number(porta) !== 443 ? ':' + porta : '')
+              : 'http://' + teste.ip + (Number(porta) !== 80 ? ':' + porta : '');
+          }
+        }
+
+        if(!teste.ok && !url){
+          if(abaRemota) abaRemota.close();
+          throw new Error(teste.erro || 'Acesso remoto não encontrado. Verifique se a porta do remoto está habilitada.');
         }
         abaRemota.opener = null;
         abaRemota.location.replace(url);
