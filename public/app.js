@@ -1203,8 +1203,20 @@ document.addEventListener("DOMContentLoaded", function(){
           if(abaRemota) abaRemota.close();
           throw new Error('Cliente offline ou sem IP PPPoE ativo no MikroTik.');
         }
-        const usarHttps = confirm('IP atual: ' + d.ip_atual + '\n\nOK: abrir por HTTPS\nCancelar: abrir por HTTP');
-        const url = usarHttps ? ('https://' + d.ip_atual) : ('http://' + d.ip_atual);
+        const teste = await fetch('/api/clientes/' + encodeURIComponent(idClienteAtual()) + '/testar-acesso-remoto', {credentials:'same-origin', cache:'no-store'});
+        const acesso = await teste.json().catch(()=>({}));
+        if(!acesso.ok || !acesso.encontrado){
+          if(abaRemota) abaRemota.close();
+          throw new Error('Não foi encontrada uma porta de acesso do equipamento.');
+        }
+        let url = '';
+        if(acesso.protocolo === 'https') url = 'https://' + acesso.ip + ':' + acesso.porta;
+        else if(acesso.protocolo === 'http') url = 'http://' + acesso.ip + ':' + acesso.porta;
+        else if(acesso.protocolo === 'winbox') url = 'winbox://' + acesso.ip;
+        if(!url){
+          if(abaRemota) abaRemota.close();
+          throw new Error('Acesso encontrado sem endereço válido.');
+        }
         abaRemota.opener = null;
         abaRemota.location.replace(url);
         return;

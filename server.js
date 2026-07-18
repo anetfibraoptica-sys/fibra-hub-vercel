@@ -922,6 +922,63 @@ app.get("/api/clientes/:id/acesso-equipamento", async (req, res) => {
   }
 });
 
+
+
+// Diagnóstico rápido de acesso web do equipamento (usado pelos botões do resumo)
+function testarPorta(host, porta, timeout=2500){
+  return new Promise(resolve=>{
+    const socket = new net.Socket();
+    let finalizado = false;
+    const fim = (ok)=>{
+      if(finalizado) return;
+      finalizado = true;
+      try{ socket.destroy(); }catch(e){}
+      resolve(ok);
+    };
+    socket.setTimeout(timeout);
+    socket.once('connect', ()=>fim(true));
+    socket.once('timeout', ()=>fim(false));
+    socket.once('error', ()=>fim(false));
+    socket.connect(porta, host);
+  });
+}
+
+app.get("/api/clientes/:id/testar-acesso-remoto", async (req, res) => {
+  try {
+    const r = await pool.query("SELECT * FROM clientes WHERE id=$1", [req.params.id]);
+    if (!r.rows.length) return res.status(404).json({ok:false, erro:"Cliente não encontrado."});
+
+    const acesso = await consultarIpPPPoECliente(r.rows[0]);
+    if (!acesso.online || !acesso.ip) {
+      return res.json({ok:true, encontrado:false, erro:"Cliente offline."});
+    }
+
+    const portas = [
+      {porta:443, protocolo:'https'},
+      {porta:8443, protocolo:'https'},
+      {porta:80, protocolo:'http'},
+      {porta:8080, protocolo:'http'},
+      {porta:8291, protocolo:'winbox'}
+    ];
+
+    for (const item of portas){
+      if(await testarPorta(acesso.ip, item.porta)){
+        return res.json({
+          ok:true,
+          encontrado:true,
+          ip:acesso.ip,
+          porta:item.porta,
+          protocolo:item.protocolo
+        });
+      }
+    }
+
+    return res.json({ok:true, encontrado:false, ip:acesso.ip});
+  } catch(error){
+    return res.status(500).json({ok:false, erro:error.message});
+  }
+});
+
 app.get("/api/clientes/:id/acesso-remoto", async (req, res) => {
   try {
     const r = await pool.query("SELECT * FROM clientes WHERE id=$1", [req.params.id]);
