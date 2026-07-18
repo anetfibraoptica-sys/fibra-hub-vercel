@@ -950,33 +950,26 @@ app.get("/api/clientes/:id/testar-acesso-remoto", async (req, res) => {
   try {
     const r = await pool.query("SELECT * FROM clientes WHERE id=$1", [req.params.id]);
     if (!r.rows.length) return res.status(404).json({ok:false, erro:"Cliente não encontrado"});
-    const acesso = await consultarIpPPPoECliente(r.rows[0]);
-    if (!acesso.online || !acesso.ip) return res.json({ok:false, erro:"Cliente offline"});
-    let encontrado = await testarPortasAcesso(acesso.ip, [
-      {port:443, protocol:"https"},
-      {port:8443, protocol:"https"},
-      {port:80, protocol:"http"},
-      {port:8080, protocol:"http"},
-      {port:8291, protocol:"winbox"}
-    ]);
+    const acesso = await obterIpAtualCliente(r.rows[0]);
+    if (!acesso.ip) return res.json({ok:false, erro:"Cliente offline"});
 
-    // Fallback: quando o backend estiver fora da VPN (ex.: Vercel),
-    // usa o proprio MikroTik para validar o acesso do cliente.
-    if (!encontrado && acesso.cfg) {
-      for (const item of [
-        {port:443, protocol:"https", url:p=>`https://${acesso.ip}:${p}`},
-        {port:8443, protocol:"https", url:p=>`https://${acesso.ip}:${p}`},
-        {port:80, protocol:"http", url:p=>`http://${acesso.ip}:${p}`},
-        {port:8080, protocol:"http", url:p=>`http://${acesso.ip}:${p}`}
-      ]) {
-        try {
-          await fetchViaMikroTik(acesso.cfg, item.url(item.port));
-          encontrado = {porta:item.port, protocol:item.protocol};
-          break;
-        } catch(e) {}
-      }
+    const portas = [
+      {port:443, protocol:"https", url:`https://${acesso.ip}`},
+      {port:8443, protocol:"https", url:`https://${acesso.ip}:8443`},
+      {port:80, protocol:"http", url:`http://${acesso.ip}`},
+      {port:8080, protocol:"http", url:`http://${acesso.ip}:8080`}
+    ];
+
+    for (const item of portas) {
+      try {
+        const html = await fetchViaMikroTik(acesso.cfg, item.url);
+        if (html && String(html).trim().length > 5) {
+          return res.json({ok:true, ip:acesso.ip, acesso:{porta:item.port, protocolo:item.protocol}, url:item.url});
+        }
+      } catch(e) {}
     }
-    return res.json({ok:!!encontrado, ip:acesso.ip, acesso:encontrado});
+
+    return res.json({ok:false, ip:acesso.ip, erro:"Nenhum acesso web encontrado"});
   } catch(e) {
     return res.status(500).json({ok:false, erro:e.message});
   }
@@ -1047,8 +1040,7 @@ async function obterIpAtualCliente(cliente) {
     cfg,
     pppoe: usuario,
     uptime: active.uptime || "",
-    caller_id: active["caller-id"] || "",
-    cfg: cfg
+    caller_id: active["caller-id"] || ""
   };
 }
 
