@@ -1203,45 +1203,56 @@ document.addEventListener("DOMContentLoaded", function(){
           if(abaRemota) abaRemota.close();
           throw new Error('Cliente offline ou sem IP PPPoE ativo no MikroTik.');
         }
-        const teste = await fetch('/api/clientes/' + encodeURIComponent(d.cliente_id) + '/testar-acesso-remoto', {credentials:'same-origin', cache:'no-store'}).then(r=>r.json());
+        // Acesso remoto pela VPN: o técnico já está dentro da rede.
+        // O MikroTik é usado somente para entregar o IP PPPoE ativo.
+        // O navegador acessa diretamente o equipamento pela rota VPN.
+        const ipMatch = String(d.remoto || '').match(/\b(?:\d{1,3}\.){3}\d{1,3}\b/);
+        const ipRemoto = ipMatch ? ipMatch[0] : '';
 
-        // Aceita URL encontrada pelo diagnóstico ou monta pela informação cadastrada.
-        // Evita bloquear o acesso quando o equipamento responde corretamente, mas o teste HTTP não retorna corpo.
+        if(!ipRemoto){
+          if(abaRemota) abaRemota.close();
+          throw new Error('Cliente sem IP PPPoE ativo no MikroTik.');
+        }
+
+        const portasTeste = [
+          'http://' + ipRemoto + ':80',
+          'http://' + ipRemoto + ':8080',
+          'https://' + ipRemoto + ':443',
+          'https://' + ipRemoto + ':8443'
+        ];
+
+        // O diagnóstico real acontece pela rede VPN do técnico.
+        // Abre a primeira opção conhecida pelo navegador.
+        // Mantém fallback pelo diagnóstico do servidor.
         let url = '';
-        // Usa somente uma URL válida. Nunca aceita listas concatenadas.
-        if (typeof teste.url === 'string' && /^https?:\/\/[^,\s]+$/i.test(teste.url.trim())) {
-          url = teste.url.trim();
+
+        for(const tentativa of portasTeste){
+          try{
+            await fetch(tentativa, {
+              mode:'no-cors',
+              cache:'no-store'
+            });
+            url = tentativa;
+            break;
+          }catch(e){}
         }
 
-        // Normaliza respostas com listas de tentativas e pega somente um IP válido.
-        // Evita abrir URLs concatenadas como:
-        // http://IP,http://IP:8080,https://IP...
-        const ipValido = String(d.remoto || '').match(/\b(?:\d{1,3}\.){3}\d{1,3}\b/);
-        const remotoIp = ipValido ? ipValido[0] : '';
+        if(!url){
+          const teste = await fetch('/api/clientes/' + encodeURIComponent(d.cliente_id) + '/testar-acesso-remoto', {credentials:'same-origin', cache:'no-store'}).then(r=>r.json());
 
-        if(!url && remotoIp){
-          const origemPorta = String(d.acesso_remoto || '').match(/(?:port|porta)?[^0-9]*(\d{2,5})/i);
-          const porta = origemPorta ? origemPorta[1] : '';
-          if(porta) url = 'http://' + remotoIp + ':' + porta;
-        }
-        if(!url && teste.acesso){
-          const protocolo = teste.acesso.protocol || teste.acesso.protocolo || 'http';
-          const porta = teste.acesso.porta || teste.acesso.port;
-          if(teste.ip && porta){
-            url = protocolo === 'https'
-              ? 'https://' + teste.ip + (Number(porta) !== 443 ? ':' + porta : '')
-              : 'http://' + teste.ip + (Number(porta) !== 80 ? ':' + porta : '');
+          if(teste && teste.url){
+            url = teste.url;
           }
         }
 
-        if(!teste.ok && !url){
+        if(!url){
           if(abaRemota) abaRemota.close();
-          throw new Error(teste.erro || 'Acesso remoto não encontrado. Verifique se a porta do remoto está habilitada.');
+          throw new Error('Nenhum acesso web encontrado pela VPN. Verifique se o acesso remoto do equipamento está habilitado.');
         }
+
         abaRemota.opener = null;
         abaRemota.location.replace(url);
         return;
-      }
 
       if(interno){
         const teste = await fetch('/api/clientes/' + encodeURIComponent(d.cliente_id) + '/testar-acesso-interno', {credentials:'same-origin', cache:'no-store'}).then(r=>r.json());
