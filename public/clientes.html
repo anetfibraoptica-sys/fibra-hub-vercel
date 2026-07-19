@@ -431,12 +431,23 @@ function atualizarContadores(clientes){
   }
 
   function ehIsento(c){
-    const s = texto(c, ["status","situacao","statusCobranca","cli_boleto","boleto","cobranca","tipoCobranca"]);
+    const statusCobranca = normalizarTexto([
+      valorCampo(c, ["statusCobranca"]),
+      valorCampo(c, ["status_cobranca"]),
+      valorCampo(c, ["cadStatusCobranca"]),
+      valorCampo(c, ["cli_boleto"]),
+      valorCampo(c, ["boleto"]),
+      valorCampo(c, ["tipoCobranca"]),
+      valorCampo(c, ["cobranca"])
+    ].filter(Boolean).join(" "));
+
+    const statusGeral = texto(c, ["status","situacao","cli_status","estadoCliente","status_cliente"]);
+    const s = [statusCobranca, statusGeral].filter(Boolean).join(" ");
+
     return (
       s.includes("isento") ||
-      s === "n" ||
-      s === "nao cobrar" ||
-      s === "não cobrar"
+      statusCobranca === "n" ||
+      statusCobranca.includes("nao cobrar")
     );
   }
 
@@ -593,7 +604,11 @@ function clienteEstaBloqueadoParaFiltro(c){
 
 function textoStatusClienteParaFiltro(c){
   return normalizarTexto([
-    primeiroValor(c, ["status","situacao","statusCobranca","cli_status","estadoCliente","status_cliente","cobranca"]),
+    primeiroValor(c, ["status","situacao","cli_status","estadoCliente","status_cliente"]),
+    primeiroValor(c, ["statusCobranca"]),
+    primeiroValor(c, ["status_cobranca"]),
+    primeiroValor(c, ["cadStatusCobranca"]),
+    primeiroValor(c, ["cli_boleto","boleto","cobranca","tipoCobranca"]),
     primeiroValor(c, ["perfil","profile","cadProfile"]),
     primeiroValor(c, ["categoria","tipoCliente","grupo","classe"])
   ].filter(Boolean).join(" "));
@@ -615,9 +630,21 @@ function clienteCorrespondeFiltroStatus(c, filtro){
   const cancelado = texto.includes("cancel") || texto.includes("encerrado") ||
     temValor(["cancelamento","dataCancelamento","dtCancelamento","cli_dtcancelamento"]);
 
+  const statusCobrancaFiltro = normalizarTexto([
+    cliente.statusCobranca,
+    cliente.status_cobranca,
+    cliente.cadStatusCobranca,
+    cliente.cli_boleto,
+    cliente.boleto,
+    cliente.cobranca,
+    cliente.tipoCobranca
+  ].filter(Boolean).join(" "));
+
   const isento = !cancelado && (
-    texto.includes("isento") || texto.includes("nao cobrar") ||
-    normalizarTexto(cliente.statusCobranca || cliente.cobranca || cliente.tipoCobranca || "") === "n"
+    statusCobrancaFiltro.includes("isento") ||
+    statusCobrancaFiltro.includes("nao cobrar") ||
+    statusCobrancaFiltro === "n" ||
+    texto.includes("isento")
   );
 
   const valorConfianca = primeiroValor(cliente, [

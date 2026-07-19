@@ -4457,7 +4457,9 @@ function fbClienteRow(r){
     plano: r.plano || d.plano || "",
     servidor: r.servidor || d.servidor || d.popServidor || "",
     popServidor: r.servidor || d.popServidor || d.servidor || "",
-    profile: r.profile || d.profile || d.perfil || d.plano || ""
+    profile: r.profile || d.profile || d.perfil || d.plano || "",
+    statusCobranca: d.statusCobranca || d.status_cobranca || d.cadStatusCobranca || d.cli_boleto || d.boleto || d.tipoCobranca || "",
+    status_cobranca: d.status_cobranca || d.statusCobranca || d.cadStatusCobranca || d.cli_boleto || d.boleto || d.tipoCobranca || ""
   };
 }
 function fbBoletoRow(row){
