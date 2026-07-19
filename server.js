@@ -1089,7 +1089,9 @@ async function fetchViaMikroTik(cfg, url) {
 
     const rows = parseRouterosRows(resp);
     const row = rows[0] || {};
-    const texto = JSON.stringify(row);
+    // Alguns RouterOS retornam campos fora do primeiro row quando usamos as-value.
+    // Considera também a resposta bruta para identificar finished/downloaded.
+    const texto = JSON.stringify(row) + " " + JSON.stringify(resp);
 
     // RouterOS pode retornar erro 301/302/401/403 quando o equipamento existe.
     // Esses retornos confirmam que a porta está aberta.
@@ -1100,8 +1102,8 @@ async function fetchViaMikroTik(cfg, url) {
     // RouterOS pode retornar sucesso sem HTML no campo data.
     // Exemplo real: status: finished + downloaded: 41KiB
     // Isso significa que a porta respondeu e o equipamento está acessível.
-    const baixado = String(row.downloaded || row["downloaded"] || row.total || row["total"] || "");
-    const statusFetch = String(row.status || row["status"] || "").toLowerCase();
+    const baixado = String(row.downloaded || row["downloaded"] || row.total || row["total"] || "" ) + " " + String(resp || "");
+    const statusFetch = String(row.status || row["status"] || "" ).toLowerCase() + " " + String(resp || "").toLowerCase();
     if (statusFetch === "finished" || /\d+\s*(kib|mib|b)/i.test(baixado)) {
       return { ok: true, row, data: row.data || row.contents || "" };
     }
