@@ -374,99 +374,159 @@
 #modalPlanosCadastro .planos-cadastro-backdrop{
   position:absolute;
   inset:0;
-  background:rgba(0,0,0,.62);
+  background:rgba(0,0,0,.55);
 }
 #modalPlanosCadastro .planos-cadastro-box{
   position:relative;
-  width:min(620px,100%);
-  max-height:min(720px,88vh);
+  width:min(1120px,96vw);
+  max-height:min(760px,90vh);
   overflow:hidden;
   display:flex;
   flex-direction:column;
-  border-radius:12px;
-  border:1px solid rgba(255,255,255,.12);
-  background:#172235;
-  color:#fff;
-  box-shadow:0 18px 55px rgba(0,0,0,.42);
+  border-radius:10px;
+  border:1px solid #cfd8e3;
+  background:#f6f8fb;
+  color:#1b2838;
+  box-shadow:0 18px 55px rgba(0,0,0,.28);
 }
 #modalPlanosCadastro .planos-cadastro-header{
   display:flex;
-  align-items:center;
+  align-items:flex-start;
   justify-content:space-between;
   gap:12px;
-  padding:16px 18px;
-  border-bottom:1px solid rgba(255,255,255,.10);
+  padding:18px 22px 10px;
+  border-bottom:1px solid #d7dfea;
+  background:#fff;
 }
-#modalPlanosCadastro .planos-cadastro-header h3{margin:0;font-size:20px;}
-#modalPlanosCadastro .planos-cadastro-header p{margin:4px 0 0;color:#aebbd0;font-size:13px;}
+#modalPlanosCadastro .planos-cadastro-header h3{margin:0;font-size:22px;font-weight:700;color:#152235;}
+#modalPlanosCadastro .planos-cadastro-header p{margin:6px 0 0;color:#5e6b7a;font-size:13px;}
 #modalPlanosCadastro .planos-cadastro-fechar{
   width:38px;
   height:38px;
-  border:0;
+  border:1px solid #d3dbe6;
   border-radius:8px;
-  background:rgba(255,255,255,.09);
-  color:#fff;
-  font-size:22px;
+  background:#fff;
+  color:#374151;
+  font-size:24px;
   cursor:pointer;
 }
-#modalPlanosCadastro .planos-cadastro-corpo{padding:16px 18px;overflow:auto;}
-#modalPlanosCadastro .planos-cadastro-status{
-  margin-bottom:12px;
-  padding:11px 12px;
-  border-radius:8px;
-  background:rgba(255,255,255,.06);
-  color:#cbd5e1;
-}
-#modalPlanosCadastro .planos-cadastro-lista{
+#modalPlanosCadastro .planos-cadastro-corpo{padding:18px 22px 22px;overflow:auto;background:#f6f8fb;}
+#modalPlanosCadastro .planos-cadastro-grade{
   display:grid;
-  grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:10px;
+  grid-template-columns:minmax(0,1.05fr) minmax(360px,.95fr);
+  gap:22px;
+  align-items:start;
 }
-#modalPlanosCadastro .plano-cadastro-item{
-  min-height:58px;
-  padding:12px 14px;
-  border:1px solid rgba(255,255,255,.12);
-  border-radius:9px;
-  background:#223149;
-  color:#fff;
+#modalPlanosCadastro .planos-cadastro-painel{
+  background:#fff;
+  border:1px solid #d6ddea;
+  border-top:3px solid #4da3ff;
+  border-radius:6px;
+  min-height:320px;
+}
+#modalPlanosCadastro .planos-cadastro-painel h4{
+  margin:0;
+  padding:16px 18px 10px;
+  font-size:18px;
+  font-weight:600;
+  color:#1c2b3d;
+}
+#modalPlanosCadastro .planos-cadastro-status{
+  margin:0 18px 14px;
+  padding:10px 12px;
+  border-radius:4px;
+  background:#eef4fb;
+  border:1px solid #dbe7f5;
+  color:#536274;
+  font-size:13px;
+}
+#modalPlanosCadastro .planos-cadastro-tabela-wrap{
+  padding:0 18px 18px;
+  overflow:auto;
+}
+#modalPlanosCadastro .planos-cadastro-tabela{
+  width:100%;
+  border-collapse:collapse;
+  font-size:14px;
+}
+#modalPlanosCadastro .planos-cadastro-tabela th,
+#modalPlanosCadastro .planos-cadastro-tabela td{
+  padding:12px 10px;
+  border-bottom:1px solid #e6ebf2;
   text-align:left;
-  cursor:pointer;
-  transition:background .15s ease,border-color .15s ease,transform .08s ease;
+  vertical-align:middle;
 }
-#modalPlanosCadastro .plano-cadastro-item:hover,
-#modalPlanosCadastro .plano-cadastro-item:focus{
-  background:#2b3c58;
-  border-color:#54a7ff;
-  outline:none;
+#modalPlanosCadastro .planos-cadastro-tabela th{
+  color:#2f3f52;
+  font-weight:700;
+  font-size:13px;
 }
-#modalPlanosCadastro .plano-cadastro-item:active{transform:scale(.99);}
-#modalPlanosCadastro .plano-cadastro-item.selecionado{
-  border-color:#29c984;
-  box-shadow:inset 0 0 0 1px #29c984;
+#modalPlanosCadastro .planos-cadastro-vazio{
+  color:#6b7b8d;
+  padding:18px 10px;
 }
-#modalPlanosCadastro .plano-cadastro-item strong{display:block;font-size:15px;overflow-wrap:anywhere;}
-#modalPlanosCadastro .plano-cadastro-item small{display:block;margin-top:4px;color:#9fb0c8;}
-#modalPlanosCadastro .planos-cadastro-acoes{
-  display:flex;
-  justify-content:flex-end;
-  gap:10px;
-  padding:14px 18px;
-  border-top:1px solid rgba(255,255,255,.10);
-}
-#modalPlanosCadastro .planos-cadastro-acoes button{
-  min-height:40px;
-  padding:0 16px;
+#modalPlanosCadastro .btn-plano-excluir{
+  min-height:34px;
+  padding:0 12px;
   border:0;
-  border-radius:8px;
+  border-radius:4px;
+  background:#cb3e38;
+  color:#fff;
+  font-weight:600;
+  cursor:pointer;
+}
+#modalPlanosCadastro .planos-cadastro-form{
+  padding:0 18px 18px;
+}
+#modalPlanosCadastro .planos-cadastro-campo{margin-bottom:16px;}
+#modalPlanosCadastro .planos-cadastro-campo label{
+  display:block;
+  margin-bottom:8px;
+  font-weight:700;
+  color:#1f2d3d;
+}
+#modalPlanosCadastro .planos-cadastro-campo select,
+#modalPlanosCadastro .planos-cadastro-campo input{
+  width:100%;
+  min-height:44px;
+  padding:10px 12px;
+  border:1px solid #c9d3df;
+  border-radius:2px;
+  background:#fff;
+  color:#1b2838;
+  font-size:15px;
+  box-sizing:border-box;
+}
+#modalPlanosCadastro .planos-cadastro-campo input[readonly]{background:#f7f9fb;}
+#modalPlanosCadastro .planos-cadastro-botoes{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-top:10px;
+}
+#modalPlanosCadastro .btn-planos-incluir,
+#modalPlanosCadastro .btn-planos-atualizar,
+#modalPlanosCadastro .btn-planos-cancelar{
+  min-height:40px;
+  padding:0 18px;
+  border:0;
+  border-radius:4px;
   cursor:pointer;
   font-weight:600;
 }
-#modalPlanosCadastro .btn-planos-atualizar{background:#2c80d3;color:#fff;}
-#modalPlanosCadastro .btn-planos-cancelar{background:#3b4658;color:#fff;}
-@media (max-width:700px){
+#modalPlanosCadastro .btn-planos-incluir,
+#modalPlanosCadastro .btn-planos-atualizar{background:#2680eb;color:#fff;}
+#modalPlanosCadastro .btn-planos-cancelar{background:#5c6776;color:#fff;}
+#modalPlanosCadastro .planos-cadastro-ajuda{
+  margin-top:14px;
+  color:#64748b;
+  font-size:13px;
+  line-height:1.45;
+}
+@media (max-width:860px){
   #modalPlanosCadastro{padding:10px;}
-  #modalPlanosCadastro .planos-cadastro-box{max-height:90vh;}
-  #modalPlanosCadastro .planos-cadastro-lista{grid-template-columns:1fr;}
+  #modalPlanosCadastro .planos-cadastro-box{width:min(100%,96vw);max-height:92vh;}
+  #modalPlanosCadastro .planos-cadastro-grade{grid-template-columns:1fr;gap:14px;}
 }
 </style>
 
@@ -1337,19 +1397,53 @@ function fibraNormalizarStatusClienteCadastro(c){
   <section class="planos-cadastro-box" role="dialog" aria-modal="true" aria-labelledby="tituloModalPlanosCadastro">
     <header class="planos-cadastro-header">
       <div>
-        <h3 id="tituloModalPlanosCadastro">Selecionar Plano</h3>
-        <p id="subtituloModalPlanosCadastro">Profiles disponíveis no MikroTik selecionado.</p>
+        <h3 id="tituloModalPlanosCadastro">Plano de Cobrança</h3>
+        <p id="subtituloModalPlanosCadastro">Selecione um plano disponível no MikroTik para preencher o cadastro do cliente.</p>
       </div>
       <button type="button" class="planos-cadastro-fechar" data-fechar-planos="1" aria-label="Fechar">×</button>
     </header>
     <div class="planos-cadastro-corpo">
-      <div id="statusModalPlanosCadastro" class="planos-cadastro-status">Selecione o servidor do cliente para carregar os planos.</div>
-      <div id="listaModalPlanosCadastro" class="planos-cadastro-lista"></div>
+      <div class="planos-cadastro-grade">
+        <section class="planos-cadastro-painel">
+          <h4>Listagem</h4>
+          <div id="statusModalPlanosCadastro" class="planos-cadastro-status">Selecione o servidor do cliente para carregar os planos.</div>
+          <div class="planos-cadastro-tabela-wrap">
+            <table class="planos-cadastro-tabela">
+              <thead>
+                <tr>
+                  <th>DESCRIÇÃO</th>
+                  <th>VALOR UN.</th>
+                  <th>QUANT.</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="listaModalPlanosCadastro"></tbody>
+            </table>
+          </div>
+        </section>
+        <section class="planos-cadastro-painel">
+          <h4>Plano de Cobrança</h4>
+          <div class="planos-cadastro-form">
+            <div class="planos-cadastro-campo">
+              <label for="selectPlanoModalCadastro">Descrição</label>
+              <select id="selectPlanoModalCadastro">
+                <option value="">Selecione</option>
+              </select>
+            </div>
+            <div class="planos-cadastro-campo">
+              <label for="quantidadePlanoModalCadastro">Quantidade</label>
+              <input id="quantidadePlanoModalCadastro" type="number" min="1" step="1" value="1" readonly>
+            </div>
+            <div class="planos-cadastro-botoes">
+              <button type="button" id="btnIncluirPlanoCadastro" class="btn-planos-incluir">Incluir</button>
+              <button type="button" id="btnAtualizarPlanosCadastro" class="btn-planos-atualizar">Atualizar</button>
+              <button type="button" class="btn-planos-cancelar" data-fechar-planos="1">Cancelar</button>
+            </div>
+            <div class="planos-cadastro-ajuda">O plano selecionado preenche apenas o profile do cadastro. A alteração definitiva continua acontecendo somente ao salvar o cliente.</div>
+          </div>
+        </section>
+      </div>
     </div>
-    <footer class="planos-cadastro-acoes">
-      <button type="button" id="btnAtualizarPlanosCadastro" class="btn-planos-atualizar">Atualizar lista</button>
-      <button type="button" class="btn-planos-cancelar" data-fechar-planos="1">Cancelar</button>
-    </footer>
   </section>
 </div>
 
@@ -4929,7 +5023,7 @@ document.addEventListener("DOMContentLoaded", function(){
 (function(){
   function el(id){ return document.getElementById(id); }
   function norm(v){
-    return String(v || "").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
+    return String(v || "").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().trim();
   }
   function servidorAtual(){
     return String((el("cadPop") && el("cadPop").value) || (el("cadServidorReceita") && el("cadServidorReceita").value) || "").trim();
@@ -4948,9 +5042,30 @@ document.addEventListener("DOMContentLoaded", function(){
     modal.classList.remove("aberto");
     modal.setAttribute("aria-hidden","true");
   }
-  function aplicarPlano(nome){
+  function perfilAtual(){
+    return String((el("cadProfile") && el("cadProfile").value) || "").trim();
+  }
+  function parseValor(nome){
+    const txt=String(nome || "");
+    const m=txt.match(/R\$\s*([\d\.]+,\d{2})/i);
+    return m ? 'R$ ' + m[1] : '-';
+  }
+  function limparPlanoAtual(){
     const select=el("cadProfile");
     if(!select) return;
+    select.value='';
+    select.dispatchEvent(new Event("input",{bubbles:true}));
+    select.dispatchEvent(new Event("change",{bubbles:true}));
+    if(typeof window.sincronizarProfileResumo==="function") window.sincronizarProfileResumo();
+    if(typeof window.atualizarResumoCadastro==="function") window.atualizarResumoCadastro();
+    renderizarPlanoAtual();
+    const combo=el("selectPlanoModalCadastro");
+    if(combo) combo.value='';
+    setStatus('Plano removido. Selecione outro para incluir.');
+  }
+  function aplicarPlano(nome){
+    const select=el("cadProfile");
+    if(!select || !nome) return;
 
     let opcao=Array.from(select.options || []).find(function(o){
       return norm(o.value || o.textContent)===norm(nome);
@@ -4966,88 +5081,131 @@ document.addEventListener("DOMContentLoaded", function(){
     select.dispatchEvent(new Event("change",{bubbles:true}));
     if(typeof window.sincronizarProfileResumo==="function") window.sincronizarProfileResumo();
     if(typeof window.atualizarResumoCadastro==="function") window.atualizarResumoCadastro();
-    fechar();
-    setTimeout(function(){
-      select.scrollIntoView({behavior:"smooth",block:"center"});
-    },100);
+    renderizarPlanoAtual();
+    setStatus('Plano aplicado ao cadastro. Salve o cliente para confirmar a alteração.');
   }
-  function renderizar(profiles){
-    const lista=el("listaModalPlanosCadastro");
-    if(!lista) return;
-    lista.innerHTML="";
-    const atual=String((el("cadProfile") && el("cadProfile").value) || "").trim();
-
-    if(!profiles.length){
-      setStatus("Nenhum plano/profile foi encontrado nesse MikroTik.");
+  function renderizarPlanoAtual(){
+    const tbody=el("listaModalPlanosCadastro");
+    if(!tbody) return;
+    tbody.innerHTML='';
+    const atual=perfilAtual();
+    if(!atual){
+      const tr=document.createElement('tr');
+      const td=document.createElement('td');
+      td.colSpan=4;
+      td.className='planos-cadastro-vazio';
+      td.textContent='Nenhum plano selecionado no momento.';
+      tr.appendChild(td);
+      tbody.appendChild(tr);
       return;
     }
-
-    setStatus(profiles.length+" plano"+(profiles.length===1?" disponível.":"s disponíveis.")+" Clique para selecionar.");
+    const tr=document.createElement('tr');
+    const tdNome=document.createElement('td');
+    tdNome.textContent=atual;
+    const tdValor=document.createElement('td');
+    tdValor.textContent=parseValor(atual);
+    const tdQtd=document.createElement('td');
+    tdQtd.textContent='1';
+    const tdAcao=document.createElement('td');
+    const btn=document.createElement('button');
+    btn.type='button';
+    btn.className='btn-plano-excluir';
+    btn.textContent='Excluir';
+    btn.addEventListener('click', limparPlanoAtual);
+    tdAcao.appendChild(btn);
+    tr.appendChild(tdNome);
+    tr.appendChild(tdValor);
+    tr.appendChild(tdQtd);
+    tr.appendChild(tdAcao);
+    tbody.appendChild(tr);
+  }
+  function renderizarProfiles(profiles){
+    const select=el('selectPlanoModalCadastro');
+    if(!select) return;
+    const atual=perfilAtual();
+    select.innerHTML='';
+    const padrao=document.createElement('option');
+    padrao.value='';
+    padrao.textContent='Selecione';
+    select.appendChild(padrao);
     profiles.forEach(function(nome){
-      const botao=document.createElement("button");
-      botao.type="button";
-      botao.className="plano-cadastro-item"+(norm(nome)===norm(atual)?" selecionado":"");
-      const titulo=document.createElement("strong");
-      titulo.textContent=nome;
-      const apoio=document.createElement("small");
-      apoio.textContent=norm(nome)===norm(atual)?"Plano atual":"Selecionar este plano";
-      botao.appendChild(titulo);
-      botao.appendChild(apoio);
-      botao.addEventListener("click",function(){ aplicarPlano(nome); });
-      lista.appendChild(botao);
+      const option=document.createElement('option');
+      option.value=nome;
+      option.textContent=nome;
+      if(norm(nome)===norm(atual)) option.selected=true;
+      select.appendChild(option);
     });
+    if(!profiles.length){
+      setStatus('Nenhum plano/profile foi encontrado nesse MikroTik.');
+    }else{
+      setStatus(profiles.length+' plano'+(profiles.length===1?' disponível.':'s disponíveis.')+' Escolha um plano e clique em Incluir.');
+    }
+    renderizarPlanoAtual();
   }
   async function carregar(force){
     const servidor=servidorAtual();
-    const lista=el("listaModalPlanosCadastro");
-    if(lista) lista.innerHTML="";
+    const select=el('selectPlanoModalCadastro');
+    if(select) select.innerHTML='<option value="">Selecione</option>';
+    renderizarPlanoAtual();
 
     if(!servidorValido(servidor)){
-      setStatus("Selecione primeiro o SERVIDOR do cliente na aba Servidor.");
-      const campo=el("cadPop");
+      setStatus('Selecione primeiro o SERVIDOR do cliente na aba Servidor.');
+      const campo=el('cadPop');
       if(campo) campo.focus();
       return;
     }
 
-    const sub=el("subtituloModalPlanosCadastro");
-    if(sub) sub.textContent="Profiles disponíveis em "+servidor+".";
-    setStatus("Consultando planos no MikroTik...");
+    const sub=el('subtituloModalPlanosCadastro');
+    if(sub) sub.textContent='Profiles disponíveis em '+servidor+'.';
+    setStatus('Consultando planos no MikroTik...');
 
     try{
-      let url="/api/mikrotik/profiles?servidor="+encodeURIComponent(servidor);
-      if(force) url+="&force=1";
-      const resp=await fetch(url,{cache:"no-store"});
+      let url='/api/mikrotik/profiles?servidor='+encodeURIComponent(servidor);
+      if(force) url+='&force=1';
+      const resp=await fetch(url,{cache:'no-store'});
       const data=await resp.json().catch(function(){ return {}; });
       if(!resp.ok || data.ok===false){
-        throw new Error(data.mensagem || data.erro || "Não foi possível consultar os planos.");
+        throw new Error(data.mensagem || data.erro || 'Não foi possível consultar os planos.');
       }
       const profiles=Array.isArray(data.profiles)?data.profiles.filter(Boolean):[];
-      renderizar(profiles);
+      renderizarProfiles(profiles);
     }catch(e){
-      setStatus("Erro ao consultar os planos: "+e.message);
+      renderizarPlanoAtual();
+      setStatus('Erro ao consultar os planos: '+e.message);
     }
   }
   window.abrirModalPlanosCadastro=function(){
-    const modal=el("modalPlanosCadastro");
+    const modal=el('modalPlanosCadastro');
     if(!modal) return;
-    modal.classList.add("aberto");
-    modal.setAttribute("aria-hidden","false");
+    modal.classList.add('aberto');
+    modal.setAttribute('aria-hidden','false');
     carregar(false);
   };
   window.fecharModalPlanosCadastro=fechar;
 
-  document.addEventListener("DOMContentLoaded",function(){
-    const modal=el("modalPlanosCadastro");
+  document.addEventListener('DOMContentLoaded',function(){
+    const modal=el('modalPlanosCadastro');
     if(modal){
-      modal.addEventListener("click",function(e){
-        if(e.target && e.target.getAttribute("data-fechar-planos")==="1") fechar();
+      modal.addEventListener('click',function(e){
+        if(e.target && e.target.getAttribute('data-fechar-planos')==='1') fechar();
       });
     }
-    const atualizar=el("btnAtualizarPlanosCadastro");
-    if(atualizar) atualizar.addEventListener("click",function(){ carregar(true); });
+    const atualizar=el('btnAtualizarPlanosCadastro');
+    if(atualizar) atualizar.addEventListener('click',function(){ carregar(true); });
+    const incluir=el('btnIncluirPlanoCadastro');
+    if(incluir) incluir.addEventListener('click',function(){
+      const combo=el('selectPlanoModalCadastro');
+      const nome=combo ? String(combo.value || '').trim() : '';
+      if(!nome){
+        setStatus('Selecione um plano antes de clicar em Incluir.');
+        if(combo) combo.focus();
+        return;
+      }
+      aplicarPlano(nome);
+    });
   });
-  document.addEventListener("keydown",function(e){
-    if(e.key==="Escape" && el("modalPlanosCadastro")?.classList.contains("aberto")) fechar();
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Escape' && el('modalPlanosCadastro')?.classList.contains('aberto')) fechar();
   });
 })();
 </script>
