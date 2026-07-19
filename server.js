@@ -4355,6 +4355,98 @@ function fbClienteFromAny(body){
 }
 
 
+async function fbEnsurePlanosCobranca(){
+  if(!process.env.DATABASE_URL) throw new Error("DATABASE_URL não configurada.");
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS planos_cobranca (
+      id SERIAL PRIMARY KEY,
+      descricao TEXT NOT NULL,
+      valor NUMERIC(12,2) NOT NULL DEFAULT 0,
+      ativo BOOLEAN NOT NULL DEFAULT TRUE,
+      criado_em TIMESTAMP DEFAULT NOW(),
+      atualizado_em TIMESTAMP DEFAULT NOW()
+    );
+  `);
+  await pool.query("CREATE UNIQUE INDEX IF NOT EXISTS idx_planos_cobranca_descricao_lower ON planos_cobranca (LOWER(descricao));");
+}
+
+function fbPlanoCobrancaRow(row){
+  return {
+    id: row.id,
+    descricao: String(row.descricao || ""),
+    valor: Number(row.valor || 0),
+    ativo: row.ativo !== false
+  };
+}
+
+app.get("/api/planos-cobranca", async (req, res) => {
+  try{
+    await fbEnsurePlanosCobranca();
+    const r = await pool.query(`
+      SELECT id, descricao, valor, ativo
+      FROM planos_cobranca
+      WHERE ativo=TRUE
+      ORDER BY descricao ASC
+    `);
+    return res.json({ok:true, planos:r.rows.map(fbPlanoCobrancaRow)});
+  }catch(err){
+    return res.status(500).json({ok:false, erro:err.message});
+  }
+});
+
+app.post("/api/planos-cobranca", async (req, res) => {
+  try{
+    await fbEnsurePlanosCobranca();
+    const descricao = String(req.body?.descricao || "").trim();
+    const valor = Number(req.body?.valor);
+    if(!descricao) return res.status(400).json({ok:false, erro:"Informe a descrição do plano."});
+    if(!Number.isFinite(valor) || valor <= 0) return res.status(400).json({ok:false, erro:"Informe um valor válido para o plano."});
+
+    const existente = await pool.query(
+      "SELECT id FROM planos_cobranca WHERE LOWER(descricao)=LOWER($1) LIMIT 1",
+      [descricao]
+    );
+
+    let r;
+    if(existente.rows[0]){
+      r = await pool.query(`
+        UPDATE planos_cobranca
+        SET descricao=$1, valor=$2, ativo=TRUE, atualizado_em=NOW()
+        WHERE id=$3
+        RETURNING id, descricao, valor, ativo
+      `, [descricao, valor, existente.rows[0].id]);
+    }else{
+      r = await pool.query(`
+        INSERT INTO planos_cobranca (descricao, valor, ativo, criado_em, atualizado_em)
+        VALUES ($1,$2,TRUE,NOW(),NOW())
+        RETURNING id, descricao, valor, ativo
+      `, [descricao, valor]);
+    }
+
+    return res.json({ok:true, plano:fbPlanoCobrancaRow(r.rows[0])});
+  }catch(err){
+    return res.status(500).json({ok:false, erro:err.message});
+  }
+});
+
+app.delete("/api/planos-cobranca/:id", async (req, res) => {
+  try{
+    await fbEnsurePlanosCobranca();
+    const id = Number(req.params.id);
+    if(!Number.isInteger(id) || id <= 0) return res.status(400).json({ok:false, erro:"Plano inválido."});
+    const r = await pool.query(`
+      UPDATE planos_cobranca
+      SET ativo=FALSE, atualizado_em=NOW()
+      WHERE id=$1
+      RETURNING id
+    `, [id]);
+    if(!r.rows[0]) return res.status(404).json({ok:false, erro:"Plano não encontrado."});
+    return res.json({ok:true});
+  }catch(err){
+    return res.status(500).json({ok:false, erro:err.message});
+  }
+});
+
 async function fbEnsureTables(){
   if(!process.env.DATABASE_URL) throw new Error("DATABASE_URL não configurada.");
   await pool.query(`

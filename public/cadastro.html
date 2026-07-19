@@ -465,16 +465,22 @@
   color:#6b7b8d;
   padding:18px 10px;
 }
+#modalPlanosCadastro .btn-plano-selecionar,
 #modalPlanosCadastro .btn-plano-excluir{
   min-height:34px;
   padding:0 12px;
   border:0;
   border-radius:4px;
-  background:#cb3e38;
   color:#fff;
   font-weight:600;
   cursor:pointer;
+  white-space:nowrap;
 }
+#modalPlanosCadastro .btn-plano-selecionar{background:#2680eb;}
+#modalPlanosCadastro .btn-plano-selecionar.selecionado{background:#219653;}
+#modalPlanosCadastro .btn-plano-excluir{background:#cb3e38;}
+#modalPlanosCadastro .planos-cadastro-acoes-linha{display:flex;gap:7px;justify-content:flex-end;}
+#modalPlanosCadastro .plano-cadastro-linha-selecionada{background:#eef8f2;}
 #modalPlanosCadastro .planos-cadastro-form{
   padding:0 18px 18px;
 }
@@ -1398,23 +1404,24 @@ function fibraNormalizarStatusClienteCadastro(c){
     <header class="planos-cadastro-header">
       <div>
         <h3 id="tituloModalPlanosCadastro">Plano de Cobrança</h3>
-        <p id="subtituloModalPlanosCadastro">Adicione manualmente a descrição e o valor do plano de cobrança.</p>
+        <p id="subtituloModalPlanosCadastro">Crie planos uma vez e depois selecione o plano já cadastrado para o cliente.</p>
       </div>
       <button type="button" class="planos-cadastro-fechar" data-fechar-planos="1" aria-label="Fechar">×</button>
     </header>
     <div class="planos-cadastro-corpo">
+      <input id="cadPlano" type="hidden">
+      <input id="cadValor" type="hidden">
       <div class="planos-cadastro-grade">
         <section class="planos-cadastro-painel">
-          <h4>Listagem</h4>
-          <div id="statusModalPlanosCadastro" class="planos-cadastro-status">Preencha a descrição e o valor e clique em Incluir.</div>
+          <h4>Planos cadastrados</h4>
+          <div id="statusModalPlanosCadastro" class="planos-cadastro-status">Carregando planos cadastrados...</div>
           <div class="planos-cadastro-tabela-wrap">
             <table class="planos-cadastro-tabela">
               <thead>
                 <tr>
                   <th>DESCRIÇÃO</th>
-                  <th>VALOR UN.</th>
-                  <th>QUANT.</th>
-                  <th></th>
+                  <th>VALOR</th>
+                  <th>AÇÕES</th>
                 </tr>
               </thead>
               <tbody id="listaModalPlanosCadastro"></tbody>
@@ -1422,21 +1429,22 @@ function fibraNormalizarStatusClienteCadastro(c){
           </div>
         </section>
         <section class="planos-cadastro-painel">
-          <h4>Plano de Cobrança</h4>
+          <h4>Criar novo plano</h4>
           <div class="planos-cadastro-form">
             <div class="planos-cadastro-campo">
-              <label for="cadPlano">Descrição</label>
-              <input id="cadPlano" type="text" placeholder="Plano 600 MB - Fibra+" autocomplete="off">
+              <label for="novoPlanoDescricao">Descrição</label>
+              <input id="novoPlanoDescricao" type="text" placeholder="Plano 600 MB - Fibra+" autocomplete="off">
             </div>
             <div class="planos-cadastro-campo">
-              <label for="cadValor">Valor</label>
-              <input id="cadValor" type="text" inputmode="decimal" placeholder="100,00" autocomplete="off">
+              <label for="novoPlanoValor">Valor</label>
+              <input id="novoPlanoValor" type="text" inputmode="decimal" placeholder="100,00" autocomplete="off">
             </div>
             <div class="planos-cadastro-botoes">
-              <button type="button" id="btnIncluirPlanoCadastro" class="btn-planos-incluir">Incluir</button>
+              <button type="button" id="btnCriarPlanoCadastro" class="btn-planos-incluir">Criar plano</button>
+              <button type="button" id="btnAtualizarPlanosCadastro" class="btn-planos-atualizar">Atualizar lista</button>
               <button type="button" class="btn-planos-cancelar" data-fechar-planos="1">Cancelar</button>
             </div>
-            <div class="planos-cadastro-ajuda">Informe a descrição e o valor do plano. A alteração definitiva acontece somente ao salvar o cliente.</div>
+            <div class="planos-cadastro-ajuda">Criar um plano apenas adiciona-o à lista. Para aplicar ao cliente, clique em <strong>Selecionar</strong> no plano desejado e depois salve o cadastro do cliente.</div>
           </div>
         </section>
       </div>
@@ -5050,9 +5058,8 @@ document.addEventListener("DOMContentLoaded", function(){
   }
 
   function formatarMoeda(valor, comPrefixo){
-    const numero = numeroMoeda(valor);
-    if(!numero && !String(valor || "").trim()) return comPrefixo ? "R$ 0,00" : "";
-    const formatado = numero.toLocaleString("pt-BR", {
+    const numero = typeof valor === "number" ? valor : numeroMoeda(valor);
+    const formatado = Number(numero || 0).toLocaleString("pt-BR", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     });
@@ -5066,114 +5073,155 @@ document.addEventListener("DOMContentLoaded", function(){
   }
 
   function atualizarResumo(){
-    if(typeof window.atualizarResumoCadastro === "function"){
-      window.atualizarResumoCadastro();
+    if(typeof window.atualizarResumoCadastro === "function") window.atualizarResumoCadastro();
+  }
+
+  function planoAtual(){
+    return {
+      descricao: String((el("cadPlano") && el("cadPlano").value) || "").trim(),
+      valor: numeroMoeda((el("cadValor") && el("cadValor").value) || "")
+    };
+  }
+
+  async function respostaJson(resp){
+    const data = await resp.json().catch(function(){ return {}; });
+    if(!resp.ok || data.ok === false){
+      throw new Error(data.erro || data.mensagem || "Não foi possível concluir a operação.");
     }
+    return data;
   }
 
-  function descricaoAtual(){
-    return String((el("cadPlano") && el("cadPlano").value) || "").trim();
+  function selecionarPlano(plano){
+    const campoPlano = el("cadPlano");
+    const campoValor = el("cadValor");
+    if(campoPlano) campoPlano.value = String(plano.descricao || "").trim();
+    if(campoValor) campoValor.value = formatarMoeda(Number(plano.valor || 0), false);
+    dispararAlteracao(campoPlano);
+    dispararAlteracao(campoValor);
+    atualizarResumo();
+    renderizarPlanos(window.__fibraPlanosCobranca || []);
+    setStatus("Plano selecionado para este cliente. Clique em Salvar para confirmar.");
   }
 
-  function valorAtual(){
-    return String((el("cadValor") && el("cadValor").value) || "").trim();
-  }
-
-  function renderizarPlanoAtual(){
+  function renderizarPlanos(planos){
     const tbody = el("listaModalPlanosCadastro");
     if(!tbody) return;
     tbody.innerHTML = "";
+    const atual = planoAtual();
 
-    const descricao = descricaoAtual();
-    const valor = valorAtual();
-
-    if(!descricao && !valor){
+    if(!Array.isArray(planos) || !planos.length){
       const tr = document.createElement("tr");
       const td = document.createElement("td");
-      td.colSpan = 4;
+      td.colSpan = 3;
       td.className = "planos-cadastro-vazio";
-      td.textContent = "Nenhum plano de cobrança adicionado no momento.";
+      td.textContent = "Nenhum plano cadastrado. Crie o primeiro plano ao lado.";
       tr.appendChild(td);
       tbody.appendChild(tr);
       return;
     }
 
-    const tr = document.createElement("tr");
-    const tdDescricao = document.createElement("td");
-    tdDescricao.textContent = descricao || "Sem descrição";
+    planos.forEach(function(plano){
+      const selecionado = atual.descricao && atual.descricao.toLowerCase() === String(plano.descricao || "").toLowerCase();
+      const tr = document.createElement("tr");
+      if(selecionado) tr.className = "plano-cadastro-linha-selecionada";
 
-    const tdValor = document.createElement("td");
-    tdValor.textContent = formatarMoeda(valor, true);
+      const tdDescricao = document.createElement("td");
+      tdDescricao.textContent = plano.descricao || "Sem descrição";
 
-    const tdQuantidade = document.createElement("td");
-    tdQuantidade.textContent = "1";
+      const tdValor = document.createElement("td");
+      tdValor.textContent = formatarMoeda(Number(plano.valor || 0), true);
 
-    const tdAcao = document.createElement("td");
-    const botaoExcluir = document.createElement("button");
-    botaoExcluir.type = "button";
-    botaoExcluir.className = "btn-plano-excluir";
-    botaoExcluir.textContent = "Excluir";
-    botaoExcluir.addEventListener("click", excluirPlano);
-    tdAcao.appendChild(botaoExcluir);
+      const tdAcoes = document.createElement("td");
+      const acoes = document.createElement("div");
+      acoes.className = "planos-cadastro-acoes-linha";
 
-    tr.appendChild(tdDescricao);
-    tr.appendChild(tdValor);
-    tr.appendChild(tdQuantidade);
-    tr.appendChild(tdAcao);
-    tbody.appendChild(tr);
+      const btnSelecionar = document.createElement("button");
+      btnSelecionar.type = "button";
+      btnSelecionar.className = "btn-plano-selecionar" + (selecionado ? " selecionado" : "");
+      btnSelecionar.textContent = selecionado ? "Selecionado" : "Selecionar";
+      btnSelecionar.addEventListener("click", function(){ selecionarPlano(plano); });
+
+      const btnExcluir = document.createElement("button");
+      btnExcluir.type = "button";
+      btnExcluir.className = "btn-plano-excluir";
+      btnExcluir.textContent = "Excluir";
+      btnExcluir.addEventListener("click", function(){ excluirPlanoCadastrado(plano); });
+
+      acoes.appendChild(btnSelecionar);
+      acoes.appendChild(btnExcluir);
+      tdAcoes.appendChild(acoes);
+      tr.appendChild(tdDescricao);
+      tr.appendChild(tdValor);
+      tr.appendChild(tdAcoes);
+      tbody.appendChild(tr);
+    });
   }
 
-  function incluirPlano(){
-    const campoDescricao = el("cadPlano");
-    const campoValor = el("cadValor");
-    const descricao = String(campoDescricao ? campoDescricao.value : "").trim();
-    const valorDigitado = String(campoValor ? campoValor.value : "").trim();
-    const valorNumero = numeroMoeda(valorDigitado);
+  async function carregarPlanos(mensagem){
+    setStatus(mensagem || "Carregando planos cadastrados...");
+    try{
+      const resp = await fetch("/api/planos-cobranca?t=" + Date.now(), {cache:"no-store"});
+      const data = await respostaJson(resp);
+      window.__fibraPlanosCobranca = Array.isArray(data.planos) ? data.planos : [];
+      renderizarPlanos(window.__fibraPlanosCobranca);
+      setStatus(window.__fibraPlanosCobranca.length + " plano" + (window.__fibraPlanosCobranca.length === 1 ? " cadastrado." : "s cadastrados. Selecione um para aplicar ao cliente."));
+    }catch(e){
+      window.__fibraPlanosCobranca = [];
+      renderizarPlanos([]);
+      setStatus("Erro ao carregar os planos: " + e.message);
+    }
+  }
+
+  async function criarPlano(){
+    const descricaoInput = el("novoPlanoDescricao");
+    const valorInput = el("novoPlanoValor");
+    const descricao = String(descricaoInput ? descricaoInput.value : "").trim();
+    const valor = numeroMoeda(valorInput ? valorInput.value : "");
 
     if(!descricao){
-      setStatus("Informe a descrição do plano.");
-      if(campoDescricao) campoDescricao.focus();
+      setStatus("Informe a descrição do novo plano.");
+      if(descricaoInput) descricaoInput.focus();
+      return;
+    }
+    if(!valor || valor <= 0){
+      setStatus("Informe um valor válido para o novo plano.");
+      if(valorInput) valorInput.focus();
       return;
     }
 
-    if(!valorDigitado || valorNumero <= 0){
-      setStatus("Informe um valor válido para o plano.");
-      if(campoValor) campoValor.focus();
-      return;
+    const botao = el("btnCriarPlanoCadastro");
+    if(botao) botao.disabled = true;
+    setStatus("Criando plano...");
+    try{
+      const resp = await fetch("/api/planos-cobranca", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({descricao:descricao, valor:valor})
+      });
+      await respostaJson(resp);
+      if(descricaoInput) descricaoInput.value = "";
+      if(valorInput) valorInput.value = "";
+      await carregarPlanos("Plano criado. Atualizando a lista...");
+      setStatus("Plano criado. Agora clique em Selecionar para aplicá-lo ao cliente.");
+      if(descricaoInput) descricaoInput.focus();
+    }catch(e){
+      setStatus("Erro ao criar o plano: " + e.message);
+    }finally{
+      if(botao) botao.disabled = false;
     }
-
-    campoDescricao.value = descricao;
-    campoValor.value = formatarMoeda(valorDigitado, false);
-    dispararAlteracao(campoDescricao);
-    dispararAlteracao(campoValor);
-    atualizarResumo();
-    renderizarPlanoAtual();
-    setStatus("Plano adicionado ao cadastro. Clique em Salvar para confirmar.");
   }
 
-  function excluirPlano(){
-    const campoDescricao = el("cadPlano");
-    const campoValor = el("cadValor");
-    if(campoDescricao) campoDescricao.value = "";
-    if(campoValor) campoValor.value = "";
-    dispararAlteracao(campoDescricao);
-    dispararAlteracao(campoValor);
-    atualizarResumo();
-    renderizarPlanoAtual();
-    setStatus("Plano removido do cadastro. Clique em Salvar para confirmar.");
-  }
-
-  function prepararModal(){
-    const subtitulo = el("subtituloModalPlanosCadastro");
-    if(subtitulo){
-      subtitulo.textContent = "Adicione manualmente a descrição e o valor do plano de cobrança.";
+  async function excluirPlanoCadastrado(plano){
+    if(!plano || !plano.id) return;
+    if(!window.confirm('Excluir o plano "' + plano.descricao + '" da lista de planos cadastrados?')) return;
+    setStatus("Excluindo plano...");
+    try{
+      const resp = await fetch("/api/planos-cobranca/" + encodeURIComponent(plano.id), {method:"DELETE"});
+      await respostaJson(resp);
+      await carregarPlanos("Plano excluído. Atualizando a lista...");
+    }catch(e){
+      setStatus("Erro ao excluir o plano: " + e.message);
     }
-    const campoValor = el("cadValor");
-    if(campoValor && campoValor.value){
-      campoValor.value = formatarMoeda(campoValor.value, false);
-    }
-    renderizarPlanoAtual();
-    setStatus("Preencha a descrição e o valor e clique em Incluir.");
   }
 
   window.abrirModalPlanosCadastro = function(){
@@ -5181,11 +5229,7 @@ document.addEventListener("DOMContentLoaded", function(){
     if(!modal) return;
     modal.classList.add("aberto");
     modal.setAttribute("aria-hidden", "false");
-    prepararModal();
-    setTimeout(function(){
-      const campo = el("cadPlano");
-      if(campo) campo.focus();
-    }, 50);
+    carregarPlanos();
   };
 
   window.fecharModalPlanosCadastro = fechar;
@@ -5198,28 +5242,30 @@ document.addEventListener("DOMContentLoaded", function(){
       });
     }
 
-    const incluir = el("btnIncluirPlanoCadastro");
-    if(incluir) incluir.addEventListener("click", incluirPlano);
+    const criar = el("btnCriarPlanoCadastro");
+    if(criar) criar.addEventListener("click", criarPlano);
 
-    const campoValor = el("cadValor");
-    if(campoValor){
-      campoValor.addEventListener("blur", function(){
-        if(campoValor.value) campoValor.value = formatarMoeda(campoValor.value, false);
-      });
-      campoValor.addEventListener("keydown", function(e){
+    const atualizar = el("btnAtualizarPlanosCadastro");
+    if(atualizar) atualizar.addEventListener("click", function(){ carregarPlanos("Atualizando lista..."); });
+
+    const descricao = el("novoPlanoDescricao");
+    const valor = el("novoPlanoValor");
+    if(descricao){
+      descricao.addEventListener("keydown", function(e){
         if(e.key === "Enter"){
           e.preventDefault();
-          incluirPlano();
+          if(valor) valor.focus();
         }
       });
     }
-
-    const campoDescricao = el("cadPlano");
-    if(campoDescricao){
-      campoDescricao.addEventListener("keydown", function(e){
+    if(valor){
+      valor.addEventListener("blur", function(){
+        if(valor.value) valor.value = formatarMoeda(valor.value, false);
+      });
+      valor.addEventListener("keydown", function(e){
         if(e.key === "Enter"){
           e.preventDefault();
-          if(campoValor) campoValor.focus();
+          criarPlano();
         }
       });
     }
