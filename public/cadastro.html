@@ -359,6 +359,117 @@
   }
 }
 </style>
+
+<style id="fibra-planos-cadastro-style">
+#modalPlanosCadastro{
+  position:fixed;
+  inset:0;
+  z-index:10050;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+}
+#modalPlanosCadastro.aberto{display:flex;}
+#modalPlanosCadastro .planos-cadastro-backdrop{
+  position:absolute;
+  inset:0;
+  background:rgba(0,0,0,.62);
+}
+#modalPlanosCadastro .planos-cadastro-box{
+  position:relative;
+  width:min(620px,100%);
+  max-height:min(720px,88vh);
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.12);
+  background:#172235;
+  color:#fff;
+  box-shadow:0 18px 55px rgba(0,0,0,.42);
+}
+#modalPlanosCadastro .planos-cadastro-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:16px 18px;
+  border-bottom:1px solid rgba(255,255,255,.10);
+}
+#modalPlanosCadastro .planos-cadastro-header h3{margin:0;font-size:20px;}
+#modalPlanosCadastro .planos-cadastro-header p{margin:4px 0 0;color:#aebbd0;font-size:13px;}
+#modalPlanosCadastro .planos-cadastro-fechar{
+  width:38px;
+  height:38px;
+  border:0;
+  border-radius:8px;
+  background:rgba(255,255,255,.09);
+  color:#fff;
+  font-size:22px;
+  cursor:pointer;
+}
+#modalPlanosCadastro .planos-cadastro-corpo{padding:16px 18px;overflow:auto;}
+#modalPlanosCadastro .planos-cadastro-status{
+  margin-bottom:12px;
+  padding:11px 12px;
+  border-radius:8px;
+  background:rgba(255,255,255,.06);
+  color:#cbd5e1;
+}
+#modalPlanosCadastro .planos-cadastro-lista{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+}
+#modalPlanosCadastro .plano-cadastro-item{
+  min-height:58px;
+  padding:12px 14px;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:9px;
+  background:#223149;
+  color:#fff;
+  text-align:left;
+  cursor:pointer;
+  transition:background .15s ease,border-color .15s ease,transform .08s ease;
+}
+#modalPlanosCadastro .plano-cadastro-item:hover,
+#modalPlanosCadastro .plano-cadastro-item:focus{
+  background:#2b3c58;
+  border-color:#54a7ff;
+  outline:none;
+}
+#modalPlanosCadastro .plano-cadastro-item:active{transform:scale(.99);}
+#modalPlanosCadastro .plano-cadastro-item.selecionado{
+  border-color:#29c984;
+  box-shadow:inset 0 0 0 1px #29c984;
+}
+#modalPlanosCadastro .plano-cadastro-item strong{display:block;font-size:15px;overflow-wrap:anywhere;}
+#modalPlanosCadastro .plano-cadastro-item small{display:block;margin-top:4px;color:#9fb0c8;}
+#modalPlanosCadastro .planos-cadastro-acoes{
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+  padding:14px 18px;
+  border-top:1px solid rgba(255,255,255,.10);
+}
+#modalPlanosCadastro .planos-cadastro-acoes button{
+  min-height:40px;
+  padding:0 16px;
+  border:0;
+  border-radius:8px;
+  cursor:pointer;
+  font-weight:600;
+}
+#modalPlanosCadastro .btn-planos-atualizar{background:#2c80d3;color:#fff;}
+#modalPlanosCadastro .btn-planos-cancelar{background:#3b4658;color:#fff;}
+@media (max-width:700px){
+  #modalPlanosCadastro{padding:10px;}
+  #modalPlanosCadastro .planos-cadastro-box{max-height:90vh;}
+  #modalPlanosCadastro .planos-cadastro-lista{grid-template-columns:1fr;}
+}
+</style>
+
 </head>
 <body onload="protegerPagina(); iniciarSocket(); carregarCadastroClienteHub();">
 
@@ -426,7 +537,7 @@ function fibraCadastroLimparStoragesSelecao(){
 
 <section class="content cadastro-receita-page">
 <section class="cadastro-shortcuts">
-    <button class="sc azul">▥<span>Planos</span></button>
+    <button type="button" id="btnPlanosCadastro" class="sc azul" onclick="abrirModalPlanosCadastro();return false;">▥<span>Planos</span></button>
     <button class="sc vermelho">◎<span>Acesso Vinc.</span></button>
     <button class="sc azul">▣<span>O.S.</span></button>
     <button class="sc vermelho">⌂<span>End. Cobrança</span></button>
@@ -1220,6 +1331,28 @@ function fibraNormalizarStatusClienteCadastro(c){
 
 
 <!-- Modal Lista de Boletos - Fibra+ Hub -->
+
+<div id="modalPlanosCadastro" aria-hidden="true">
+  <div class="planos-cadastro-backdrop" data-fechar-planos="1"></div>
+  <section class="planos-cadastro-box" role="dialog" aria-modal="true" aria-labelledby="tituloModalPlanosCadastro">
+    <header class="planos-cadastro-header">
+      <div>
+        <h3 id="tituloModalPlanosCadastro">Selecionar Plano</h3>
+        <p id="subtituloModalPlanosCadastro">Profiles disponíveis no MikroTik selecionado.</p>
+      </div>
+      <button type="button" class="planos-cadastro-fechar" data-fechar-planos="1" aria-label="Fechar">×</button>
+    </header>
+    <div class="planos-cadastro-corpo">
+      <div id="statusModalPlanosCadastro" class="planos-cadastro-status">Selecione o servidor do cliente para carregar os planos.</div>
+      <div id="listaModalPlanosCadastro" class="planos-cadastro-lista"></div>
+    </div>
+    <footer class="planos-cadastro-acoes">
+      <button type="button" id="btnAtualizarPlanosCadastro" class="btn-planos-atualizar">Atualizar lista</button>
+      <button type="button" class="btn-planos-cancelar" data-fechar-planos="1">Cancelar</button>
+    </footer>
+  </section>
+</div>
+
 <div id="modalBoletosCliente" class="fibra-modal-boletos" aria-hidden="true">
   <div class="fibra-modal-boletos-backdrop"></div>
   <div class="fibra-modal-boletos-box" role="dialog" aria-modal="true">
@@ -4791,4 +4924,132 @@ document.addEventListener("DOMContentLoaded", function(){
   }
 })();
 </script>
+
+<script id="fibra-planos-cadastro-script">
+(function(){
+  function el(id){ return document.getElementById(id); }
+  function norm(v){
+    return String(v || "").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
+  }
+  function servidorAtual(){
+    return String((el("cadPop") && el("cadPop").value) || (el("cadServidorReceita") && el("cadServidorReceita").value) || "").trim();
+  }
+  function servidorValido(v){
+    const s=norm(v);
+    return !!(s && s!=="-" && s!=="--" && !s.includes("sem servidor") && !s.includes("selecione"));
+  }
+  function setStatus(texto){
+    const alvo=el("statusModalPlanosCadastro");
+    if(alvo) alvo.textContent=texto;
+  }
+  function fechar(){
+    const modal=el("modalPlanosCadastro");
+    if(!modal) return;
+    modal.classList.remove("aberto");
+    modal.setAttribute("aria-hidden","true");
+  }
+  function aplicarPlano(nome){
+    const select=el("cadProfile");
+    if(!select) return;
+
+    let opcao=Array.from(select.options || []).find(function(o){
+      return norm(o.value || o.textContent)===norm(nome);
+    });
+    if(!opcao){
+      opcao=document.createElement("option");
+      opcao.value=nome;
+      opcao.textContent=nome;
+      select.appendChild(opcao);
+    }
+    select.value=opcao.value;
+    select.dispatchEvent(new Event("input",{bubbles:true}));
+    select.dispatchEvent(new Event("change",{bubbles:true}));
+    if(typeof window.sincronizarProfileResumo==="function") window.sincronizarProfileResumo();
+    if(typeof window.atualizarResumoCadastro==="function") window.atualizarResumoCadastro();
+    fechar();
+    setTimeout(function(){
+      select.scrollIntoView({behavior:"smooth",block:"center"});
+    },100);
+  }
+  function renderizar(profiles){
+    const lista=el("listaModalPlanosCadastro");
+    if(!lista) return;
+    lista.innerHTML="";
+    const atual=String((el("cadProfile") && el("cadProfile").value) || "").trim();
+
+    if(!profiles.length){
+      setStatus("Nenhum plano/profile foi encontrado nesse MikroTik.");
+      return;
+    }
+
+    setStatus(profiles.length+" plano"+(profiles.length===1?" disponível.":"s disponíveis.")+" Clique para selecionar.");
+    profiles.forEach(function(nome){
+      const botao=document.createElement("button");
+      botao.type="button";
+      botao.className="plano-cadastro-item"+(norm(nome)===norm(atual)?" selecionado":"");
+      const titulo=document.createElement("strong");
+      titulo.textContent=nome;
+      const apoio=document.createElement("small");
+      apoio.textContent=norm(nome)===norm(atual)?"Plano atual":"Selecionar este plano";
+      botao.appendChild(titulo);
+      botao.appendChild(apoio);
+      botao.addEventListener("click",function(){ aplicarPlano(nome); });
+      lista.appendChild(botao);
+    });
+  }
+  async function carregar(force){
+    const servidor=servidorAtual();
+    const lista=el("listaModalPlanosCadastro");
+    if(lista) lista.innerHTML="";
+
+    if(!servidorValido(servidor)){
+      setStatus("Selecione primeiro o SERVIDOR do cliente na aba Servidor.");
+      const campo=el("cadPop");
+      if(campo) campo.focus();
+      return;
+    }
+
+    const sub=el("subtituloModalPlanosCadastro");
+    if(sub) sub.textContent="Profiles disponíveis em "+servidor+".";
+    setStatus("Consultando planos no MikroTik...");
+
+    try{
+      let url="/api/mikrotik/profiles?servidor="+encodeURIComponent(servidor);
+      if(force) url+="&force=1";
+      const resp=await fetch(url,{cache:"no-store"});
+      const data=await resp.json().catch(function(){ return {}; });
+      if(!resp.ok || data.ok===false){
+        throw new Error(data.mensagem || data.erro || "Não foi possível consultar os planos.");
+      }
+      const profiles=Array.isArray(data.profiles)?data.profiles.filter(Boolean):[];
+      renderizar(profiles);
+    }catch(e){
+      setStatus("Erro ao consultar os planos: "+e.message);
+    }
+  }
+  window.abrirModalPlanosCadastro=function(){
+    const modal=el("modalPlanosCadastro");
+    if(!modal) return;
+    modal.classList.add("aberto");
+    modal.setAttribute("aria-hidden","false");
+    carregar(false);
+  };
+  window.fecharModalPlanosCadastro=fechar;
+
+  document.addEventListener("DOMContentLoaded",function(){
+    const modal=el("modalPlanosCadastro");
+    if(modal){
+      modal.addEventListener("click",function(e){
+        if(e.target && e.target.getAttribute("data-fechar-planos")==="1") fechar();
+      });
+    }
+    const atualizar=el("btnAtualizarPlanosCadastro");
+    if(atualizar) atualizar.addEventListener("click",function(){ carregar(true); });
+  });
+  document.addEventListener("keydown",function(e){
+    if(e.key==="Escape" && el("modalPlanosCadastro")?.classList.contains("aberto")) fechar();
+  });
+})();
+</script>
+
 </body></html>
