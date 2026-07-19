@@ -4615,6 +4615,178 @@ app.get("/api/boletos", async (req,res)=>{
   }
 });
 
+
+/* DASHBOARD FINANCEIRO — totais reais do Supabase/PostgreSQL */
+function dashboardTexto(valor) {
+  return String(valor ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function dashboardNumero(valor) {
+  if (valor === undefined || valor === null || valor === "") return 0;
+  if (typeof valor === "number") return Number.isFinite(valor) ? valor : 0;
+  let texto = String(valor).trim().replace(/[R$\s]/g, "");
+  if (texto.includes(",") && texto.includes(".")) {
+    texto = texto.replace(/\./g, "").replace(",", ".");
+  } else if (texto.includes(",")) {
+    texto = texto.replace(",", ".");
+  }
+  const numero = Number(texto);
+  return Number.isFinite(numero) ? numero : 0;
+}
+
+function dashboardDados(row) {
+  const bruto = row && row.dados && typeof row.dados === "object" ? row.dados : {};
+  const interno = bruto.dados && typeof bruto.dados === "object" ? bruto.dados : {};
+  return { ...interno, ...bruto };
+}
+
+function dashboardPrimeiro(objetos, campos) {
+  for (const obj of objetos) {
+    if (!obj) continue;
+    for (const campo of campos) {
+      const valor = obj[campo];
+      if (valor !== undefined && valor !== null && String(valor).trim() !== "") return valor;
+    }
+  }
+  return "";
+}
+
+function dashboardClienteCobrado(row) {
+  const dados = dashboardDados(row);
+  const status = dashboardTexto(dashboardPrimeiro([row, dados], [
+    "status", "situacao", "statusCobranca", "status_cliente", "estadoCliente", "cobranca"
+  ]));
+  const cancelamento = dashboardPrimeiro([row, dados], [
+    "cancelamento", "dataCancelamento", "dtCancelamento", "cli_dtcancelamento"
+  ]);
+  const naoCobrar = [
+    "cancel", "encerrado", "inativo", "excluido", "isento", "cortesia", "nao cobrar"
+  ].some(palavra => status.includes(palavra));
+  return !naoCobrar && !String(cancelamento || "").trim();
+}
+
+function dashboardValorCliente(row) {
+  const dados = dashboardDados(row);
+  return dashboardNumero(dashboardPrimeiro([row, dados], [
+    "valor_mensal", "valorMensal", "mensalidade", "valorPlano", "planoValor",
+    "valor_plano", "cli_valor", "preco", "price", "valor"
+  ]));
+}
+
+function dashboardStatusBoleto(row) {
+  const dados = dashboardDados(row);
+  return dashboardTexto([
+    dashboardPrimeiro([row, dados], ["status", "situacao", "estado"]),
+    dashboardPrimeiro([row, dados], ["efi_status", "efiStatus", "statusEfi"])
+  ].filter(Boolean).join(" "));
+}
+
+function dashboardBoletoCancelado(row) {
+  const status = dashboardStatusBoleto(row);
+  return ["cancel", "estorn", "refund", "devolv"].some(palavra => status.includes(palavra));
+}
+
+function dashboardValorTotalBoleto(row) {
+  const dados = dashboardDados(row);
+  return dashboardNumero(dashboardPrimeiro([row, dados], [
+    "total", "valor", "valorBoleto", "valor_boleto", "amount"
+  ]));
+}
+
+function dashboardValorPagoBoleto(row) {
+  const dados = dashboardDados(row);
+  return dashboardNumero(dashboardPrimeiro([row, dados], [
+    "valor_pago", "valorPago", "pago", "recebido", "paid_value"
+  ]));
+}
+
+function dashboardBoletoPago(row) {
+  const dados = dashboardDados(row);
+  const status = dashboardStatusBoleto(row);
+  const total = dashboardValorTotalBoleto(row);
+  const pago = dashboardValorPagoBoleto(row);
+  const dataPagamento = dashboardPrimeiro([row, dados], [
+    "pagamento", "data_pagamento", "dataPagamento", "recebidoEm", "dataRecebimento", "paid_at"
+  ]);
+  return Boolean(dataPagamento) ||
+    ["pago", "paid", "baixado", "recebido", "liquidado", "quitado", "settled"].some(palavra => status.includes(palavra)) ||
+    (total > 0 && pago >= total);
+}
+
+function dashboardDataPagamento(row) {
+  const dados = dashboardDados(row);
+  return dashboardPrimeiro([row, dados], [
+    "pagamento", "data_pagamento", "dataPagamento", "recebidoEm", "dataRecebimento", "paid_at",
+    "atualizado_em", "atualizadoEm", "updated_at"
+  ]);
+}
+
+function dashboardDataNoMesAtual(valor) {
+  if (!valor) return false;
+  const data = new Date(valor);
+  if (Number.isNaN(data.getTime())) return false;
+  const hoje = new Date();
+  return data.getFullYear() === hoje.getFullYear() && data.getMonth() === hoje.getMonth();
+}
+
+app.get("/api/dashboard/financeiro", async (req, res) => {
+  try {
+    await fbEnsureTables();
+    const [clientesResult, boletosResult] = await Promise.all([
+      pool.query("SELECT * FROM clientes ORDER BY id"),
+      pool.query("SELECT * FROM boletos ORDER BY id")
+    ]);
+
+    const clientes = clientesResult.rows || [];
+    const boletos = boletosResult.rows || [];
+
+    const receita = clientes
+      .filter(dashboardClienteCobrado)
+      .reduce((soma, cliente) => soma + dashboardValorCliente(cliente), 0);
+
+    let recebimentoMes = 0;
+    let emAberto = 0;
+    let boletosAbertos = 0;
+
+    for (const boleto of boletos) {
+      if (dashboardBoletoCancelado(boleto)) continue;
+
+      const total = dashboardValorTotalBoleto(boleto);
+      const valorPago = dashboardValorPagoBoleto(boleto);
+      const pago = dashboardBoletoPago(boleto);
+
+      if (pago) {
+        if (dashboardDataNoMesAtual(dashboardDataPagamento(boleto))) {
+          recebimentoMes += valorPago > 0 ? valorPago : total;
+        }
+        continue;
+      }
+
+      boletosAbertos += 1;
+      emAberto += Math.max(total - valorPago, 0);
+    }
+
+    return res.json({
+      ok: true,
+      totais: {
+        receita: Number(receita.toFixed(2)),
+        recebimentoMes: Number(recebimentoMes.toFixed(2)),
+        emAberto: Number(emAberto.toFixed(2)),
+        boletosAbertos
+      },
+      fonte: "Supabase/PostgreSQL",
+      atualizadoEm: new Date().toISOString()
+    });
+  } catch (err) {
+    console.error("Erro /api/dashboard/financeiro:", err);
+    return res.status(500).json({ ok:false, erro:err.message });
+  }
+});
+
 app.get("/api/debug/boletos", async (req,res)=>{
   try{
     await fbEnsureTables();
