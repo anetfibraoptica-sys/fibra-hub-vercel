@@ -383,7 +383,7 @@
   overflow:hidden;
   display:flex;
   flex-direction:column;
-  border-radius:10px;
+  border-radius:8px;
   border:1px solid #cfd8e3;
   background:#f6f8fb;
   color:#1b2838;
@@ -394,109 +394,83 @@
   align-items:flex-start;
   justify-content:space-between;
   gap:12px;
-  padding:18px 22px 10px;
+  padding:16px 20px 10px;
   border-bottom:1px solid #d7dfea;
   background:#fff;
 }
-#modalPlanosCadastro .planos-cadastro-header h3{margin:0;font-size:22px;font-weight:700;color:#152235;}
-#modalPlanosCadastro .planos-cadastro-header p{margin:6px 0 0;color:#5e6b7a;font-size:13px;}
+#modalPlanosCadastro .planos-cadastro-header h3{margin:0;font-size:24px;font-weight:600;color:#172235;}
+#modalPlanosCadastro .planos-cadastro-header p{margin:5px 0 0;color:#667487;font-size:13px;}
 #modalPlanosCadastro .planos-cadastro-fechar{
   width:38px;
   height:38px;
   border:1px solid #d3dbe6;
-  border-radius:8px;
+  border-radius:6px;
   background:#fff;
   color:#374151;
   font-size:24px;
   cursor:pointer;
 }
-#modalPlanosCadastro .planos-cadastro-corpo{padding:18px 22px 22px;overflow:auto;background:#f6f8fb;}
+#modalPlanosCadastro .planos-cadastro-corpo{padding:18px 20px 22px;overflow:auto;background:#f6f8fb;}
 #modalPlanosCadastro .planos-cadastro-grade{
   display:grid;
-  grid-template-columns:minmax(0,1.05fr) minmax(360px,.95fr);
-  gap:22px;
+  grid-template-columns:minmax(0,1fr) minmax(390px,1.08fr);
+  gap:24px;
   align-items:start;
 }
 #modalPlanosCadastro .planos-cadastro-painel{
   background:#fff;
-  border:1px solid #d6ddea;
-  border-top:3px solid #4da3ff;
-  border-radius:6px;
-  min-height:320px;
+  border:1px solid #d5dde8;
+  border-top:3px solid #3699f5;
+  border-radius:4px;
+  min-height:310px;
 }
 #modalPlanosCadastro .planos-cadastro-painel h4{
   margin:0;
-  padding:16px 18px 10px;
-  font-size:18px;
+  padding:14px 16px 12px;
+  font-size:20px;
   font-weight:600;
-  color:#1c2b3d;
+  color:#1d2b3c;
 }
 #modalPlanosCadastro .planos-cadastro-status{
-  margin:0 18px 14px;
-  padding:10px 12px;
-  border-radius:4px;
-  background:#eef4fb;
-  border:1px solid #dbe7f5;
-  color:#536274;
+  margin:0 16px 12px;
+  padding:9px 11px;
+  border:1px solid #dce6f1;
+  border-radius:3px;
+  background:#f2f7fc;
+  color:#58687a;
   font-size:13px;
 }
-#modalPlanosCadastro .planos-cadastro-tabela-wrap{
-  padding:0 18px 18px;
-  overflow:auto;
-}
-#modalPlanosCadastro .planos-cadastro-tabela{
-  width:100%;
-  border-collapse:collapse;
-  font-size:14px;
-}
+#modalPlanosCadastro .planos-cadastro-tabela-wrap{padding:0 14px 18px;overflow:auto;}
+#modalPlanosCadastro .planos-cadastro-tabela{width:100%;border-collapse:collapse;font-size:14px;}
 #modalPlanosCadastro .planos-cadastro-tabela th,
 #modalPlanosCadastro .planos-cadastro-tabela td{
-  padding:12px 10px;
-  border-bottom:1px solid #e6ebf2;
+  padding:12px 8px;
+  border-bottom:1px solid #e4eaf1;
   text-align:left;
   vertical-align:middle;
 }
-#modalPlanosCadastro .planos-cadastro-tabela th{
-  color:#2f3f52;
-  font-weight:700;
-  font-size:13px;
-}
-#modalPlanosCadastro .planos-cadastro-vazio{
-  color:#6b7b8d;
-  padding:18px 10px;
-}
-#modalPlanosCadastro .btn-plano-selecionar,
+#modalPlanosCadastro .planos-cadastro-tabela th{color:#26384b;font-weight:700;font-size:13px;white-space:nowrap;}
+#modalPlanosCadastro .planos-cadastro-vazio{color:#6b7b8d;padding:18px 8px;}
 #modalPlanosCadastro .btn-plano-excluir{
   min-height:34px;
   padding:0 12px;
   border:0;
   border-radius:4px;
+  background:#c83c37;
   color:#fff;
   font-weight:600;
   cursor:pointer;
   white-space:nowrap;
 }
-#modalPlanosCadastro .btn-plano-selecionar{background:#2680eb;}
-#modalPlanosCadastro .btn-plano-selecionar.selecionado{background:#219653;}
-#modalPlanosCadastro .btn-plano-excluir{background:#cb3e38;}
-#modalPlanosCadastro .planos-cadastro-acoes-linha{display:flex;gap:7px;justify-content:flex-end;}
-#modalPlanosCadastro .plano-cadastro-linha-selecionada{background:#eef8f2;}
-#modalPlanosCadastro .planos-cadastro-form{
-  padding:0 18px 18px;
-}
+#modalPlanosCadastro .planos-cadastro-form{padding:0 16px 18px;}
 #modalPlanosCadastro .planos-cadastro-campo{margin-bottom:16px;}
-#modalPlanosCadastro .planos-cadastro-campo label{
-  display:block;
-  margin-bottom:8px;
-  font-weight:700;
-  color:#1f2d3d;
-}
+#modalPlanosCadastro .planos-cadastro-campo label{display:block;margin-bottom:7px;font-weight:700;color:#1f2d3d;}
 #modalPlanosCadastro .planos-cadastro-campo select,
 #modalPlanosCadastro .planos-cadastro-campo input{
   width:100%;
   min-height:44px;
-  padding:10px 12px;
-  border:1px solid #c9d3df;
+  padding:9px 12px;
+  border:1px solid #bcc9d7;
   border-radius:2px;
   background:#fff;
   color:#1b2838;
@@ -504,31 +478,33 @@
   box-sizing:border-box;
 }
 #modalPlanosCadastro .planos-cadastro-campo input[readonly]{background:#f7f9fb;}
-#modalPlanosCadastro .planos-cadastro-botoes{
-  display:flex;
-  flex-wrap:wrap;
-  gap:10px;
-  margin-top:10px;
-}
+#modalPlanosCadastro .planos-cadastro-botoes{display:flex;flex-wrap:wrap;gap:9px;margin-top:4px;}
 #modalPlanosCadastro .btn-planos-incluir,
 #modalPlanosCadastro .btn-planos-atualizar,
-#modalPlanosCadastro .btn-planos-cancelar{
+#modalPlanosCadastro .btn-planos-novo,
+#modalPlanosCadastro .btn-planos-cancelar,
+#modalPlanosCadastro .btn-planos-salvar-novo{
   min-height:40px;
-  padding:0 18px;
+  padding:0 16px;
   border:0;
   border-radius:4px;
   cursor:pointer;
   font-weight:600;
 }
 #modalPlanosCadastro .btn-planos-incluir,
-#modalPlanosCadastro .btn-planos-atualizar{background:#2680eb;color:#fff;}
+#modalPlanosCadastro .btn-planos-salvar-novo{background:#2680eb;color:#fff;}
+#modalPlanosCadastro .btn-planos-atualizar{background:#4d87bd;color:#fff;}
+#modalPlanosCadastro .btn-planos-novo{background:#e8eef5;color:#24364a;border:1px solid #cbd6e2;}
 #modalPlanosCadastro .btn-planos-cancelar{background:#5c6776;color:#fff;}
-#modalPlanosCadastro .planos-cadastro-ajuda{
-  margin-top:14px;
-  color:#64748b;
-  font-size:13px;
-  line-height:1.45;
+#modalPlanosCadastro .planos-cadastro-novo{
+  display:none;
+  margin-top:18px;
+  padding-top:16px;
+  border-top:1px solid #dfe6ee;
 }
+#modalPlanosCadastro .planos-cadastro-novo.aberto{display:block;}
+#modalPlanosCadastro .planos-cadastro-novo h5{margin:0 0 14px;font-size:16px;color:#1f2d3d;}
+#modalPlanosCadastro .planos-cadastro-ajuda{margin-top:12px;color:#64748b;font-size:13px;line-height:1.45;}
 @media (max-width:860px){
   #modalPlanosCadastro{padding:10px;}
   #modalPlanosCadastro .planos-cadastro-box{width:min(100%,96vw);max-height:92vh;}
@@ -1404,47 +1380,69 @@ function fibraNormalizarStatusClienteCadastro(c){
     <header class="planos-cadastro-header">
       <div>
         <h3 id="tituloModalPlanosCadastro">Plano de Cobrança</h3>
-        <p id="subtituloModalPlanosCadastro">Crie planos uma vez e depois selecione o plano já cadastrado para o cliente.</p>
+        <p>Selecione um plano já cadastrado e inclua no cadastro do cliente.</p>
       </div>
       <button type="button" class="planos-cadastro-fechar" data-fechar-planos="1" aria-label="Fechar">×</button>
     </header>
     <div class="planos-cadastro-corpo">
       <input id="cadPlano" type="hidden">
       <input id="cadValor" type="hidden">
+      <input id="cadPlanoQuantidade" type="hidden" value="1">
       <div class="planos-cadastro-grade">
         <section class="planos-cadastro-painel">
-          <h4>Planos cadastrados</h4>
+          <h4>Listagem</h4>
           <div id="statusModalPlanosCadastro" class="planos-cadastro-status">Carregando planos cadastrados...</div>
           <div class="planos-cadastro-tabela-wrap">
             <table class="planos-cadastro-tabela">
               <thead>
                 <tr>
                   <th>DESCRIÇÃO</th>
-                  <th>VALOR</th>
-                  <th>AÇÕES</th>
+                  <th>VALOR UN.</th>
+                  <th>QUANT.</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody id="listaModalPlanosCadastro"></tbody>
             </table>
           </div>
         </section>
+
         <section class="planos-cadastro-painel">
-          <h4>Criar novo plano</h4>
+          <h4>Plano de Cobrança</h4>
           <div class="planos-cadastro-form">
             <div class="planos-cadastro-campo">
-              <label for="novoPlanoDescricao">Descrição</label>
-              <input id="novoPlanoDescricao" type="text" placeholder="Plano 600 MB - Fibra+" autocomplete="off">
+              <label for="selectPlanoModalCadastro">Descrição</label>
+              <select id="selectPlanoModalCadastro">
+                <option value="">Selecione</option>
+              </select>
             </div>
             <div class="planos-cadastro-campo">
-              <label for="novoPlanoValor">Valor</label>
-              <input id="novoPlanoValor" type="text" inputmode="decimal" placeholder="100,00" autocomplete="off">
+              <label for="quantidadePlanoModalCadastro">Quantidade</label>
+              <input id="quantidadePlanoModalCadastro" type="number" min="1" step="1" value="1">
             </div>
             <div class="planos-cadastro-botoes">
-              <button type="button" id="btnCriarPlanoCadastro" class="btn-planos-incluir">Criar plano</button>
-              <button type="button" id="btnAtualizarPlanosCadastro" class="btn-planos-atualizar">Atualizar lista</button>
+              <button type="button" id="btnIncluirPlanoCadastro" class="btn-planos-incluir">Incluir</button>
+              <button type="button" id="btnAtualizarPlanosCadastro" class="btn-planos-atualizar">Atualizar</button>
+              <button type="button" id="btnAbrirNovoPlanoCadastro" class="btn-planos-novo">Novo plano</button>
               <button type="button" class="btn-planos-cancelar" data-fechar-planos="1">Cancelar</button>
             </div>
-            <div class="planos-cadastro-ajuda">Criar um plano apenas adiciona-o à lista. Para aplicar ao cliente, clique em <strong>Selecionar</strong> no plano desejado e depois salve o cadastro do cliente.</div>
+
+            <div id="areaNovoPlanoCadastro" class="planos-cadastro-novo">
+              <h5>Cadastrar novo plano</h5>
+              <div class="planos-cadastro-campo">
+                <label for="novoPlanoDescricao">Descrição</label>
+                <input id="novoPlanoDescricao" type="text" placeholder="Plano 600 MB - Fibra+" autocomplete="off">
+              </div>
+              <div class="planos-cadastro-campo">
+                <label for="novoPlanoValor">Valor</label>
+                <input id="novoPlanoValor" type="text" inputmode="decimal" placeholder="100,00" autocomplete="off">
+              </div>
+              <div class="planos-cadastro-botoes">
+                <button type="button" id="btnCriarPlanoCadastro" class="btn-planos-salvar-novo">Salvar novo plano</button>
+              </div>
+            </div>
+
+            <div class="planos-cadastro-ajuda">A listagem à esquerda mostra o plano aplicado ao cliente. O botão <strong>Novo plano</strong> serve apenas para cadastrar uma nova opção na lista.</div>
           </div>
         </section>
       </div>
@@ -5077,9 +5075,11 @@ document.addEventListener("DOMContentLoaded", function(){
   }
 
   function planoAtual(){
+    const quantidade = Math.max(1, parseInt((el("cadPlanoQuantidade") && el("cadPlanoQuantidade").value) || "1", 10) || 1);
     return {
       descricao: String((el("cadPlano") && el("cadPlano").value) || "").trim(),
-      valor: numeroMoeda((el("cadValor") && el("cadValor").value) || "")
+      valorTotal: numeroMoeda((el("cadValor") && el("cadValor").value) || ""),
+      quantidade: quantidade
     };
   }
 
@@ -5091,84 +5091,126 @@ document.addEventListener("DOMContentLoaded", function(){
     return data;
   }
 
-  function selecionarPlano(plano){
+  function removerPlanoDoCliente(){
     const campoPlano = el("cadPlano");
     const campoValor = el("cadValor");
-    if(campoPlano) campoPlano.value = String(plano.descricao || "").trim();
-    if(campoValor) campoValor.value = formatarMoeda(Number(plano.valor || 0), false);
+    const campoQuantidade = el("cadPlanoQuantidade");
+    if(campoPlano) campoPlano.value = "";
+    if(campoValor) campoValor.value = "";
+    if(campoQuantidade) campoQuantidade.value = "1";
     dispararAlteracao(campoPlano);
     dispararAlteracao(campoValor);
     atualizarResumo();
-    renderizarPlanos(window.__fibraPlanosCobranca || []);
-    setStatus("Plano selecionado para este cliente. Clique em Salvar para confirmar.");
+    renderizarPlanoAplicado();
+    const select = el("selectPlanoModalCadastro");
+    if(select) select.value = "";
+    setStatus("Plano removido do cadastro do cliente. Salve o cliente para confirmar.");
   }
 
-  function renderizarPlanos(planos){
+  function renderizarPlanoAplicado(){
     const tbody = el("listaModalPlanosCadastro");
     if(!tbody) return;
     tbody.innerHTML = "";
     const atual = planoAtual();
 
-    if(!Array.isArray(planos) || !planos.length){
+    if(!atual.descricao){
       const tr = document.createElement("tr");
       const td = document.createElement("td");
-      td.colSpan = 3;
+      td.colSpan = 4;
       td.className = "planos-cadastro-vazio";
-      td.textContent = "Nenhum plano cadastrado. Crie o primeiro plano ao lado.";
+      td.textContent = "Nenhum plano incluído para este cliente.";
       tr.appendChild(td);
       tbody.appendChild(tr);
       return;
     }
 
+    const unitario = atual.quantidade > 0 ? atual.valorTotal / atual.quantidade : atual.valorTotal;
+    const tr = document.createElement("tr");
+    const tdDescricao = document.createElement("td");
+    tdDescricao.textContent = atual.descricao;
+    const tdValor = document.createElement("td");
+    tdValor.textContent = formatarMoeda(unitario, false);
+    const tdQuantidade = document.createElement("td");
+    tdQuantidade.textContent = String(atual.quantidade);
+    const tdAcao = document.createElement("td");
+    const btnExcluir = document.createElement("button");
+    btnExcluir.type = "button";
+    btnExcluir.className = "btn-plano-excluir";
+    btnExcluir.textContent = "Excluir";
+    btnExcluir.addEventListener("click", removerPlanoDoCliente);
+    tdAcao.appendChild(btnExcluir);
+    tr.appendChild(tdDescricao);
+    tr.appendChild(tdValor);
+    tr.appendChild(tdQuantidade);
+    tr.appendChild(tdAcao);
+    tbody.appendChild(tr);
+  }
+
+  function preencherSelect(planos){
+    const select = el("selectPlanoModalCadastro");
+    if(!select) return;
+    const valorAnterior = select.value;
+    select.innerHTML = '<option value="">Selecione</option>';
     planos.forEach(function(plano){
-      const selecionado = atual.descricao && atual.descricao.toLowerCase() === String(plano.descricao || "").toLowerCase();
-      const tr = document.createElement("tr");
-      if(selecionado) tr.className = "plano-cadastro-linha-selecionada";
-
-      const tdDescricao = document.createElement("td");
-      tdDescricao.textContent = plano.descricao || "Sem descrição";
-
-      const tdValor = document.createElement("td");
-      tdValor.textContent = formatarMoeda(Number(plano.valor || 0), true);
-
-      const tdAcoes = document.createElement("td");
-      const acoes = document.createElement("div");
-      acoes.className = "planos-cadastro-acoes-linha";
-
-      const btnSelecionar = document.createElement("button");
-      btnSelecionar.type = "button";
-      btnSelecionar.className = "btn-plano-selecionar" + (selecionado ? " selecionado" : "");
-      btnSelecionar.textContent = selecionado ? "Selecionado" : "Selecionar";
-      btnSelecionar.addEventListener("click", function(){ selecionarPlano(plano); });
-
-      const btnExcluir = document.createElement("button");
-      btnExcluir.type = "button";
-      btnExcluir.className = "btn-plano-excluir";
-      btnExcluir.textContent = "Excluir";
-      btnExcluir.addEventListener("click", function(){ excluirPlanoCadastrado(plano); });
-
-      acoes.appendChild(btnSelecionar);
-      acoes.appendChild(btnExcluir);
-      tdAcoes.appendChild(acoes);
-      tr.appendChild(tdDescricao);
-      tr.appendChild(tdValor);
-      tr.appendChild(tdAcoes);
-      tbody.appendChild(tr);
+      const option = document.createElement("option");
+      option.value = String(plano.id || "");
+      option.textContent = String(plano.descricao || "Sem descrição") + " - " + formatarMoeda(Number(plano.valor || 0), true);
+      select.appendChild(option);
     });
+    if(valorAnterior && Array.from(select.options).some(function(o){ return o.value === valorAnterior; })){
+      select.value = valorAnterior;
+    }
   }
 
   async function carregarPlanos(mensagem){
     setStatus(mensagem || "Carregando planos cadastrados...");
+    renderizarPlanoAplicado();
     try{
       const resp = await fetch("/api/planos-cobranca?t=" + Date.now(), {cache:"no-store"});
       const data = await respostaJson(resp);
       window.__fibraPlanosCobranca = Array.isArray(data.planos) ? data.planos : [];
-      renderizarPlanos(window.__fibraPlanosCobranca);
-      setStatus(window.__fibraPlanosCobranca.length + " plano" + (window.__fibraPlanosCobranca.length === 1 ? " cadastrado." : "s cadastrados. Selecione um para aplicar ao cliente."));
+      preencherSelect(window.__fibraPlanosCobranca);
+      setStatus(window.__fibraPlanosCobranca.length + " plano" + (window.__fibraPlanosCobranca.length === 1 ? " disponível." : "s disponíveis. Selecione um e clique em Incluir."));
     }catch(e){
       window.__fibraPlanosCobranca = [];
-      renderizarPlanos([]);
+      preencherSelect([]);
       setStatus("Erro ao carregar os planos: " + e.message);
+    }
+  }
+
+  function incluirPlanoNoCliente(){
+    const select = el("selectPlanoModalCadastro");
+    const quantidadeInput = el("quantidadePlanoModalCadastro");
+    const id = select ? String(select.value || "") : "";
+    const quantidade = Math.max(1, parseInt(quantidadeInput ? quantidadeInput.value : "1", 10) || 1);
+    const plano = (window.__fibraPlanosCobranca || []).find(function(item){ return String(item.id) === id; });
+
+    if(!plano){
+      setStatus("Selecione um plano antes de clicar em Incluir.");
+      if(select) select.focus();
+      return;
+    }
+
+    const campoPlano = el("cadPlano");
+    const campoValor = el("cadValor");
+    const campoQuantidade = el("cadPlanoQuantidade");
+    if(campoPlano) campoPlano.value = String(plano.descricao || "").trim();
+    if(campoValor) campoValor.value = formatarMoeda(Number(plano.valor || 0) * quantidade, false);
+    if(campoQuantidade) campoQuantidade.value = String(quantidade);
+    dispararAlteracao(campoPlano);
+    dispararAlteracao(campoValor);
+    atualizarResumo();
+    renderizarPlanoAplicado();
+    setStatus("Plano incluído no cadastro do cliente. Salve o cliente para confirmar.");
+  }
+
+  function alternarNovoPlano(){
+    const area = el("areaNovoPlanoCadastro");
+    if(!area) return;
+    area.classList.toggle("aberto");
+    if(area.classList.contains("aberto")){
+      const descricao = el("novoPlanoDescricao");
+      if(descricao) descricao.focus();
     }
   }
 
@@ -5191,36 +5233,27 @@ document.addEventListener("DOMContentLoaded", function(){
 
     const botao = el("btnCriarPlanoCadastro");
     if(botao) botao.disabled = true;
-    setStatus("Criando plano...");
+    setStatus("Salvando novo plano...");
     try{
       const resp = await fetch("/api/planos-cobranca", {
         method:"POST",
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify({descricao:descricao, valor:valor})
       });
-      await respostaJson(resp);
+      const data = await respostaJson(resp);
       if(descricaoInput) descricaoInput.value = "";
       if(valorInput) valorInput.value = "";
+      const area = el("areaNovoPlanoCadastro");
+      if(area) area.classList.remove("aberto");
       await carregarPlanos("Plano criado. Atualizando a lista...");
-      setStatus("Plano criado. Agora clique em Selecionar para aplicá-lo ao cliente.");
-      if(descricaoInput) descricaoInput.focus();
+      const criado = data.plano || data.item || null;
+      const select = el("selectPlanoModalCadastro");
+      if(select && criado && criado.id) select.value = String(criado.id);
+      setStatus("Plano criado e disponível para seleção.");
     }catch(e){
       setStatus("Erro ao criar o plano: " + e.message);
     }finally{
       if(botao) botao.disabled = false;
-    }
-  }
-
-  async function excluirPlanoCadastrado(plano){
-    if(!plano || !plano.id) return;
-    if(!window.confirm('Excluir o plano "' + plano.descricao + '" da lista de planos cadastrados?')) return;
-    setStatus("Excluindo plano...");
-    try{
-      const resp = await fetch("/api/planos-cobranca/" + encodeURIComponent(plano.id), {method:"DELETE"});
-      await respostaJson(resp);
-      await carregarPlanos("Plano excluído. Atualizando a lista...");
-    }catch(e){
-      setStatus("Erro ao excluir o plano: " + e.message);
     }
   }
 
@@ -5229,6 +5262,8 @@ document.addEventListener("DOMContentLoaded", function(){
     if(!modal) return;
     modal.classList.add("aberto");
     modal.setAttribute("aria-hidden", "false");
+    const quantidade = el("quantidadePlanoModalCadastro");
+    if(quantidade) quantidade.value = String(planoAtual().quantidade || 1);
     carregarPlanos();
   };
 
@@ -5242,11 +5277,17 @@ document.addEventListener("DOMContentLoaded", function(){
       });
     }
 
-    const criar = el("btnCriarPlanoCadastro");
-    if(criar) criar.addEventListener("click", criarPlano);
+    const incluir = el("btnIncluirPlanoCadastro");
+    if(incluir) incluir.addEventListener("click", incluirPlanoNoCliente);
 
     const atualizar = el("btnAtualizarPlanosCadastro");
     if(atualizar) atualizar.addEventListener("click", function(){ carregarPlanos("Atualizando lista..."); });
+
+    const abrirNovo = el("btnAbrirNovoPlanoCadastro");
+    if(abrirNovo) abrirNovo.addEventListener("click", alternarNovoPlano);
+
+    const criar = el("btnCriarPlanoCadastro");
+    if(criar) criar.addEventListener("click", criarPlano);
 
     const descricao = el("novoPlanoDescricao");
     const valor = el("novoPlanoValor");
