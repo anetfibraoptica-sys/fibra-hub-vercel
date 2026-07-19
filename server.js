@@ -955,55 +955,54 @@ app.get("/api/clientes/:id/testar-acesso-remoto", async (req, res) => {
     console.log("[DIAG REMOTO] acesso retornado", JSON.stringify({ ip: acesso.ip, cfg: !!acesso.cfg, pppoe: acesso.pppoe }));
     if (!acesso.ip) return res.json({ok:false, erro:"Cliente offline"});
 
-    // Primeiro usa a porta cadastrada do equipamento quando existir.
-    // O diagnóstico fica apenas como fallback.
-    // A porta de acesso do equipamento fica cadastrada no campo acesso_remoto.
-    // Exemplos aceitos: 8080, :8080, http://ip:8080
-    // Procura a porta remota em todos os campos possíveis do cadastro.
-    // Alguns clientes antigos podem ter sido salvos em campos diferentes.
-    const camposPorta = [
-      r.rows[0].acesso_remoto,
-      r.rows[0].porta_acesso,
-      r.rows[0].porta,
-      r.rows[0].porta_http,
-      r.rows[0].porta_web
-    ].filter(Boolean).map(v => String(v));
-    const acessoCadastrado = camposPorta.join(" ");
-    const portaExtraida = acessoCadastrado.match(/:(\d{2,5})/) || acessoCadastrado.match(/\b(\d{2,5})\b/);
-    const portaCadastrada = portaExtraida ? Number(portaExtraida[1]) : 0;
-    const portas = portaCadastrada ? [
-      {port: portaCadastrada, protocol:"http", url:`http://${acesso.ip}:${portaCadastrada}`}
-    ] : [
+    // Diagnóstico sempre realizado pelo MikroTik.
+    // Não utiliza porta cadastrada no banco.
+    // O IP vem do PPPoE ativo e a porta é descoberta pelo teste real.
+    const portas = [
+      {port:80, protocol:"http", url:`http://${acesso.ip}`},
+      {port:8080, protocol:"http", url:`http://${acesso.ip}:8080`},
       {port:443, protocol:"https", url:`https://${acesso.ip}`},
       {port:8443, protocol:"https", url:`https://${acesso.ip}:8443`},
-      {port:80, protocol:"http", url:`http://${acesso.ip}`},
-      {port:8080, protocol:"http", url:`http://${acesso.ip}:8080`}
+      {port:8291, protocol:"tcp", url:`http://${acesso.ip}:8291`},
+      {port:37777, protocol:"http", url:`http://${acesso.ip}:37777`},
+      {port:34567, protocol:"http", url:`http://${acesso.ip}:34567`}
     ];
-
-    // Porta cadastrada: abre diretamente sem depender do diagnóstico HTTP.
-    if (portaCadastrada) {
-      return res.json({ok:true, ip:acesso.ip, acesso:{porta:portaCadastrada, protocolo:"http"}, url:`http://${acesso.ip}:${portaCadastrada}`});
-    }
 
     for (const item of portas) {
       try {
-        console.log("[DIAG REMOTO] testando", item.url);
+        console.log("[DIAG REMOTO] testando pelo MikroTik", item.url);
         const teste = await fetchViaMikroTik(acesso.cfg, item.url);
         console.log("[DIAG REMOTO] retorno", JSON.stringify(teste).slice(0,200));
+
         if (teste.ok) {
-          return res.json({ok:true, ip:acesso.ip, acesso:{porta:item.port, protocolo:item.protocol}, url:item.url});
+          return res.json({
+            ok:true,
+            ip:acesso.ip,
+            acesso:{porta:item.port, protocolo:item.protocol},
+            url:item.url
+          });
         }
       } catch(e) {
-        // Equipamentos web costumam responder com redirecionamento para login (301/302)
-        // Isso confirma que a porta está aberta e o equipamento está acessível.
         const msg = String(e && e.message ? e.message : e);
-        if (/status\s*30[12378]|302|301|Location:|login\.html/i.test(msg)) {
-          return res.json({ok:true, ip:acesso.ip, acesso:{porta:item.port, protocolo:item.protocol}, url:item.url});
+
+        // RouterOS retorna erro no fetch quando recebe redirect HTTP.
+        // Isso é uma confirmação de que o equipamento respondeu.
+        if (/status\s*30[12378]|302|301|Location:|login\.html|401|403/i.test(msg)) {
+          return res.json({
+            ok:true,
+            ip:acesso.ip,
+            acesso:{porta:item.port, protocolo:item.protocol},
+            url:item.url
+          });
         }
       }
     }
 
-    return res.json({ok:false, ip:acesso.ip, erro:"Nenhum acesso web encontrado. Verifique se a porta do remoto está habilitada no equipamento."});
+    return res.json({
+      ok:false,
+      ip:acesso.ip,
+      erro:"Equipamento encontrado, porém nenhuma porta web de acesso remoto respondeu. Habilite o acesso remoto do equipamento."
+    });
   } catch(e) {
     return res.status(500).json({ok:false, erro:e.message});
   }
