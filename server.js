@@ -959,11 +959,18 @@ app.get("/api/clientes/:id/testar-acesso-remoto", async (req, res) => {
     // O diagnóstico fica apenas como fallback.
     // A porta de acesso do equipamento fica cadastrada no campo acesso_remoto.
     // Exemplos aceitos: 8080, :8080, http://ip:8080
-    const acessoCadastrado = String(r.rows[0].acesso_remoto || "");
-    const portaExtraida = acessoCadastrado.match(/:(\d{2,5})/);
-    const portaCadastrada = Number(
-      portaExtraida ? portaExtraida[1] : (acessoCadastrado.match(/^\d{2,5}$/) || [0])[0]
-    );
+    // Procura a porta remota em todos os campos possíveis do cadastro.
+    // Alguns clientes antigos podem ter sido salvos em campos diferentes.
+    const camposPorta = [
+      r.rows[0].acesso_remoto,
+      r.rows[0].porta_acesso,
+      r.rows[0].porta,
+      r.rows[0].porta_http,
+      r.rows[0].porta_web
+    ].filter(Boolean).map(v => String(v));
+    const acessoCadastrado = camposPorta.join(" ");
+    const portaExtraida = acessoCadastrado.match(/:(\d{2,5})/) || acessoCadastrado.match(/\b(\d{2,5})\b/);
+    const portaCadastrada = portaExtraida ? Number(portaExtraida[1]) : 0;
     const portas = portaCadastrada ? [
       {port: portaCadastrada, protocol:"http", url:`http://${acesso.ip}:${portaCadastrada}`}
     ] : [
@@ -996,7 +1003,7 @@ app.get("/api/clientes/:id/testar-acesso-remoto", async (req, res) => {
       }
     }
 
-    return res.json({ok:false, ip:acesso.ip, erro:"Nenhum acesso web encontrado"});
+    return res.json({ok:false, ip:acesso.ip, erro:"Nenhum acesso web encontrado. Verifique se a porta do remoto está habilitada no equipamento."});
   } catch(e) {
     return res.status(500).json({ok:false, erro:e.message});
   }
