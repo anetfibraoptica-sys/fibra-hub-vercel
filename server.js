@@ -1020,16 +1020,22 @@ app.get("/api/clientes/:id/acesso-equipamento", async (req, res) => {
 
     const acesso = await consultarIpPPPoECliente(cliente);
     const ipInterno = ipInternoEquipamentoCliente(cliente);
+    const dados = dadosClienteObjeto(cliente);
+    const portaAcesso = String(
+      dados.cadPortaAcesso || dados.portaAcesso || dados.porta_acesso ||
+      cliente.acesso_remoto || dados.acessoRemoto || dados.acesso_remoto || ""
+    ).trim();
 
     return res.json({
       ok: true,
       cliente_id: cliente.id,
-      nome: cliente.nome || dadosClienteObjeto(cliente).nome || "",
+      nome: cliente.nome || dados.nome || "",
       login_pppoe: login,
       servidor,
       online: Boolean(acesso.online),
       ip_atual: acesso.ip || "",
       ip_interno: ipInterno,
+      porta_acesso: portaAcesso,
       uptime: acesso.uptime || "",
       mac: acesso.caller_id || "",
       remoto: acesso.online ? urlsAdministracao(acesso.ip, false) : [],
