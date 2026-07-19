@@ -1083,7 +1083,7 @@ async function fetchViaMikroTik(cfg, url) {
     const resp = await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
       "/tool/fetch",
       `=url=${url}`,
-      "=output=user",
+      "=output=none",
       "=as-value="
     ]], 20000);
 
