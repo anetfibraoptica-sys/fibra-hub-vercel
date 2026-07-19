@@ -1204,32 +1204,24 @@ document.addEventListener("DOMContentLoaded", function(){
           throw new Error('Cliente offline ou sem IP PPPoE ativo no MikroTik.');
         }
 
-        // O técnico já está conectado diretamente à VPN do MikroTik.
-        // Portanto, não consultamos/testamos portas pelo servidor nem pelo MikroTik:
-        // apenas montamos a URL e o navegador acessa o equipamento pela VPN do PC/celular.
-        const ip = String(d.ip_atual || '').trim().replace(/\/\d+$/, '');
-        const portaBruta = String(d.porta_acesso || '').trim();
-        let urlDireta = '';
+        // A VPN já está conectada no PC/celular. O MikroTik é usado somente
+        // para identificar automaticamente qual porta web responde; depois a
+        // aba abre o endereço diretamente pela VPN do técnico.
+        try{
+          abaRemota.document.body.innerHTML = '<p style="font-family:Arial,sans-serif;padding:24px">Consultando automaticamente a porta correta do equipamento...</p>';
+        }catch(e){}
 
-        if(/^https?:\/\//i.test(portaBruta)){
-          try{
-            const u = new URL(portaBruta);
-            u.hostname = ip;
-            urlDireta = u.toString();
-          }catch(e){}
+        const resposta = await fetch('/api/clientes/' + encodeURIComponent(d.cliente_id) + '/testar-acesso-remoto', {
+          credentials:'same-origin',
+          cache:'no-store'
+        });
+        const teste = await resposta.json().catch(()=>({}));
+        if(!resposta.ok || !teste.ok || !teste.url){
+          if(abaRemota) abaRemota.close();
+          throw new Error(teste.erro || 'Não foi possível identificar a porta web do equipamento.');
         }
 
-        if(!urlDireta){
-          const encontrada = portaBruta.match(/\d{1,5}/);
-          const porta = encontrada ? Number(encontrada[0]) : 8080;
-          const protocolo = /https/i.test(portaBruta) || [443, 8443, 9443].includes(porta)
-            ? 'https'
-            : 'http';
-          const portaPadrao = (protocolo === 'http' && porta === 80) || (protocolo === 'https' && porta === 443);
-          urlDireta = protocolo + '://' + ip + (portaPadrao ? '' : ':' + porta);
-        }
-
-        abaRemota.location.replace(urlDireta);
+        abaRemota.location.replace(teste.url);
         return;
       }
 
