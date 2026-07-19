@@ -4049,9 +4049,53 @@ async function financeiroComTravaDoPonto(body, tarefa) {
   }
 }
 
+
+/* Usa a descrição do Plano de Cobrança como descrição padrão do boleto.
+   Uma descrição digitada manualmente no boleto continua tendo prioridade. */
+async function financeiroAplicarDescricaoPlanoCliente(body) {
+  body = {...(body || {})};
+  if (String(body.descricao || "").trim()) return body;
+
+  const clienteId = String(body.clienteId || body.cliente_id || body.idCliente || "").trim();
+  const login = String(body.login || body.loginPppoe || body.clienteLogin || "").trim();
+  let r = {rows:[]};
+
+  if (/^\d+$/.test(clienteId)) {
+    r = await pool.query("SELECT plano,dados FROM clientes WHERE id=$1 LIMIT 1", [Number(clienteId)]);
+  }
+  if (!r.rows[0] && login) {
+    r = await pool.query(`
+      SELECT plano,dados FROM clientes
+      WHERE login_pppoe=$1
+         OR dados->>'loginPppoe'=$1
+         OR dados->>'login'=$1
+         OR dados->>'cadLogin'=$1
+      ORDER BY atualizado_em DESC NULLS LAST, id DESC
+      LIMIT 1
+    `, [login]);
+  }
+
+  const row = r.rows[0] || {};
+  const dados = row.dados && typeof row.dados === "object" ? row.dados : {};
+  const descricao = String(
+    dados.descricaoBoleto ||
+    dados.descricao_boleto ||
+    dados.boletoDescricao ||
+    dados.boleto_descricao ||
+    dados.planoCobranca ||
+    dados.plano_cobranca ||
+    row.plano ||
+    dados.plano ||
+    ""
+  ).trim();
+
+  if (descricao) body.descricao = descricao;
+  return body;
+}
+
 app.post("/api/efi/boleto/criar", async (req, res) => {
   try {
-    const body = req.body || {};
+    const body = await financeiroAplicarDescricaoPlanoCliente(req.body || {});
     const resultado = await financeiroComTravaDoPonto(body, async () => {
       const duplicado = await financeiroBuscarDuplicado(body);
       if (duplicado) throw financeiroErroDuplicado(duplicado);
@@ -4081,8 +4125,13 @@ app.post("/api/efi/boleto/criar", async (req, res) => {
 
 app.post("/api/efi/carne/criar", async (req, res) => {
   try {
-    const body = req.body || {};
-    const parcelas = Array.isArray(body.parcelas) ? body.parcelas : [];
+    const body = await financeiroAplicarDescricaoPlanoCliente(req.body || {});
+    const parcelas = Array.isArray(body.parcelas)
+      ? body.parcelas.map(parcela => ({
+          ...parcela,
+          descricao: String(parcela?.descricao || body.descricao || "").trim()
+        }))
+      : [];
     if (!parcelas.length) return res.status(400).json({ ok:false, erro:"Nenhuma parcela informada." });
 
     const criados = await financeiroComTravaDoPonto(body, async () => {
@@ -4443,6 +4492,100 @@ app.delete("/api/planos-cobranca/:id", async (req, res) => {
     if(!r.rows[0]) return res.status(404).json({ok:false, erro:"Plano não encontrado."});
     return res.json({ok:true});
   }catch(err){
+    return res.status(500).json({ok:false, erro:err.message});
+  }
+});
+
+
+/* Salva somente o Plano de Cobrança do cliente.
+   Não altera dados pessoais, servidor, profile ou cadastro no MikroTik. */
+app.patch("/api/clientes/plano-cobranca", async (req, res) => {
+  try{
+    await fbEnsureTables();
+
+    const clienteId = String(req.body?.clienteId || req.body?.cliente_id || req.body?.id || "").trim();
+    const login = String(req.body?.login || req.body?.loginPppoe || req.body?.login_pppoe || "").trim();
+    const remover = req.body?.remover === true;
+    const descricao = remover ? "" : String(req.body?.descricao || "").trim();
+    const planoId = remover ? null : (Number(req.body?.planoId || req.body?.plano_id) || null);
+    const quantidade = remover ? 1 : Math.max(1, parseInt(req.body?.quantidade, 10) || 1);
+    const valorUnitario = remover ? 0 : Number(req.body?.valorUnitario ?? req.body?.valor_unitario ?? req.body?.valor ?? 0);
+    const valorTotalRecebido = remover ? 0 : Number(req.body?.valorTotal ?? req.body?.valor_total);
+    const valorTotal = remover
+      ? 0
+      : (Number.isFinite(valorTotalRecebido) && valorTotalRecebido >= 0
+          ? valorTotalRecebido
+          : valorUnitario * quantidade);
+
+    if(!remover && !descricao){
+      return res.status(400).json({ok:false, erro:"Informe a descrição do plano de cobrança."});
+    }
+    if(!remover && (!Number.isFinite(valorUnitario) || valorUnitario <= 0)){
+      return res.status(400).json({ok:false, erro:"Informe um valor válido para o plano de cobrança."});
+    }
+
+    let alvo = {rows:[]};
+    if(/^\d+$/.test(clienteId)){
+      alvo = await pool.query("SELECT id FROM clientes WHERE id=$1 LIMIT 1", [Number(clienteId)]);
+    }
+    if(!alvo.rows[0] && login){
+      alvo = await pool.query(`
+        SELECT id FROM clientes
+        WHERE login_pppoe=$1
+           OR dados->>'loginPppoe'=$1
+           OR dados->>'login'=$1
+           OR dados->>'cadLogin'=$1
+        ORDER BY atualizado_em DESC NULLS LAST, id DESC
+        LIMIT 1
+      `, [login]);
+    }
+    if(!alvo.rows[0]){
+      return res.status(404).json({
+        ok:false,
+        erro:"Cliente ainda não está salvo no Fibra+ Hub. Salve o cadastro uma vez antes de incluir o plano de cobrança."
+      });
+    }
+
+    const dadosPlano = {
+      plano: descricao,
+      cadPlano: descricao,
+      planoCobranca: descricao,
+      plano_cobranca: descricao,
+      planoCobrancaId: planoId,
+      plano_cobranca_id: planoId,
+      valorMensal: valorTotal,
+      valor: valorTotal,
+      mensalidade: valorTotal,
+      valorPlano: valorTotal,
+      cadValor: valorTotal,
+      planoQuantidade: quantidade,
+      quantidadePlano: quantidade,
+      cadPlanoQuantidade: quantidade,
+      descricaoBoleto: descricao,
+      descricao_boleto: descricao,
+      boletoDescricao: descricao,
+      boleto_descricao: descricao
+    };
+
+    const atualizado = await pool.query(`
+      UPDATE clientes
+      SET plano=$1,
+          dados=COALESCE(dados,'{}'::jsonb) || $2::jsonb,
+          atualizado_em=NOW()
+      WHERE id=$3
+      RETURNING *
+    `, [descricao, JSON.stringify(dadosPlano), alvo.rows[0].id]);
+
+    return res.json({
+      ok:true,
+      mensagem: remover
+        ? "Plano de cobrança removido do cliente."
+        : "Plano de cobrança salvo no cliente.",
+      cliente: fbClienteRow(atualizado.rows[0]),
+      planoCobranca: dadosPlano
+    });
+  }catch(err){
+    console.error("Erro /api/clientes/plano-cobranca:", err);
     return res.status(500).json({ok:false, erro:err.message});
   }
 });

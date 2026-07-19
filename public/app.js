@@ -820,8 +820,13 @@ document.addEventListener("DOMContentLoaded", function(){
     var tel3 = val(["#cadTelefone3"], pick(c,["telefone3","tel3","celular3"], "-"));
     var complemento = val(["#cadComplemento"], pick(c,["complemento"], "-"));
 
-    var plano = val(["#cadProfile option:checked","#cadProfile"], pick(c,["plano","planoCobranca","profile","perfil"], "-"));
-    var valor = pick(c,["valor","valorPlano","valor_mensal","mensalidade"], "R$ 0,00");
+    var plano = val(["#cadPlano"], pick(c,["plano","planoCobranca","cadPlano"], "Nenhum Plano Ativo"));
+    var valorBruto = val(["#cadValor"], pick(c,["valorMensal","valor","valorPlano","valor_mensal","mensalidade"], "0"));
+    var valorNumero = Number(String(valorBruto || "0").replace(/R\$/gi, "").replace(/\s/g, "").replace(/\./g, "").replace(",", ".").replace(/[^0-9.-]/g, ""));
+    var valor = Number.isFinite(valorNumero)
+      ? valorNumero.toLocaleString("pt-BR", {style:"currency", currency:"BRL"})
+      : "R$ 0,00";
+    var quantidadePlano = val(["#cadPlanoQuantidade"], "1") || "1";
 
     card.innerHTML = `
       <div class="resumo-receitanet">
@@ -881,7 +886,7 @@ document.addEventListener("DOMContentLoaded", function(){
         <div class="resumo-section-title">Plano de Cobrança</div>
         <table class="resumo-table">
           <thead><tr><th>PLANO</th><th>VALOR UN</th><th>QTDADE</th></tr></thead>
-          <tbody><tr class="destaque"><td>${plano}</td><td>${valor}</td><td>1</td></tr></tbody>
+          <tbody><tr class="destaque"><td>${plano}</td><td>${valor}</td><td>${quantidadePlano}</td></tr></tbody>
         </table>
         <div class="resumo-total">Total: ${valor}</div>
 

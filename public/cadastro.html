@@ -1663,6 +1663,7 @@ function gerarBoletoCliente(){
     login: cliente.loginPppoe || cliente.login || "",
     nome: cliente.nome || "",
     cpfCnpj: cliente.cpfCnpj || cliente.cpf || "",
+    descricao: (window.fibraDescricaoBoletoCliente && window.fibraDescricaoBoletoCliente()) || "Mensalidade",
     emissao: new Date().toISOString().slice(0,10),
     vencimento,
     valor,
@@ -2003,6 +2004,11 @@ function abrirModalBoletoAvulso(){
   if(!modal) return;
   document.getElementById("avulsoEmissao").value = dataHojeISO();
   document.getElementById("avulsoVencimento").value = dataHojeISO();
+  const descricaoPlano = window.fibraDescricaoBoletoCliente && window.fibraDescricaoBoletoCliente();
+  const campoDescricao = document.getElementById("avulsoDescricao");
+  if(campoDescricao && !String(campoDescricao.value || "").trim() && descricaoPlano){
+    campoDescricao.value = descricaoPlano;
+  }
   modal.classList.add("aberto");
 }
 function fecharSubmodaisBoletos(){
@@ -2023,7 +2029,7 @@ function gerarMensalidadesCliente(){
       nome:c.nome||"",
       cpfCnpj:c.cpfCnpj||c.cpf||"",
       categoria:"Mensalidade",
-      descricao:`Mensalidade ${venc.slice(5,7)}/${venc.slice(0,4)}`,
+      descricao:(window.fibraDescricaoBoletoCliente && window.fibraDescricaoBoletoCliente()) || `Mensalidade ${venc.slice(5,7)}/${venc.slice(0,4)}`,
       emissao:dataHojeISO(),
       vencimento:venc,
       valor:valor,
@@ -2047,7 +2053,7 @@ function gerarBoletoAvulsoCliente(){
     nome:c.nome||"",
     cpfCnpj:c.cpfCnpj||c.cpf||"",
     categoria:document.getElementById("avulsoCategoria").value,
-    descricao:document.getElementById("avulsoDescricao").value || "Boleto Avulso",
+    descricao:document.getElementById("avulsoDescricao").value || (window.fibraDescricaoBoletoCliente && window.fibraDescricaoBoletoCliente()) || "Boleto Avulso",
     emissao:document.getElementById("avulsoEmissao").value || dataHojeISO(),
     vencimento:venc,
     valor:valor,
@@ -2287,6 +2293,11 @@ function abrirModalBoletoAvulso(){
   if(!modal) return;
   document.getElementById("avulsoEmissao").value = dataHojeISO();
   document.getElementById("avulsoVencimento").value = dataHojeISO();
+  const descricaoPlano = window.fibraDescricaoBoletoCliente && window.fibraDescricaoBoletoCliente();
+  const campoDescricao = document.getElementById("avulsoDescricao");
+  if(campoDescricao && !String(campoDescricao.value || "").trim() && descricaoPlano){
+    campoDescricao.value = descricaoPlano;
+  }
   modal.classList.add("aberto");
 }
 function fecharSubmodaisBoletos(){
@@ -2307,7 +2318,7 @@ function gerarMensalidadesCliente(){
       nome:c.nome||"",
       cpfCnpj:c.cpfCnpj||c.cpf||"",
       categoria:"Mensalidade",
-      descricao:`Mensalidade ${venc.slice(5,7)}/${venc.slice(0,4)}`,
+      descricao:(window.fibraDescricaoBoletoCliente && window.fibraDescricaoBoletoCliente()) || `Mensalidade ${venc.slice(5,7)}/${venc.slice(0,4)}`,
       emissao:dataHojeISO(),
       vencimento:venc,
       valor:valor,
@@ -2331,7 +2342,7 @@ function gerarBoletoAvulsoCliente(){
     nome:c.nome||"",
     cpfCnpj:c.cpfCnpj||c.cpf||"",
     categoria:document.getElementById("avulsoCategoria").value,
-    descricao:document.getElementById("avulsoDescricao").value || "Boleto Avulso",
+    descricao:document.getElementById("avulsoDescricao").value || (window.fibraDescricaoBoletoCliente && window.fibraDescricaoBoletoCliente()) || "Boleto Avulso",
     emissao:document.getElementById("avulsoEmissao").value || dataHojeISO(),
     vencimento:venc,
     valor:valor,
@@ -3988,7 +3999,7 @@ document.addEventListener("DOMContentLoaded", function(){
       telefone: telefoneCliente(c),
       email: emailCliente(c),
       categoria: document.getElementById("avulsoCategoria")?.value || "Mensalidade",
-      descricao: document.getElementById("avulsoDescricao")?.value || "Boleto Avulso",
+      descricao: document.getElementById("avulsoDescricao")?.value || (window.fibraDescricaoBoletoCliente && window.fibraDescricaoBoletoCliente()) || "Boleto Avulso",
       emissao: document.getElementById("avulsoEmissao")?.value || new Date().toISOString().slice(0,10),
       vencimento: venc,
       valor,
@@ -4033,7 +4044,7 @@ document.addEventListener("DOMContentLoaded", function(){
         vencimento: venc,
         valor,
         total: valor,
-        descricao: `Mensalidade ${String(venc).slice(5,7)}/${String(venc).slice(0,4)}`,
+        descricao: (window.fibraDescricaoBoletoCliente && window.fibraDescricaoBoletoCliente()) || `Mensalidade ${String(venc).slice(5,7)}/${String(venc).slice(0,4)}`,
         categoria: "Mensalidade"
       });
     }
@@ -4838,7 +4849,8 @@ document.addEventListener("DOMContentLoaded", function(){
     return j;
   }
 
-  async function executar(comMikrotik, botao){
+  async function executar(comMikrotik, botao, opcoes){
+    opcoes = opcoes || {};
     if(botao) botao.disabled = true;
 
     try{
@@ -4869,19 +4881,29 @@ document.addEventListener("DOMContentLoaded", function(){
         "cadastro.html?cliente=" + encodeURIComponent(chave)
       );
 
+      if(cliente){
+        window.__fibraClienteCadastro = Object.assign({}, window.__fibraClienteCadastro || {}, cliente);
+        window.__fibraClienteSelecionado = Object.assign({}, window.__fibraClienteSelecionado || {}, cliente);
+      }
+
       document.dispatchEvent(new CustomEvent("fibra:cliente-salvo", {
         detail:{cliente:cliente || null}
       }));
 
-      alert(
-        comMikrotik
-          ? "Cliente salvo no Supabase e sincronizado com o MikroTik."
-          : "Cliente salvo no Supabase."
-      );
+      if(!opcoes.silencioso){
+        alert(
+          comMikrotik
+            ? "Cliente salvo no Supabase e sincronizado com o MikroTik."
+            : "Cliente salvo no Supabase."
+        );
+      }
 
       return true;
     }catch(e){
-      alert("Erro ao salvar cliente: " + e.message);
+      if(!opcoes.semAlertaErro){
+        alert("Erro ao salvar cliente: " + e.message);
+      }
+      if(opcoes.lancarErro) throw e;
       return false;
     }finally{
       if(botao) botao.disabled = false;
@@ -4967,11 +4989,11 @@ document.addEventListener("DOMContentLoaded", function(){
     }
   };
 
-  window.salvarCadastroCliente = function(comMikrotik){
+  window.salvarCadastroCliente = function(comMikrotik, opcoes){
     const btn = comMikrotik
       ? $("btnSalvarClienteSupabaseMikrotik")
       : $("btnSalvarClienteSupabase");
-    return executar(Boolean(comMikrotik), btn);
+    return executar(Boolean(comMikrotik), btn, opcoes || {});
   };
 })();
 </script>
@@ -5091,20 +5113,79 @@ document.addEventListener("DOMContentLoaded", function(){
     return data;
   }
 
-  function removerPlanoDoCliente(){
-    const campoPlano = el("cadPlano");
-    const campoValor = el("cadValor");
-    const campoQuantidade = el("cadPlanoQuantidade");
-    if(campoPlano) campoPlano.value = "";
-    if(campoValor) campoValor.value = "";
-    if(campoQuantidade) campoQuantidade.value = "1";
-    dispararAlteracao(campoPlano);
-    dispararAlteracao(campoValor);
-    atualizarResumo();
-    renderizarPlanoAplicado();
-    const select = el("selectPlanoModalCadastro");
-    if(select) select.value = "";
-    setStatus("Plano removido do cadastro do cliente. Salve o cliente para confirmar.");
+
+  function referenciaClienteAtual(){
+    const atual = window.__fibraClienteCadastro || window.__fibraClienteSelecionado || {};
+    const params = new URLSearchParams(location.search);
+    const clienteParam = String(params.get("cliente") || params.get("id") || "").trim();
+    const id = String(atual.id || atual.clienteId || atual.cliente_id || (/^\d+$/.test(clienteParam) ? clienteParam : "")).trim();
+    const login = String((el("cadLogin") && el("cadLogin").value) || atual.loginPppoe || atual.login_pppoe || atual.login || "").trim();
+    return {id:id, login:login};
+  }
+
+  function atualizarClienteEmMemoria(cliente){
+    if(!cliente) return;
+    window.__fibraClienteCadastro = Object.assign({}, window.__fibraClienteCadastro || {}, cliente);
+    window.__fibraClienteSelecionado = Object.assign({}, window.__fibraClienteSelecionado || {}, cliente);
+  }
+
+  async function salvarSomentePlanoCobranca(dados){
+    const referencia = referenciaClienteAtual();
+    const resp = await fetch("/api/clientes/plano-cobranca", {
+      method:"PATCH",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify(Object.assign({}, dados || {}, {
+        clienteId:referencia.id,
+        login:referencia.login,
+        loginPppoe:referencia.login
+      }))
+    });
+    const retorno = await respostaJson(resp);
+    atualizarClienteEmMemoria(retorno.cliente);
+    return retorno;
+  }
+
+  window.fibraDescricaoBoletoCliente = function(){
+    const atual = window.__fibraClienteCadastro || window.__fibraClienteSelecionado || {};
+    return String(
+      (el("cadPlano") && el("cadPlano").value) ||
+      atual.descricaoBoleto ||
+      atual.descricao_boleto ||
+      atual.boletoDescricao ||
+      atual.boleto_descricao ||
+      atual.planoCobranca ||
+      atual.plano_cobranca ||
+      atual.plano ||
+      ""
+    ).trim();
+  };
+
+  async function removerPlanoDoCliente(){
+    const botaoExcluir = document.querySelector("#listaModalPlanosCadastro .btn-plano-excluir");
+    if(botaoExcluir) botaoExcluir.disabled = true;
+    setStatus("Removendo somente o plano de cobrança do cliente...");
+
+    try{
+      await salvarSomentePlanoCobranca({remover:true});
+
+      const campoPlano = el("cadPlano");
+      const campoValor = el("cadValor");
+      const campoQuantidade = el("cadPlanoQuantidade");
+      if(campoPlano) campoPlano.value = "";
+      if(campoValor) campoValor.value = "";
+      if(campoQuantidade) campoQuantidade.value = "1";
+      dispararAlteracao(campoPlano);
+      dispararAlteracao(campoValor);
+      atualizarResumo();
+      renderizarPlanoAplicado();
+      const select = el("selectPlanoModalCadastro");
+      if(select) select.value = "";
+      setStatus("Plano de cobrança removido. Nenhum outro dado do cadastro foi alterado.");
+    }catch(e){
+      setStatus("Erro ao remover o plano de cobrança: " + e.message);
+    }finally{
+      if(botaoExcluir) botaoExcluir.disabled = false;
+    }
   }
 
   function renderizarPlanoAplicado(){
@@ -5178,9 +5259,10 @@ document.addEventListener("DOMContentLoaded", function(){
     }
   }
 
-  function incluirPlanoNoCliente(){
+  async function incluirPlanoNoCliente(){
     const select = el("selectPlanoModalCadastro");
     const quantidadeInput = el("quantidadePlanoModalCadastro");
+    const botaoIncluir = el("btnIncluirPlanoCadastro");
     const id = select ? String(select.value || "") : "";
     const quantidade = Math.max(1, parseInt(quantidadeInput ? quantidadeInput.value : "1", 10) || 1);
     const plano = (window.__fibraPlanosCobranca || []).find(function(item){ return String(item.id) === id; });
@@ -5191,17 +5273,46 @@ document.addEventListener("DOMContentLoaded", function(){
       return;
     }
 
-    const campoPlano = el("cadPlano");
-    const campoValor = el("cadValor");
-    const campoQuantidade = el("cadPlanoQuantidade");
-    if(campoPlano) campoPlano.value = String(plano.descricao || "").trim();
-    if(campoValor) campoValor.value = formatarMoeda(Number(plano.valor || 0) * quantidade, false);
-    if(campoQuantidade) campoQuantidade.value = String(quantidade);
-    dispararAlteracao(campoPlano);
-    dispararAlteracao(campoValor);
-    atualizarResumo();
-    renderizarPlanoAplicado();
-    setStatus("Plano incluído no cadastro do cliente. Salve o cliente para confirmar.");
+    const valorUnitario = Number(plano.valor || 0);
+    const valorTotal = valorUnitario * quantidade;
+
+    if(botaoIncluir) botaoIncluir.disabled = true;
+    setStatus("Salvando somente o Plano de Cobrança...");
+
+    try{
+      const retorno = await salvarSomentePlanoCobranca({
+        planoId:plano.id,
+        descricao:String(plano.descricao || "").trim(),
+        valorUnitario:valorUnitario,
+        quantidade:quantidade,
+        valorTotal:valorTotal
+      });
+
+      const campoPlano = el("cadPlano");
+      const campoValor = el("cadValor");
+      const campoQuantidade = el("cadPlanoQuantidade");
+      if(campoPlano) campoPlano.value = String(plano.descricao || "").trim();
+      if(campoValor) campoValor.value = formatarMoeda(valorTotal, false);
+      if(campoQuantidade) campoQuantidade.value = String(quantidade);
+      dispararAlteracao(campoPlano);
+      dispararAlteracao(campoValor);
+      atualizarResumo();
+      renderizarPlanoAplicado();
+
+      document.dispatchEvent(new CustomEvent("fibra:plano-cobranca-salvo", {
+        detail:{cliente:retorno.cliente || null, plano:plano}
+      }));
+
+      setStatus("Plano de Cobrança salvo. A descrição também será usada automaticamente nos boletos do cliente.");
+      setTimeout(function(){
+        fechar();
+        atualizarResumo();
+      }, 500);
+    }catch(e){
+      setStatus("Erro ao salvar o Plano de Cobrança: " + e.message);
+    }finally{
+      if(botaoIncluir) botaoIncluir.disabled = false;
+    }
   }
 
   function alternarNovoPlano(){
