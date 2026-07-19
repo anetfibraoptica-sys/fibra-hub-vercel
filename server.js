@@ -1093,15 +1093,24 @@ async function fetchViaMikroTik(cfg, url) {
 
     // RouterOS pode retornar erro 301/302/401/403 quando o equipamento existe.
     // Esses retornos confirmam que a porta está aberta.
-    if (/status\s*[^0-9]*(301|302|401|403)|302|301|401|403|Location|login\.html/i.test(texto)) {
+    if (/status\s*[^0-9]*(301|302|401|403)|fetch failed with status\s*(301|302|401|403)|302|301|401|403|Location|login\.html/i.test(texto)) {
       return { ok: true, row };
+    }
+
+    // RouterOS pode retornar sucesso sem HTML no campo data.
+    // Exemplo real: status: finished + downloaded: 41KiB
+    // Isso significa que a porta respondeu e o equipamento está acessível.
+    const baixado = String(row.downloaded || row["downloaded"] || row.total || row["total"] || "");
+    const statusFetch = String(row.status || row["status"] || "").toLowerCase();
+    if (statusFetch === "finished" || /\d+\s*(kib|mib|b)/i.test(baixado)) {
+      return { ok: true, row, data: row.data || row.contents || "" };
     }
 
     const conteudo = row.data || row.contents || row["data"] || "";
     return { ok: !!(conteudo && String(conteudo).trim().length > 5), row, data: conteudo };
   } catch (e) {
     const msg = String(e && e.message ? e.message : e);
-    if (/status\s*[^0-9]*(301|302|401|403)|302|301|401|403|Location|login\.html/i.test(msg)) {
+    if (/status\s*[^0-9]*(301|302|401|403)|fetch failed with status\s*(301|302|401|403)|302|301|401|403|Location|login\.html/i.test(msg)) {
       return { ok: true, erro: msg };
     }
     throw e;
