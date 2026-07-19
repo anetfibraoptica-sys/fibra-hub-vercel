@@ -107,6 +107,125 @@ function routerosSend(host, port, user, pass, sentences, timeoutMs = 12000) {
 }
 
 
+
+/**
+ * Executa um único comando na API do RouterOS aguardando a resposta real
+ * (!done, !trap ou !fatal), sem temporizadores fixos. Esta função é usada
+ * somente pelo diagnóstico do botão de acesso remoto.
+ */
+function routerosCommandStable(cfg, words, timeoutMs = 10000) {
+  return new Promise((resolve, reject) => {
+    const socket = new net.Socket();
+    let stage = "login";
+    let buffer = Buffer.alloc(0);
+    let finished = false;
+
+    const finish = (error, sentences) => {
+      if (finished) return;
+      finished = true;
+      clearTimeout(timer);
+      try { socket.destroy(); } catch (_) {}
+      if (error) reject(error);
+      else resolve(sentences || []);
+    };
+
+    const timer = setTimeout(() => {
+      finish(new Error("Timeout aguardando resposta da API MikroTik"));
+    }, timeoutMs);
+
+    socket.setTimeout(timeoutMs);
+    socket.on("timeout", () => finish(new Error("Timeout conectando na API MikroTik")));
+    socket.on("error", (error) => finish(error));
+
+    socket.on("data", (chunk) => {
+      if (finished) return;
+      buffer = Buffer.concat([buffer, chunk]);
+      const sentences = parseSentences(buffer);
+      if (!sentences.length) return;
+
+      if (stage === "login") {
+        const loginTrap = sentences.find((sentence) => sentence.includes("!trap") || sentence.includes("!fatal"));
+        if (loginTrap) {
+          return finish(new Error("Falha no login da API MikroTik: " + loginTrap.join(" ")));
+        }
+
+        const loginDone = sentences.some((sentence) => sentence.includes("!done"));
+        if (!loginDone) return;
+
+        stage = "command";
+        buffer = Buffer.alloc(0);
+        socket.write(encodeSentence(words));
+        return;
+      }
+
+      const terminou = sentences.some((sentence) =>
+        sentence.includes("!done") || sentence.includes("!trap") || sentence.includes("!fatal")
+      );
+      if (terminou) finish(null, sentences);
+    });
+
+    socket.connect(Number(cfg.port || 8728), cfg.host, () => {
+      socket.write(encodeSentence(["/login", `=name=${cfg.user}`, `=password=${cfg.pass}`]));
+    });
+  });
+}
+
+function routerosResponseText(sentences) {
+  return (sentences || []).flat().join(" ");
+}
+
+function routerosField(sentences, fieldName) {
+  const prefix = `=${fieldName}=`;
+  for (const sentence of sentences || []) {
+    for (const word of sentence || []) {
+      if (word.startsWith(prefix)) return word.slice(prefix.length);
+    }
+  }
+  return "";
+}
+
+/**
+ * Reproduz pelo MikroTik o teste manual confirmado no WinBox:
+ * /tool fetch url="http://IP:PORTA" output=none
+ */
+async function testarAcessoWebPeloMikroTik(cfg, url) {
+  const sentences = await routerosCommandStable(cfg, [
+    "/tool/fetch",
+    `=url=${url}`,
+    "=output=none",
+    "=idle-timeout=3s",
+    "=http-max-redirect-count=0",
+    "=check-certificate=no"
+  ], 8000);
+
+  const texto = routerosResponseText(sentences);
+  const status = routerosField(sentences, "status").toLowerCase();
+  const downloaded = routerosField(sentences, "downloaded");
+  const total = routerosField(sentences, "total");
+  const trapMessage = routerosField(sentences, "message");
+
+  // Sucesso normal do RouterOS: status=finished, com ou sem tamanho baixado.
+  if (status === "finished") {
+    return { ok: true, status, downloaded, total, texto };
+  }
+
+  // Redirecionamento, autenticação ou outra resposta HTTP comprovam que
+  // existe um servidor web escutando naquela porta.
+  const httpStatus = String(trapMessage || texto).match(/(?:status|HTTP\/\d(?:\.\d)?)\D+(\d{3})/i);
+  if (httpStatus) {
+    const code = Number(httpStatus[1]);
+    if (code >= 200 && code < 500) {
+      return { ok: true, status: String(code), downloaded, total, texto };
+    }
+  }
+
+  if (/Location:|login\.html|status\s*(?:301|302|303|307|308|401|403)/i.test(trapMessage + " " + texto)) {
+    return { ok: true, status: "http-response", downloaded, total, texto };
+  }
+
+  return { ok: false, status, downloaded, total, texto };
+}
+
 function servidorConfig(nomeServidor) {
   const nome = String(nomeServidor || "").toUpperCase();
 
@@ -949,62 +1068,62 @@ async function testarPortasAcesso(ip, portas) {
 app.get("/api/clientes/:id/testar-acesso-remoto", async (req, res) => {
   try {
     const r = await pool.query("SELECT * FROM clientes WHERE id=$1", [req.params.id]);
-    if (!r.rows.length) return res.status(404).json({ok:false, erro:"Cliente não encontrado"});
-    const acesso = await obterIpAtualCliente(r.rows[0]);
-    console.log("[DIAG REMOTO] cliente", req.params.id);
-    console.log("[DIAG REMOTO] acesso retornado", JSON.stringify({ ip: acesso.ip, cfg: !!acesso.cfg, pppoe: acesso.pppoe }));
-    if (!acesso.ip) return res.json({ok:false, erro:"Cliente offline"});
+    if (!r.rows.length) {
+      return res.status(404).json({ ok:false, erro:"Cliente não encontrado." });
+    }
 
-    // Diagnóstico sempre realizado pelo MikroTik.
-    // Não utiliza porta cadastrada no banco.
-    // O IP vem do PPPoE ativo e a porta é descoberta pelo teste real.
+    // IP e servidor são consultados no MikroTik a cada clique.
+    const acesso = await obterIpAtualCliente(r.rows[0]);
+    if (!acesso.ip || !acesso.cfg) {
+      return res.json({ ok:false, erro:"Cliente offline ou sem IP PPPoE ativo no MikroTik." });
+    }
+
+    // Somente portas de administração web. O MikroTik faz o diagnóstico;
+    // depois o navegador do técnico abre a URL diretamente através da VPN.
     const portas = [
-      {port:80, protocol:"http", url:`http://${acesso.ip}`},
-      {port:8080, protocol:"http", url:`http://${acesso.ip}:8080`},
-      {port:443, protocol:"https", url:`https://${acesso.ip}`},
-      {port:8443, protocol:"https", url:`https://${acesso.ip}:8443`},
-      {port:8291, protocol:"tcp", url:`http://${acesso.ip}:8291`},
-      {port:37777, protocol:"http", url:`http://${acesso.ip}:37777`},
-      {port:34567, protocol:"http", url:`http://${acesso.ip}:34567`}
+      { porta:80, protocolo:"http", url:`http://${acesso.ip}` },
+      { porta:8080, protocolo:"http", url:`http://${acesso.ip}:8080` },
+      { porta:443, protocolo:"https", url:`https://${acesso.ip}` },
+      { porta:8443, protocolo:"https", url:`https://${acesso.ip}:8443` },
+      { porta:8000, protocolo:"http", url:`http://${acesso.ip}:8000` },
+      { porta:8081, protocolo:"http", url:`http://${acesso.ip}:8081` },
+      { porta:8888, protocolo:"http", url:`http://${acesso.ip}:8888` },
+      { porta:9443, protocolo:"https", url:`https://${acesso.ip}:9443` }
     ];
 
-    for (const item of portas) {
-      try {
-        console.log("[DIAG REMOTO] testando pelo MikroTik", item.url);
-        const teste = await fetchViaMikroTik(acesso.cfg, item.url);
-        console.log("[DIAG REMOTO] retorno", JSON.stringify(teste).slice(0,200));
-
-        if (teste.ok) {
-          return res.json({
-            ok:true,
-            ip:acesso.ip,
-            acesso:{porta:item.port, protocolo:item.protocol},
-            url:item.url
-          });
+    // Dois pequenos lotes mantêm a resposta rápida sem sobrecarregar o router.
+    const lotes = [portas.slice(0, 4), portas.slice(4)];
+    for (const lote of lotes) {
+      const resultados = await Promise.all(lote.map(async (item) => {
+        try {
+          const teste = await testarAcessoWebPeloMikroTik(acesso.cfg, item.url);
+          return { item, teste };
+        } catch (error) {
+          return { item, teste:{ ok:false, erro:error.message } };
         }
-      } catch(e) {
-        const msg = String(e && e.message ? e.message : e);
+      }));
 
-        // RouterOS retorna erro no fetch quando recebe redirect HTTP.
-        // Isso é uma confirmação de que o equipamento respondeu.
-        if (/status\s*30[12378]|302|301|Location:|login\.html|401|403/i.test(msg)) {
-          return res.json({
-            ok:true,
-            ip:acesso.ip,
-            acesso:{porta:item.port, protocolo:item.protocol},
-            url:item.url
-          });
-        }
+      const encontrado = resultados.find((resultado) => resultado.teste && resultado.teste.ok);
+      if (encontrado) {
+        return res.json({
+          ok:true,
+          ip:acesso.ip,
+          acesso:{
+            porta:encontrado.item.porta,
+            protocolo:encontrado.item.protocolo
+          },
+          url:encontrado.item.url
+        });
       }
     }
 
     return res.json({
       ok:false,
       ip:acesso.ip,
-      erro:"Equipamento encontrado, porém nenhuma porta web de acesso remoto respondeu. Habilite o acesso remoto do equipamento."
+      erro:"Nenhuma porta web respondeu. Habilite o acesso remoto do equipamento e tente novamente."
     });
-  } catch(e) {
-    return res.status(500).json({ok:false, erro:e.message});
+  } catch (error) {
+    return res.status(500).json({ ok:false, erro:error.message });
   }
 });
 

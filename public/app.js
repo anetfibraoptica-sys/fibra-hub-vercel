@@ -1199,47 +1199,25 @@ document.addEventListener("DOMContentLoaded", function(){
       const d = await dadosAcesso();
 
       if(remoto){
-        if(!d.online || !d.remoto || !d.remoto.length){
+        if(!d.online || !d.ip_atual){
           if(abaRemota) abaRemota.close();
           throw new Error('Cliente offline ou sem IP PPPoE ativo no MikroTik.');
         }
-        const teste = await fetch('/api/clientes/' + encodeURIComponent(d.cliente_id) + '/testar-acesso-remoto', {credentials:'same-origin', cache:'no-store'}).then(r=>r.json());
 
-        // Aceita URL encontrada pelo diagnóstico ou monta pela informação cadastrada.
-        // Evita bloquear o acesso quando o equipamento responde corretamente, mas o teste HTTP não retorna corpo.
-        let url = '';
-        // Usa somente uma URL válida. Nunca aceita listas concatenadas.
-        if (typeof teste.url === 'string' && /^https?:\/\/[^,\s]+$/i.test(teste.url.trim())) {
-          url = teste.url.trim();
-        }
+        const resposta = await fetch(
+          '/api/clientes/' + encodeURIComponent(d.cliente_id) + '/testar-acesso-remoto',
+          { credentials:'same-origin', cache:'no-store' }
+        );
+        const teste = await resposta.json().catch(()=>({}));
 
-        // Normaliza respostas com listas de tentativas e pega somente um IP válido.
-        // Evita abrir URLs concatenadas como:
-        // http://IP,http://IP:8080,https://IP...
-        const ipValido = String(d.remoto || '').match(/\b(?:\d{1,3}\.){3}\d{1,3}\b/);
-        const remotoIp = ipValido ? ipValido[0] : '';
-
-        if(!url && remotoIp){
-          const origemPorta = String(d.acesso_remoto || '').match(/(?:port|porta)?[^0-9]*(\d{2,5})/i);
-          const porta = origemPorta ? origemPorta[1] : '';
-          if(porta) url = 'http://' + remotoIp + ':' + porta;
-        }
-        if(!url && teste.acesso){
-          const protocolo = teste.acesso.protocol || teste.acesso.protocolo || 'http';
-          const porta = teste.acesso.porta || teste.acesso.port;
-          if(teste.ip && porta){
-            url = protocolo === 'https'
-              ? 'https://' + teste.ip + (Number(porta) !== 443 ? ':' + porta : '')
-              : 'http://' + teste.ip + (Number(porta) !== 80 ? ':' + porta : '');
-          }
-        }
-
-        if(!teste.ok && !url){
+        if(!resposta.ok || !teste.ok || !teste.url){
           if(abaRemota) abaRemota.close();
-          throw new Error(teste.erro || 'Acesso remoto não encontrado. Verifique se a porta do remoto está habilitada.');
+          throw new Error(teste.erro || 'Nenhuma porta web respondeu. Habilite o acesso remoto do equipamento.');
         }
-        abaRemota.opener = null;
-        abaRemota.location.replace(url);
+
+        // A URL já vem pronta do backend. O navegador a abre diretamente
+        // pela VPN ativa do técnico, em uma nova aba.
+        abaRemota.location.href = teste.url;
         return;
       }
 
