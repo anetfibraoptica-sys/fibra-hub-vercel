@@ -2312,8 +2312,10 @@ app.post("/api/mikrotik/cliente-acao", async (req, res) => {
 
 
 /* ============================================================
-   STATUS DEDICADO DO CLIENTE - /ppp/active/print
-   Online somente no servidor selecionado e com IP+MAC+UPTIME.
+   STATUS DEDICADO DO CLIENTE
+   Consulta somente o MikroTik selecionado e devolve os dados
+   reais usados no bloco Resumo: sessão ativa, Secret, serviço,
+   VLAN/interface, profile, MTU e MRU.
 ============================================================ */
 app.get("/api/cliente/status", async (req, res) => {
   const normalizar = (v) => String(v || "")
@@ -2338,63 +2340,196 @@ app.get("/api/cliente/status", async (req, res) => {
     return true;
   };
 
+  const estaHabilitado = (row) => {
+    const disabled = normalizar(getCampo(row, ["disabled"]));
+    return disabled !== "yes" && disabled !== "true";
+  };
+
   try {
     const login = String(req.query.login || "").trim();
     const servidorNome = String(req.query.servidor || "").trim();
 
     if (!login) {
-      return res.json({ online:false, motivo:"login_nao_informado", login:"", ip:"", mac:"", uptime:"", interface:"", profile:"", servidor:servidorNome });
+      return res.json({
+        online:false,
+        motivo:"login_nao_informado",
+        login:"--",
+        ip:"",
+        mac:"",
+        uptime:"",
+        interface:"",
+        servico:"",
+        profile:"Nenhum profile encontrado",
+        mtu:"1480",
+        mru:"1480",
+        servidor:servidorNome
+      });
     }
 
     if (!servidorValido(servidorNome)) {
-      return res.json({ online:false, motivo:"servidor_nao_selecionado", login, ip:"", mac:"", uptime:"", interface:"", profile:"", servidor:servidorNome });
+      return res.json({
+        online:false,
+        motivo:"servidor_nao_selecionado",
+        login,
+        ip:"",
+        mac:"",
+        uptime:"",
+        interface:"",
+        servico:"",
+        profile:"Nenhum profile encontrado",
+        mtu:"1480",
+        mru:"1480",
+        servidor:servidorNome
+      });
     }
 
-    let retorno = null;
-    if (typeof consultarOnlineServidor === "function") {
-      retorno = await consultarOnlineServidor(servidorNome);
+    const cfg = servidorConfig(servidorNome);
+    if (!cfg.host || !cfg.user || !cfg.pass) {
+      return res.status(500).json({
+        online:false,
+        erro:true,
+        motivo:"mikrotik_nao_configurado",
+        mensagem:"Variáveis do MikroTik não configuradas para " + (cfg.key || servidorNome),
+        login,
+        ip:"",
+        mac:"",
+        uptime:"",
+        interface:"",
+        servico:"",
+        profile:"Nenhum profile encontrado",
+        mtu:"1480",
+        mru:"1480",
+        servidor:cfg.key || servidorNome
+      });
     }
 
-    const ativos = Array.isArray(retorno)
-      ? retorno
-      : Array.isArray(retorno?.clientes)
-        ? retorno.clientes
-        : [];
+    const consultarLinhas = async (comando, timeout = 12000) => {
+      try {
+        const resposta = await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [comando], timeout);
+        return parseRouterosRows(resposta);
+      } catch (erro) {
+        console.warn("Consulta complementar do Resumo falhou:", comando[0], erro.message);
+        return [];
+      }
+    };
+
+    const [activeRows, secretRows, pppoeInterfaceRows, pppoeServerRows] = await Promise.all([
+      consultarLinhas(["/ppp/active/print", "?name=" + login]),
+      consultarLinhas(["/ppp/secret/print", "?name=" + login]),
+      consultarLinhas(["/interface/pppoe-server/print", "?user=" + login]),
+      consultarLinhas(["/interface/pppoe-server/server/print"])
+    ]);
 
     const loginAlvo = normalizar(login);
 
-    const sessao = ativos.find((s) => {
-      const nome = getCampo(s, ["name", "usuario", "user", "login", "loginPppoe", "pppoe", "cliente"]);
-      return nome && normalizar(nome) === loginAlvo;
+    const active = activeRows.find((row) =>
+      normalizar(getCampo(row, ["name", "user", "usuario", "login"])) === loginAlvo
+    ) || activeRows[0] || null;
+
+    const secret = secretRows.find((row) =>
+      normalizar(getCampo(row, ["name", "user", "usuario", "login"])) === loginAlvo
+    ) || secretRows[0] || null;
+
+    const pppoeInterface = pppoeInterfaceRows.find((row) => {
+      const user = getCampo(row, ["user", "name", "usuario", "login"]);
+      if (normalizar(user) === loginAlvo) return true;
+      const nomeDinamico = normalizar(getCampo(row, ["name"]))
+        .replace(/^<pppoe-/, "")
+        .replace(/>$/, "");
+      return nomeDinamico === loginAlvo;
+    }) || pppoeInterfaceRows[0] || null;
+
+    const servicosCandidatos = [
+      getCampo(pppoeInterface, ["service-name", "service"]),
+      getCampo(active, ["service-name", "service"]),
+      getCampo(secret, ["service-name"])
+    ].filter((v) => {
+      const n = normalizar(v);
+      return n && n !== "pppoe" && n !== "any";
     });
 
-    if (!sessao) {
-      return res.json({ online:false, motivo:"login_nao_encontrado_no_ppp_active", login, ip:"", mac:"", uptime:"", interface:"", profile:"", servidor:servidorNome });
+    let pppoeServer = null;
+    for (const nomeServico of servicosCandidatos) {
+      pppoeServer = pppoeServerRows.find((row) =>
+        normalizar(getCampo(row, ["service-name", "service"])) === normalizar(nomeServico)
+      );
+      if (pppoeServer) break;
     }
 
-    const ip = getCampo(sessao, ["address", "ip", "ipAtual", "remoteAddress", "remote-address", "remote_address"]);
-    const mac = getCampo(sessao, ["callerId", "caller-id", "caller_id", "mac", "macAddress", "mac_address", "callingStationId", "calling-station-id"]);
-    const uptime = getCampo(sessao, ["uptime", "tempo", "tempoOnline", "onlineTime", "sessionTime", "session-time"]);
-    const iface = getCampo(sessao, ["service", "interface", "interfaceName", "interface-name", "vlan"]);
-    const profile = getCampo(sessao, ["profile", "perfil", "plano", "rateLimit", "rate-limit"]);
-    const servidor = getCampo(sessao, ["servidor", "server", "router", "mikrotik"]) || servidorNome;
+    if (!pppoeServer) {
+      const interfaceDinamica = getCampo(pppoeInterface, ["server-interface", "interface"]);
+      if (interfaceDinamica) {
+        pppoeServer = pppoeServerRows.find((row) =>
+          normalizar(getCampo(row, ["interface"])) === normalizar(interfaceDinamica)
+        ) || null;
+      }
+    }
 
-    const online = Boolean(ip && mac && uptime);
+    if (!pppoeServer) {
+      const habilitados = pppoeServerRows.filter(estaHabilitado);
+      if (habilitados.length === 1) pppoeServer = habilitados[0];
+      else pppoeServer = habilitados[0] || pppoeServerRows[0] || null;
+    }
+
+    const online = Boolean(active);
+    const ip = getCampo(active, ["address", "remote-address", "remote_address", "ip"]);
+    const mac = getCampo(active, ["caller-id", "caller_id", "callerId", "mac-address", "mac_address", "mac"])
+      || getCampo(pppoeInterface, ["caller-id", "caller_id", "callerId", "mac-address", "mac_address", "mac"]);
+    const uptime = getCampo(active, ["uptime", "session-time", "session_time", "tempo"])
+      || getCampo(pppoeInterface, ["uptime", "session-time", "session_time", "tempo"]);
+
+    const profile = getCampo(secret, ["profile", "perfil", "plano"])
+      || getCampo(active, ["profile", "perfil", "plano"])
+      || "Nenhum profile encontrado";
+
+    const servico = getCampo(pppoeInterface, ["service-name", "service"])
+      || getCampo(pppoeServer, ["service-name", "service"])
+      || getCampo(active, ["service-name", "service"])
+      || getCampo(secret, ["service"])
+      || "-";
+
+    const interfaceFisica = getCampo(pppoeServer, ["interface"])
+      || getCampo(pppoeInterface, ["server-interface", "interface"])
+      || getCampo(active, ["interface"])
+      || "-";
+
+    const mtu = getCampo(pppoeInterface, ["actual-mtu", "actual_mtu", "mtu"])
+      || getCampo(active, ["actual-mtu", "actual_mtu", "mtu"])
+      || getCampo(pppoeServer, ["max-mtu", "max_mtu", "mtu"])
+      || "1480";
+
+    const mru = getCampo(pppoeInterface, ["actual-mru", "actual_mru", "mru"])
+      || getCampo(active, ["actual-mru", "actual_mru", "mru"])
+      || getCampo(pppoeServer, ["max-mru", "max_mru", "mru"])
+      || "1480";
+
+    const loginReal = getCampo(active, ["name", "user", "usuario", "login"])
+      || getCampo(pppoeInterface, ["user", "usuario", "login"])
+      || getCampo(secret, ["name", "user", "usuario", "login"])
+      || login;
 
     return res.json({
       online,
-      motivo: online ? "sessao_ppp_active_confirmada" : "sessao_incompleta",
-      login,
+      motivo: online ? "sessao_ppp_active_confirmada" : "login_nao_encontrado_no_ppp_active",
+      login: loginReal || "--",
       ip: online ? ip : "",
       mac: online ? mac : "",
       uptime: online ? uptime : "",
-      interface: online ? iface : "",
-      profile: online ? profile : "",
-      servidor
+      interface: interfaceFisica,
+      servico,
+      profile,
+      mtu,
+      mru,
+      servidor: cfg.key || servidorNome
     });
   } catch (err) {
     console.error("Erro /api/cliente/status:", err);
-    return res.status(500).json({ online:false, erro:true, motivo:"erro_endpoint_status_cliente", mensagem:err.message });
+    return res.status(500).json({
+      online:false,
+      erro:true,
+      motivo:"erro_endpoint_status_cliente",
+      mensagem:err.message
+    });
   }
 });
 

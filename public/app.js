@@ -858,14 +858,14 @@ document.addEventListener("DOMContentLoaded", function(){
             <span class="resumo-value"><b>Serviço:</b> <span id="resServico">${servico}</span></span>
             <span class="resumo-value"><b>IP:</b> <span id="resIp">${ip}</span></span>
             <span class="resumo-value"><b>Profile Servidor:</b> <span id="resProfile">${profile}</span></span>
-            <span class="resumo-value"><b>MTU:</b> ${mtu}</span>
+            <span class="resumo-value"><b>MTU:</b> <span id="resMtu">${mtu}</span></span>
           </div>
           <div class="resumo-field">
             <span class="resumo-value"><b>Login:</b> <span id="resLogin2">${login}</span></span>
             <span class="resumo-value"><b>Tempo:</b> <span id="resTempo">-</span></span>
             <span class="resumo-value"><b>MAC:</b> <span id="resMac">${mac}</span></span>
             <span class="resumo-value"><b>Interface:</b> <span id="resInterface">${interfaceV}</span></span>
-            <span class="resumo-value"><b>MRU:</b> ${mru}</span>
+            <span class="resumo-value"><b>MRU:</b> <span id="resMru">${mru}</span></span>
           </div>
         </div>
 

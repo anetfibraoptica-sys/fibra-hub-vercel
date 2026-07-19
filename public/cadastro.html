@@ -2660,7 +2660,12 @@ document.addEventListener("DOMContentLoaded", function(){
   }
   function getVal(id){ return (document.getElementById(id)?.value || "").trim(); }
   function getTxt(id){ return (document.getElementById(id)?.textContent || "").trim(); }
-  function setTxt(id, valor){ const el=document.getElementById(id); if(el) el.textContent = valor || "-"; }
+  function setTxt(id, valor, fallback){
+    const el = document.getElementById(id);
+    if(!el) return;
+    const texto = String(valor === undefined || valor === null ? "" : valor).trim();
+    el.textContent = texto || (fallback === undefined ? "-" : fallback);
+  }
 
   function statusEl(){
     return document.getElementById("resStatusOnline") || document.querySelector(".offline-dot, .status-dot");
@@ -2685,7 +2690,18 @@ document.addEventListener("DOMContentLoaded", function(){
     return true;
   }
 
-  function aplicarOffline(){
+  function aplicarDadosMikrotik(d){
+    if(!d) return;
+    setTxt("resServico", d.servico || d.service, "-");
+    setTxt("resProfile", d.profile, "Nenhum profile encontrado");
+    setTxt("resMtu", d.mtu, "1480");
+    setTxt("resMru", d.mru, "1480");
+    setTxt("resLogin2", d.login || loginAtual(), "--");
+    setTxt("resInterface", d.interface, "-");
+    if(d.servidor) setTxt("resServidor", d.servidor, "-");
+  }
+
+  function aplicarOffline(d){
     const el = statusEl();
     if(el){
       el.textContent = "● Offline";
@@ -2693,9 +2709,10 @@ document.addEventListener("DOMContentLoaded", function(){
       el.classList.add("status-offline-real","offline-dot");
       el.style.color = "#ef4444";
     }
-    setTxt("resIp", "-");
-    setTxt("resTempo", "-");
-    setTxt("resMac", "-");
+    aplicarDadosMikrotik(d);
+    setTxt("resIp", "", "-");
+    setTxt("resTempo", "", "-");
+    setTxt("resMac", "", "-");
   }
 
   function aplicarVerificando(){
@@ -2716,12 +2733,10 @@ document.addEventListener("DOMContentLoaded", function(){
       el.classList.add("status-online-real","offline-dot");
       el.style.color = "#22c55e";
     }
-    setTxt("resIp", d.ip);
-    setTxt("resTempo", d.uptime);
-    setTxt("resMac", d.mac);
-    setTxt("resInterface", d.interface || "PPPOE");
-    setTxt("resProfile", d.profile || "-");
-    if(d.servidor) setTxt("resServidor", d.servidor);
+    aplicarDadosMikrotik(d);
+    setTxt("resIp", d.ip, "-");
+    setTxt("resTempo", d.uptime, "-");
+    setTxt("resMac", d.mac, "-");
   }
 
   async function consultar(){
@@ -2740,10 +2755,10 @@ document.addEventListener("DOMContentLoaded", function(){
       const resp = await fetch(url, {cache:"no-store"});
       const data = await resp.json();
 
-      if(data && data.online === true && data.ip && data.mac && data.uptime){
+      if(data && data.online === true){
         aplicarOnline(data);
       }else{
-        aplicarOffline();
+        aplicarOffline(data);
       }
     }catch(e){
       console.warn("Erro status cliente:", e);
@@ -2757,6 +2772,10 @@ document.addEventListener("DOMContentLoaded", function(){
     setTimeout(consultar, 700);
     setTimeout(consultar, 2000);
     setTimeout(consultar, 4200);
+  });
+
+  document.addEventListener("fibra:cliente-carregado", function(){
+    setTimeout(consultar, 250);
   });
 
   document.addEventListener("change", function(e){
