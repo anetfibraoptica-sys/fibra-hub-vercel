@@ -56,7 +56,18 @@ async function carregarRelatorios(){
  const r=await fetch('/api/clientes');
  const dados=await r.json();
  const clientes=Array.isArray(dados)?dados:(dados.clientes||[]);
+ try{
+ const mk=await fetch('/api/mikrotiks');
+ if(mk.ok){
+  const mks=await mk.json();
+  const lista=Array.isArray(mks)?mks:(mks.mikrotiks||mks.data||[]);
+  document.getElementById('diagServidores').textContent=lista.length;
+ }else{
+  document.getElementById('diagServidores').textContent='-';
+ }
+}catch(e){
  document.getElementById('diagServidores').textContent='-';
+}
  let online=0, semPlano=0, semDescricao=0;
  const tbody=document.getElementById('listaDiagnostico');
  tbody.innerHTML='';
