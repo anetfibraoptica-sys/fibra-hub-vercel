@@ -4070,11 +4070,19 @@ document.addEventListener("DOMContentLoaded", function(){
   window.gerarMensalidadesCliente = async function(){
     const c = cliente();
     if(!exigirPlanoCobrancaIncluido()) return;
-    const valor = num(document.getElementById("mensalidadeValor")?.value);
     const primeiro = document.getElementById("mensalidadePrimeiroVencimento")?.value;
     const qtd = Math.max(1, Number(document.getElementById("mensalidadeQuantidade")?.value || 1));
     const per = document.getElementById("mensalidadePeriodicidade")?.value || "mensal";
-    if(!valor || !primeiro){ alert("Informe valor e primeiro vencimento."); return; }
+    const atual = window.__fibraClienteCadastro || window.__fibraClienteSelecionado || c || {};
+    const valor = num(
+      atual.valorMensal ||
+      atual.mensalidade ||
+      atual.valorPlano ||
+      document.getElementById("cadValor")?.value ||
+      0
+    );
+    if(!primeiro){ alert("Informe o primeiro vencimento."); return; }
+    if(!valor){ alert("Plano de Cobrança sem valor configurado."); return; }
 
     const parcelas = [];
     for(let i=0;i<qtd;i++){
