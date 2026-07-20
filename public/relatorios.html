@@ -39,12 +39,10 @@
 </div>
 </section>
 <section class="panel">
-<h3>📦 Controle de Planos de Cobrança</h3>
-<div style="overflow:auto">
-<table class="table" style="width:100%">
-<thead><tr><th>Plano de Cobrança</th><th>Clientes</th><th>Valor</th></tr></thead>
-<tbody id="listaPlanosDiagnostico"></tbody>
-</table>
+<h3>📡 Monitoramento da Rede</h3>
+<div class="cards-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:15px;margin-top:20px;">
+<div class="card"><h4>🌐 Comunicação</h4><strong id="redeStatus">Ativo</strong><p>Status do monitoramento</p></div>
+<div class="card"><h4>⚠️ Pendências</h4><strong id="redePendencias">0</strong><p>Problemas encontrados</p></div>
 </div>
 </section>
 <section class="panel">
@@ -77,28 +75,6 @@ async function carregarRelatorios(){
  document.getElementById('diagOnline').textContent=online;
  document.getElementById('diagSemPlano').textContent=semPlano;
  document.getElementById('diagSemDescricao').textContent=semDescricao;
- const tabelaPlanos=document.getElementById('listaPlanosDiagnostico');
- if(tabelaPlanos){
-   tabelaPlanos.innerHTML='';
-   try{
-    const rp=await fetch('/api/planos-cobranca');
-    const planosResp=await rp.json();
-    const listaPlanos=Array.isArray(planosResp)?planosResp:(planosResp.planos||[]);
-    listaPlanos.forEach(pl=>{
-      const descricao=pl.descricao||'-';
-      const valor=Number(pl.valor||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
-      let qtd=0;
-      clientes.forEach(c=>{
-        const pc=String(c.planoCobranca||c.plano_cobranca||'').trim().toLowerCase();
-        if(pc===descricao.toLowerCase()) qtd++;
-      });
-      tabelaPlanos.innerHTML += '<tr><td>'+descricao+'</td><td>'+qtd+'</td><td>'+valor+'</td></tr>';
-    });
-    if(!listaPlanos.length) tabelaPlanos.innerHTML='<tr><td colspan="3">Nenhum plano cadastrado</td></tr>';
-   }catch(err){
-    console.error(err);
-    tabelaPlanos.innerHTML='<tr><td colspan="3">Erro ao carregar planos</td></tr>';
-   }
  }
  }catch(e){console.error(e);}
 }
