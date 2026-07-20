@@ -820,8 +820,8 @@ document.addEventListener("DOMContentLoaded", function(){
     var tel3 = val(["#cadTelefone3"], pick(c,["telefone3","tel3","celular3"], "-"));
     var complemento = val(["#cadComplemento"], pick(c,["complemento"], "-"));
 
-    var plano = val(["#cadPlano"], pick(c,["plano","planoCobranca","cadPlano"], "Nenhum Plano Ativo"));
-    var valorBruto = val(["#cadValor"], pick(c,["valorMensal","valor","valorPlano","valor_mensal","mensalidade"], "0"));
+    var plano = val(["#cadPlano"], pick(c,["plano","planoCobranca","plano_cobranca","cadPlano","descricaoPlanoCobranca"], "Nenhum Plano Ativo"));
+    var valorBruto = val(["#cadValor"], pick(c,["valorMensal","valor","valorPlano","valorPlanoCobranca","valor_plano_cobranca","valor_mensal","mensalidade"], "0"));
     var valorNumero = Number(String(valorBruto || "0").replace(/R\$/gi, "").replace(/\s/g, "").replace(/\./g, "").replace(",", ".").replace(/[^0-9.-]/g, ""));
     var valor = Number.isFinite(valorNumero)
       ? valorNumero.toLocaleString("pt-BR", {style:"currency", currency:"BRL"})
