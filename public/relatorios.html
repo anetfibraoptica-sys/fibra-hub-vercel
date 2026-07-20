@@ -21,20 +21,20 @@
 <a href="usuarios.html" class=""><span class="icon">👥</span>Usuários</a>
 <a href="configuracoes.html" class=""><span class="icon">⚙️</span>Configurações</a>
 <a href="backup.html" class=""><span class="icon">☁</span>Backup</a><a href="#" onclick="sair()"><span class="icon">↪</span></a></nav></aside><main class="main"><header class="topbar"><h1>Relatórios</h1><div class="topbar-right"><span id="liveStatus" class="badge badge-off">CONECTANDO</span><span class="badge">2 Servidores</span><span class="badge">Administrador</span></div></header><section class="content"><section class="panel">
-<h3>Relatórios Gerais</h3>
+<h3>Controle e Diagnóstico</h3>
 <div class="cards-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:15px;margin-top:20px;">
-<div class="card"><h4>👥 Clientes</h4><strong id="rTotal">0</strong><p>Total cadastrados</p></div>
-<div class="card"><h4>🟢 Online</h4><strong id="rOnline">0</strong><p>Clientes online</p></div>
-<div class="card"><h4>💰 Receita Prevista</h4><strong id="rReceita">R$ 0,00</strong><p>Planos ativos</p></div>
-<div class="card"><h4>⚠️ Isentos</h4><strong id="rIsentos">0</strong><p>Clientes isentos</p></div>
+<div class="card"><h4>📡 MikroTik</h4><strong id="diagServidores">0</strong><p>Servidores cadastrados</p></div>
+<div class="card"><h4>🟢 Online</h4><strong id="diagOnline">0</strong><p>Clientes conectados</p></div>
+<div class="card"><h4>⚠️ Sem Plano</h4><strong id="diagSemPlano">0</strong><p>Clientes sem cobrança</p></div>
+<div class="card"><h4>⚠️ Sem Descrição</h4><strong id="diagSemDescricao">0</strong><p>Boleto sem descrição</p></div>
 </div>
 </section>
 <section class="panel">
-<h3>Resumo de Clientes</h3>
+<h3>Diagnóstico de Clientes</h3>
 <div style="overflow:auto">
 <table class="table" style="width:100%">
-<thead><tr><th>Cliente</th><th>Status</th><th>Plano</th><th>Valor</th></tr></thead>
-<tbody id="listaRelatorioClientes"></tbody>
+<thead><tr><th>Cliente</th><th>Status</th><th>Plano Cobrança</th><th>Problema</th></tr></thead>
+<tbody id="listaDiagnostico"></tbody>
 </table>
 </div>
 </section>
@@ -44,25 +44,30 @@ async function carregarRelatorios(){
  const r=await fetch('/api/clientes');
  const dados=await r.json();
  const clientes=Array.isArray(dados)?dados:(dados.clientes||[]);
- document.getElementById('rTotal').textContent=clientes.length;
- let receita=0,isentos=0,online=0;
- const tbody=document.getElementById('listaRelatorioClientes');
+ document.getElementById('diagServidores').textContent='-';
+ let online=0, semPlano=0, semDescricao=0;
+ const tbody=document.getElementById('listaDiagnostico');
  tbody.innerHTML='';
- clientes.slice(0,100).forEach(c=>{
-   const valor=Number(c.valorMensal||c.mensalidade||c.valor||0);
-   receita+=valor;
-   const status=String(c.status||c.statusCobranca||'').toUpperCase();
-   if(status.includes('ISENTO')) isentos++;
-   if(String(c.online||c.statusMikrotik||'').toUpperCase().includes('ONLINE')) online++;
-   tbody.innerHTML += '<tr><td>'+((c.nome||c.nomeCliente||'-'))+'</td><td>'+status+'</td><td>'+((c.planoCobranca||c.plano||'-'))+'</td><td>R$ '+valor.toFixed(2).replace('.',',')+'</td></tr>';
+ clientes.forEach(c=>{
+   const status=String(c.statusMikrotik||c.status||'').toUpperCase();
+   if(status.includes('ONLINE')) online++;
+   const plano=String(c.planoCobranca||c.plano||'').trim();
+   const descricao=String(c.descricaoBoleto||c.descricao_boleto||plano||'').trim();
+   let problemas=[];
+   if(!plano){ semPlano++; problemas.push('Sem Plano de Cobrança'); }
+   if(!descricao){ semDescricao++; problemas.push('Sem descrição boleto'); }
+   if(problemas.length){
+    tbody.innerHTML += '<tr><td>'+((c.nome||c.nomeCliente||'-'))+'</td><td>'+status+'</td><td>'+ (plano||'-') +'</td><td>'+problemas.join(', ')+'</td></tr>';
+   }
  });
- document.getElementById('rReceita').textContent='R$ '+receita.toFixed(2).replace('.',',');
- document.getElementById('rIsentos').textContent=isentos;
- document.getElementById('rOnline').textContent=online;
+ document.getElementById('diagOnline').textContent=online;
+ document.getElementById('diagSemPlano').textContent=semPlano;
+ document.getElementById('diagSemDescricao').textContent=semDescricao;
  }catch(e){console.error(e);}
 }
 carregarRelatorios();
-</script><div class="footer"><span>© 2026 Fibra+</span><span>Hub com 2 servidores MikroTik</span></div></section></main></div><script src="supabase-client.js"></script>
+</script>
+<div class="footer"><span>© 2026 Fibra+</span><span>Hub com 2 servidores MikroTik</span></div></section></main></div><script src="supabase-client.js"></script>
 <script src="auth-painel.js"></script>
 <script src="app.js"></script>
 <script src="pppoe-stable.js"></script>
