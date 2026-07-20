@@ -74,8 +74,21 @@ async function carregarRelatorios(){
  clientes.forEach(c=>{
    const status=String(c.statusMikrotik||c.status||'').toUpperCase();
    if(status.includes('ONLINE')) online++;
-   const plano=String(c.planoCobranca||c.plano||'').trim();
-   const descricao=String(c.descricaoBoleto||c.descricao_boleto||plano||'').trim();
+   const plano=String(
+     c.planoCobrancaDescricao ||
+     c.plano_cobranca_descricao ||
+     c.planoCobranca ||
+     c.plano_cobranca ||
+     c.plano ||
+     ''
+   ).trim();
+   const descricao=String(
+     c.descricaoBoleto ||
+     c.descricao_boleto ||
+     c.descricaoPlano ||
+     c.descricao_plano ||
+     ''
+   ).trim();
    let problemas=[];
    if(!plano){ semPlano++; problemas.push('Sem Plano de Cobrança'); }
    if(!descricao){ semDescricao++; problemas.push('Sem descrição boleto'); }
