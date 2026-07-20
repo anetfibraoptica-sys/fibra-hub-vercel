@@ -4050,33 +4050,25 @@ async function financeiroComTravaDoPonto(body, tarefa) {
 }
 
 
-/* Usa a descrição do Plano de Cobrança como descrição padrão do boleto.
-   Uma descrição digitada manualmente no boleto continua tendo prioridade. */
+/* Exige um Plano de Cobrança incluído no cliente antes de gerar qualquer
+   boleto ou carnê. A descrição do plano é sempre usada nas cobranças. */
+function financeiroErroPlanoObrigatorio() {
+  const erro = new Error(
+    "Inclua um Plano de Cobrança no cliente antes de gerar boleto ou carnê."
+  );
+  erro.codigo = "PLANO_COBRANCA_OBRIGATORIO";
+  erro.httpStatus = 400;
+  return erro;
+}
+
 async function financeiroAplicarDescricaoPlanoCliente(body) {
   body = {...(body || {})};
-  if (String(body.descricao || "").trim()) return body;
 
-  const clienteId = String(body.clienteId || body.cliente_id || body.idCliente || "").trim();
-  const login = String(body.login || body.loginPppoe || body.clienteLogin || "").trim();
-  let r = {rows:[]};
+  const { clienteId, cliente, loginBanco } = await financeiroValidarPonto(body);
+  const dados = cliente.dados && typeof cliente.dados === "object" ? cliente.dados : {};
 
-  if (/^\d+$/.test(clienteId)) {
-    r = await pool.query("SELECT plano,dados FROM clientes WHERE id=$1 LIMIT 1", [Number(clienteId)]);
-  }
-  if (!r.rows[0] && login) {
-    r = await pool.query(`
-      SELECT plano,dados FROM clientes
-      WHERE login_pppoe=$1
-         OR dados->>'loginPppoe'=$1
-         OR dados->>'login'=$1
-         OR dados->>'cadLogin'=$1
-      ORDER BY atualizado_em DESC NULLS LAST, id DESC
-      LIMIT 1
-    `, [login]);
-  }
-
-  const row = r.rows[0] || {};
-  const dados = row.dados && typeof row.dados === "object" ? row.dados : {};
+  // Usa somente os campos próprios do Plano de Cobrança. Não considera profile
+  // ou plano antigo do MikroTik como plano financeiro válido.
   const descricao = String(
     dados.descricaoBoleto ||
     dados.descricao_boleto ||
@@ -4084,12 +4076,33 @@ async function financeiroAplicarDescricaoPlanoCliente(body) {
     dados.boleto_descricao ||
     dados.planoCobranca ||
     dados.plano_cobranca ||
-    row.plano ||
-    dados.plano ||
     ""
   ).trim();
 
-  if (descricao) body.descricao = descricao;
+  const valorPlano = Number(
+    dados.valorMensal ??
+    dados.mensalidade ??
+    dados.valorPlano ??
+    dados.cadValor ??
+    0
+  );
+
+  if (!descricao || !Number.isFinite(valorPlano) || valorPlano <= 0) {
+    throw financeiroErroPlanoObrigatorio();
+  }
+
+  body.clienteId = clienteId;
+  body.cliente_id = clienteId;
+  if (loginBanco) {
+    body.login = loginBanco;
+    body.loginPppoe = loginBanco;
+    body.clienteLogin = loginBanco;
+  }
+
+  // A descrição do boleto e de todas as parcelas do carnê vem do plano incluído.
+  body.descricao = descricao;
+  body.descricaoPlanoCobranca = descricao;
+  body.valorPlanoCobranca = valorPlano;
   return body;
 }
 
@@ -4114,7 +4127,8 @@ app.post("/api/efi/boleto/criar", async (req, res) => {
     });
   } catch (err) {
     console.error("Erro /api/efi/boleto/criar:", err);
-    return res.status(err.codigo === "BOLETO_DUPLICADO" ? 409 : 500).json({
+    const status = err.httpStatus || (err.codigo === "BOLETO_DUPLICADO" ? 409 : 500);
+    return res.status(status).json({
       ok:false,
       erro:err.message,
       codigo:err.codigo || "",
@@ -4129,7 +4143,8 @@ app.post("/api/efi/carne/criar", async (req, res) => {
     const parcelas = Array.isArray(body.parcelas)
       ? body.parcelas.map(parcela => ({
           ...parcela,
-          descricao: String(parcela?.descricao || body.descricao || "").trim()
+          // A descrição de cada parcela do carnê é sempre a descrição do plano.
+          descricao: String(body.descricao || "").trim()
         }))
       : [];
     if (!parcelas.length) return res.status(400).json({ ok:false, erro:"Nenhuma parcela informada." });
@@ -4162,7 +4177,8 @@ app.post("/api/efi/carne/criar", async (req, res) => {
     });
   } catch (err) {
     console.error("Erro /api/efi/carne/criar:", err);
-    return res.status(err.codigo === "BOLETO_DUPLICADO" ? 409 : 500).json({
+    const status = err.httpStatus || (err.codigo === "BOLETO_DUPLICADO" ? 409 : 500);
+    return res.status(status).json({
       ok:false,
       erro:err.message,
       codigo:err.codigo || "",

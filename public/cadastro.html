@@ -3958,6 +3958,29 @@ document.addEventListener("DOMContentLoaded", function(){
     if(!resp.ok || !json.ok) throw new Error(json.erro || json.mensagem || "Erro ao criar carnê na Efí.");
     return json;
   }
+  function exigirPlanoCobrancaIncluido(){
+    const atual = window.__fibraClienteCadastro || window.__fibraClienteSelecionado || {};
+    const descricao = String(
+      document.getElementById("cadPlano")?.value ||
+      atual.planoCobranca ||
+      atual.plano_cobranca ||
+      atual.descricaoBoleto ||
+      atual.descricao_boleto ||
+      ""
+    ).trim();
+    const valor = num(
+      document.getElementById("cadValor")?.value ||
+      atual.valorMensal ||
+      atual.mensalidade ||
+      atual.valorPlano ||
+      0
+    );
+    if(!descricao || valor <= 0){
+      alert("Inclua um Plano de Cobrança no cliente antes de gerar boleto ou carnê.");
+      return false;
+    }
+    return true;
+  }
   async function desbloquearClientePorPagamento(){
     const c = cliente();
     const login = loginCadastro(c);
@@ -3981,6 +4004,7 @@ document.addEventListener("DOMContentLoaded", function(){
   const oldGerarBoletoAvulso = window.gerarBoletoAvulsoCliente;
   window.gerarBoletoAvulsoCliente = async function(){
     const c = cliente();
+    if(!exigirPlanoCobrancaIncluido()) return;
     const valor = num(document.getElementById("avulsoValor")?.value);
     const venc = document.getElementById("avulsoVencimento")?.value;
     if(!valor || !venc){ alert("Informe valor e vencimento."); return; }
@@ -4028,6 +4052,7 @@ document.addEventListener("DOMContentLoaded", function(){
   const oldGerarMensalidades = window.gerarMensalidadesCliente;
   window.gerarMensalidadesCliente = async function(){
     const c = cliente();
+    if(!exigirPlanoCobrancaIncluido()) return;
     const valor = num(document.getElementById("mensalidadeValor")?.value);
     const primeiro = document.getElementById("mensalidadePrimeiroVencimento")?.value;
     const qtd = Math.max(1, Number(document.getElementById("mensalidadeQuantidade")?.value || 1));
