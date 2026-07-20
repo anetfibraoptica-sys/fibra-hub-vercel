@@ -21,7 +21,7 @@
 <a href="usuarios.html" class=""><span class="icon">👥</span>Usuários</a>
 <a href="configuracoes.html" class=""><span class="icon">⚙️</span>Configurações</a>
 <a href="backup.html" class=""><span class="icon">☁</span>Backup</a><a href="#" onclick="sair()"><span class="icon">↪</span></a></nav></aside><main class="main"><header class="topbar"><h1>Relatórios</h1><div class="topbar-right"><span id="liveStatus" class="badge badge-off">CONECTANDO</span><span class="badge">2 Servidores</span><span class="badge">Administrador</span></div></header><section class="content"><section class="panel">
-<h3>Controle e Diagnóstico</h3>
+<h3>Controle e Diagnóstico</h3><button onclick="carregarRelatorios()" style="margin-top:10px">🔄 Atualizar Diagnóstico</button><span id="ultimaAtualizacao" style="margin-left:10px;color:#666"></span>
 <div class="cards-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:15px;margin-top:20px;">
 <div class="card"><h4>📡 MikroTik</h4><strong id="diagServidores">0</strong><p>Servidores cadastrados</p></div>
 <div class="card"><h4>🟢 Online</h4><strong id="diagOnline">0</strong><p>Clientes conectados</p></div>
@@ -86,6 +86,7 @@ async function carregarRelatorios(){
  document.getElementById('diagOnline').textContent=online;
  document.getElementById('diagSemPlano').textContent=semPlano;
  document.getElementById('diagSemDescricao').textContent=semDescricao;
+ document.getElementById('ultimaAtualizacao').textContent='Atualizado: '+new Date().toLocaleString('pt-BR');
  }
  }catch(e){console.error(e);}
 }
