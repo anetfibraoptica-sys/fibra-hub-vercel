@@ -38,6 +38,20 @@
 </table>
 </div>
 </section>
+<section class="panel">
+<h3>📦 Controle de Planos de Cobrança</h3>
+<div style="overflow:auto">
+<table class="table" style="width:100%">
+<thead><tr><th>Plano</th><th>Clientes</th></tr></thead>
+<tbody id="listaPlanosDiagnostico"></tbody>
+</table>
+</div>
+</section>
+<section class="panel">
+<h3>📝 Auditoria (Preparação)</h3>
+<p style="color:#666">Histórico de alterações será registrado nesta área.</p>
+</section>
+
 <script>
 async function carregarRelatorios(){
  try{
@@ -63,6 +77,21 @@ async function carregarRelatorios(){
  document.getElementById('diagOnline').textContent=online;
  document.getElementById('diagSemPlano').textContent=semPlano;
  document.getElementById('diagSemDescricao').textContent=semDescricao;
+ const planos={};
+ clientes.forEach(c=>{
+   const p=String(c.planoCobranca||c.plano||'').trim();
+   if(p) planos[p]=(planos[p]||0)+1;
+ });
+ const tabelaPlanos=document.getElementById('listaPlanosDiagnostico');
+ if(tabelaPlanos){
+   tabelaPlanos.innerHTML='';
+   Object.keys(planos).forEach(p=>{
+     tabelaPlanos.innerHTML += '<tr><td>'+p+'</td><td>'+planos[p]+'</td></tr>';
+   });
+   if(!Object.keys(planos).length){
+     tabelaPlanos.innerHTML='<tr><td colspan="2">Nenhum plano encontrado</td></tr>';
+   }
+ }
  }catch(e){console.error(e);}
 }
 carregarRelatorios();
