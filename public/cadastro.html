@@ -2046,6 +2046,7 @@ function gerarMensalidadesCliente(){
     });
   }
   fibraSalvarBoletosStorage(lista);
+  alert("✅ Carnê gerado com sucesso!\n\nCliente: " + (c.nome||"") + "\nQuantidade de parcelas: " + qtd + "\nValor da parcela: R$ " + valor.toFixed(2));
   fecharSubmodaisBoletos();
   renderizarBoletosCliente();
 }
@@ -2070,6 +2071,7 @@ function gerarBoletoAvulsoCliente(){
     origem:"avulso"
   });
   fibraSalvarBoletosStorage(lista);
+  alert("✅ Boleto avulso gerado com sucesso!\n\nCliente: " + (c.nome||"") + "\nValor: R$ " + valor.toFixed(2) + "\nVencimento: " + venc);
   fecharSubmodaisBoletos();
   renderizarBoletosCliente();
 }
@@ -2345,6 +2347,7 @@ function gerarMensalidadesCliente(){
     });
   }
   fibraSalvarBoletosStorage(lista);
+  alert("✅ Carnê gerado com sucesso!\n\nCliente: " + (c.nome||"") + "\nQuantidade de parcelas: " + qtd + "\nValor da parcela: R$ " + valor.toFixed(2));
   fecharSubmodaisBoletos();
   renderizarBoletosCliente();
 }
@@ -4068,6 +4071,10 @@ document.addEventListener("DOMContentLoaded", function(){
 
   const oldGerarMensalidades = window.gerarMensalidadesCliente;
   window.gerarMensalidadesCliente = async function(){
+    if(window.__fibraGerandoCobranca){ alert("⏳ Gerando carnê, aguarde..."); return; }
+    window.__fibraGerandoCobranca = true;
+    const btn = document.querySelector("button[onclick*="gerarMensalidadesCliente"]");
+    if(btn){ btn.disabled=true; btn.textContent="⏳ Gerando..."; }
     const c = cliente();
     if(!exigirPlanoCobrancaIncluido()) return;
     const primeiro = document.getElementById("mensalidadePrimeiroVencimento")?.value;
@@ -4075,6 +4082,7 @@ document.addEventListener("DOMContentLoaded", function(){
     const per = document.getElementById("mensalidadePeriodicidade")?.value || "mensal";
     const atual = window.__fibraClienteCadastro || window.__fibraClienteSelecionado || c || {};
     const valor = num(
+      (window.fibraValorPlanoCobrancaCliente && window.fibraValorPlanoCobrancaCliente()) ||
       atual.valorMensal ||
       atual.mensalidade ||
       atual.valorPlano ||
