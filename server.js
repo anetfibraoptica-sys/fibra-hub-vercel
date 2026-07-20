@@ -4069,7 +4069,7 @@ async function financeiroAplicarDescricaoPlanoCliente(body) {
 
   // Usa somente os campos próprios do Plano de Cobrança. Não considera profile
   // ou plano antigo do MikroTik como plano financeiro válido.
-  const descricao = String(
+  let descricao = String(
     dados.descricaoBoleto ||
     dados.descricao_boleto ||
     dados.boletoDescricao ||
@@ -4079,13 +4079,43 @@ async function financeiroAplicarDescricaoPlanoCliente(body) {
     ""
   ).trim();
 
-  const valorPlano = Number(
+  let valorPlano = Number(
     dados.valorMensal ??
     dados.mensalidade ??
     dados.valorPlano ??
     dados.cadValor ??
     0
   );
+
+  // Compatibilidade: o cadastro novo salva plano e valor em campos próprios,
+  // então o financeiro também consulta a tabela de planos quando necessário.
+  const planoId = Number(dados.planoCobrancaId || dados.plano_cobranca_id || 0);
+  if ((!descricao || !Number.isFinite(valorPlano) || valorPlano <= 0) && planoId > 0) {
+    try {
+      const rp = await pool.query(
+        "SELECT descricao, valor FROM planos_cobranca WHERE id=$1 LIMIT 1",
+        [planoId]
+      );
+      if (rp.rows[0]) {
+        descricao = String(rp.rows[0].descricao || "").trim();
+        valorPlano = Number(rp.rows[0].valor || 0);
+      }
+    } catch (_) {}
+  }
+
+  // Fallback por descrição caso exista vínculo antigo salvo sem ID.
+  if ((!descricao || !Number.isFinite(valorPlano) || valorPlano <= 0) && dados.plano_cobranca) {
+    try {
+      const rp = await pool.query(
+        "SELECT descricao, valor FROM planos_cobranca WHERE LOWER(descricao)=LOWER($1) LIMIT 1",
+        [String(dados.plano_cobranca)]
+      );
+      if (rp.rows[0]) {
+        descricao = String(rp.rows[0].descricao || "").trim();
+        valorPlano = Number(rp.rows[0].valor || 0);
+      }
+    } catch (_) {}
+  }
 
   if (!descricao || !Number.isFinite(valorPlano) || valorPlano <= 0) {
     throw financeiroErroPlanoObrigatorio();
