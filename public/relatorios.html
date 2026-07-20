@@ -72,8 +72,17 @@ async function carregarRelatorios(){
  const tbody=document.getElementById('listaDiagnostico');
  tbody.innerHTML='';
  clientes.forEach(c=>{
-   const status=String(c.statusMikrotik||c.status||'').toUpperCase();
-   if(status.includes('ONLINE')) online++;
+   const status=String(
+     c.statusMikrotik ||
+     c.status_mikrotik ||
+     c.statusPPP ||
+     c.status_ppp ||
+     c.status ||
+     ''
+   ).toUpperCase();
+   const conectado = c.online === true || c.conectado === true || c.online === 'true' ||
+                     status.includes('ONLINE') || status.includes('CONECTADO') || status.includes('ATIVO');
+   if(conectado) online++;
    const plano=String(
      c.planoCobrancaDescricao ||
      c.plano_cobranca_descricao ||
@@ -99,7 +108,7 @@ async function carregarRelatorios(){
  document.getElementById('diagOnline').textContent=online;
  document.getElementById('diagSemPlano').textContent=semPlano;
  document.getElementById('diagSemDescricao').textContent=semDescricao;
- document.getElementById('ultimaAtualizacao').textContent='Atualizado: '+new Date().toLocaleString('pt-BR');
+ document.getElementById('ultimaAtualizacao').textContent='Atualizado: '+new Date().toLocaleString('pt-BR')+' | Clientes consultados: '+clientes.length;
  }
  }catch(e){console.error(e);}
 }
