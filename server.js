@@ -4528,7 +4528,20 @@ app.patch("/api/clientes/plano-cobranca", async (req, res) => {
     const descricao = remover ? "" : String(req.body?.descricao || "").trim();
     const planoId = remover ? null : (Number(req.body?.planoId || req.body?.plano_id) || null);
     const quantidade = remover ? 1 : Math.max(1, parseInt(req.body?.quantidade, 10) || 1);
-    const valorUnitario = remover ? 0 : Number(req.body?.valorUnitario ?? req.body?.valor_unitario ?? req.body?.valor ?? 0);
+    let valorUnitario = remover ? 0 : Number(req.body?.valorUnitario ?? req.body?.valor_unitario ?? req.body?.valor ?? 0);
+
+    // Quando o plano vem selecionado pelo cadastro de planos, busca o valor oficial
+    // para não salvar o vínculo com valor zerado.
+    if(!remover && planoId && (!Number.isFinite(valorUnitario) || valorUnitario <= 0)){
+      const planoDb = await pool.query(
+        "SELECT valor FROM planos_cobranca WHERE id=$1 LIMIT 1",
+        [planoId]
+      );
+      if(planoDb.rows[0]){
+        valorUnitario = Number(planoDb.rows[0].valor || 0);
+      }
+    }
+
     const valorTotalRecebido = remover ? 0 : Number(req.body?.valorTotal ?? req.body?.valor_total);
     const valorTotal = remover
       ? 0
