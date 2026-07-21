@@ -1,0 +1,3 @@
+v52.1 - Plano Cobrança SQL corrigido
+
+Baseado na v52. O endpoint /api/planos-cobranca foi revisado para manter 3 parâmetros no insert conforme schema planos_cobranca.

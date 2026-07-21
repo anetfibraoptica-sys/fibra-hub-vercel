@@ -4483,10 +4483,10 @@ app.post("/api/planos-cobranca", async (req, res) => {
       `, [descricao, valor, existente.rows[0].id]);
     }else{
       r = await pool.query(`
-        INSERT INTO planos_cobranca (descricao, valor, ativo, criado_em, atualizado_em)
-        VALUES ($1,$2,TRUE,NOW(),NOW())
+        INSERT INTO planos_cobranca (descricao, valor, ativo)
+        VALUES ($1,$2,$3)
         RETURNING id, descricao, valor, ativo
-      `, [descricao, valor]);
+      `, [descricao, valor, true]);
     }
 
     return res.json({ok:true, plano:fbPlanoCobrancaRow(r.rows[0])});
