@@ -5539,7 +5539,7 @@ document.addEventListener("DOMContentLoaded", function(){
     try{
       const c = typeof clienteDoCadastro === "function" ? clienteDoCadastro() : {};
       const plano = c.planoCobranca || c.plano || {};
-      const valor = plano.valor ?? c.valorPlanoCobranca ?? c.valorMensal ?? c.valor ?? 0;
+      const valor = plano.valor ?? plano.valorUnitario ?? plano.valor_unitario ?? c.valorPlanoCobranca ?? c.valorUnitario ?? c.valor_unitario ?? c.valorMensal ?? c.valor ?? 0;
       const descricao = plano.descricao || plano.nome || c.plano || "";
 
       const campoValor = document.getElementById("resValor");
