@@ -1996,9 +1996,19 @@ function abrirModalGerarMensalidades(){
   const c=clienteAtualBoletos();
   const modal=document.getElementById("modalGerarMensalidades");
   if(!modal) return;
-  document.getElementById("mensalidadeValor").value = 
-    c.valorPlanoCobranca || c.valorMensal || c.valor || ""; 
+
+  // Valor vem exclusivamente do plano vinculado ao cliente.
+  const valorPlano = 
+    c.valorPlanoCobranca ||
+    c.valorMensal ||
+    c.valor ||
+    c.plano_valor ||
+    c.plano?.valor ||
+    "";
+
+  document.getElementById("mensalidadeValor").value = valorPlano || "";
   document.getElementById("mensalidadeValor").readOnly = true;
+
   document.getElementById("mensalidadePrimeiroVencimento").value = dataHojeISO();
   modal.classList.add("aberto");
 }
@@ -2287,9 +2297,19 @@ function abrirModalGerarMensalidades(){
   const c=clienteAtualBoletos();
   const modal=document.getElementById("modalGerarMensalidades");
   if(!modal) return;
-  document.getElementById("mensalidadeValor").value = 
-    c.valorPlanoCobranca || c.valorMensal || c.valor || ""; 
+
+  // Valor vem exclusivamente do plano vinculado ao cliente.
+  const valorPlano = 
+    c.valorPlanoCobranca ||
+    c.valorMensal ||
+    c.valor ||
+    c.plano_valor ||
+    c.plano?.valor ||
+    "";
+
+  document.getElementById("mensalidadeValor").value = valorPlano || "";
   document.getElementById("mensalidadeValor").readOnly = true;
+
   document.getElementById("mensalidadePrimeiroVencimento").value = dataHojeISO();
   modal.classList.add("aberto");
 }
