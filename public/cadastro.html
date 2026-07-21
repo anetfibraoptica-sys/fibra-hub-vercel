@@ -1996,7 +1996,9 @@ function abrirModalGerarMensalidades(){
   const c=clienteAtualBoletos();
   const modal=document.getElementById("modalGerarMensalidades");
   if(!modal) return;
-  document.getElementById("mensalidadeValor").value = c.valorMensal || c.valor || "";
+  document.getElementById("mensalidadeValor").value = 
+    c.valorPlanoCobranca || c.valorMensal || c.valor || ""; 
+  document.getElementById("mensalidadeValor").readOnly = true;
   document.getElementById("mensalidadePrimeiroVencimento").value = dataHojeISO();
   modal.classList.add("aberto");
 }
@@ -2017,7 +2019,7 @@ function fecharSubmodaisBoletos(){
 }
 function gerarMensalidadesCliente(){
   const c=clienteAtualBoletos(), lista=fibraGetBoletosStorage();
-  const valor=fibraNumero(document.getElementById("mensalidadeValor").value);
+  const valor=fibraNumero(document.getElementById("mensalidadeValor").value || c.valorPlanoCobranca || c.valorMensal || c.valor);
   const primeiro=document.getElementById("mensalidadePrimeiroVencimento").value;
   const qtd=Math.max(1, Number(document.getElementById("mensalidadeQuantidade").value || 1));
   const per=document.getElementById("mensalidadePeriodicidade").value;
@@ -2285,7 +2287,9 @@ function abrirModalGerarMensalidades(){
   const c=clienteAtualBoletos();
   const modal=document.getElementById("modalGerarMensalidades");
   if(!modal) return;
-  document.getElementById("mensalidadeValor").value = c.valorMensal || c.valor || "";
+  document.getElementById("mensalidadeValor").value = 
+    c.valorPlanoCobranca || c.valorMensal || c.valor || ""; 
+  document.getElementById("mensalidadeValor").readOnly = true;
   document.getElementById("mensalidadePrimeiroVencimento").value = dataHojeISO();
   modal.classList.add("aberto");
 }
@@ -2306,7 +2310,7 @@ function fecharSubmodaisBoletos(){
 }
 function gerarMensalidadesCliente(){
   const c=clienteAtualBoletos(), lista=fibraGetBoletosStorage();
-  const valor=fibraNumero(document.getElementById("mensalidadeValor").value);
+  const valor=fibraNumero(document.getElementById("mensalidadeValor").value || c.valorPlanoCobranca || c.valorMensal || c.valor);
   const primeiro=document.getElementById("mensalidadePrimeiroVencimento").value;
   const qtd=Math.max(1, Number(document.getElementById("mensalidadeQuantidade").value || 1));
   const per=document.getElementById("mensalidadePeriodicidade").value;
