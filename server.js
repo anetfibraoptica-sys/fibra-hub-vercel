@@ -4588,6 +4588,8 @@ app.patch("/api/clientes/plano-cobranca", async (req, res) => {
       valorMensal: valorTotal,
       valorUnitario: valorUnitario,
       valor_unitario: valorUnitario,
+      valorPlanoUnitario: valorUnitario,
+      valor_plano_unitario: valorUnitario,
       valor: valorTotal,
       mensalidade: valorTotal,
       valorPlano: valorTotal,

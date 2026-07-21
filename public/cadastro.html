@@ -5169,7 +5169,7 @@ document.addEventListener("DOMContentLoaded", function(){
     return {
       descricao: String((el("cadPlano") && el("cadPlano").value) || dados.planoCobranca || dados.plano_cobranca || dados.plano || cliente.plano || "").trim(),
       valorTotal: numeroMoeda((el("cadValor") && el("cadValor").value) || dados.valorMensal || dados.valorPlano || dados.valor || ""),
-      valorUnitario: numeroMoeda(dados.valorUnitario || dados.valor_unitario || dados.valorMensal || dados.valorPlano || dados.valor || ""),
+      valorUnitario: numeroMoeda(dados.valorUnitario || dados.valor_unitario || dados.valorPlanoUnitario || dados.valor_plano_unitario || dados.valorMensal || dados.valorPlano || dados.valor || ""),
       quantidade: quantidade
     };
   }
