@@ -3819,6 +3819,12 @@ async function salvarBoletoGeradoSupabase(body, detalhes, conta, nomeConta) {
     const clienteExato = await pool.query(`SELECT id FROM clientes WHERE login_pppoe=$1 OR dados->>'loginPppoe'=$1 OR dados->>'login'=$1 ORDER BY id DESC LIMIT 1`, [login]);
     clienteId = String(clienteExato.rows[0]?.id || "").trim();
   }
+  if (!clienteId && body.cliente && typeof body.cliente === "object") {
+    clienteId = String(body.cliente.id || body.cliente.clienteId || body.cliente.cliente_id || "").trim();
+  }
+  if (!clienteId && body.dados && typeof body.dados === "object") {
+    clienteId = String(body.dados.clienteId || body.dados.cliente_id || body.dados.idCliente || "").trim();
+  }
   if (!clienteId) throw new Error("Não foi possível identificar o ponto do cliente. Abra o cadastro correto antes de gerar o boleto.");
   const nome = String(body.nome || body.cliente || body.cliente_nome || "");
   const cpf = String(body.cpfCnpj || body.cpf || body.cpf_cnpj || body.documento || "");
@@ -3970,6 +3976,12 @@ function financeiroErroDuplicado(boleto) {
 
 async function financeiroValidarPonto(body) {
   const clienteId = String(body.clienteId || body.cliente_id || body.idCliente || "").trim();
+  if (!clienteId && body.cliente && typeof body.cliente === "object") {
+    clienteId = String(body.cliente.id || body.cliente.clienteId || body.cliente.cliente_id || "").trim();
+  }
+  if (!clienteId && body.dados && typeof body.dados === "object") {
+    clienteId = String(body.dados.clienteId || body.dados.cliente_id || body.dados.idCliente || "").trim();
+  }
   if (!clienteId) throw new Error("Não foi possível identificar o ponto do cliente. Abra o cadastro correto antes de gerar o boleto.");
 
   const r = await pool.query(`
