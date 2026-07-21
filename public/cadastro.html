@@ -1762,6 +1762,8 @@ function verDetalhesBoleto(index){
 <div id="modalGerarMensalidades" class="fibra-submodal" aria-hidden="true">
   <div class="fibra-submodal-box">
     <h3>Gerar Mensalidades</h3>
+    <label>Valor</label>
+    <input id="mensalidadeValor" type="text" placeholder="R$ 0,00">
     <label>Primeiro vencimento</label>
     <input id="mensalidadePrimeiroVencimento" type="date">
     <label>Quantidade</label>
@@ -1988,21 +1990,11 @@ function renderizarBoletosCliente(){
     </tr>`;
   }).join("");
 }
-
-function fibraValorPlanoCobrancaCliente(){
-  const c = clienteAtualBoletos() || {};
-  const valor = c.valorPlano || c.valorMensal || c.mensalidade || c.valor || 
-    document.getElementById("cadValor")?.value || 0;
-  return fibraNumero(valor);
-}
-
 function abrirModalGerarMensalidades(){
   const c=clienteAtualBoletos();
   const modal=document.getElementById("modalGerarMensalidades");
   if(!modal) return;
-  // Valor vem automaticamente do Plano de Cobrança vinculado ao cliente.
-  // Não exibe mais campo manual de valor.
-
+  document.getElementById("mensalidadeValor").value = c.valorMensal || c.valor || "";
   document.getElementById("mensalidadePrimeiroVencimento").value = dataHojeISO();
   modal.classList.add("aberto");
 }
@@ -2023,11 +2015,11 @@ function fecharSubmodaisBoletos(){
 }
 function gerarMensalidadesCliente(){
   const c=clienteAtualBoletos(), lista=fibraGetBoletosStorage();
-  const valor=fibraValorPlanoCobrancaCliente();
+  const valor=fibraNumero(document.getElementById("mensalidadeValor").value);
   const primeiro=document.getElementById("mensalidadePrimeiroVencimento").value;
   const qtd=Math.max(1, Number(document.getElementById("mensalidadeQuantidade").value || 1));
   const per=document.getElementById("mensalidadePeriodicidade").value;
-  if(!valor || !primeiro){alert("Cliente sem Plano de Cobrança ou valor configurado."); return;}
+  if(!valor || !primeiro){alert("Informe valor e primeiro vencimento."); return;}
   for(let i=0;i<qtd;i++){
     const venc = per==="mensal" ? addMes(primeiro,i) : addDias(primeiro, per==="quinzenal" ? i*15 : i*7);
     lista.push({
@@ -2046,7 +2038,6 @@ function gerarMensalidadesCliente(){
     });
   }
   fibraSalvarBoletosStorage(lista);
-  alert("✅ Carnê gerado com sucesso!\n\nCliente: " + (c.nome||"") + "\nQuantidade de parcelas: " + qtd + "\nValor da parcela: R$ " + valor.toFixed(2));
   fecharSubmodaisBoletos();
   renderizarBoletosCliente();
 }
@@ -2071,7 +2062,6 @@ function gerarBoletoAvulsoCliente(){
     origem:"avulso"
   });
   fibraSalvarBoletosStorage(lista);
-  alert("✅ Boleto avulso gerado com sucesso!\n\nCliente: " + (c.nome||"") + "\nValor: R$ " + valor.toFixed(2) + "\nVencimento: " + venc);
   fecharSubmodaisBoletos();
   renderizarBoletosCliente();
 }
@@ -2289,21 +2279,11 @@ function renderizarBoletosCliente(){
     </tr>`;
   }).join("");
 }
-
-function fibraValorPlanoCobrancaCliente(){
-  const c = clienteAtualBoletos() || {};
-  const valor = c.valorPlano || c.valorMensal || c.mensalidade || c.valor || 
-    document.getElementById("cadValor")?.value || 0;
-  return fibraNumero(valor);
-}
-
 function abrirModalGerarMensalidades(){
   const c=clienteAtualBoletos();
   const modal=document.getElementById("modalGerarMensalidades");
   if(!modal) return;
-  // Valor vem automaticamente do Plano de Cobrança vinculado ao cliente.
-  // Não exibe mais campo manual de valor.
-
+  document.getElementById("mensalidadeValor").value = c.valorMensal || c.valor || "";
   document.getElementById("mensalidadePrimeiroVencimento").value = dataHojeISO();
   modal.classList.add("aberto");
 }
@@ -2324,11 +2304,11 @@ function fecharSubmodaisBoletos(){
 }
 function gerarMensalidadesCliente(){
   const c=clienteAtualBoletos(), lista=fibraGetBoletosStorage();
-  const valor=fibraValorPlanoCobrancaCliente();
+  const valor=fibraNumero(document.getElementById("mensalidadeValor").value);
   const primeiro=document.getElementById("mensalidadePrimeiroVencimento").value;
   const qtd=Math.max(1, Number(document.getElementById("mensalidadeQuantidade").value || 1));
   const per=document.getElementById("mensalidadePeriodicidade").value;
-  if(!valor || !primeiro){alert("Cliente sem Plano de Cobrança ou valor configurado."); return;}
+  if(!valor || !primeiro){alert("Informe valor e primeiro vencimento."); return;}
   for(let i=0;i<qtd;i++){
     const venc = per==="mensal" ? addMes(primeiro,i) : addDias(primeiro, per==="quinzenal" ? i*15 : i*7);
     lista.push({
@@ -2347,7 +2327,6 @@ function gerarMensalidadesCliente(){
     });
   }
   fibraSalvarBoletosStorage(lista);
-  alert("✅ Carnê gerado com sucesso!\n\nCliente: " + (c.nome||"") + "\nQuantidade de parcelas: " + qtd + "\nValor da parcela: R$ " + valor.toFixed(2));
   fecharSubmodaisBoletos();
   renderizarBoletosCliente();
 }
@@ -4071,26 +4050,13 @@ document.addEventListener("DOMContentLoaded", function(){
 
   const oldGerarMensalidades = window.gerarMensalidadesCliente;
   window.gerarMensalidadesCliente = async function(){
-    if(window.__fibraGerandoCobranca){ alert("⏳ Gerando carnê, aguarde..."); return; }
-    window.__fibraGerandoCobranca = true;
-    const btn = document.querySelector("button[onclick*="gerarMensalidadesCliente"]");
-    if(btn){ btn.disabled=true; btn.textContent="⏳ Gerando..."; }
     const c = cliente();
     if(!exigirPlanoCobrancaIncluido()) return;
+    const valor = num(document.getElementById("mensalidadeValor")?.value);
     const primeiro = document.getElementById("mensalidadePrimeiroVencimento")?.value;
     const qtd = Math.max(1, Number(document.getElementById("mensalidadeQuantidade")?.value || 1));
     const per = document.getElementById("mensalidadePeriodicidade")?.value || "mensal";
-    const atual = window.__fibraClienteCadastro || window.__fibraClienteSelecionado || c || {};
-    const valor = num(
-      (window.fibraValorPlanoCobrancaCliente && window.fibraValorPlanoCobrancaCliente()) ||
-      atual.valorMensal ||
-      atual.mensalidade ||
-      atual.valorPlano ||
-      document.getElementById("cadValor")?.value ||
-      0
-    );
-    if(!primeiro){ alert("Informe o primeiro vencimento."); return; }
-    if(!valor){ alert("Plano de Cobrança sem valor configurado."); return; }
+    if(!valor || !primeiro){ alert("Informe valor e primeiro vencimento."); return; }
 
     const parcelas = [];
     for(let i=0;i<qtd;i++){
