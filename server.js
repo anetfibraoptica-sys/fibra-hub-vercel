@@ -4593,7 +4593,7 @@ app.patch("/api/clientes/plano-cobranca", async (req, res) => {
           atualizado_em=NOW()
       WHERE id=$3
       RETURNING *
-    `, [descricao, JSON.stringify(dadosPlano), alvo.rows[0].id, planoId]);
+    `, [descricao, JSON.stringify(dadosPlano), alvo.rows[0].id]);
 
     return res.json({
       ok:true,
