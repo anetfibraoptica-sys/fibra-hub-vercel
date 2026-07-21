@@ -5453,4 +5453,37 @@ document.addEventListener("DOMContentLoaded", function(){
 })();
 </script>
 
+
+<script id="fibra-v525-plano-valor-auto">
+(function(){
+ async function atualizarValorPlanoResumo(){
+   try{
+    const planoEl = document.getElementById('cadPlano') || document.getElementById('plano');
+    if(!planoEl) return;
+    const nome = String(planoEl.value || planoEl.options?.[planoEl.selectedIndex]?.text || '').trim();
+    if(!nome) return;
+    const resp = await fetch('/api/planos-cobranca');
+    if(!resp.ok) return;
+    const planos = await resp.json();
+    const lista = Array.isArray(planos) ? planos : (planos.planos || planos.data || []);
+    const p = lista.find(x => String(x.descricao || x.nome || '').trim() === nome || String(x.id) === nome);
+    if(!p) return;
+    const valor = Number(p.valor || p.valor_mensal || p.preco || 0);
+    const valorTxt = valor.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+    const rv=document.getElementById('resValor');
+    const rt=document.getElementById('resTotal');
+    if(rv) rv.textContent=valorTxt;
+    if(rt) rt.textContent=valorTxt;
+   }catch(e){ console.warn('v52.5 plano valor:',e); }
+ }
+ document.addEventListener('DOMContentLoaded',()=>{
+   setTimeout(atualizarValorPlanoResumo,1000);
+   setTimeout(atualizarValorPlanoResumo,2500);
+ });
+ document.addEventListener('change',e=>{
+   if(e.target && (e.target.id==='cadPlano'||e.target.id==='plano')) setTimeout(atualizarValorPlanoResumo,200);
+ });
+})();
+</script>
+
 </body></html>
