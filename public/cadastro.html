@@ -5524,4 +5524,36 @@ document.addEventListener("DOMContentLoaded", function(){
 })();
 </script>
 
+
+<script>
+/* v53.6 - Corrige valor do plano na aba Planos sem alterar layout */
+(function(){
+  function atualizarValorPlanoResumo(){
+    try{
+      const c = typeof clienteDoCadastro === "function" ? clienteDoCadastro() : {};
+      const plano = c.planoCobranca || c.plano || {};
+      const valor = plano.valor ?? c.valorPlanoCobranca ?? c.valorMensal ?? c.valor ?? 0;
+      const descricao = plano.descricao || plano.nome || c.plano || "";
+
+      const campoValor = document.getElementById("resValor");
+      const campoPlano = document.getElementById("resPlano");
+
+      if(campoPlano && descricao){
+        campoPlano.textContent = descricao;
+      }
+
+      if(campoValor){
+        const n = Number(String(valor).replace(",", "."));
+        campoValor.textContent = Number.isFinite(n)
+          ? n.toLocaleString("pt-BR",{style:"currency",currency:"BRL"})
+          : "R$ 0,00";
+      }
+    }catch(e){}
+  }
+
+  document.addEventListener("DOMContentLoaded", atualizarValorPlanoResumo);
+  window.addEventListener("load", atualizarValorPlanoResumo);
+  window.atualizarValorPlanoResumo = atualizarValorPlanoResumo;
+})();
+</script>
 </body></html>
