@@ -521,6 +521,7 @@ async function initDb() {
   await pool.query("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS servidor TEXT;");
   await pool.query("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS acesso_remoto TEXT;");
   await pool.query("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS confianca_ate TEXT;");
+  await pool.query("ALTER TABLE clientes ADD COLUMN IF NOT EXISTS plano_cobranca_id INTEGER;");
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS efi_configuracoes (
@@ -4590,7 +4591,7 @@ app.patch("/api/clientes/plano-cobranca", async (req, res) => {
           atualizado_em=NOW()
       WHERE id=$3
       RETURNING *
-    `, [descricao, JSON.stringify(dadosPlano), alvo.rows[0].id]);
+    `, [descricao, JSON.stringify(dadosPlano), alvo.rows[0].id, planoId]);
 
     return res.json({
       ok:true,
@@ -4665,6 +4666,7 @@ async function fbEnsureTables(){
     "ALTER TABLE clientes ADD COLUMN IF NOT EXISTS plano TEXT;",
     "ALTER TABLE clientes ADD COLUMN IF NOT EXISTS servidor TEXT;",
     "ALTER TABLE clientes ADD COLUMN IF NOT EXISTS profile TEXT;",
+    "ALTER TABLE clientes ADD COLUMN IF NOT EXISTS plano_cobranca_id INTEGER;",
     "ALTER TABLE clientes ADD COLUMN IF NOT EXISTS dados JSONB;",
     "ALTER TABLE boletos ADD COLUMN IF NOT EXISTS cliente_id TEXT;",
     "ALTER TABLE boletos ADD COLUMN IF NOT EXISTS cliente_login TEXT;",
@@ -5271,6 +5273,7 @@ async function autoGarantirTabelas() {
   const alters = [
     "ALTER TABLE clientes ADD COLUMN IF NOT EXISTS login_pppoe TEXT;",
     "ALTER TABLE clientes ADD COLUMN IF NOT EXISTS profile TEXT;",
+    "ALTER TABLE clientes ADD COLUMN IF NOT EXISTS plano_cobranca_id INTEGER;",
     "ALTER TABLE clientes ADD COLUMN IF NOT EXISTS servidor TEXT;",
     "ALTER TABLE clientes ADD COLUMN IF NOT EXISTS dados JSONB;",
     "ALTER TABLE clientes ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'ativo';",
