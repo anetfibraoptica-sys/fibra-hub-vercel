@@ -48,7 +48,23 @@
 
   async function consultarBoletoAbertoNaEfi(){
     const dados = dadosBoletoAberto();
-    if(!dados.numero && !dados.vencimento && !dados.cliente) return;
+
+    // Boletos importados/pagos são apenas histórico.
+    // Não consultar novamente na Efí.
+    const status = norm(dados.status);
+    const numero = norm(dados.numero);
+
+    if(
+      status.includes("pago") ||
+      status.includes("quitado") ||
+      status.includes("cancelado") ||
+      numero === "datas" ||
+      numero === "numero" ||
+      numero === "nº" ||
+      (!dados.numero && !dados.vencimento && !dados.cliente)
+    ){
+      return;
+    }
 
     setCampo("Situação na Efí", "Consultando Efí...");
 
