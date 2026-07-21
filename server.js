@@ -4463,8 +4463,10 @@ app.get("/api/planos-cobranca", async (req, res) => {
 app.post("/api/planos-cobranca", async (req, res) => {
   try{
     await fbEnsurePlanosCobranca();
+    console.log("[PLANOS COBRANCA] BODY RECEBIDO:", req.body);
     const descricao = String(req.body?.descricao || "").trim();
     const valor = Number(req.body?.valor);
+    console.log("[PLANOS COBRANCA] PARAMETROS:", { descricao, valor, quantidade: 2 });
     if(!descricao) return res.status(400).json({ok:false, erro:"Informe a descrição do plano."});
     if(!Number.isFinite(valor) || valor <= 0) return res.status(400).json({ok:false, erro:"Informe um valor válido para o plano."});
 
