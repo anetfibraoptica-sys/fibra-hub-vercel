@@ -2027,7 +2027,8 @@ function abrirModalBoletoAvulso(){
 function fecharSubmodaisBoletos(){
   document.querySelectorAll(".fibra-submodal").forEach(m=>m.classList.remove("aberto"));
 }
-function gerarMensalidadesCliente(){
+async function gerarMensalidadesCliente(){
+  alert("⏳ Gerando carnê/mensalidades, aguarde...");
   const c=clienteAtualBoletos(), lista=fibraGetBoletosStorage();
   const valor=fibraNumero(document.getElementById("mensalidadeValor").value || c.valorPlanoCobranca || c.valorMensal || c.valor);
   const primeiro=document.getElementById("mensalidadePrimeiroVencimento").value;
@@ -2328,7 +2329,8 @@ function abrirModalBoletoAvulso(){
 function fecharSubmodaisBoletos(){
   document.querySelectorAll(".fibra-submodal").forEach(m=>m.classList.remove("aberto"));
 }
-function gerarMensalidadesCliente(){
+async function gerarMensalidadesCliente(){
+  alert("⏳ Gerando carnê/mensalidades, aguarde...");
   const c=clienteAtualBoletos(), lista=fibraGetBoletosStorage();
   const valor=fibraNumero(document.getElementById("mensalidadeValor").value || c.valorPlanoCobranca || c.valorMensal || c.valor);
   const primeiro=document.getElementById("mensalidadePrimeiroVencimento").value;
@@ -4136,7 +4138,7 @@ document.addEventListener("DOMContentLoaded", function(){
       if(typeof fecharSubmodaisBoletos === "function") fecharSubmodaisBoletos();
       if(typeof renderizarBoletosCliente === "function") renderizarBoletosCliente();
 
-      alert("Carnê/mensalidades criados na Efí com integração.");
+      alert("✅ Carnê/mensalidades criados com sucesso na Efí.");
     }catch(e){
       alert("Erro ao gerar carnê na Efí: " + e.message);
     }

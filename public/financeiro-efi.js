@@ -26,6 +26,7 @@ function cancelarEfi(i){efiCobrancas[i].status="cancelado";salvarSilenciosoEfi()
 function removerEfi(i){if(!confirm("Excluir cobrança?"))return;efiCobrancas.splice(i,1);salvarSilenciosoEfi();}
 function gerarPixEfi(i){selecionarCobrancaEfi(i);efiCobrancas[i].txid="DEMO"+Date.now();localStorage.setItem("fibraEfiCobrancas",JSON.stringify(efiCobrancas));document.getElementById("efiResultadoPagamento").innerHTML=`<b>PIX preparado para Efí</b><br>Cliente: ${efiCobrancas[i].cliente}<br>Valor: ${efiMoney(efiCobrancas[i].valor)}<br><code>PIX COPIA E COLA SERÁ GERADO PELA API EFÍ</code>`;}
 async function gerarBoletoEfi(i){
+  alert("⏳ Gerando boleto, aguarde...");
   selecionarCobrancaEfi(i);
   const c=efiCobrancas[i];
   if(!c) return;
@@ -56,7 +57,7 @@ async function gerarBoletoEfi(i){
     c.boleto=json.boleto||json.link_boleto||json.charge_id||"GERADO";
     c.efi=json;
     salvarSilenciosoEfi();
-    document.getElementById("efiResultadoPagamento").innerHTML=`<b>Boleto gerado na Efí</b><br>Cliente: ${c.cliente}<br>Valor: ${efiMoney(c.valor)}<br>${json.link_boleto?`<a target="_blank" href="${json.link_boleto}">Abrir boleto</a>`:"Cobrança criada com sucesso"}`;
+    document.getElementById("efiResultadoPagamento").innerHTML=`<b>✅ Boleto gerado na Efí</b><br>Cliente: ${c.cliente}<br>Valor: ${efiMoney(c.valor)}<br>${json.link_boleto?`<a target="_blank" href="${json.link_boleto}">Abrir boleto</a>`:"Cobrança criada com sucesso"}`;
   }catch(e){
     alert("Erro ao gerar boleto na Efí: "+e.message);
   }
