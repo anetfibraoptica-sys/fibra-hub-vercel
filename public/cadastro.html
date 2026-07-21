@@ -2004,6 +2004,9 @@ function abrirModalGerarMensalidades(){
     c.valor ||
     c.plano_valor ||
     c.plano?.valor ||
+    (window.__fibraPlanosCobranca || []).find(p => 
+      String(p.id) === String(c.plano_id || c.planoId || c.plano_cobranca_id)
+    )?.valor ||
     "";
 
   document.getElementById("mensalidadeValor").value = valorPlano || "";
@@ -2306,6 +2309,9 @@ function abrirModalGerarMensalidades(){
     c.valor ||
     c.plano_valor ||
     c.plano?.valor ||
+    (window.__fibraPlanosCobranca || []).find(p => 
+      String(p.id) === String(c.plano_id || c.planoId || c.plano_cobranca_id)
+    )?.valor ||
     "";
 
   document.getElementById("mensalidadeValor").value = valorPlano || "";
@@ -5366,10 +5372,10 @@ document.addEventListener("DOMContentLoaded", function(){
       }));
 
       setStatus("Plano de Cobrança salvo. A descrição também será usada automaticamente nos boletos do cliente.");
-      setTimeout(function(){
-        fechar();
-        atualizarResumo();
-      }, 500);
+      atualizarResumo();
+      // Mantém o modal aberto para o usuário fechar manualmente.
+      // A mensagem de sucesso permanece visível.
+
     }catch(e){
       setStatus("Erro ao salvar o Plano de Cobrança: " + e.message);
     }finally{
