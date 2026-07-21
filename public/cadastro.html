@@ -5157,10 +5157,12 @@ document.addEventListener("DOMContentLoaded", function(){
   }
 
   function planoAtual(){
-    const quantidade = Math.max(1, parseInt((el("cadPlanoQuantidade") && el("cadPlanoQuantidade").value) || "1", 10) || 1);
+    const cliente = window.__fibraClienteCadastro || window.__fibraClienteSelecionado || {};
+    const dados = cliente.dados || {};
+    const quantidade = Math.max(1, parseInt((el("cadPlanoQuantidade") && el("cadPlanoQuantidade").value) || dados.cadPlanoQuantidade || "1", 10) || 1);
     return {
-      descricao: String((el("cadPlano") && el("cadPlano").value) || "").trim(),
-      valorTotal: numeroMoeda((el("cadValor") && el("cadValor").value) || ""),
+      descricao: String((el("cadPlano") && el("cadPlano").value) || dados.planoCobranca || dados.plano_cobranca || dados.plano || cliente.plano || "").trim(),
+      valorTotal: numeroMoeda((el("cadValor") && el("cadValor").value) || dados.valorMensal || dados.valorPlano || dados.valor || ""),
       quantidade: quantidade
     };
   }
