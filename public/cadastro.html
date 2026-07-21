@@ -1653,7 +1653,9 @@ let vencidos = 0, aberto = 0, pagos = 0;
 function gerarBoletoCliente(){
   const {lista} = fibraGetBoletosStorage();
   const cliente = typeof clienteDoCadastro === "function" ? clienteDoCadastro() : {};
-  const valor = fibraNumero(cliente.valorMensal || cliente.valor || prompt("Valor do boleto:", "100,00"));
+  const plano = cliente.planoCobranca || cliente.plano || {};
+  const valorPlano = plano.valor ?? cliente.valorPlanoCobranca ?? cliente.valorMensal ?? cliente.valor;
+  const valor = fibraNumero(valorPlano || prompt("Valor do boleto:", "100,00"));
   const vencimento = prompt("Data de vencimento (AAAA-MM-DD):", new Date().toISOString().slice(0,10));
   if(!vencimento) return;
 
@@ -1662,7 +1664,7 @@ function gerarBoletoCliente(){
     login: cliente.loginPppoe || cliente.login || "",
     nome: cliente.nome || "",
     cpfCnpj: cliente.cpfCnpj || cliente.cpf || "",
-    descricao: (window.fibraDescricaoBoletoCliente && window.fibraDescricaoBoletoCliente()) || "Mensalidade",
+    descricao: plano.descricao || plano.nome || (window.fibraDescricaoBoletoCliente && window.fibraDescricaoBoletoCliente()) || "Mensalidade",
     emissao: new Date().toISOString().slice(0,10),
     vencimento,
     valor,
@@ -4052,11 +4054,19 @@ document.addEventListener("DOMContentLoaded", function(){
   window.gerarMensalidadesCliente = async function(){
     const c = cliente();
     if(!exigirPlanoCobrancaIncluido()) return;
-    const valor = num(document.getElementById("mensalidadeValor")?.value);
+    const atualPlano = window.__fibraClienteCadastro || window.__fibraClienteSelecionado || {};
+    const valor = num(
+      atualPlano.valorMensal ||
+      atualPlano.mensalidade ||
+      atualPlano.valorPlano ||
+      atualPlano.planoValor ||
+      document.getElementById("cadValor")?.value ||
+      0
+    );
     const primeiro = document.getElementById("mensalidadePrimeiroVencimento")?.value;
     const qtd = Math.max(1, Number(document.getElementById("mensalidadeQuantidade")?.value || 1));
     const per = document.getElementById("mensalidadePeriodicidade")?.value || "mensal";
-    if(!valor || !primeiro){ alert("Informe valor e primeiro vencimento."); return; }
+    if(!valor || !primeiro){ alert("Cliente sem plano com valor ou sem primeiro vencimento."); return; }
 
     const parcelas = [];
     for(let i=0;i<qtd;i++){
