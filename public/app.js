@@ -849,7 +849,17 @@ document.addEventListener("DOMContentLoaded", function(){
     var valorBruto = planoOrigem.valor ?? planoOrigem.valorUnitario ?? planoOrigem.valor_unitario ??
       planoCadastro.valor ?? planoCadastro.valorUnitario ?? planoCadastro.valor_unitario ??
       planoCadastro.valor_mensal ?? planoCadastro.valorMensal ?? "0";
-    var valorNumero = Number(String(valorBruto || "0").replace(/R\$/gi, "").replace(/\s/g, "").replace(/\./g, "").replace(",", ".").replace(/[^0-9.-]/g, ""));
+    var valorNumero;
+    if(typeof valorBruto === "number"){
+      valorNumero = valorBruto;
+    }else{
+      var valorTexto = String(valorBruto ?? "0").replace(/R\$/gi, "").replace(/\s/g, "");
+      valorNumero = Number(
+        valorTexto.includes(",")
+          ? valorTexto.replace(/\./g, "").replace(",", ".").replace(/[^0-9.-]/g, "")
+          : valorTexto.replace(/[^0-9.-]/g, "")
+      );
+    }
     var valor = Number.isFinite(valorNumero)
       ? valorNumero.toLocaleString("pt-BR", {style:"currency", currency:"BRL"})
       : "R$ 0,00";
