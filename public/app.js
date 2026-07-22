@@ -731,6 +731,12 @@ document.addEventListener("DOMContentLoaded", function(){
     addLista(c.boletos);
     addLista(c.faturas);
     addLista(c.titulos);
+    addLista(c.mensalidades);
+    addLista(c.cobrancas);
+    addLista(c.cobrancasGeradas);
+    addLista(c.mensalidades);
+    addLista(c.cobrancas);
+    addLista(c.cobrancasGeradas);
 
     try{ addLista(JSON.parse(localStorage.getItem("boletos") || "[]")); }catch(e){}
     try{ addLista(JSON.parse(localStorage.getItem("fibra_boletos") || "[]")); }catch(e){}
