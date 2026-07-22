@@ -829,8 +829,13 @@ document.addEventListener("DOMContentLoaded", function(){
     // Resumo -> Plano de Cobrança deve usar exclusivamente o objeto salvo do plano do cliente.
     // Não usar carnê, boletos, mensalidades, profile ou campos financeiros.
     var planoOrigem = (c.plano_cobranca && typeof c.plano_cobranca === "object") ? c.plano_cobranca : {};
-    var plano = planoOrigem.descricao || planoOrigem.nome || c.plano_cobranca || "Nenhum Plano Ativo";
-    var valorBruto = planoOrigem.valor ?? planoOrigem.valorUnitario ?? planoOrigem.valor_unitario ?? "0";
+    // Quando plano_cobranca vem apenas como texto, buscar o cadastro original pelo ID do plano.
+    var planoCadastro = (window.__fibraPlanosCobranca || []).find(p =>
+      String(p.id) === String(c.plano_cobranca_id || c.planoCobrancaId || c.plano_id || c.planoId)
+    ) || {};
+    var plano = planoOrigem.descricao || planoOrigem.nome || planoCadastro.descricao || planoCadastro.nome || c.plano_cobranca || "Nenhum Plano Ativo";
+    var valorBruto = planoOrigem.valor ?? planoOrigem.valorUnitario ?? planoOrigem.valor_unitario ??
+      planoCadastro.valor ?? planoCadastro.valorUnitario ?? planoCadastro.valor_unitario ?? "0";
     var valorNumero = Number(String(valorBruto || "0").replace(/R\$/gi, "").replace(/\s/g, "").replace(/\./g, "").replace(",", ".").replace(/[^0-9.-]/g, ""));
     var valor = Number.isFinite(valorNumero)
       ? valorNumero.toLocaleString("pt-BR", {style:"currency", currency:"BRL"})
