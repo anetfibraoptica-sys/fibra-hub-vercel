@@ -827,12 +827,13 @@ document.addEventListener("DOMContentLoaded", function(){
     var complemento = val(["#cadComplemento"], pick(c,["complemento"], "-"));
 
     var plano = val(["#cadPlano"], pick(c,["plano","planoCobranca","plano_cobranca","cadPlano","descricaoPlanoCobranca"], "Nenhum Plano Ativo"));
-    var valorBruto = val(["#cadValor"], pick(c,["valorMensal","valor","valorPlano","valorPlanoCobranca","valor_plano_cobranca","valor_mensal","mensalidade"], "0"));
+    // No resumo, Plano de Cobrança deve usar o valor do plano cadastrado, nunca o total do carnê/boletos.
+    var valorBruto = val(["#cadValor"], pick(c,["valorUnitario","valor_unitario","valorPlanoUnitario","valor_plano_unitario","valorMensal","valor_mensal"], "0"));
     var valorNumero = Number(String(valorBruto || "0").replace(/R\$/gi, "").replace(/\s/g, "").replace(/\./g, "").replace(",", ".").replace(/[^0-9.-]/g, ""));
     var valor = Number.isFinite(valorNumero)
       ? valorNumero.toLocaleString("pt-BR", {style:"currency", currency:"BRL"})
       : "R$ 0,00";
-    var quantidadePlano = val(["#cadPlanoQuantidade"], "1") || "1";
+    var quantidadePlano = val(["#cadPlanoQuantidade"], pick(c,["quantidadePlano","quantidade","qtdPlano"], "1")) || "1";
 
     card.innerHTML = `
       <div class="resumo-receitanet">
