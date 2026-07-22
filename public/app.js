@@ -835,7 +835,8 @@ document.addEventListener("DOMContentLoaded", function(){
     ) || {};
     var plano = planoOrigem.descricao || planoOrigem.nome || planoCadastro.descricao || planoCadastro.nome || c.plano_cobranca || "Nenhum Plano Ativo";
     var valorBruto = planoOrigem.valor ?? planoOrigem.valorUnitario ?? planoOrigem.valor_unitario ??
-      planoCadastro.valor ?? planoCadastro.valorUnitario ?? planoCadastro.valor_unitario ?? "0";
+      planoCadastro.valor ?? planoCadastro.valorUnitario ?? planoCadastro.valor_unitario ??
+      planoCadastro.valor_mensal ?? planoCadastro.valorMensal ?? "0";
     var valorNumero = Number(String(valorBruto || "0").replace(/R\$/gi, "").replace(/\s/g, "").replace(/\./g, "").replace(",", ".").replace(/[^0-9.-]/g, ""));
     var valor = Number.isFinite(valorNumero)
       ? valorNumero.toLocaleString("pt-BR", {style:"currency", currency:"BRL"})
