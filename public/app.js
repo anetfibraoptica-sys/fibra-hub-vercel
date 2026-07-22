@@ -827,8 +827,10 @@ document.addEventListener("DOMContentLoaded", function(){
     var complemento = val(["#cadComplemento"], pick(c,["complemento"], "-"));
 
     var plano = val(["#cadPlano"], pick(c,["plano","planoCobranca","plano_cobranca","cadPlano","descricaoPlanoCobranca"], "Nenhum Plano Ativo"));
-    // No resumo, Plano de Cobrança deve usar o valor do plano cadastrado, nunca o total do carnê/boletos.
-    var valorBruto = val(["#cadValor"], pick(c,["valorUnitario","valor_unitario","valorPlanoUnitario","valor_plano_unitario","valorMensal","valor_mensal"], "0"));
+    // No resumo, Plano de Cobrança deve usar somente o valor do plano cadastrado.
+    // Nunca usar total de carnê/boletos/mensalidades acumuladas.
+    var planoOrigem = (c.plano && typeof c.plano === "object") ? c.plano : {};
+    var valorBruto = val(["#cadValor"], pick(planoOrigem,["valor","valorUnitario","valor_unitario"], pick(c,["valorUnitario","valor_unitario","valorPlanoUnitario","valor_plano_unitario","valorMensal","valor_mensal"], "0")));
     var valorNumero = Number(String(valorBruto || "0").replace(/R\$/gi, "").replace(/\s/g, "").replace(/\./g, "").replace(",", ".").replace(/[^0-9.-]/g, ""));
     var valor = Number.isFinite(valorNumero)
       ? valorNumero.toLocaleString("pt-BR", {style:"currency", currency:"BRL"})
