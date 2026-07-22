@@ -1654,7 +1654,7 @@ function gerarBoletoCliente(){
   const {lista} = fibraGetBoletosStorage();
   const cliente = typeof clienteDoCadastro === "function" ? clienteDoCadastro() : {};
   const plano = cliente.planoCobranca || cliente.plano || {};
-  const valorPlano = plano.valor ?? cliente.valorPlanoCobranca ?? cliente.valorMensal ?? cliente.valor;
+  const valorPlano = plano.valor ?? plano.valorUnitario ?? plano.valor_unitario ?? cliente.valorPlanoCobranca ?? cliente.valorUnitario ?? cliente.valor_unitario ?? cliente.valorMensal ?? cliente.valor;
   const valor = fibraNumero(valorPlano || prompt("Valor do boleto:", "100,00"));
   const vencimento = prompt("Data de vencimento (AAAA-MM-DD):", new Date().toISOString().slice(0,10));
   if(!vencimento) return;
@@ -5168,8 +5168,8 @@ document.addEventListener("DOMContentLoaded", function(){
     const quantidade = Math.max(1, parseInt((el("cadPlanoQuantidade") && el("cadPlanoQuantidade").value) || dados.cadPlanoQuantidade || "1", 10) || 1);
     return {
       descricao: String((el("cadPlano") && el("cadPlano").value) || dados.planoCobranca || dados.plano_cobranca || dados.plano || cliente.plano || "").trim(),
-      valorTotal: numeroMoeda((el("cadValor") && el("cadValor").value) || dados.valorMensal || dados.valorPlano || dados.valor || ""),
-      valorUnitario: numeroMoeda(dados.valorUnitario || dados.valor_unitario || dados.valorPlanoUnitario || dados.valor_plano_unitario || dados.valorMensal || dados.valorPlano || dados.valor || ""),
+      valorTotal: numeroMoeda((el("cadValor") && el("cadValor").value) || dados.valorUnitario || dados.valor_unitario || dados.valorPlanoUnitario || dados.valor_plano_unitario || dados.valorMensal || dados.valorPlano || dados.valor || ""),
+      valorUnitario: numeroMoeda(dados.valorUnitario || dados.valor_unitario || dados.valorPlanoUnitario || dados.valor_plano_unitario || dados.valorUnitario || dados.valor_unitario || dados.valorPlanoUnitario || dados.valor_plano_unitario || dados.valorMensal || dados.valorPlano || dados.valor || ""),
       quantidade: quantidade
     };
   }
@@ -5342,7 +5342,7 @@ document.addEventListener("DOMContentLoaded", function(){
       return;
     }
 
-    const valorUnitario = numeroMoeda(plano.valor || 0);
+    const valorUnitario = Number(plano.valor || 0);
     const valorTotal = valorUnitario * quantidade;
 
     if(botaoIncluir) botaoIncluir.disabled = true;
