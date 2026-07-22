@@ -4529,6 +4529,11 @@ app.patch("/api/clientes/plano-cobranca", async (req, res) => {
     const planoId = remover ? null : (Number(req.body?.planoId || req.body?.plano_id) || null);
     const quantidade = remover ? 1 : Math.max(1, parseInt(req.body?.quantidade, 10) || 1);
     let valorUnitario = remover ? 0 : Number(req.body?.valorUnitario ?? req.body?.valor_unitario ?? req.body?.valor ?? 0);
+    // Aceita valores vindos do navegador em formato brasileiro (ex: 49,90 ou R$ 49,90)
+    if(!remover && (!Number.isFinite(valorUnitario) || valorUnitario <= 0)){
+      const bruto = String(req.body?.valorUnitario ?? req.body?.valor_unitario ?? req.body?.valor ?? "").replace(/[^0-9,.-]/g, "").replace(/\\./g, "").replace(",", ".");
+      valorUnitario = Number(bruto || 0);
+    }
 
     // Quando o plano vem selecionado pelo cadastro de planos, busca o valor oficial
     // para não salvar o vínculo com valor zerado.

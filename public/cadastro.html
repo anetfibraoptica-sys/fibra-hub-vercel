@@ -5342,7 +5342,7 @@ document.addEventListener("DOMContentLoaded", function(){
       return;
     }
 
-    const valorUnitario = Number(plano.valor || 0);
+    const valorUnitario = numeroMoeda(plano.valor || 0);
     const valorTotal = valorUnitario * quantidade;
 
     if(botaoIncluir) botaoIncluir.disabled = true;
