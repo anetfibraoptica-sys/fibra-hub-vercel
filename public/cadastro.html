@@ -5538,9 +5538,9 @@ document.addEventListener("DOMContentLoaded", function(){
   function atualizarValorPlanoResumo(){
     try{
       const c = typeof clienteDoCadastro === "function" ? clienteDoCadastro() : {};
-      const plano = c.planoCobranca || c.plano || {};
-      const valor = plano.valor ?? plano.valorUnitario ?? plano.valor_unitario ?? c.valorPlanoCobranca ?? c.valorUnitario ?? c.valor_unitario ?? c.valorMensal ?? c.valor ?? 0;
-      const descricao = plano.descricao || plano.nome || c.plano || "";
+      const plano = (c.plano_cobranca && typeof c.plano_cobranca === "object") ? c.plano_cobranca : {};
+      const valor = plano.valor ?? plano.valorUnitario ?? plano.valor_unitario ?? 0;
+      const descricao = plano.descricao || plano.nome || c.plano_cobranca || "";
 
       const campoValor = document.getElementById("resValor");
       const campoPlano = document.getElementById("resPlano");

@@ -826,11 +826,11 @@ document.addEventListener("DOMContentLoaded", function(){
     var tel3 = val(["#cadTelefone3"], pick(c,["telefone3","tel3","celular3"], "-"));
     var complemento = val(["#cadComplemento"], pick(c,["complemento"], "-"));
 
-    var plano = val(["#cadPlano"], pick(c,["plano","planoCobranca","plano_cobranca","cadPlano","descricaoPlanoCobranca"], "Nenhum Plano Ativo"));
-    // No resumo, Plano de Cobrança deve usar somente o valor do plano cadastrado.
-    // Nunca usar total de carnê/boletos/mensalidades acumuladas.
-    var planoOrigem = (c.plano && typeof c.plano === "object") ? c.plano : {};
-    var valorBruto = val(["#cadValor"], pick(planoOrigem,["valor","valorUnitario","valor_unitario"], pick(c,["valorUnitario","valor_unitario","valorPlanoUnitario","valor_plano_unitario","valorMensal","valor_mensal"], "0")));
+    // Resumo -> Plano de Cobrança deve usar exclusivamente o objeto salvo do plano do cliente.
+    // Não usar carnê, boletos, mensalidades, profile ou campos financeiros.
+    var planoOrigem = (c.plano_cobranca && typeof c.plano_cobranca === "object") ? c.plano_cobranca : {};
+    var plano = planoOrigem.descricao || planoOrigem.nome || c.plano_cobranca || "Nenhum Plano Ativo";
+    var valorBruto = planoOrigem.valor ?? planoOrigem.valorUnitario ?? planoOrigem.valor_unitario ?? "0";
     var valorNumero = Number(String(valorBruto || "0").replace(/R\$/gi, "").replace(/\s/g, "").replace(/\./g, "").replace(",", ".").replace(/[^0-9.-]/g, ""));
     var valor = Number.isFinite(valorNumero)
       ? valorNumero.toLocaleString("pt-BR", {style:"currency", currency:"BRL"})
