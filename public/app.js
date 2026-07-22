@@ -1,14 +1,5 @@
 
 // Carrega a fonte oficial dos planos para o Resumo sem duplicar regras de negócio.
-async function fibraCarregarPlanosCobrancaResumo(){
-  if(Array.isArray(window.__fibraPlanosCobranca) && window.__fibraPlanosCobranca.length) return;
-  try{
-    const r = await fetch("/api/planos-cobranca");
-    if(!r.ok) return;
-    const dados = await r.json();
-    window.__fibraPlanosCobranca = Array.isArray(dados) ? dados : (dados.planos || []);
-  }catch(e){}
-}
 
 
 /* Compatibilidade imediata do Cadastro: mantém a função global disponível
@@ -837,8 +828,6 @@ document.addEventListener("DOMContentLoaded", function(){
     var tel2 = val(["#cadTelefone2","input[name='telefone2']","input[name='cli_celular']"], pick(c,["telefone2","tel2","celular2"], "-"));
     var tel3 = val(["#cadTelefone3"], pick(c,["telefone3","tel3","celular3"], "-"));
     var complemento = val(["#cadComplemento"], pick(c,["complemento"], "-"));
-
-    await fibraCarregarPlanosCobrancaResumo();
 
     // Resumo -> Plano de Cobrança deve usar exclusivamente o objeto salvo do plano do cliente.
     // Não usar carnê, boletos, mensalidades, profile ou campos financeiros.
