@@ -3992,23 +3992,45 @@ document.addEventListener("DOMContentLoaded", function(){
     return json;
   }
   function exigirPlanoCobrancaIncluido(){
-    const atual = window.__fibraClienteCadastro || window.__fibraClienteSelecionado || {};
+    const formulario = cliente() || {};
+    const memoria = window.__fibraClienteCadastro || window.__fibraClienteSelecionado || {};
+    const dados = Object.assign(
+      {},
+      (memoria.dados && typeof memoria.dados === "object") ? memoria.dados : {},
+      (formulario.dados && typeof formulario.dados === "object") ? formulario.dados : {},
+      memoria,
+      formulario
+    );
+
     const descricao = String(
       document.getElementById("cadPlano")?.value ||
-      atual.planoCobranca ||
-      atual.plano_cobranca ||
-      atual.descricaoBoleto ||
-      atual.descricao_boleto ||
+      dados.planoCobranca ||
+      dados.plano_cobranca ||
+      dados.descricaoBoleto ||
+      dados.descricao_boleto ||
+      dados.boletoDescricao ||
+      dados.boleto_descricao ||
+      dados.plano ||
       ""
     ).trim();
-    const valor = num(
+
+    const valorBruto =
       document.getElementById("cadValor")?.value ||
-      atual.valorMensal ||
-      atual.mensalidade ||
-      atual.valorPlano ||
-      0
-    );
-    if(!descricao || valor <= 0){
+      dados.valorMensal ||
+      dados.mensalidade ||
+      dados.valorPlano ||
+      dados.cadValor ||
+      dados.valorTotal ||
+      dados.valor_total ||
+      dados.valorUnitario ||
+      dados.valor_unitario ||
+      dados.valorPlanoUnitario ||
+      dados.valor_plano_unitario ||
+      dados.valor ||
+      0;
+    const valor = typeof valorBruto === "number" ? valorBruto : num(valorBruto);
+
+    if(!descricao || !Number.isFinite(Number(valor)) || Number(valor) <= 0){
       alert("Inclua um Plano de Cobrança no cliente antes de gerar boleto ou carnê.");
       return false;
     }
