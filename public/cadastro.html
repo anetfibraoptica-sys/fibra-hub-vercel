@@ -5164,7 +5164,7 @@ document.addEventListener("DOMContentLoaded", function(){
 
   function planoAtual(){
     const cliente = window.__fibraClienteCadastro || window.__fibraClienteSelecionado || {};
-    const dados = cliente.dados || {};
+    const dados = Object.assign({}, cliente, (cliente.dados && typeof cliente.dados === "object") ? cliente.dados : {});
     const quantidade = Math.max(1, parseInt((el("cadPlanoQuantidade") && el("cadPlanoQuantidade").value) || dados.cadPlanoQuantidade || "1", 10) || 1);
     return {
       descricao: String((el("cadPlano") && el("cadPlano").value) || dados.planoCobranca || dados.plano_cobranca || dados.plano || cliente.plano || "").trim(),
