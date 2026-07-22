@@ -4070,13 +4070,19 @@ async function financeiroAplicarDescricaoPlanoCliente(body) {
 
   // Usa somente os campos próprios do Plano de Cobrança. Não considera profile
   // ou plano antigo do MikroTik como plano financeiro válido.
+  const planoSalvo =
+    dados.plano_cobranca ||
+    dados.planoCobranca ||
+    cliente.plano_cobranca ||
+    cliente.planoCobranca ||
+    {};
+
   const descricao = String(
     dados.descricaoBoleto ||
     dados.descricao_boleto ||
     dados.boletoDescricao ||
     dados.boleto_descricao ||
-    dados.planoCobranca ||
-    dados.plano_cobranca ||
+    (typeof planoSalvo === "object" ? (planoSalvo.descricao || planoSalvo.nome || "") : planoSalvo) ||
     ""
   ).trim();
 
@@ -4085,7 +4091,7 @@ async function financeiroAplicarDescricaoPlanoCliente(body) {
     dados.mensalidade ??
     dados.valorPlano ??
     dados.cadValor ??
-    0
+    (typeof planoSalvo === "object" ? (planoSalvo.valor ?? planoSalvo.valorMensal ?? planoSalvo.valor_unitario ?? 0) : 0)
   );
 
   if (!descricao || !Number.isFinite(valorPlano) || valorPlano <= 0) {
