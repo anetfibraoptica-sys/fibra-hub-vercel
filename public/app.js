@@ -797,7 +797,7 @@ document.addEventListener("DOMContentLoaded", function(){
     return venc ? dataBR(venc) : "Fatura em aberto";
   }
 
-  function montarResumoReceitaNet(){
+  async function montarResumoReceitaNet(){
     var card = document.querySelector(".cadastro-resumo-card");
     if(!card) return;
 
@@ -833,8 +833,17 @@ document.addEventListener("DOMContentLoaded", function(){
     // Não usar carnê, boletos, mensalidades, profile ou campos financeiros.
     var planoOrigem = (c.plano_cobranca && typeof c.plano_cobranca === "object") ? c.plano_cobranca : {};
     // Quando plano_cobranca vem apenas como texto, buscar o cadastro original pelo ID do plano.
-    var planoCadastro = (window.__fibraPlanosCobranca || []).find(p =>
-      String(p.id) === String(c.plano_cobranca_id || c.planoCobrancaId || c.plano_id || c.planoId)
+    var planoIdResumo = c.plano_cobranca_id || c.planoCobrancaId || c.plano_id || c.planoId;
+    var listaPlanosResumo = Array.isArray(window.__fibraPlanosCobranca) ? window.__fibraPlanosCobranca : [];
+    if(planoIdResumo && !listaPlanosResumo.length){
+      try{
+        var respPlanosResumo = await fetch('/api/planos-cobranca?t=' + Date.now(), {cache:'no-store'});
+        var jsonPlanosResumo = await respPlanosResumo.json();
+        listaPlanosResumo = Array.isArray(jsonPlanosResumo) ? jsonPlanosResumo : (jsonPlanosResumo.planos || jsonPlanosResumo.data || []);
+      }catch(e){ listaPlanosResumo = []; }
+    }
+    var planoCadastro = listaPlanosResumo.find(p =>
+      String(p.id) === String(planoIdResumo)
     ) || {};
     var plano = planoOrigem.descricao || planoOrigem.nome || planoCadastro.descricao || planoCadastro.nome || c.plano_cobranca || "Nenhum Plano Ativo";
     var valorBruto = planoOrigem.valor ?? planoOrigem.valorUnitario ?? planoOrigem.valor_unitario ??
