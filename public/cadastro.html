@@ -5501,7 +5501,7 @@ document.addEventListener("DOMContentLoaded", function(){
 
 <script id="fibra-v525-plano-valor-auto">
 (function(){
- async function atualizarValorPlanoResumo(){
+ async async function atualizarValorPlanoResumo(){
    try{
     const planoEl = document.getElementById('cadPlano') || document.getElementById('plano');
     if(!planoEl) return;
@@ -5538,7 +5538,17 @@ document.addEventListener("DOMContentLoaded", function(){
   function atualizarValorPlanoResumo(){
     try{
       const c = typeof clienteDoCadastro === "function" ? clienteDoCadastro() : {};
-      const plano = (c.plano_cobranca && typeof c.plano_cobranca === "object") ? c.plano_cobranca : {};
+      const planoObj = (c.plano_cobranca && typeof c.plano_cobranca === "object") ? c.plano_cobranca : {};
+      const planoId = c.plano_cobranca_id || c.planoCobrancaId || c.plano_id || c.planoId;
+      let plano = planoObj;
+      if(planoId && (!plano.valor && !plano.valorUnitario && !plano.valor_unitario)){
+        try{
+          const r = await fetch("/api/planos-cobranca?t=" + Date.now(), {cache:"no-store"});
+          const j = await r.json();
+          const lista = Array.isArray(j.planos) ? j.planos : [];
+          plano = lista.find(p => String(p.id) === String(planoId)) || planoObj;
+        }catch(e){}
+      }
       const valor = plano.valor ?? plano.valorUnitario ?? plano.valor_unitario ?? 0;
       const descricao = plano.descricao || plano.nome || c.plano_cobranca || "";
 
