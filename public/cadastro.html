@@ -2717,6 +2717,13 @@ async function carregarContasEfiNoCadastro(){
   try{ contas = await FibraDB.carregarContasEfi(); }catch(e){ console.warn("Erro contas Efí:", e.message); }
   contas = (contas || []).filter(c => String(c.status || "ativo").toLowerCase() === "ativo");
 
+  // Define a Conta Principal como padrão para clientes sem conta selecionada
+  const contaPrincipal = contas.find(c =>
+    c.principal === true ||
+    c.is_principal === true ||
+    String(c.nome || "").toLowerCase().includes("principal")
+  );
+
   let select = document.getElementById("cadContaBancaria");
 
 
@@ -2725,6 +2732,11 @@ async function carregarContasEfiNoCadastro(){
   select.innerHTML = '<option value="">Selecione a conta Efí</option>' + contas.map(c =>
     `<option value="${c.id}" data-nome="${c.nome}">${c.nome}${c.titular ? " - " + c.titular : ""}</option>`
   ).join("");
+
+  if(contaPrincipal && !select.value){
+    select.value = contaPrincipal.id;
+    select.dataset.contaEfiNome = contaPrincipal.nome || "";
+  }
 
   select.addEventListener("change", function(){
     const opt = select.options[select.selectedIndex];
