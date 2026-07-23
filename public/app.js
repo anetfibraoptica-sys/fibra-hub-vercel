@@ -806,6 +806,12 @@ document.addEventListener("DOMContentLoaded", function(){
         className: statusElAtual.className
       };
     }
+
+    var dadosStatusAtual = {};
+    ["resServico","resIp","resProfile","resMtu","resLogin2","resTempo","resMac","resInterface","resMru"].forEach(function(id){
+      var el = document.getElementById(id);
+      if(el) dadosStatusAtual[id] = el.textContent;
+    });
     var card = document.querySelector(".cadastro-resumo-card");
     if(!card) return;
 
@@ -977,6 +983,13 @@ document.addEventListener("DOMContentLoaded", function(){
         novoStatus.className = statusAtual.className;
       }
     }
+
+    Object.keys(dadosStatusAtual).forEach(function(id){
+      var el = document.getElementById(id);
+      if(el && dadosStatusAtual[id] !== undefined){
+        el.textContent = dadosStatusAtual[id];
+      }
+    });
   }
 
   window.__fibraMontarResumoCadastro = montarResumoReceitaNet;
