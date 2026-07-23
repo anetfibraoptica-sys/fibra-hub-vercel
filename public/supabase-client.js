@@ -371,7 +371,6 @@ const FibraDB = {
 
   async carregarContasEfi(){
     const rows = await this.getAll("efi_contas", "&order=nome.asc");
-    localStorage.setItem("efi_contas", JSON.stringify(rows || []));
     return rows || [];
   },
 
