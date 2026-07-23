@@ -89,12 +89,8 @@
     }else{
       el.value=texto(valor);
     }
-    // Não dispara eventos ao apenas preencher o formulário de edição.
-    // Esses eventos eram interpretados como alteração real e podiam afetar o resumo/status.
-    if(opcoes.dispararEventos){
-      el.dispatchEvent(new Event('input',{bubbles:true}));
-      el.dispatchEvent(new Event('change',{bubbles:true}));
-    }
+    el.dispatchEvent(new Event('input',{bubbles:true}));
+    el.dispatchEvent(new Event('change',{bubbles:true}));
     return true;
   }
 
@@ -181,8 +177,10 @@
     if(ident) ident.textContent='Identificador: '+texto(primeiro(c,['id','identificador','clienteId','cliente_id']) || '--');
     const h=document.querySelector('.topbar h1, h1');
     if(h) h.textContent='Cadastro de Cliente - Editando';
+    // Mantém o objeto original do monitoramento intacto.
+// A edição recebe uma cópia para não alterar o cliente usado no Resumo.
     window.__fibraClienteSelecionado=c;
-    window.__fibraClienteCadastro=c;
+    window.__fibraClienteCadastro=JSON.parse(JSON.stringify(c));
     if(typeof atualizarResumoCadastro==='function') atualizarResumoCadastro();
     requestAnimationFrame(()=>setTimeout(()=>{
       if(typeof atualizarResumoCadastro==='function') atualizarResumoCadastro();
