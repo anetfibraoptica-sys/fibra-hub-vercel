@@ -2052,9 +2052,11 @@ function fibraValorProporcionalPrimeiraCobranca(valor, cliente, primeiroVencimen
   if(!inicio) return null;
   const dInicio = new Date(inicio + 'T00:00:00');
   const dVenc = new Date(primeiroVencimento + 'T00:00:00');
-  if(isNaN(dInicio) || isNaN(dVenc) || dVenc <= dInicio) return Number(valor);
-  const dias = Math.ceil((dVenc - dInicio) / 86400000);
-  return Number(((Number(valor) / 30) * dias).toFixed(2));
+  if(isNaN(dInicio.getTime()) || isNaN(dVenc.getTime())) return null;
+  if(dVenc <= dInicio) return Number(valor);
+  const diasMes = new Date(dInicio.getFullYear(), dInicio.getMonth()+1, 0).getDate();
+  const dias = Math.max(1, Math.ceil((dVenc - dInicio) / 86400000) + 1);
+  return Number(((Number(valor) / diasMes) * dias).toFixed(2));
 }
 function calcularProporcionalMensalidade(){
   const c=clienteAtualBoletos() || {};
