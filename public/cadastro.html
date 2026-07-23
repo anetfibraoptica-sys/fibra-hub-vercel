@@ -2028,11 +2028,22 @@ function abrirModalBoletoAvulso(){
 function fecharSubmodaisBoletos(){
   document.querySelectorAll(".fibra-submodal").forEach(m=>m.classList.remove("aberto"));
 }
+function fibraValorProporcionalPrimeiraCobranca(valor, cliente, primeiroVencimento){
+  const inicio = cliente && (cliente.dataInicioCobranca || cliente.dataInicio || cliente.inicioCobranca);
+  if(!inicio) return null;
+  const dInicio = new Date(inicio + 'T00:00:00');
+  const dVenc = new Date(primeiroVencimento + 'T00:00:00');
+  if(isNaN(dInicio) || isNaN(dVenc) || dVenc <= dInicio) return Number(valor);
+  const dias = Math.ceil((dVenc - dInicio) / 86400000);
+  return Number(((Number(valor) / 30) * dias).toFixed(2));
+}
 async function gerarMensalidadesCliente(){
   alert("⏳ Gerando carnê/mensalidades, aguarde...");
   const c=clienteAtualBoletos(), lista=fibraGetBoletosStorage();
-  const valor=fibraNumero(document.getElementById("mensalidadeValor").value || c.valorPlanoCobranca || c.valorMensal || c.valor);
+  const valorPlano=fibraNumero(document.getElementById("mensalidadeValor").value || c.valorPlanoCobranca || c.valorMensal || c.valor);
   const primeiro=document.getElementById("mensalidadePrimeiroVencimento").value;
+  if(!(c.dataInicioCobranca || c.dataInicio || c.inicioCobranca)){alert("Informe a Data de Início da Cobrança."); return;}
+  const valor=fibraValorProporcionalPrimeiraCobranca(valorPlano, c, primeiro) || valorPlano;
   const qtd=Math.max(1, Number(document.getElementById("mensalidadeQuantidade").value || 1));
   const per=document.getElementById("mensalidadePeriodicidade").value;
   if(!valor || !primeiro){alert("Informe valor e primeiro vencimento."); return;}
