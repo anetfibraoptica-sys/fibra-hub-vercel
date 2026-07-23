@@ -2043,7 +2043,7 @@ async function gerarMensalidadesCliente(){
   const valorPlano=fibraNumero(document.getElementById("mensalidadeValor").value || c.valorPlanoCobranca || c.valorMensal || c.valor);
   const primeiro=document.getElementById("mensalidadePrimeiroVencimento").value;
   if(!(c.dataInicioCobranca || c.dataInicio || c.inicioCobranca)){alert("Informe a Data de Início da Cobrança."); return;}
-  const valor=fibraValorProporcionalPrimeiraCobranca(valorPlano, c, primeiro) || valorPlano;
+  const valorPrimeiraCobranca=fibraValorProporcionalPrimeiraCobranca(valorPlano, c, primeiro) || valorPlano;
   const qtd=Math.max(1, Number(document.getElementById("mensalidadeQuantidade").value || 1));
   const per=document.getElementById("mensalidadePeriodicidade").value;
   if(!valor || !primeiro){alert("Informe valor e primeiro vencimento."); return;}
@@ -2058,8 +2058,8 @@ async function gerarMensalidadesCliente(){
       descricao:(window.fibraDescricaoBoletoCliente && window.fibraDescricaoBoletoCliente()) || `Mensalidade ${venc.slice(5,7)}/${venc.slice(0,4)}`,
       emissao:dataHojeISO(),
       vencimento:venc,
-      valor:valor,
-      total:valor,
+      valor:(i===0 ? valorPrimeiraCobranca : valorPlano),
+      total:(i===0 ? valorPrimeiraCobranca : valorPlano),
       status:"pendente",
       origem:"manual"
     });
@@ -2363,8 +2363,8 @@ async function gerarMensalidadesCliente(){
       descricao:(window.fibraDescricaoBoletoCliente && window.fibraDescricaoBoletoCliente()) || `Mensalidade ${venc.slice(5,7)}/${venc.slice(0,4)}`,
       emissao:dataHojeISO(),
       vencimento:venc,
-      valor:valor,
-      total:valor,
+      valor:(i===0 ? valorPrimeiraCobranca : valorPlano),
+      total:(i===0 ? valorPrimeiraCobranca : valorPlano),
       status:"pendente",
       origem:"manual"
     });
