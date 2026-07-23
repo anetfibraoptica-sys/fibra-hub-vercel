@@ -681,16 +681,6 @@ document.addEventListener("DOMContentLoaded", function(){
     if(memoria && typeof memoria === "object"){
       return Object.assign({}, memoria.dados || {}, memoria);
     }
-    var keys = ["clienteSelecionadoCompleto","clienteCadastroSelecionado","clienteEditar","clienteOnlineSelecionado"];
-    for(var i=0;i<keys.length;i++){
-      try{
-        var raw = localStorage.getItem(keys[i]);
-        if(raw){
-          var obj = JSON.parse(raw);
-          if(obj && typeof obj === "object") return Object.assign({}, obj.dados || {}, obj);
-        }
-      }catch(e){}
-    }
     return {};
   }
 
