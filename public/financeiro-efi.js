@@ -67,3 +67,24 @@ function gerarPixEfiDemo(){if(efiSelecionado===null)return alert("Selecione uma 
 function gerarBoletoEfiDemo(){if(efiSelecionado===null)return alert("Selecione uma cobrança.");gerarBoletoEfi(efiSelecionado);}
 function gerarPixBoletoEfiDemo(){if(efiSelecionado===null)return alert("Selecione uma cobrança.");gerarPixEfi(efiSelecionado);gerarBoletoEfi(efiSelecionado);}
 function filtrarFinanceiroEfi(){let input=document.getElementById("buscaFinanceiroEfi");let tb=document.getElementById("efiTabela");if(!input||!tb)return;let termo=input.value.trim().toLowerCase();Array.from(tb.querySelectorAll("tr")).forEach(tr=>{let txt=(tr.innerText||"").toLowerCase();tr.style.display=!termo||txt.includes(termo)?"":"none";});}
+
+
+async function salvarConfiguracaoEfiConta(numero){
+  try{
+    const n=numero||1;
+    const conta={
+      nome:(document.getElementById("efi"+n+"NomeConta")||{}).value || ("Efí "+n),
+      titular:(document.getElementById("efi"+n+"Documento")||{}).value || null,
+      ambiente:(document.getElementById("efi"+n+"Ambiente")||{}).value || "producao",
+      clientId:(document.getElementById("efi"+n+"ClientId")||{}).value || null,
+      clientSecret:(document.getElementById("efi"+n+"ClientSecret")||{}).value || null,
+      webhook:(document.getElementById("efi"+n+"Webhook")||{}).value || null
+    };
+    if(window.FibraDB && FibraDB.salvarContaEfi){
+      await FibraDB.salvarContaEfi(conta);
+    }
+    alert("Conta Efí salva com sucesso.");
+  }catch(e){
+    alert("Erro ao salvar conta Efí: "+e.message);
+  }
+}
