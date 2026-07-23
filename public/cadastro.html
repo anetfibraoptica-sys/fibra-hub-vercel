@@ -5119,7 +5119,7 @@ document.addEventListener("DOMContentLoaded", function(){
 
     const url = 'https://wa.me/' + numero;
     const novaJanela = window.open(url, '_blank', 'noopener,noreferrer');
-    if (!novaJanela) window.location.href = url;
+    if (!novaJanela) alert('O navegador bloqueou a abertura do WhatsApp. Libere pop-ups para abrir em nova aba.');
   }
 
   function iniciar(){
