@@ -4179,7 +4179,7 @@ app.post("/api/efi/carne/criar", async (req, res) => {
       ? body.parcelas.map(parcela => ({
           ...parcela,
           // A descrição de cada parcela do carnê é sempre a descrição do plano.
-          descricao: String(body.descricao || "").trim()
+          descricao: `${String(body.descricao || "Mensalidade").trim()} - Parcela ${String(parcela.numero || parcela.parcela || "").trim()}`.trim()
         }))
       : [];
     if (!parcelas.length) return res.status(400).json({ ok:false, erro:"Nenhuma parcela informada." });
