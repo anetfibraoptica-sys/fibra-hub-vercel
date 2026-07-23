@@ -2743,7 +2743,7 @@ document.addEventListener("fibra:supabase-sync", carregarContasEfiNoCadastro);
   if(typeof oldClienteDoCadastro === "function"){
     window.clienteDoCadastro = function(){
       const c = oldClienteDoCadastro();
-      const sel = document.getElementById("efiContaCliente") || document.getElementById("contaEfi") || document.getElementById("contaCobranca");
+      const sel = document.getElementById("cadContaBancaria");
       if(sel){
         const opt = sel.options[sel.selectedIndex];
         c.efiContaId = sel.value || "";
