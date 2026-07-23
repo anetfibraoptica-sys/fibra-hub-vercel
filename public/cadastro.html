@@ -2721,6 +2721,7 @@ async function carregarContasEfiNoCadastro(){
   const contaPrincipal = contas.find(c =>
     c.principal === true ||
     c.is_principal === true ||
+    c.conta_padrao === true ||
     String(c.nome || "").toLowerCase().includes("principal")
   );
 
@@ -2734,8 +2735,8 @@ async function carregarContasEfiNoCadastro(){
   ).join("");
 
   if(contaPrincipal && !select.value){
-    select.value = contaPrincipal.id;
-    select.dataset.contaEfiNome = contaPrincipal.nome || "";
+    select.value = String(contaPrincipal.id);
+    select.dispatchEvent(new Event("change"));
   }
 
   select.addEventListener("change", function(){
