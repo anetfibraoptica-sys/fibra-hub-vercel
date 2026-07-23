@@ -2746,7 +2746,33 @@ async function efiSalvarConfig(cfg) {
     cfg.Webhook || ""
   ]);
 
-  return efiRowToConfig(r.rows[0]);
+  const row = r.rows[0];
+
+  // Mantem o cadastro de contas disponivel para a aba Cobranca.
+  // A conta continua tendo uma unica origem: Financeiro -> Efi.
+  try {
+    await pool.query(`
+      INSERT INTO efi_contas
+        (nome, client_id, client_secret, ambiente, status, atualizado_em)
+      VALUES
+        ($1,$2,$3,$4,'ativo',NOW())
+      ON CONFLICT (nome) DO UPDATE SET
+        client_id = EXCLUDED.client_id,
+        client_secret = EXCLUDED.client_secret,
+        ambiente = EXCLUDED.ambiente,
+        status = 'ativo',
+        atualizado_em = NOW()
+    `, [
+      cfg.NomeConta || '',
+      cfg.ClientId || '',
+      cfg.ClientSecret || '',
+      cfg.Ambiente || 'producao'
+    ]);
+  } catch(e) {
+    console.warn('Nao foi possivel sincronizar efi_contas:', e.message);
+  }
+
+  return efiRowToConfig(row);
 }
 
 async function efiGerarToken(cfgParam = null) {
