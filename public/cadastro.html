@@ -3017,12 +3017,7 @@ document.addEventListener("DOMContentLoaded", function(){
     const login = loginAtual();
     const servidor = servidorAtual();
 
-    // Durante a edição do cadastro os campos podem ficar temporariamente vazios.
-    // Não alterar o resumo para OFFLINE apenas por uma alteração local do formulário.
     if(!login || !servidorValido(servidor)){
-      if(window.__fibraClienteCadastro || document.activeElement){
-        return;
-      }
       aplicarOffline();
       return;
     }

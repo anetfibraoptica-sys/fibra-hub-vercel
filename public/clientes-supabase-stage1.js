@@ -89,8 +89,12 @@
     }else{
       el.value=texto(valor);
     }
-    el.dispatchEvent(new Event('input',{bubbles:true}));
-    el.dispatchEvent(new Event('change',{bubbles:true}));
+    // Não dispara eventos ao apenas preencher o formulário de edição.
+    // Esses eventos eram interpretados como alteração real e podiam afetar o resumo/status.
+    if(opcoes.dispararEventos){
+      el.dispatchEvent(new Event('input',{bubbles:true}));
+      el.dispatchEvent(new Event('change',{bubbles:true}));
+    }
     return true;
   }
 
