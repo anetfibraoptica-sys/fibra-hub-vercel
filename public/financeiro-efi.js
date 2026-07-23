@@ -7,7 +7,33 @@ function efiHoje(){return new Date().toISOString().slice(0,10);}
 function efiMaisDias(dias){let d=new Date();d.setDate(d.getDate()+dias);return d.toISOString().slice(0,10);}
 function efiVencido(c){if(c.status==="pago")return false;let h=new Date();h.setHours(0,0,0,0);let d=new Date((c.vencimento||efiHoje())+"T00:00:00");return d<h;}
 function efiStatusTexto(c){if(c.status==="pago")return"✅ Pago";if(c.status==="vencido"||efiVencido(c))return"🔴 Vencido";if(c.status==="cancelado")return"⚫ Cancelado";return"🟡 Aberto";}
-function salvarConfigEfi(){let cfg={ambiente:val("efiAmbiente"),clientId:val("efiClientId"),clientSecret:val("efiClientSecret"),pixKey:val("efiPixKey"),certificado:val("efiCertificado"),webhook:val("efiWebhookUrl")};localStorage.setItem("fibraEfiConfig",JSON.stringify(cfg));alert("Configuração Efí salva localmente. Integração real será ligada depois.");}
+async function salvarConfigEfi(){
+  let contas = [
+    {
+      nome: val("efi1NomeConta"),
+      documento: val("efi1Documento"),
+      ambiente: val("efi1Ambiente"),
+      clientId: val("efi1ClientId"),
+      clientSecret: val("efi1ClientSecret"),
+      webhook: val("efi1Webhook")
+    },
+    {
+      nome: val("efi2NomeConta"),
+      documento: val("efi2Documento"),
+      ambiente: val("efi2Ambiente"),
+      clientId: val("efi2ClientId"),
+      clientSecret: val("efi2ClientSecret"),
+      webhook: val("efi2Webhook")
+    }
+  ].filter(c => c.nome);
+
+  if(window.FibraDB && FibraDB.salvarContaEfi){
+    for(const conta of contas){
+      await FibraDB.salvarContaEfi(conta);
+    }
+  }
+  alert("Configuração Efí salva.");
+}
 function carregarConfigEfi(){try{let cfg=JSON.parse(localStorage.getItem("fibraEfiConfig")||"{}");Object.keys(cfg).forEach(k=>{});if(cfg.ambiente)document.getElementById("efiAmbiente").value=cfg.ambiente;if(cfg.clientId)document.getElementById("efiClientId").value=cfg.clientId;if(cfg.clientSecret)document.getElementById("efiClientSecret").value=cfg.clientSecret;if(cfg.pixKey)document.getElementById("efiPixKey").value=cfg.pixKey;if(cfg.certificado)document.getElementById("efiCertificado").value=cfg.certificado;if(cfg.webhook)document.getElementById("efiWebhookUrl").value=cfg.webhook;}catch(e){}}
 function val(id){let el=document.getElementById(id);return el?el.value:"";}
 function testarConexaoEfi(){document.getElementById("efiStatus").textContent="Aguardando API";alert("A conexão real com Efí será ativada na próxima etapa com Client ID, Secret e certificado .p12.");}
@@ -67,24 +93,3 @@ function gerarPixEfiDemo(){if(efiSelecionado===null)return alert("Selecione uma 
 function gerarBoletoEfiDemo(){if(efiSelecionado===null)return alert("Selecione uma cobrança.");gerarBoletoEfi(efiSelecionado);}
 function gerarPixBoletoEfiDemo(){if(efiSelecionado===null)return alert("Selecione uma cobrança.");gerarPixEfi(efiSelecionado);gerarBoletoEfi(efiSelecionado);}
 function filtrarFinanceiroEfi(){let input=document.getElementById("buscaFinanceiroEfi");let tb=document.getElementById("efiTabela");if(!input||!tb)return;let termo=input.value.trim().toLowerCase();Array.from(tb.querySelectorAll("tr")).forEach(tr=>{let txt=(tr.innerText||"").toLowerCase();tr.style.display=!termo||txt.includes(termo)?"":"none";});}
-
-
-async function salvarConfiguracaoEfiConta(numero){
-  try{
-    const n=numero||1;
-    const conta={
-      nome:(document.getElementById("efi"+n+"NomeConta")||{}).value || ("Efí "+n),
-      titular:(document.getElementById("efi"+n+"Documento")||{}).value || null,
-      ambiente:(document.getElementById("efi"+n+"Ambiente")||{}).value || "producao",
-      clientId:(document.getElementById("efi"+n+"ClientId")||{}).value || null,
-      clientSecret:(document.getElementById("efi"+n+"ClientSecret")||{}).value || null,
-      webhook:(document.getElementById("efi"+n+"Webhook")||{}).value || null
-    };
-    if(window.FibraDB && FibraDB.salvarContaEfi){
-      await FibraDB.salvarContaEfi(conta);
-    }
-    alert("Conta Efí salva com sucesso.");
-  }catch(e){
-    alert("Erro ao salvar conta Efí: "+e.message);
-  }
-}
