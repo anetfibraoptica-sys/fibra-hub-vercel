@@ -2064,7 +2064,7 @@ function calcularProporcionalMensalidade(){
   const campoVenc = document.getElementById("mensalidadePrimeiroVencimento");
   const venc = campoVenc ? String(campoVenc.value || "").trim() : "";
   const campoValor = document.getElementById("mensalidadeValor");
-  const valor = fibraNumero(campoValor ? campoValor.value : 0);
+  const valor = fibraNumero((campoValor ? campoValor.value : "") || document.getElementById("cadValor")?.value || window.__fibraValorPlano || 0);
 
   if(!inicio){
     alert("Informe a Data de Início da Cobrança.");
@@ -2097,7 +2097,7 @@ function calcularProporcionalMensalidade(){
 async function gerarMensalidadesCliente(){
   alert("⏳ Gerando carnê/mensalidades, aguarde...");
   const c=Object.assign({}, clienteAtualBoletos(), {cadInicioCobranca: document.getElementById("cadInicioCobranca")?.value || ""}), lista=fibraGetBoletosStorage();
-  const valorPlano=fibraNumero(document.getElementById("mensalidadeValor").value || c.valorPlanoCobranca || c.valorMensal || c.valor);
+  const valorPlano=fibraNumero(document.getElementById("mensalidadeValor").value || document.getElementById("cadValor")?.value || c.valorPlanoCobranca || c.valorMensal || c.valor);
   const primeiro=document.getElementById("mensalidadePrimeiroVencimento").value;
   const inicioTelaGeracao = document.getElementById("cadInicioCobranca")?.value || "";
   if(!(inicioTelaGeracao || c.cadInicioCobranca || c.dataInicioCobranca || c.dataInicio || c.inicioCobranca)){alert("Informe a Data de Início da Cobrança."); return;}
@@ -2423,7 +2423,7 @@ function calcularProporcionalMensalidade(){
   const campoVenc = document.getElementById("mensalidadePrimeiroVencimento");
   const venc = campoVenc ? String(campoVenc.value || "").trim() : "";
   const campoValor = document.getElementById("mensalidadeValor");
-  const valor = fibraNumero(campoValor ? campoValor.value : 0);
+  const valor = fibraNumero((campoValor ? campoValor.value : "") || document.getElementById("cadValor")?.value || window.__fibraValorPlano || 0);
 
   if(!inicio){
     alert("Informe a Data de Início da Cobrança.");
@@ -2456,7 +2456,7 @@ function calcularProporcionalMensalidade(){
 async function gerarMensalidadesCliente(){
   alert("⏳ Gerando carnê/mensalidades, aguarde...");
   const c=clienteAtualBoletos(), lista=fibraGetBoletosStorage();
-  const valor=fibraNumero(document.getElementById("mensalidadeValor").value || c.valorPlanoCobranca || c.valorMensal || c.valor);
+  const valor=fibraNumero(document.getElementById("mensalidadeValor").value || document.getElementById("cadValor")?.value || c.valorPlanoCobranca || c.valorMensal || c.valor);
   const primeiro=document.getElementById("mensalidadePrimeiroVencimento").value;
   const qtd=Math.max(1, Number(document.getElementById("mensalidadeQuantidade").value || 1));
   const per=document.getElementById("mensalidadePeriodicidade").value;
