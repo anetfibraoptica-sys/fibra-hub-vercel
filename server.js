@@ -1539,8 +1539,9 @@ app.put("/api/clientes/:id", async (req, res) => {
       `UPDATE clientes SET
         nome=$1, servidor=$2, cpf=$3, telefone=$4, cep=$5, endereco=$6, numero=$7,
         complemento=$8, bairro=$9, referencia=$10, plano=$11, pppoe=$12, acesso_remoto=$13, senha=$14,
-        vencimento=$15, valor=$16, status=$17, observacoes=$18
-       WHERE id=$19 RETURNING *`,
+        vencimento=$15, valor=$16, status=$17, observacoes=$18,
+        dados=COALESCE($19::jsonb, dados)
+       WHERE id=$20 RETURNING *`,
       [
         c.nome || "",
         c.servidor || "",
@@ -1560,6 +1561,7 @@ app.put("/api/clientes/:id", async (req, res) => {
         c.valor || "",
         c.status || clienteAntigo.status || "ativo",
         c.observacoes || "",
+        c.dados ? JSON.stringify(c.dados) : null,
         req.params.id
       ]
     );
