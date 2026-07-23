@@ -2059,12 +2059,13 @@ function fibraValorProporcionalPrimeiraCobranca(valor, cliente, primeiroVencimen
   return Number(((Number(valor) / diasMes) * dias).toFixed(2));
 }
 function calcularProporcionalMensalidade(){
-  const c=clienteAtualBoletos() || {};
-  const valor=fibraNumero(document.getElementById("mensalidadeValor").value || c.valorPlanoCobranca || c.valorMensal || c.valor || c.valorMensalidade || c.planoValor);
-  const venc=document.getElementById("mensalidadePrimeiroVencimento").value;
+  const campoInicio = document.getElementById("cadInicioCobranca");
+  const inicio = campoInicio ? String(campoInicio.value || "").trim() : "";
+  const campoVenc = document.getElementById("mensalidadePrimeiroVencimento");
+  const venc = campoVenc ? String(campoVenc.value || "").trim() : "";
+  const campoValor = document.getElementById("mensalidadeValor");
+  const valor = fibraNumero(campoValor ? campoValor.value : 0);
 
-  const inicioTela = document.getElementById("cadInicioCobranca")?.value || "";
-  const inicio = inicioTela || c.cadInicioCobranca || c.dataInicioCobranca || c.dataInicio || c.inicioCobranca || c.dataInicioDaCobranca || c.data_inicio_cobranca || c.dataInicioCobrancaCliente;
   if(!inicio){
     alert("Informe a Data de Início da Cobrança.");
     return;
@@ -2073,10 +2074,26 @@ function calcularProporcionalMensalidade(){
     alert("Informe o Primeiro vencimento.");
     return;
   }
-  const clienteCalculo = Object.assign({}, c, {dataInicioCobranca: inicio});
-  const calc=fibraValorProporcionalPrimeiraCobranca(valor,clienteCalculo,venc) || valor;
-  document.getElementById("mensalidadeValorProporcional").value = calc.toFixed(2).replace(".",",");
+  if(!valor){
+    alert("Informe o valor do plano.");
+    return;
+  }
+
+  const di = new Date(inicio + "T00:00:00");
+  const dv = new Date(venc + "T00:00:00");
+  if(isNaN(di.getTime()) || isNaN(dv.getTime())){
+    alert("Data inválida para cálculo proporcional.");
+    return;
+  }
+
+  const diasMes = new Date(di.getFullYear(), di.getMonth()+1, 0).getDate();
+  const dias = Math.max(1, Math.ceil((dv-di)/86400000)+1);
+  const resultado = Number(((valor/diasMes)*dias).toFixed(2));
+
+  const campoResultado = document.getElementById("mensalidadeValorProporcional");
+  if(campoResultado) campoResultado.value = resultado.toFixed(2).replace(".",",");
 }
+
 async function gerarMensalidadesCliente(){
   alert("⏳ Gerando carnê/mensalidades, aguarde...");
   const c=Object.assign({}, clienteAtualBoletos(), {cadInicioCobranca: document.getElementById("cadInicioCobranca")?.value || ""}), lista=fibraGetBoletosStorage();
@@ -2401,13 +2418,13 @@ function fecharSubmodaisBoletos(){
   document.querySelectorAll(".fibra-submodal").forEach(m=>m.classList.remove("aberto"));
 }
 function calcularProporcionalMensalidade(){
-  const c=clienteAtualBoletos() || {};
   const campoInicio = document.getElementById("cadInicioCobranca");
-  const inicioTela = campoInicio ? String(campoInicio.value || "").trim() : "";
-  const valor=fibraNumero(document.getElementById("mensalidadeValor").value || c.valorPlanoCobranca || c.valorMensal || c.valor || c.valorMensalidade || c.planoValor);
-  const venc=document.getElementById("mensalidadePrimeiroVencimento").value;
+  const inicio = campoInicio ? String(campoInicio.value || "").trim() : "";
+  const campoVenc = document.getElementById("mensalidadePrimeiroVencimento");
+  const venc = campoVenc ? String(campoVenc.value || "").trim() : "";
+  const campoValor = document.getElementById("mensalidadeValor");
+  const valor = fibraNumero(campoValor ? campoValor.value : 0);
 
-  const inicio = inicioTela || c.cadInicioCobranca || c.dataInicioCobranca || c.dataInicio || c.inicioCobranca || c.dataInicioDaCobranca || c.data_inicio_cobranca || c.dataInicioCobrancaCliente;
   if(!inicio){
     alert("Informe a Data de Início da Cobrança.");
     return;
@@ -2416,10 +2433,26 @@ function calcularProporcionalMensalidade(){
     alert("Informe o Primeiro vencimento.");
     return;
   }
-  const clienteCalculo = Object.assign({}, c, {dataInicioCobranca: inicio});
-  const calc=fibraValorProporcionalPrimeiraCobranca(valor,clienteCalculo,venc) || valor;
-  document.getElementById("mensalidadeValorProporcional").value = calc.toFixed(2).replace(".",",");
+  if(!valor){
+    alert("Informe o valor do plano.");
+    return;
+  }
+
+  const di = new Date(inicio + "T00:00:00");
+  const dv = new Date(venc + "T00:00:00");
+  if(isNaN(di.getTime()) || isNaN(dv.getTime())){
+    alert("Data inválida para cálculo proporcional.");
+    return;
+  }
+
+  const diasMes = new Date(di.getFullYear(), di.getMonth()+1, 0).getDate();
+  const dias = Math.max(1, Math.ceil((dv-di)/86400000)+1);
+  const resultado = Number(((valor/diasMes)*dias).toFixed(2));
+
+  const campoResultado = document.getElementById("mensalidadeValorProporcional");
+  if(campoResultado) campoResultado.value = resultado.toFixed(2).replace(".",",");
 }
+
 async function gerarMensalidadesCliente(){
   alert("⏳ Gerando carnê/mensalidades, aguarde...");
   const c=clienteAtualBoletos(), lista=fibraGetBoletosStorage();
