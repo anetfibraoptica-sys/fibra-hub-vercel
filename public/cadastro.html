@@ -2024,6 +2024,9 @@ function abrirModalGerarMensalidades(){
     (window.__fibraPlanosCobranca || []).find(p => 
       String(p.id) === String(c.plano_id || c.planoId || c.plano_cobranca_id)
     )?.valor ||
+    document.getElementById("cadValor")?.value ||
+    document.getElementById("resValor")?.textContent ||
+    window.__fibraValorPlano ||
     "";
 
   document.getElementById("mensalidadeValor").value = valorPlano || "";
@@ -2064,7 +2067,7 @@ function calcularProporcionalMensalidade(){
   const campoVenc = document.getElementById("mensalidadePrimeiroVencimento");
   const venc = campoVenc ? String(campoVenc.value || "").trim() : "";
   const campoValor = document.getElementById("mensalidadeValor");
-  const valor = fibraNumero((campoValor ? campoValor.value : "") || document.getElementById("cadValor")?.value || window.__fibraValorPlano || 0);
+  const valor = fibraNumero((campoValor ? campoValor.value : "") || document.getElementById("cadValor")?.value || document.getElementById("resValor")?.textContent || window.__fibraValorPlano || 0);
 
   if(!inicio){
     alert("Informe a Data de Início da Cobrança.");
@@ -2394,6 +2397,9 @@ function abrirModalGerarMensalidades(){
     (window.__fibraPlanosCobranca || []).find(p => 
       String(p.id) === String(c.plano_id || c.planoId || c.plano_cobranca_id)
     )?.valor ||
+    document.getElementById("cadValor")?.value ||
+    document.getElementById("resValor")?.textContent ||
+    window.__fibraValorPlano ||
     "";
 
   document.getElementById("mensalidadeValor").value = valorPlano || "";
@@ -2423,7 +2429,7 @@ function calcularProporcionalMensalidade(){
   const campoVenc = document.getElementById("mensalidadePrimeiroVencimento");
   const venc = campoVenc ? String(campoVenc.value || "").trim() : "";
   const campoValor = document.getElementById("mensalidadeValor");
-  const valor = fibraNumero((campoValor ? campoValor.value : "") || document.getElementById("cadValor")?.value || window.__fibraValorPlano || 0);
+  const valor = fibraNumero((campoValor ? campoValor.value : "") || document.getElementById("cadValor")?.value || document.getElementById("resValor")?.textContent || window.__fibraValorPlano || 0);
 
   if(!inicio){
     alert("Informe a Data de Início da Cobrança.");
