@@ -2062,8 +2062,6 @@ async function gerarMensalidadesCliente(){
   const valorPrimeiraCobranca=(document.getElementById("mensalidadeUsarProporcional")?.value === "sim" ? (fibraValorProporcionalPrimeiraCobranca(valorPlano, c, primeiro) || valorPlano) : valorPlano);
   const qtd=Math.max(1, Number(document.getElementById("mensalidadeQuantidade").value || 1));
   const per=document.getElementById("mensalidadePeriodicidade").value;
-  const valorPlano=valor;
-  const valorPrimeiraCobranca=(document.getElementById("mensalidadeUsarProporcional")?.value === "sim" ? (fibraValorProporcionalPrimeiraCobranca(valorPlano, c, primeiro) || valorPlano) : valorPlano);
   if(!valorPlano || !primeiro){alert("Informe valor do plano e primeiro vencimento."); return;}
   for(let i=0;i<qtd;i++){
     const venc = per==="mensal" ? addMes(primeiro,i) : addDias(primeiro, per==="quinzenal" ? i*15 : i*7);
@@ -2377,8 +2375,6 @@ async function gerarMensalidadesCliente(){
   const primeiro=document.getElementById("mensalidadePrimeiroVencimento").value;
   const qtd=Math.max(1, Number(document.getElementById("mensalidadeQuantidade").value || 1));
   const per=document.getElementById("mensalidadePeriodicidade").value;
-  const valorPlano=valor;
-  const valorPrimeiraCobranca=(document.getElementById("mensalidadeUsarProporcional")?.value === "sim" ? (fibraValorProporcionalPrimeiraCobranca(valorPlano, c, primeiro) || valorPlano) : valorPlano);
   if(!valorPlano || !primeiro){alert("Informe valor do plano e primeiro vencimento."); return;}
   for(let i=0;i<qtd;i++){
     const venc = per==="mensal" ? addMes(primeiro,i) : addDias(primeiro, per==="quinzenal" ? i*15 : i*7);
