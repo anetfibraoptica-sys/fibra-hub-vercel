@@ -2011,12 +2011,20 @@ function renderizarBoletosCliente(){
 }
 
 function fibraObterValorPlanoModal(){
+  const c = (typeof clienteAtualBoletos === "function" ? clienteAtualBoletos() : {}) || {};
   const fontes = [
     document.getElementById("mensalidadeValor")?.value,
     window.__fibraValorPlano,
     document.getElementById("resValor")?.textContent,
     document.getElementById("resTotal")?.textContent,
-    document.getElementById("cadValor")?.value
+    document.getElementById("cadValor")?.value,
+    document.getElementById("cadValorPlano")?.value,
+    c.valorPlanoCobranca,
+    c.valorMensal,
+    c.valorMensalidade,
+    c.planoValor,
+    c.valor,
+    c.plano?.valor
   ];
   for(const v of fontes){
     const n = fibraNumero(v);
