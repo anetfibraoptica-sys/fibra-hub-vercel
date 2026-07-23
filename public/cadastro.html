@@ -2061,7 +2061,7 @@ function calcularProporcionalMensalidade(){
   const valor=fibraNumero(document.getElementById("mensalidadeValor").value || c.valorPlanoCobranca || c.valorMensal || c.valor || c.valorMensalidade || c.planoValor);
   const venc=document.getElementById("mensalidadePrimeiroVencimento").value;
 
-  const inicio = c.dataInicioCobranca || c.dataInicio || c.inicioCobranca || c.dataInicioDaCobranca || c.data_inicio_cobranca || c.dataInicioCobrancaCliente;
+  const inicio = c.cadInicioCobranca || c.dataInicioCobranca || c.dataInicio || c.inicioCobranca || c.dataInicioDaCobranca || c.data_inicio_cobranca || c.dataInicioCobrancaCliente;
   if(!inicio){
     alert("Informe a Data de Início da Cobrança.");
     return;
@@ -2255,7 +2255,22 @@ function addDias(data, dias){
   return d.toISOString().slice(0,10);
 }
 function clienteAtualBoletos(){
-  try{return typeof clienteDoCadastro==="function" ? clienteDoCadastro() : {};}catch(e){return {}}
+  try{
+    // Financeiro usa somente a fonte do Supabase/cache carregado do servidor.
+    const lista = Array.isArray(window.__fibraClientesSupabase) ? window.__fibraClientesSupabase : [];
+    const loginAtual = String(document.getElementById("cadLogin")?.value || "").trim().toLowerCase();
+    const cpfAtual = String(document.getElementById("cadCpf")?.value || "").trim();
+    const encontrado = lista.find(c => {
+      const login = String(c.loginPppoe || c.login || "").trim().toLowerCase();
+      const cpf = String(c.cpfCnpj || c.cpf || c.documento || "").trim();
+      return (loginAtual && login === loginAtual) || (cpfAtual && cpf === cpfAtual);
+    });
+    const tela = {
+      cadInicioCobranca: document.getElementById("cadInicioCobranca")?.value || "",
+      cadVencimento: document.getElementById("cadVencimento")?.value || ""
+    };
+    return Object.assign({}, encontrado || {}, tela);
+  }catch(e){return {}}
 }
 function chaveClienteBoletos(){
   const c = clienteAtualBoletos();
