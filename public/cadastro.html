@@ -4127,15 +4127,36 @@ document.addEventListener("DOMContentLoaded", function(){
     if(!valor || !primeiro){ alert("Cliente sem plano com valor ou sem primeiro vencimento."); return; }
 
     const parcelas = [];
+    const inicioCobranca =
+      atualPlano.dataInicioCobranca ||
+      atualPlano.data_inicio_cobranca ||
+      atualPlano.inicioCobranca ||
+      document.getElementById("dataInicioCobranca")?.value ||
+      "";
+
+    function calcularPrimeiraParcelaProporcional(valorPlano, inicio, vencimento){
+      if(!inicio || !vencimento) return Number(valorPlano);
+      const ini = new Date(inicio + "T00:00:00");
+      const fim = new Date(vencimento + "T00:00:00");
+      const dias = Math.ceil((fim - ini) / 86400000);
+      if(!Number.isFinite(dias) || dias <= 0) return Number(valorPlano);
+      return Number(((Number(valorPlano) / 30) * dias).toFixed(2));
+    }
+
     for(let i=0;i<qtd;i++){
       let venc = primeiro;
       if(typeof addMes === "function" && per === "mensal") venc = addMes(primeiro, i);
       else if(typeof addDias === "function") venc = addDias(primeiro, per === "quinzenal" ? i*15 : i*7);
+
+      const valorParcela = i === 0
+        ? calcularPrimeiraParcelaProporcional(valor, inicioCobranca, venc)
+        : valor;
+
       parcelas.push({
         numero: Date.now()+i,
         vencimento: venc,
-        valor,
-        total: valor,
+        valor: valorParcela,
+        total: valorParcela,
         descricao: (window.fibraDescricaoBoletoCliente && window.fibraDescricaoBoletoCliente()) || `Mensalidade ${String(venc).slice(5,7)}/${String(venc).slice(0,4)}`,
         categoria: "Mensalidade"
       });
