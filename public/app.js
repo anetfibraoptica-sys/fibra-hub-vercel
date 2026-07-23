@@ -798,6 +798,14 @@ document.addEventListener("DOMContentLoaded", function(){
   }
 
   async function montarResumoReceitaNet(){
+    var statusAtual = null;
+    var statusElAtual = document.getElementById("resStatusOnline");
+    if(statusElAtual){
+      statusAtual = {
+        text: statusElAtual.textContent,
+        className: statusElAtual.className
+      };
+    }
     var card = document.querySelector(".cadastro-resumo-card");
     if(!card) return;
 
@@ -961,6 +969,14 @@ document.addEventListener("DOMContentLoaded", function(){
         <span class="pai-status">Desativado</span>
       </div>
     `;
+
+    if(statusAtual){
+      var novoStatus = document.getElementById("resStatusOnline");
+      if(novoStatus){
+        novoStatus.textContent = statusAtual.text;
+        novoStatus.className = statusAtual.className;
+      }
+    }
   }
 
   window.__fibraMontarResumoCadastro = montarResumoReceitaNet;
