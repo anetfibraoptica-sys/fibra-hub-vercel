@@ -2030,6 +2030,7 @@ function abrirModalGerarMensalidades(){
     "";
 
   document.getElementById("mensalidadeValor").value = valorPlano || "";
+  window.__fibraValorPlano = valorPlano || "";
   document.getElementById("mensalidadeValor").readOnly = true;
 
   document.getElementById("mensalidadePrimeiroVencimento").value = dataHojeISO();
@@ -2085,6 +2086,7 @@ function calcularProporcionalMensalidade(){
     alert("Informe o Primeiro vencimento.");
     return;
   }
+  console.log("PROPORCIONAL DEBUG", {inicio, venc, valor, campoModal: campoValor?.value, global: window.__fibraValorPlano, cadValor: document.getElementById("cadValor")?.value, resValor: document.getElementById("resValor")?.textContent});
   if(!valor){
     alert("Informe o valor do plano.");
     return;
@@ -2417,6 +2419,7 @@ function abrirModalGerarMensalidades(){
     "";
 
   document.getElementById("mensalidadeValor").value = valorPlano || "";
+  window.__fibraValorPlano = valorPlano || "";
   document.getElementById("mensalidadeValor").readOnly = true;
 
   document.getElementById("mensalidadePrimeiroVencimento").value = dataHojeISO();
@@ -2461,6 +2464,7 @@ function calcularProporcionalMensalidade(){
     alert("Informe o Primeiro vencimento.");
     return;
   }
+  console.log("PROPORCIONAL DEBUG", {inicio, venc, valor, campoModal: campoValor?.value, global: window.__fibraValorPlano, cadValor: document.getElementById("cadValor")?.value, resValor: document.getElementById("resValor")?.textContent});
   if(!valor){
     alert("Informe o valor do plano.");
     return;
