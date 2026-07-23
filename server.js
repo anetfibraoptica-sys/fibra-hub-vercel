@@ -4176,10 +4176,18 @@ app.post("/api/efi/carne/criar", async (req, res) => {
   try {
     const body = await financeiroAplicarDescricaoPlanoCliente(req.body || {});
     const parcelas = Array.isArray(body.parcelas)
-      ? body.parcelas.map(parcela => ({
+      ? body.parcelas.map((parcela, index) => ({
           ...parcela,
-          // A descrição de cada parcela do carnê é sempre a descrição do plano.
-          descricao: `${String(body.descricao || "Mensalidade").trim()} - Parcela ${String(parcela.numero || parcela.parcela || "").trim()}`.trim()
+          // Garante que a primeira parcela do carnê use o valor proporcional
+          // quando a Data de Início da Cobrança estiver informada.
+          valor: index === 0 && body.valorProporcionalPrimeira
+            ? Number(body.valorProporcionalPrimeira)
+            : Number(parcela.valor || body.valor || body.total || 0),
+          total: index === 0 && body.valorProporcionalPrimeira
+            ? Number(body.valorProporcionalPrimeira)
+            : Number(parcela.total || parcela.valor || body.valor || body.total || 0),
+          // A descrição de cada parcela do carnê é sempre única para a Efí.
+          descricao: `${String(body.descricao || "Mensalidade").trim()} - Parcela ${index + 1}`.trim()
         }))
       : [];
     if (!parcelas.length) return res.status(400).json({ ok:false, erro:"Nenhuma parcela informada." });
