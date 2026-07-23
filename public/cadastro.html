@@ -2398,10 +2398,12 @@ function fecharSubmodaisBoletos(){
 }
 function calcularProporcionalMensalidade(){
   const c=clienteAtualBoletos() || {};
+  const campoInicio = document.getElementById("cadInicioCobranca");
+  const inicioTela = campoInicio ? String(campoInicio.value || "").trim() : "";
   const valor=fibraNumero(document.getElementById("mensalidadeValor").value || c.valorPlanoCobranca || c.valorMensal || c.valor || c.valorMensalidade || c.planoValor);
   const venc=document.getElementById("mensalidadePrimeiroVencimento").value;
 
-  const inicio = c.dataInicioCobranca || c.dataInicio || c.inicioCobranca || c.dataInicioDaCobranca || c.data_inicio_cobranca || c.dataInicioCobrancaCliente;
+  const inicio = inicioTela || c.cadInicioCobranca || c.dataInicioCobranca || c.dataInicio || c.inicioCobranca || c.dataInicioDaCobranca || c.data_inicio_cobranca || c.dataInicioCobrancaCliente;
   if(!inicio){
     alert("Informe a Data de Início da Cobrança.");
     return;
