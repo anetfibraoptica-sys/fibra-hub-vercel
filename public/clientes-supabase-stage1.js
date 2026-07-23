@@ -179,7 +179,7 @@
     if(h) h.textContent='Cadastro de Cliente - Editando';
     // Mantém o objeto original do monitoramento intacto.
 // A edição recebe uma cópia para não alterar o cliente usado no Resumo.
-    window.__fibraClienteSelecionado=JSON.parse(JSON.stringify(c));
+    window.__fibraClienteSelecionado=c;
     window.__fibraClienteCadastro=JSON.parse(JSON.stringify(c));
     if(typeof atualizarResumoCadastro==='function') atualizarResumoCadastro();
     requestAnimationFrame(()=>setTimeout(()=>{

@@ -3018,7 +3018,8 @@ document.addEventListener("DOMContentLoaded", function(){
     const servidor = servidorAtual();
 
     if(!login || !servidorValido(servidor)){
-      aplicarOffline();
+      // Durante a edição do cadastro os campos podem estar temporariamente vazios.
+      // Não alterar o status real do cliente no Resumo.
       return;
     }
 
