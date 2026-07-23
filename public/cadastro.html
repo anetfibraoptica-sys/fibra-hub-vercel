@@ -831,9 +831,7 @@ function fibraCadastroLimparStoragesSelecao(){
             <div class="campo">
               <label>Conta</label>
               <select id="cadContaBancaria">
-                <option>API - Efí</option>
-                <option>Carteira</option>
-                <option>Banco</option>
+                <option value="">Selecione a conta</option>
               </select>
             </div>
 
@@ -2719,23 +2717,8 @@ async function carregarContasEfiNoCadastro(){
   try{ contas = await FibraDB.carregarContasEfi(); }catch(e){ console.warn("Erro contas Efí:", e.message); }
   contas = (contas || []).filter(c => String(c.status || "ativo").toLowerCase() === "ativo");
 
-  let select = document.getElementById("efiContaCliente") ||
-               document.getElementById("contaEfi") ||
-               document.getElementById("contaCobranca") ||
-               document.querySelector('select[name="conta"]') ||
-               document.querySelector('select[name="contaEfi"]');
+  let select = document.getElementById("cadContaBancaria");
 
-  if(!select){
-    const labels = Array.from(document.querySelectorAll("label"));
-    const labelConta = labels.find(l => (l.textContent || "").trim().toLowerCase() === "conta");
-    if(labelConta){
-      const box = labelConta.parentElement || labelConta.closest(".form-group") || labelConta;
-      select = document.createElement("select");
-      select.id = "efiContaCliente";
-      select.name = "efiContaCliente";
-      box.appendChild(select);
-    }
-  }
 
   if(!select) return;
 
@@ -2743,13 +2726,9 @@ async function carregarContasEfiNoCadastro(){
     `<option value="${c.id}" data-nome="${c.nome}">${c.nome}${c.titular ? " - " + c.titular : ""}</option>`
   ).join("");
 
-  const atualId = localStorage.getItem("cliente_efi_conta_id") || "";
-  if(atualId) select.value = atualId;
-
   select.addEventListener("change", function(){
     const opt = select.options[select.selectedIndex];
-    localStorage.setItem("cliente_efi_conta_id", select.value || "");
-    localStorage.setItem("cliente_efi_conta_nome", opt ? (opt.dataset.nome || opt.textContent || "") : "");
+    select.dataset.contaEfiNome = opt ? (opt.dataset.nome || opt.textContent || "") : "";
   });
 }
 
