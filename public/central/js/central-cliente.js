@@ -1,0 +1,1 @@
+document.getElementById('dados').innerText='Área do assinante criada.';
