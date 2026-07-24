@@ -4300,12 +4300,18 @@ document.addEventListener("DOMContentLoaded", function(){
       "";
 
     function calcularPrimeiraParcelaProporcional(valorPlano, inicio, vencimento){
+      // Usa exatamente o valor calculado no modal quando existir.
+      const calculado = fibraNumero(document.getElementById("mensalidadeValorProporcional")?.value || "");
+      if(document.getElementById("mensalidadeUsarProporcional")?.value === "sim" && calculado > 0){
+        return Number(calculado.toFixed(2));
+      }
       if(!inicio || !vencimento) return Number(valorPlano);
       const ini = new Date(inicio + "T00:00:00");
       const fim = new Date(vencimento + "T00:00:00");
-      const dias = Math.ceil((fim - ini) / 86400000);
+      const dias = Math.floor((fim - ini) / 86400000) + 1;
+      const diasMes = new Date(ini.getFullYear(), ini.getMonth()+1, 0).getDate();
       if(!Number.isFinite(dias) || dias <= 0) return Number(valorPlano);
-      return Number(((Number(valorPlano) / 30) * dias).toFixed(2));
+      return Number(((Number(valorPlano) / diasMes) * dias).toFixed(2));
     }
 
     for(let i=0;i<qtd;i++){
