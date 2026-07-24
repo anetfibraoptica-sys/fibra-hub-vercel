@@ -2039,7 +2039,7 @@ function fibraObterValorPlanoModal(){
   return "";
 }
 
-async async function abrirModalGerarMensalidades(){
+async async async function abrirModalGerarMensalidades(){
   await fibraGarantirValorPlanoAtualizado();
   const c=clienteAtualBoletos();
   const modal=document.getElementById("modalGerarMensalidades");
@@ -2417,7 +2417,7 @@ function renderizarBoletosCliente(){
     </tr>`;
   }).join("");
 }
-async async function abrirModalGerarMensalidades(){
+async async async function abrirModalGerarMensalidades(){
   await fibraGarantirValorPlanoAtualizado();
   const c=clienteAtualBoletos();
   const modal=document.getElementById("modalGerarMensalidades");
