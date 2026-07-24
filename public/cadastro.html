@@ -2047,7 +2047,7 @@ function fibraObterValorPlanoModal(){
   return "";
 }
 
-async function abrirModalGerarMensalidades(){
+async async function abrirModalGerarMensalidades(){
   const c=clienteAtualBoletos();
   const modal=document.getElementById("modalGerarMensalidades");
   if(!modal) return;
@@ -2088,9 +2088,14 @@ function fibraValorProporcionalPrimeiraCobranca(valor, cliente, primeiroVencimen
   const dias = Math.max(1, Math.ceil((dVenc - dInicio) / 86400000) + 1);
   return Number(((Number(valor) / diasMes) * dias).toFixed(2));
 }
-function calcularProporcionalMensalidade(){
+async function calcularProporcionalMensalidade(){
+  const cliente = clienteAtualBoletos();
   const campoInicio = document.getElementById("cadInicioCobranca");
-  const inicio = campoInicio ? String(campoInicio.value || "").trim() : "";
+  const inicio = (campoInicio ? String(campoInicio.value || "").trim() : "") ||
+    cliente?.data_inicio_cobranca ||
+    cliente?.dataInicioCobranca ||
+    cliente?.cadInicioCobranca ||
+    "";
   const campoVenc = document.getElementById("mensalidadePrimeiroVencimento");
   const venc = campoVenc ? String(campoVenc.value || "").trim() : "";
   const campoValor = document.getElementById("mensalidadeValor");
@@ -2424,7 +2429,7 @@ function renderizarBoletosCliente(){
     </tr>`;
   }).join("");
 }
-async function abrirModalGerarMensalidades(){
+async async function abrirModalGerarMensalidades(){
   const c=clienteAtualBoletos();
   const modal=document.getElementById("modalGerarMensalidades");
   if(!modal) return;
@@ -2454,9 +2459,14 @@ function abrirModalBoletoAvulso(){
 function fecharSubmodaisBoletos(){
   document.querySelectorAll(".fibra-submodal").forEach(m=>m.classList.remove("aberto"));
 }
-function calcularProporcionalMensalidade(){
+async function calcularProporcionalMensalidade(){
+  const cliente = clienteAtualBoletos();
   const campoInicio = document.getElementById("cadInicioCobranca");
-  const inicio = campoInicio ? String(campoInicio.value || "").trim() : "";
+  const inicio = (campoInicio ? String(campoInicio.value || "").trim() : "") ||
+    cliente?.data_inicio_cobranca ||
+    cliente?.dataInicioCobranca ||
+    cliente?.cadInicioCobranca ||
+    "";
   const campoVenc = document.getElementById("mensalidadePrimeiroVencimento");
   const venc = campoVenc ? String(campoVenc.value || "").trim() : "";
   const campoValor = document.getElementById("mensalidadeValor");
