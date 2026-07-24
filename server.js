@@ -4876,9 +4876,9 @@ async function fbSalvarClienteSupabaseUnico(body) {
   else if (c.login_pppoe) existente = await pool.query(`SELECT id FROM clientes WHERE login_pppoe=$1 OR dados->>'loginPppoe'=$1 OR dados->>'login'=$1 ORDER BY atualizado_em DESC NULLS LAST, criado_em DESC NULLS LAST LIMIT 1`, [c.login_pppoe]);
   let r;
   if (existente.rows[0]) {
-    r = await pool.query(`UPDATE clientes SET login_pppoe=$1,nome=$2,cpf_cnpj=$3,telefone=$4,plano=$5,servidor=$6,profile=$7,dados=COALESCE(dados,'{}'::jsonb) || $8::jsonb,atualizado_em=NOW() WHERE id=$9 RETURNING *`, [c.login_pppoe,c.nome,c.cpf_cnpj,c.telefone,c.plano,c.servidor,c.profile,JSON.stringify({...body,origem:body.origem || "Painel Fibra+ Hub"}),existente.rows[0].id]);
+    r = await pool.query(`UPDATE clientes SET login_pppoe=$1,nome=$2,cpf_cnpj=$3,telefone=$4,plano=$5,servidor=$6,profile=$7,data_inicio_cobranca=$8,dados=COALESCE(dados,'{}'::jsonb) || $9::jsonb,atualizado_em=NOW() WHERE id=$10 RETURNING *`, [c.login_pppoe,c.nome,c.cpf_cnpj,c.telefone,c.plano,c.servidor,c.profile,body.data_inicio_cobranca || body.cadInicioCobranca || body.dataInicioCobranca || body.inicioCobranca || null,JSON.stringify({...body,origem:body.origem || "Painel Fibra+ Hub"}),existente.rows[0].id]);
   } else {
-    r = await pool.query(`INSERT INTO clientes (login_pppoe,nome,cpf_cnpj,telefone,plano,servidor,profile,dados,atualizado_em,criado_em) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW(),NOW()) RETURNING *`, [c.login_pppoe,c.nome,c.cpf_cnpj,c.telefone,c.plano,c.servidor,c.profile,JSON.stringify({...body,origem:body.origem || "Painel Fibra+ Hub"})]);
+    r = await pool.query(`INSERT INTO clientes (login_pppoe,nome,cpf_cnpj,telefone,plano,servidor,profile,data_inicio_cobranca,dados,atualizado_em,criado_em) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,NOW(),NOW()) RETURNING *`, [c.login_pppoe,c.nome,c.cpf_cnpj,c.telefone,c.plano,c.servidor,c.profile,body.data_inicio_cobranca || body.cadInicioCobranca || body.dataInicioCobranca || body.inicioCobranca || null,JSON.stringify({...body,origem:body.origem || "Painel Fibra+ Hub"})]);
   }
   return fbClienteRow(r.rows[0]);
 }
