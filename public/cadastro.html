@@ -2010,12 +2010,6 @@ function renderizarBoletosCliente(){
   }).join("");
 }
 
-async function fibraGarantirValorPlanoAtualizado(){
-  try{
-    if(typeof window.atualizarValorPlanoResumo === "function") await window.atualizarValorPlanoResumo();
-  }catch(e){}
-}
-
 function fibraObterValorPlanoModal(){
   const c = (typeof clienteAtualBoletos === "function" ? clienteAtualBoletos() : {}) || {};
   const fontes = [
@@ -2039,8 +2033,7 @@ function fibraObterValorPlanoModal(){
   return "";
 }
 
-async async async function abrirModalGerarMensalidades(){
-  await fibraGarantirValorPlanoAtualizado();
+function abrirModalGerarMensalidades(){
   const c=clienteAtualBoletos();
   const modal=document.getElementById("modalGerarMensalidades");
   if(!modal) return;
@@ -2417,8 +2410,7 @@ function renderizarBoletosCliente(){
     </tr>`;
   }).join("");
 }
-async async async function abrirModalGerarMensalidades(){
-  await fibraGarantirValorPlanoAtualizado();
+function abrirModalGerarMensalidades(){
   const c=clienteAtualBoletos();
   const modal=document.getElementById("modalGerarMensalidades");
   if(!modal) return;
