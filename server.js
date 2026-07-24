@@ -4773,7 +4773,9 @@ function fbClienteRow(r){
     popServidor: r.servidor || d.popServidor || d.servidor || "",
     profile: r.profile || d.profile || d.perfil || d.plano || "",
     statusCobranca: d.statusCobranca || d.status_cobranca || d.cadStatusCobranca || d.cli_boleto || d.boleto || d.tipoCobranca || "",
-    status_cobranca: d.status_cobranca || d.statusCobranca || d.cadStatusCobranca || d.cli_boleto || d.boleto || d.tipoCobranca || ""
+    status_cobranca: d.status_cobranca || d.statusCobranca || d.cadStatusCobranca || d.cli_boleto || d.boleto || d.tipoCobranca || "",
+    data_inicio_cobranca: d.data_inicio_cobranca || d.cadInicioCobranca || d.dataInicioCobranca || d.inicioCobranca || "",
+    cadInicioCobranca: d.cadInicioCobranca || d.data_inicio_cobranca || d.dataInicioCobranca || d.inicioCobranca || ""
   };
 }
 function fbBoletoRow(row){
