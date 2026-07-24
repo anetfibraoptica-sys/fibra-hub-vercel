@@ -2010,6 +2010,20 @@ function renderizarBoletosCliente(){
   }).join("");
 }
 
+
+async function fibraBuscarValorPlanoSupabase(c){
+  try{
+    const planoId = c?.plano_cobranca_id || c?.planoCobrancaId || c?.plano_id || c?.planoId;
+    if(!planoId) return "";
+    const r = await fetch('/api/planos-cobranca');
+    const j = await r.json();
+    const lista = j.planos || [];
+    const plano = lista.find(x => Number(x.id) === Number(planoId));
+    if(plano && Number(plano.valor) > 0) return String(plano.valor);
+  }catch(e){ console.warn('valor plano supabase', e); }
+  return "";
+}
+
 function fibraObterValorPlanoModal(){
   const c = (typeof clienteAtualBoletos === "function" ? clienteAtualBoletos() : {}) || {};
   const fontes = [
@@ -2033,13 +2047,13 @@ function fibraObterValorPlanoModal(){
   return "";
 }
 
-function abrirModalGerarMensalidades(){
+async function abrirModalGerarMensalidades(){
   const c=clienteAtualBoletos();
   const modal=document.getElementById("modalGerarMensalidades");
   if(!modal) return;
 
   // Valor vem exclusivamente do plano vinculado ao cliente.
-  const valorPlano = fibraObterValorPlanoModal() || c.valorPlanoCobranca || c.valorMensal || c.valor || "";
+  const valorPlano = await fibraBuscarValorPlanoSupabase(c) || fibraObterValorPlanoModal() || c.valorPlanoCobranca || c.valorMensal || c.valor || "";
 
   document.getElementById("mensalidadeValor").value = valorPlano || "";
   window.__fibraValorPlano = valorPlano || "";
@@ -2410,13 +2424,13 @@ function renderizarBoletosCliente(){
     </tr>`;
   }).join("");
 }
-function abrirModalGerarMensalidades(){
+async function abrirModalGerarMensalidades(){
   const c=clienteAtualBoletos();
   const modal=document.getElementById("modalGerarMensalidades");
   if(!modal) return;
 
   // Valor vem exclusivamente do plano vinculado ao cliente.
-  const valorPlano = fibraObterValorPlanoModal() || c.valorPlanoCobranca || c.valorMensal || c.valor || "";
+  const valorPlano = await fibraBuscarValorPlanoSupabase(c) || fibraObterValorPlanoModal() || c.valorPlanoCobranca || c.valorMensal || c.valor || "";
 
   document.getElementById("mensalidadeValor").value = valorPlano || "";
   window.__fibraValorPlano = valorPlano || "";
