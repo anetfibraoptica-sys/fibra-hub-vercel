@@ -2055,7 +2055,7 @@ async function abrirModalGerarMensalidades(){
   // Valor vem exclusivamente do plano vinculado ao cliente.
   const valorPlano = await fibraBuscarValorPlanoSupabase(c) || fibraObterValorPlanoModal() || c.valorPlanoCobranca || c.valorMensal || c.valor || "";
 
-  document.getElementById("mensalidadeValor").value = valorPlano || "";
+  document.getElementById("mensalidadeValor").value = valorPlano !== "" && valorPlano != null ? Number(valorPlano).toFixed(2).replace(".", ",") : "";
   window.__fibraValorPlano = valorPlano || "";
   document.getElementById("mensalidadeValor").readOnly = true;
 
@@ -2432,7 +2432,7 @@ async function abrirModalGerarMensalidades(){
   // Valor vem exclusivamente do plano vinculado ao cliente.
   const valorPlano = await fibraBuscarValorPlanoSupabase(c) || fibraObterValorPlanoModal() || c.valorPlanoCobranca || c.valorMensal || c.valor || "";
 
-  document.getElementById("mensalidadeValor").value = valorPlano || "";
+  document.getElementById("mensalidadeValor").value = valorPlano !== "" && valorPlano != null ? Number(valorPlano).toFixed(2).replace(".", ",") : "";
   window.__fibraValorPlano = valorPlano || "";
   document.getElementById("mensalidadeValor").readOnly = true;
 
