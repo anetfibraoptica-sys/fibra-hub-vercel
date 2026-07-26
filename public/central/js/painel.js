@@ -157,9 +157,9 @@
     const statusTexto = normalize(firstData.status || state.assinante?.status || els.summaryStatus.textContent);
     const confiancaAtiva = statusTexto.includes("confianca");
     const clienteAtivo = !blocked && !confiancaAtiva && !inactive;
-    // O card inteiro de confiança só existe para clientes bloqueados ou já liberados em confiança.
-    // Clientes ativos não devem visualizar nenhuma parte do card.
-    els.trustCard.hidden = clienteAtivo || !(blocked || confiancaAtiva);
+    // O card de confiança permanece visível para informar o status.
+    // Clientes ativos não podem solicitar, por isso exibem apenas Indisponível.
+    els.trustCard.hidden = !(blocked || clienteAtivo || confiancaAtiva);
     if(confiancaAtiva){
       els.trustStatus.textContent = "Ativa";
       els.trustDescription.textContent = "Sua liberação em confiança está ativa.";
@@ -169,6 +169,8 @@
       els.trustDescription.textContent = "Solicite uma liberação temporária de 24 horas.";
       els.trustButton.hidden = false;
     }else{
+      els.trustStatus.textContent = "Indisponível";
+      els.trustDescription.textContent = "";
       els.trustButton.hidden = true;
     }
 
