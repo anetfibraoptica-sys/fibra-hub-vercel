@@ -210,7 +210,7 @@
       const status = group === "pagas" ? {label:"Paga", cls:"paid"} : overdue ? {label:"Vencida", cls:"overdue"} : {label:"Em aberto", cls:"open"};
       const point = identifyBillPoint(bill);
       const actions = [];
-      if(bill.pix) actions.push(`<button type="button" class="bill-action" data-copy="${escapeAttr(bill.pix)}">Copiar PIX</button>`);
+      if(bill.pix) actions.push(`<button type="button" class="bill-action" data-pix-modal="${escapeAttr(key)}">PIX</button>`);
       if(bill.linhaDigitavel) actions.push(`<button type="button" class="bill-action" data-copy="${escapeAttr(bill.linhaDigitavel)}">Copiar linha</button>`);
       if(safeLink(bill.linkPdf)) actions.push(`<a class="bill-action primary" href="${escapeAttr(bill.linkPdf)}" target="_blank" rel="noopener">Abrir 2ª via</a>`);
       const key = billKey(bill);
@@ -318,6 +318,13 @@
   }
 
   async function handleBillAction(event){
+    const pixButton = event.target.closest("[data-pix-modal]");
+    if(pixButton){
+      const card = pixButton.closest("[data-bill-key]");
+      const bill = state.boletos.find(item=>billKey(item) === pixButton.dataset.pixModal || billKey(item) === card?.dataset.billKey);
+      if(bill){ openBillModal(bill); }
+      return;
+    }
     const button = event.target.closest("[data-copy]");
     if(!button) return;
     try{
