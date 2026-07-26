@@ -400,7 +400,9 @@
     els.refresh.textContent = busy ? "Atualizando…" : "Atualizar dados";
   }
 
+  let messageTimer = null;
   function showMessage(message,type, persist=false, clientId=null){
+    if(messageTimer) clearTimeout(messageTimer);
     els.message.textContent = message;
     els.message.className = `page-message ${type || "info"}`;
     els.message.hidden = false;
@@ -408,6 +410,12 @@
       sessionStorage.setItem("central_conf_message", message);
       sessionStorage.setItem("central_conf_message_type", type || "info");
       if(clientId) sessionStorage.setItem("central_conf_message_client", String(clientId));
+      messageTimer = setTimeout(()=>{
+        hideMessage();
+        sessionStorage.removeItem("central_conf_message");
+        sessionStorage.removeItem("central_conf_message_type");
+        sessionStorage.removeItem("central_conf_message_client");
+      },30000);
     }
   }
   function hideMessage(){
