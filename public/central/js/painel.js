@@ -75,7 +75,7 @@
       els.trustButton.disabled = true;
       try{
         await CentralAPI.solicitarConfianca(id);
-        showMessage("Solicitação de liberação em confiança enviada.", "success");
+        showMessage("✅ Liberação em Confiança realizada com sucesso! Sua conexão foi liberada por 24 horas.", "success");
         await loadAll(false);
       }catch(e){
         showMessage(e.message || "Não foi possível solicitar a liberação.", "error");
