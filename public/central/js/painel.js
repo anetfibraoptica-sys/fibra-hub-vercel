@@ -133,6 +133,7 @@
       state.boletos = billsResult.boletos || [];
       renderAll();
       if(manual) showMessage("Dados atualizados.", "success");
+      else if(sessionStorage.getItem("central_conf_message")) restoreSavedMessage();
       else if(!state.keepMessage) hideMessage();
     }catch(error){
       if(error.status === 401){
