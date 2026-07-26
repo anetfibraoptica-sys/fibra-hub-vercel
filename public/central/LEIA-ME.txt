@@ -1,0 +1,40 @@
+CENTRAL DO ASSINANTE v72 — CARD PRÓXIMO VENCIMENTO LIMPO
+
+Esta versão continua abrindo diretamente pelo arquivo index.html.
+
+CORREÇÃO PRINCIPAL:
+- Visão geral: exibe apenas resumo, situação, próximos vencimentos e planos/conexões.
+- Faturas: exibe apenas a página de faturas e os filtros de cobrança.
+- Cadastro: exibe apenas os campos de contato que podem ser editados.
+
+As telas continuam dentro do mesmo painel.html, sem servidor local, mas agora são separadas visualmente e pelo endereço:
+- painel.html#visao-geral
+- painel.html#faturas
+- painel.html#cadastro
+
+A conexão direta com o Supabase, a busca em planos_cobranca e a ordenação dos boletos foram preservadas.
+
+
+VERSÃO v68
+- Cadastro em modo somente consulta.
+- Removidos campos de edição, botão de salvar e gravação de contato no Supabase.
+
+- Cadastro inclui data de nascimento, somente para consulta.
+
+
+VERSÃO 69
+Cada fatura identifica o ponto correspondente pelo cliente_id do boleto. Se não houver cliente_id, a Central tenta relacionar pelo cliente_login/login PPPoE.
+
+
+ALTERAÇÃO v71:
+- Removido da Visão geral o card “Em aberto”, incluindo total em reais e quantidade de faturas pendentes.
+- A página Faturas permanece completa e inalterada.
+
+AJUSTE v72:
+- O texto técnico "Boleto importado ReceitaNet" não aparece mais no card Próximo vencimento.
+- Descrições legítimas de outras faturas continuam sendo exibidas.
+
+
+VERSÃO v73: tela de login compactada e responsiva para caber na viewport sem barra de rolagem; painel interno preservado.
+
+v74: o card Próximo vencimento abre a tela Faturas, filtra cobranças em aberto e destaca a fatura correspondente.
