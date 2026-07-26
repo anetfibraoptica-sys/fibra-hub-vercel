@@ -9,7 +9,7 @@
   const yearElement = document.getElementById("current-year");
   const documentError = document.getElementById("document-error");
   const documentWrap = document.getElementById("document-wrap");
-  const STORAGE_KEY = "fibra_plus_saved_cpf";
+
   const supabaseStatus = document.getElementById("supabase-status");
 
   yearElement.textContent = String(new Date().getFullYear());
@@ -37,10 +37,6 @@
     setLoading(true);
     try{
       await CentralAPI.login(cpf, rememberInput.checked);
-      try{
-        if(rememberInput.checked) localStorage.setItem(STORAGE_KEY, cpf);
-        else localStorage.removeItem(STORAGE_KEY);
-      }catch(_){}
       showMessage("Cliente localizado no Supabase. Abrindo sua central…", "success");
       window.setTimeout(()=>location.replace(`painel.html#cpf=${encodeURIComponent(cpf)}`), 250);
     }catch(error){
@@ -73,11 +69,10 @@
   }
 
   function restoreSavedCpf(){
-    const saved = localStorage.getItem(STORAGE_KEY) || localStorage.getItem("fibra_plus_saved_document");
+    const saved ="" || localStorage.getItem("fibra_plus_saved_document");
     if(!saved) return;
     documentInput.value = formatCpf(saved);
     rememberInput.checked = true;
-    localStorage.removeItem("fibra_plus_saved_document");
   }
 
   function setLoading(loading){
