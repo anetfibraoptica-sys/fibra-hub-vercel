@@ -395,8 +395,8 @@
     const me = await directMe();
     const cliente = me?.assinante || {};
     const body = {
-      servidor: String(cliente.servidor || ""),
-      login: String(cliente.loginPppoe || cliente.login || ""),
+      servidor: String(cliente.servidor || cliente.servidorId || cliente.mikrotik || cliente.mikrotikServidor || cliente.router || ""),
+      login: String(cliente.loginPppoe || cliente.login_pppoe || cliente.login || ""),
       acao: "confianca",
       dias: 1,
       profile: String(cliente.profile || ""),
