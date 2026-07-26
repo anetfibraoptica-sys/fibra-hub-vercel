@@ -5,7 +5,7 @@
   const SUPABASE_URL = String(config.url || "").replace(/\/$/, "");
   const SUPABASE_KEY = String(config.key || "");
   const SESSION_KEY = "fibra_plus_central_documento";
-  const PERSIST_KEY = "";
+  const PERSIST_KEY = "fibra_plus_central_documento_persistente";
 
   function onlyDigits(value){ return String(value || "").replace(/\D/g, ""); }
 
@@ -155,18 +155,19 @@
   }
 
   function directDocument(){
-    return hashDocument() || onlyDigits(storageGet(sessionStorage, SESSION_KEY) || "");
+    return hashDocument() || onlyDigits(storageGet(sessionStorage, SESSION_KEY) || storageGet(localStorage, PERSIST_KEY));
   }
 
   function saveDirectSession(document, remember){
     const cpf = onlyDigits(document);
     storageSet(sessionStorage, SESSION_KEY, cpf);
-    
+    if(remember) storageSet(localStorage, PERSIST_KEY, cpf);
+    else storageRemove(localStorage, PERSIST_KEY);
   }
 
   function clearDirectSession(){
     storageRemove(sessionStorage, SESSION_KEY);
-    
+    storageRemove(localStorage, PERSIST_KEY);
   }
 
   async function backendRequest(path, options={}){
@@ -405,7 +406,6 @@
 
     const resp = await fetch("/api/mikrotik/cliente-acao", {
       method: "POST",
-      credentials: "include",
       headers: {"Content-Type":"application/json"},
       body: JSON.stringify(body)
     });
