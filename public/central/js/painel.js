@@ -220,7 +220,7 @@
         <dl>
           <div><dt>Login PPPoE</dt><dd>${escapeHtml(point.loginPppoe || "Não informado")}</dd></div>
           <div><dt>Vencimento</dt><dd>${point.diaVencimento ? `Dia ${escapeHtml(point.diaVencimento)}` : "Não informado"}</dd></div>
-          <div><dt>Tecnologia</dt><dd>${escapeHtml(point.tecnologia || point.profile || "Fibra")}</dd></div>
+          <div><dt>Tecnologia</dt><dd>${escapeHtml("Fibra Óptica")}</dd></div>
           <div><dt>Endereço</dt><dd>${escapeHtml(address || "Não informado")}</dd></div>
         </dl>
       </article>`;
