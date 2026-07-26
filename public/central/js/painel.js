@@ -209,11 +209,11 @@
       const overdue = isOverdue(bill);
       const status = group === "pagas" ? {label:"Paga", cls:"paid"} : overdue ? {label:"Vencida", cls:"overdue"} : {label:"Em aberto", cls:"open"};
       const point = identifyBillPoint(bill);
+      const key = billKey(bill);
       const actions = [];
       if(bill.pix) actions.push(`<button type="button" class="bill-action" data-pix-modal="${escapeAttr(key)}">PIX</button>`);
       if(bill.linhaDigitavel) actions.push(`<button type="button" class="bill-action" data-copy="${escapeAttr(bill.linhaDigitavel)}">Copiar linha</button>`);
       if(safeLink(bill.linkPdf)) actions.push(`<a class="bill-action primary" href="${escapeAttr(bill.linkPdf)}" target="_blank" rel="noopener">Abrir 2ª via</a>`);
-      const key = billKey(bill);
       return `<article class="bill-card" data-bill-key="${escapeAttr(key)}" tabindex="-1">
         <div class="bill-main">
           <div class="bill-icon" aria-hidden="true">▤</div>
