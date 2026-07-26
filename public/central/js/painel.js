@@ -1,7 +1,8 @@
 (function dashboardPage(){
   "use strict";
 
-  const state = {assinante:null, pontos:[], boletos:[], filtro:"todas", view:"visao-geral", nextBillKey:"", nextBill:null};
+  const state = {
+    keepMessage: false,assinante:null, pontos:[], boletos:[], filtro:"todas", view:"visao-geral", nextBillKey:"", nextBill:null};
   const els = {
     logout:document.getElementById("logout-button"),
     refresh:document.getElementById("refresh-button"),
@@ -73,11 +74,14 @@
       const id = state.assinante?.id || state.pontos[0]?.id;
       if(!id) return;
       els.trustButton.disabled = true;
+      state.keepMessage = true;
+      showMessage("⏳ Aguarde enquanto estamos realizando a liberação da sua conexão.", "info");
       try{
         await CentralAPI.solicitarConfianca(id);
         showMessage("✅ Liberação em Confiança realizada com sucesso! Sua conexão foi liberada por 24 horas.", "success");
         await loadAll(false);
       }catch(e){
+        state.keepMessage = false;
         showMessage(e.message || "Não foi possível solicitar a liberação.", "error");
       }finally{ els.trustButton.disabled = false; }
     });
@@ -127,7 +131,7 @@
       state.boletos = billsResult.boletos || [];
       renderAll();
       if(manual) showMessage("Dados atualizados.", "success");
-      else hideMessage();
+      else if(!state.keepMessage) hideMessage();
     }catch(error){
       if(error.status === 401){
         location.replace("index.html");
