@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=20260717">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=20260717">
+    <link rel="shortcut icon" href="/favicon.svg?v=20260717">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=20260717">
+
+<script src="00-fix-definitivo.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fibra+ Hub - Login</title>
+<style>
+*{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;font-family:Arial,Helvetica,sans-serif}body{display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 20% 10%,rgba(0,132,255,.25),transparent 34%),linear-gradient(135deg,#061225,#10284a 55%,#061225)}.login-card{width:360px;max-width:92vw;padding:26px;border-radius:20px;background:rgba(10,25,50,.92);border:1px solid rgba(255,255,255,.12);box-shadow:0 18px 50px rgba(0,0,0,.38);text-align:center}.logo{margin-bottom:18px}.logo .brand{font-size:44px;line-height:1;font-weight:900;color:#fff;letter-spacing:-2px}.logo .brand .dot{display:inline-block;width:8px;height:8px;background:#0ea5ff;border-radius:50%;margin-left:4px;vertical-align:top}.logo .brand .plus{color:#ff9f1c;margin-left:6px}.logo .slogan{margin-top:6px;color:rgba(255,255,255,.75);font-size:11px;font-weight:800;letter-spacing:.14em}h1{color:#fff;font-size:21px;margin:6px 0 18px}input{width:100%;height:42px;border-radius:11px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.08);color:#fff;outline:none;padding:0 13px;margin-bottom:10px;font-size:14px}input::placeholder{color:rgba(255,255,255,.55)}button{width:100%;height:42px;border:0;border-radius:11px;background:linear-gradient(135deg,#08a5ff,#0072ff);color:#fff;font-weight:900;cursor:pointer;margin-top:4px}p{margin:13px 0 0;color:rgba(255,255,255,.72);font-size:12px}.msg{color:#ffb4b4;min-height:16px}@media(max-width:480px){.login-card{width:calc(100vw - 24px);padding:24px 18px}.logo .brand{font-size:38px}h1{font-size:19px}}
+</style>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+<script src="supabase-client.js"></script>
+<script src="auth-painel.js"></script>
+</head>
+<body>
+  <div class="login-card">
+    <div class="logo"><div class="brand">Fibra<span class="dot"></span><span class="plus">+</span></div><div class="slogan">HUB DE CONTROLE</div></div>
+    <h1>Acessar Painel</h1>
+    <input id="usuario" autocomplete="username" placeholder="Usuário">
+    <input id="senha" type="password" autocomplete="current-password" placeholder="Senha">
+    <button onclick="entrar()">Entrar</button>
+    <p>Use seu usuário cadastrado no painel.</p><p id="msg" class="msg"></p>
+  </div>
+<script>
+async function entrar(){
+  const u=document.getElementById('usuario').value.trim();
+  const s=document.getElementById('senha').value;
+  const msg=document.getElementById('msg');
+  if(!u || !s){msg.textContent='Informe usuário e senha.';return;}
+  try{
+    msg.textContent='Verificando acesso...';
+    await FibraAuth.login(u,s);
+    window.location.replace('/dashboard.html');
+  }catch(e){ msg.textContent=e.message || 'Usuário ou senha inválidos.'; }
+}
+document.addEventListener('keydown',e=>{if(e.key==='Enter')entrar();});
+</script>
+<script src="bloqueio-configuravel.js"></script>
+<script src="mobile-responsive.js"></script>
+</body></html>
