@@ -156,7 +156,8 @@
 
     const firstData = state.pontos[0] || {};
     const confiancaAtiva = normalize(firstData.status).includes("confianca") || normalize(state.assinante?.status).includes("confianca");
-    els.trustCard.hidden = !(blocked || confiancaAtiva);
+    const mostrarConfianca = blocked || confiancaAtiva;
+    els.trustCard.hidden = !mostrarConfianca;
     if(confiancaAtiva){
       els.trustStatus.textContent = "Ativa";
       els.trustDescription.textContent = "Sua liberação em confiança está ativa.";
