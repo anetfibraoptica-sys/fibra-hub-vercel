@@ -1,7 +1,7 @@
 (function dashboardPage(){
   "use strict";
 
-  const state = {assinante:null, pontos:[], boletos:[], filtro:"todas", view:"visao-geral", nextBillKey:"", nextBill:null, keepMessage:false};
+  const state = {assinante:null, pontos:[], boletos:[], filtro:"todas", view:"visao-geral", nextBillKey:"", nextBill:null};
   const els = {
     logout:document.getElementById("logout-button"),
     refresh:document.getElementById("refresh-button"),
@@ -75,7 +75,6 @@
       els.trustButton.disabled = true;
       try{
         await CentralAPI.solicitarConfianca(id);
-        state.keepMessage = true;
         showMessage("✅ Liberação em Confiança realizada com sucesso! Sua conexão foi liberada por 24 horas.", "success");
         await loadAll(false);
       }catch(e){
@@ -128,7 +127,7 @@
       state.boletos = billsResult.boletos || [];
       renderAll();
       if(manual) showMessage("Dados atualizados.", "success");
-      else if(!state.keepMessage) hideMessage();
+      else hideMessage();
     }catch(error){
       if(error.status === 401){
         location.replace("index.html");
@@ -156,17 +155,19 @@
 
     const firstData = state.pontos[0] || {};
     const confiancaAtiva = normalize(firstData.status).includes("confianca") || normalize(state.assinante?.status).includes("confianca");
-    // O card de confiança só aparece para cliente realmente bloqueado ou para uma liberação já ativa.
-    const mostrarConfianca = (blocked && !confiancaAtiva) || confiancaAtiva;
-    els.trustCard.hidden = !mostrarConfianca;
+    // A opção de confiança só aparece para clientes bloqueados ou já em confiança.
+    // Clientes ativos não devem visualizar o card nem o botão.
+    els.trustCard.hidden = !(blocked || confiancaAtiva);
     if(confiancaAtiva){
       els.trustStatus.textContent = "Ativa";
       els.trustDescription.textContent = "Sua liberação em confiança está ativa.";
       els.trustButton.hidden = true;
-    }else{
+    }else if(blocked){
       els.trustStatus.textContent = "Disponível";
       els.trustDescription.textContent = "Solicite uma liberação temporária de 24 horas.";
       els.trustButton.hidden = false;
+    }else{
+      els.trustButton.hidden = true;
     }
 
     const openBills = state.boletos.filter(bill=>billGroup(bill) === "abertas");
@@ -220,7 +221,7 @@
         <dl>
           <div><dt>Login PPPoE</dt><dd>${escapeHtml(point.loginPppoe || "Não informado")}</dd></div>
           <div><dt>Vencimento</dt><dd>${point.diaVencimento ? `Dia ${escapeHtml(point.diaVencimento)}` : "Não informado"}</dd></div>
-          <div><dt>Tecnologia</dt><dd>${escapeHtml("Fibra Óptica")}</dd></div>
+          <div><dt>Tecnologia</dt><dd>${escapeHtml(point.tecnologia || point.profile || "Fibra")}</dd></div>
           <div><dt>Endereço</dt><dd>${escapeHtml(address || "Não informado")}</dd></div>
         </dl>
       </article>`;
