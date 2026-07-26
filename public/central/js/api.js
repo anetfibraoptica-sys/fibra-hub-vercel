@@ -397,6 +397,25 @@
     async logout(){ clearDirectSession(); return {ok:true}; },
     me:directMe,
     boletos:directBoletos,
+    async solicitarConfianca(id){
+      const clienteId = id || null;
+      const response = await fetch("/api/mikrotik/cliente-acao", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        credentials: "include",
+        body: JSON.stringify({
+          clienteId,
+          id: clienteId,
+          acao: "confianca",
+          dias: 1
+        })
+      });
+      const data = await response.json().catch(()=>({}));
+      if(!response.ok || data.ok === false){
+        throw new Error(data.message || "Não foi possível solicitar a liberação em confiança.");
+      }
+      return data;
+    },
     documentoAtual:directDocument,
     somenteDigitos:onlyDigits
   };

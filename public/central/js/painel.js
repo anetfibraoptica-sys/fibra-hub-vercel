@@ -13,6 +13,10 @@
     summaryNextDescription:document.getElementById("summary-next-description"),
     nextBillCard:document.getElementById("next-bill-card"),
     summaryStatus:document.getElementById("summary-status"),
+    trustCard:document.getElementById("trust-card"),
+    trustStatus:document.getElementById("trust-status"),
+    trustDescription:document.getElementById("trust-description"),
+    trustButton:document.getElementById("trust-button"),
     pointsCounter:document.getElementById("points-counter"),
     pointsGrid:document.getElementById("points-grid"),
     billsList:document.getElementById("bills-list"),
@@ -64,6 +68,19 @@
 
     els.billsList.addEventListener("click", handleBillAction);
     document.addEventListener("click", handleModalCopy);
+
+    els.trustButton.addEventListener("click", async ()=>{
+      const id = state.assinante?.id || state.pontos[0]?.id;
+      if(!id) return;
+      els.trustButton.disabled = true;
+      try{
+        await CentralAPI.solicitarConfianca(id);
+        showMessage("Solicitação de liberação em confiança enviada.", "success");
+        await loadAll(false);
+      }catch(e){
+        showMessage(e.message || "Não foi possível solicitar a liberação.", "error");
+      }finally{ els.trustButton.disabled = false; }
+    });
   }
 
   function readViewFromHash(){
@@ -134,7 +151,20 @@
     const statuses = state.pontos.map(point=>normalize(point.status));
     const blocked = statuses.some(status=>status.includes("bloque"));
     const inactive = statuses.length > 0 && statuses.every(status=>status.includes("inativ") || status.includes("cancel"));
-    els.summaryStatus.textContent = blocked ? "Atenção" : inactive ? "Inativo" : "Ativo";
+    els.summaryStatus.textContent = blocked ? "Bloqueado" : inactive ? "Inativo" : "Ativo";
+
+    const firstData = state.pontos[0] || {};
+    const confiancaAtiva = normalize(firstData.status).includes("confianca") || normalize(state.assinante?.status).includes("confianca");
+    els.trustCard.hidden = !(blocked || confiancaAtiva);
+    if(confiancaAtiva){
+      els.trustStatus.textContent = "Ativa";
+      els.trustDescription.textContent = "Sua liberação em confiança está ativa.";
+      els.trustButton.hidden = true;
+    }else{
+      els.trustStatus.textContent = "Disponível";
+      els.trustDescription.textContent = "Solicite uma liberação temporária de 24 horas.";
+      els.trustButton.hidden = false;
+    }
 
     const openBills = state.boletos.filter(bill=>billGroup(bill) === "abertas");
     const next = [...openBills].filter(bill=>parseDate(bill.vencimento)).sort((a,b)=>parseDate(a.vencimento)-parseDate(b.vencimento))[0];
