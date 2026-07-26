@@ -391,31 +391,38 @@
     }
   }
 
+  async function solicitarConfianca(clienteId){
+    const me = await directMe();
+    const cliente = me?.assinante || {};
+    const body = {
+      servidor: String(cliente.servidor || ""),
+      login: String(cliente.loginPppoe || cliente.login || ""),
+      acao: "confianca",
+      dias: 1,
+      profile: String(cliente.profile || ""),
+      clienteId: String(clienteId || cliente.id || "")
+    };
+
+    const resp = await fetch("/api/mikrotik/cliente-acao", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify(body)
+    });
+
+    const json = await resp.json().catch(()=>({}));
+    if(!resp.ok || !json.ok){
+      throw new Error(json.erro || json.mensagem || "Não foi possível solicitar a liberação em confiança.");
+    }
+    return json;
+  }
+
   window.CentralAPI = {
     status:directStatus,
     login(cpf, lembrar){ return directLogin(cpf, lembrar); },
     async logout(){ clearDirectSession(); return {ok:true}; },
     me:directMe,
     boletos:directBoletos,
-    async solicitarConfianca(id){
-      const clienteId = id || null;
-      const response = await fetch("/api/mikrotik/cliente-acao", {
-        method: "POST",
-        headers: {"Content-Type":"application/json"},
-        credentials: "include",
-        body: JSON.stringify({
-          clienteId,
-          id: clienteId,
-          acao: "confianca",
-          dias: 1
-        })
-      });
-      const data = await response.json().catch(()=>({}));
-      if(!response.ok || data.ok === false){
-        throw new Error(data.message || "Não foi possível solicitar a liberação em confiança.");
-      }
-      return data;
-    },
+    solicitarConfianca,
     documentoAtual:directDocument,
     somenteDigitos:onlyDigits
   };
