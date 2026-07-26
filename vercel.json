@@ -20,6 +20,14 @@
       "dest": "/server.js"
     },
     {
+      "src": "/central/?",
+      "dest": "/public/central/index.html"
+    },
+    {
+      "src": "/central/(.*)",
+      "dest": "/public/central/$1"
+    },
+    {
       "src": "/",
       "dest": "/public/index.html"
     },

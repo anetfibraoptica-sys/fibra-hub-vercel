@@ -42,3 +42,13 @@ Este documento reúne as alterações implementadas no projeto Fibra+ Hub. O Sup
 - Alterar somente os arquivos necessários.
 - Manter o layout, o tema escuro e o menu atuais.
 - Tratar cada ponto como cadastro financeiro e técnico independente.
+
+### Central do Assinante — versão 12
+- Área em `/central/`, integrada ao mesmo PostgreSQL/Supabase do painel.
+- Login somente por CPF, consultando diretamente a tabela `clientes`.
+- Acesso automático para CPFs cadastrados, com bloqueio opcional na ficha do cliente.
+- Um CPF pode reunir vários pontos/contratos existentes.
+- Exibição segura de planos, valores, vencimentos, status, faturas, PIX, linha digitável e segunda via.
+- Atualização de e-mail e telefones diretamente nos cadastros vinculados.
+- Sessão independente por cookie HttpOnly assinado.
+- Instruções completas em `README_CENTRAL_ASSINANTE.md`.

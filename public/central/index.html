@@ -1,20 +1,86 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Central do Assinante Fibra+</title>
-<link rel="stylesheet" href="css/central.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0b0d12">
+  <meta name="description" content="Central do Assinante Fibra+">
+  <title>Central do Assinante | Fibra+</title>
+  <link rel="stylesheet" href="css/style.css">
 </head>
-<body>
-<div class="card">
-<h1>Fibra+</h1>
-<h2>Central do Assinante</h2>
-<input id="login" placeholder="Login">
-<input id="senha" type="password" placeholder="Senha">
-<button onclick="entrar()">Entrar</button>
-<p id="msg"></p>
-</div>
-<script src="js/central-login.js"></script>
+<body class="login-page">
+  <main class="page-shell">
+    <section class="hero" aria-labelledby="page-title">
+      <a class="brand" href="index.html" aria-label="Fibra+ - Central do Assinante">
+        <span class="brand-provider">PROVEDOR</span>
+        <span class="brand-name">Fibra<span>+</span></span>
+        <span class="brand-tagline">Conectando você ao mundo</span>
+      </a>
+
+      <div class="hero-copy">
+        <span class="eyebrow">Área exclusiva do cliente</span>
+        <h1 id="page-title">Central do Assinante</h1>
+        <p>Consulte seus planos, faturas, PIX, segunda via e dados cadastrais.</p>
+      </div>
+    </section>
+
+    <section class="login-card" aria-labelledby="login-title">
+      <div class="avatar" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M12 12a4.25 4.25 0 1 0 0-8.5 4.25 4.25 0 0 0 0 8.5Zm0 2c-4.56 0-8.25 2.45-8.25 5.48 0 .56.46 1.02 1.02 1.02h14.46c.56 0 1.02-.46 1.02-1.02C20.25 16.45 16.56 14 12 14Z"/></svg>
+      </div>
+
+      <div class="card-heading">
+        <h2 id="login-title">Bem Vindo</h2>
+        <p>Central do Assinante Fibra+</p>
+        <div class="connection-status checking" id="supabase-status" role="status" aria-live="polite"><span></span>Banco de Dados conectado</div>
+      </div>
+
+      <form id="login-form" novalidate>
+        <div class="field-group">
+          <label for="document">CPF</label>
+          <div class="input-wrap" id="document-wrap">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.5 4A2.5 2.5 0 0 0 5 6.5v11A2.5 2.5 0 0 0 7.5 20h9a2.5 2.5 0 0 0 2.5-2.5v-11A2.5 2.5 0 0 0 16.5 4h-9ZM8 8h8v2H8V8Zm0 4h5v2H8v-2Zm0 4h7v2H8v-2Z"/></svg>
+            <input id="document" name="document" type="text" inputmode="numeric" autocomplete="username" placeholder="000.000.000-00" maxlength="14" aria-describedby="document-error" required>
+          </div>
+          <small class="field-error" id="document-error" aria-live="polite"></small>
+        </div>
+
+        <label class="remember-row">
+          <input id="remember-document" type="checkbox">
+          <span>Lembrar meu CPF e manter o acesso</span>
+        </label>
+
+        <div id="form-message" class="form-message" role="alert" aria-live="assertive" hidden></div>
+
+        <button class="primary-button" id="submit-button" type="submit">
+          <span class="button-label">ACESSAR CENTRAL</span>
+          <svg class="arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m13.2 5.2 5.4 5.4H3v2.8h15.6l-5.4 5.4 2 2L24 12l-8.8-8.8-2 2Z"/></svg>
+          <span class="spinner" aria-hidden="true"></span>
+        </button>
+      </form>
+
+      
+      
+      <div class="security-note">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 4 5v6c0 5.05 3.41 9.77 8 11 4.59-1.23 8-5.95 8-11V5l-8-3Zm-1.1 14.2-3.4-3.4 1.8-1.8 1.6 1.6 3.8-3.8 1.8 1.8-5.6 5.6Z"/></svg>
+        <span>O CPF é localizado na tabela de clientes do mesmo Supabase usado pelo painel. Os dados são consultados diretamente no Supabase em tempo real.</span>
+      </div>
+    </section>
+
+    <section class="features" aria-label="Recursos da Central do Assinante">
+      <article class="feature-card"><span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 2h8l4 4v16H7a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm7 1.5V7h3.5L14 3.5ZM8 11v2h8v-2H8Zm0 4v2h6v-2H8Z"/></svg></span><div><h3>2ª via e PIX</h3><p>Consulte faturas e copie os dados de pagamento.</p></div></article>
+      <article class="feature-card"><span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4V4Zm2 2v12h12V6H6Zm2 8h2v2H8v-2Zm3-4h2v6h-2v-6Zm3-2h2v8h-2V8Z"/></svg></span><div><h3>Planos e vencimento</h3><p>Veja todos os pontos vinculados ao seu CPF.</p></div></article>
+      <article class="feature-card"><span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-4.42 0-8 2.24-8 5v1h10.4a6.5 6.5 0 0 1-.4-2.25c0-1.36.42-2.62 1.14-3.67A12.57 12.57 0 0 0 12 14Zm7 0v2h-2v2h2v2h2v-2h2v-2h-2v-2h-2Z"/></svg></span><div><h3>Dados cadastrais</h3><p>Atualize telefone e e-mail sem expor dados internos.</p></div></article>
+    </section>
+
+    <footer>
+      <p><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 4 5v6c0 5.05 3.41 9.77 8 11 4.59-1.23 8-5.95 8-11V5l-8-3Z"/></svg> Segurança e privacidade são nossa prioridade.</p>
+      <small>© <span id="current-year"></span> Provedor Fibra+. Todos os direitos reservados.</small>
+    </footer>
+  </main>
+
+  <script src="js/supabase-config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/login.js"></script>
 </body>
 </html>

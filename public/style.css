@@ -7202,3 +7202,17 @@ body{
     border-radius:0 8px 8px 0 !important;
   }
 }
+
+/* Central do Assinante integrada à ficha do cliente */
+.central-access-panel{border-color:rgba(245,181,35,.34)!important;background:linear-gradient(145deg,rgba(245,181,35,.07),rgba(255,255,255,.015))!important}
+.central-access-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;margin-bottom:20px}
+.central-access-heading h3{margin:4px 0 7px!important}.central-access-heading p{margin:0;color:#778092;max-width:720px}
+.central-access-kicker{color:#d59a11;font-size:11px;font-weight:900;letter-spacing:1.3px;text-transform:uppercase}
+.central-access-status{display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;padding:7px 11px;border-radius:999px;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.4px;background:#eef1f5;color:#667085}
+.central-access-status.active{background:#e8f8ef;color:#16864e}.central-access-status.inactive{background:#ffecec;color:#bd3434}.central-access-status.pending,.central-access-status.loading{background:#fff4d8;color:#9a6c00}
+.central-access-grid{display:grid;grid-template-columns:minmax(300px,1.2fr) minmax(240px,.8fr);gap:20px;align-items:end}
+.central-access-grid label{display:grid;gap:8px;color:#4f596b;font-weight:800;font-size:13px}.central-password-row{display:flex;gap:8px}.central-password-row input{width:100%;min-width:0;border:1px solid #d9dee7;border-radius:10px;padding:11px 12px;background:#fff;color:#20242d;outline:0}.central-password-row input:focus{border-color:#d59a11;box-shadow:0 0 0 3px rgba(213,154,17,.12)}
+.central-access-info{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;padding:13px 15px;border:1px solid #e2e6ed;border-radius:12px;background:rgba(255,255,255,.7)}.central-access-info small{color:#798195;font-weight:800}.central-access-info strong{color:#242a34;overflow-wrap:anywhere}
+.central-access-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:18px}.central-access-actions button,.btn-central-secondary,.btn-central-danger{border:0;border-radius:9px;padding:10px 13px;font-weight:850}.central-access-actions>button:first-child{background:#e7a916;color:#17130a}.central-access-actions>button:first-child:hover{background:#f0b825}.btn-central-secondary{background:#eef1f5!important;color:#343b48!important;border:1px solid #d9dee7!important}.btn-central-danger{background:#fff0f0!important;color:#b73333!important;border:1px solid #ffd1d1!important}
+.central-access-message{margin-top:14px;padding:10px 12px;border-radius:9px;background:#f3f5f8;color:#4d5666;font-weight:750}.central-access-message.success{background:#e9f8ef;color:#16784a}.central-access-message.error{background:#fff0f0;color:#b73535}
+@media(max-width:720px){.central-access-heading{flex-direction:column}.central-access-grid{grid-template-columns:1fr}.central-password-row{flex-direction:column}.central-access-info{grid-template-columns:1fr}.central-access-actions{flex-direction:column}.central-access-actions button{width:100%}}

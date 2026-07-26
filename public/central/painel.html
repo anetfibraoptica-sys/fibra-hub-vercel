@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0b0d12">
+  <meta name="description" content="Minha Central Fibra+">
+  <title>Minha Central | Fibra+</title>
+  <link rel="stylesheet" href="css/painel.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="mini-brand" href="painel.html#visao-geral" aria-label="Página inicial da Central">Fibra<span>+</span></a>
+      <nav class="topnav" aria-label="Navegação da Central">
+        <button type="button" data-target="visao-geral" class="active" aria-selected="true">Visão geral</button>
+        <button type="button" data-target="faturas" aria-selected="false">Faturas</button>
+        <button type="button" data-target="cadastro" aria-selected="false">Cadastro</button>
+      </nav>
+      <button id="logout-button" class="logout-button" type="button">Sair</button>
+    </header>
+
+    <main class="dashboard-shell">
+      <div id="page-message" class="page-message" role="status" hidden></div>
+
+      <section class="dashboard-view active" id="visao-geral" data-view="visao-geral">
+        <section class="welcome">
+          <div>
+            <span class="eyebrow">Central do Assinante</span>
+            <h1>Olá, <strong id="subscriber-name">cliente</strong>.</h1>
+            <p id="subscriber-document">Carregando seu cadastro…</p>
+          </div>
+          <button id="refresh-button" class="secondary-button" type="button">Atualizar dados</button>
+        </section>
+
+        <section class="summary-grid" aria-label="Resumo da assinatura">
+          <article class="summary-card featured">
+            <small>Pontos vinculados</small>
+            <strong id="summary-points">0</strong>
+            <span>Conexões no mesmo CPF</span>
+          </article>
+          <article class="summary-card summary-card-link" id="next-bill-card" role="button" tabindex="0" aria-label="Abrir a próxima fatura">
+            <small>Próximo vencimento</small>
+            <strong id="summary-next-due">Não informado</strong>
+            <span id="summary-next-description">Consulte suas faturas</span>
+          </article>
+          <article class="summary-card">
+            <small>Situação</small>
+            <strong id="summary-status">Carregando</strong>
+            <span>Conforme cadastro no Fibra+</span>
+          </article>
+        </section>
+
+        <section class="support-card">
+          <div>
+            <span class="eyebrow">Atendimento</span>
+            <h2>Precisa de ajuda?</h2>
+            <p>Fale com nosso suporte pelo WhatsApp.</p>
+          </div>
+          <a id="support-whatsapp" class="whatsapp-button" href="#" target="_blank" rel="noopener">WhatsApp</a>
+        </section>
+
+        <section class="content-section">
+          <div class="section-heading">
+            <div><span class="eyebrow">Seus serviços</span><h2>Planos e conexões</h2></div>
+            <span id="points-counter" class="counter-pill">0 pontos</span>
+          </div>
+          <div id="points-grid" class="points-grid">
+            <article class="loading-card">Carregando conexões…</article>
+          </div>
+        </section>
+      </section>
+
+      <section class="dashboard-view" id="faturas" data-view="faturas" hidden>
+        <header class="view-header">
+          <div>
+            <span class="eyebrow">Financeiro</span>
+            <h1>Suas faturas</h1>
+            <p>Consulte vencimentos, valores e meios de pagamento.</p>
+          </div>
+        </header>
+
+        <section class="content-section view-content-section">
+          <div class="section-heading section-heading-wrap">
+            <div><span class="eyebrow">Cobranças</span><h2>Faturas e pagamentos</h2></div>
+            <div class="filter-group" role="group" aria-label="Filtrar faturas">
+              <button type="button" class="filter-button active" data-filter="todas">Todas as faturas</button>
+              <button type="button" class="filter-button" data-filter="abertas">Pendentes</button>
+              <button type="button" class="filter-button" data-filter="pagas">Pagas</button>
+            </div>
+          </div>
+          <div id="bills-list" class="bills-list">
+            <article class="loading-card">Carregando faturas…</article>
+          </div>
+        </section>
+      </section>
+
+      <section class="dashboard-view" id="cadastro" data-view="cadastro" hidden>
+        <header class="view-header">
+          <div>
+            <span class="eyebrow">Cadastro</span>
+            <h1>Seus dados cadastrais</h1>
+            <p>Consulte as informações registradas no seu cadastro Fibra+.</p>
+          </div>
+        </header>
+
+        <section class="content-section view-content-section">
+          <div class="section-heading">
+            <div><span class="eyebrow">Dados do assinante</span><h2>Informações cadastradas</h2></div>
+            <span class="counter-pill">Somente consulta</span>
+          </div>
+          <div class="registration-card" aria-label="Dados cadastrais do assinante">
+            <div class="registration-field">
+              <small>Nome</small>
+              <strong id="registration-name">Não informado</strong>
+            </div>
+            <div class="registration-field">
+              <small>CPF/CNPJ</small>
+              <strong id="registration-document">Documento protegido</strong>
+            </div>
+            <div class="registration-field">
+              <small>Data de nascimento</small>
+              <strong id="registration-birth-date">Não informado</strong>
+            </div>
+            <div class="registration-field">
+              <small>E-mail</small>
+              <strong id="registration-email">Não informado</strong>
+            </div>
+            <div class="registration-field">
+              <small>Telefone principal</small>
+              <strong id="registration-phone-1">Não informado</strong>
+            </div>
+            <div class="registration-field">
+              <small>Telefone alternativo</small>
+              <strong id="registration-phone-2">Não informado</strong>
+            </div>
+            <div class="registration-field registration-field-wide">
+              <small>Endereço</small>
+              <strong id="registration-address">Não informado</strong>
+            </div>
+            <p class="registration-note">Para alterar alguma informação, entre em contato com o atendimento Fibra+.</p>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <footer class="footer">© <span id="current-year"></span> Fibra+ · Central conectada ao cadastro do provedor.</footer>
+  </div>
+
+  <script src="js/supabase-config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/painel.js"></script>
+</body>
+</html>

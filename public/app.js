@@ -161,13 +161,119 @@ async function carregarClienteDetalhes(){
     const plano=fibraPrimeiroValor(c,["plano","profile"]) || "PPPoE";
     const telefone=fibraPrimeiroValor(c,["telefone1","telefone","celular","fone"]);
     const endereco=fibraPrimeiroValor(c,["endereco","logradouro","rua"]);
+    const clienteIdCentral=String(c.id||chave);
     box.innerHTML=`
       <div class="cliente-detalhes-layout">
         <section class="panel"><h3>Dados do Cliente</h3><p><b>Login:</b> ${fibraEscapeHtml(login||"--")}</p><p><b>Nome:</b> ${fibraEscapeHtml(nome||"--")}</p><p><b>Telefone:</b> ${fibraEscapeHtml(telefone||"--")}</p><p><b>Endereço:</b> ${fibraEscapeHtml(endereco||"--")}</p><p><b>Status:</b> ${fibraEscapeHtml(c.status||"--")}</p><div class="cliente-detalhes-resumo-mobile" aria-label="Resumo do cliente"><div class="cliente-resumo-card"><small>Status</small><strong>${fibraEscapeHtml(c.status||"--")}</strong></div><div class="cliente-resumo-card"><small>Plano</small><strong>${fibraEscapeHtml(plano||"--")}</strong></div><div class="cliente-resumo-card"><small>Servidor</small><strong>${fibraEscapeHtml(fibraNomeServidor(servidor)||"--")}</strong></div><div class="cliente-resumo-card"><small>Login PPPoE</small><strong>${fibraEscapeHtml(login||"--")}</strong></div></div></section>
         <section class="panel"><h3>Conexão PPPoE</h3><p><b>Servidor:</b> ${fibraEscapeHtml(fibraNomeServidor(servidor)||"--")}</p><p><b>Plano/Profile:</b> ${fibraEscapeHtml(plano||"--")}</p><p><b>IP:</b> ${fibraEscapeHtml(ip||"--")}</p><p><b>MAC/Caller ID:</b> ${fibraEscapeHtml(mac||"--")}</p><p><b>Tempo conectado:</b> ${fibraEscapeHtml(uptime||"--")}</p></section>
-      </div><section class="panel"><h3>Ações</h3><button onclick="location.href='cadastro.html?id=${encodeURIComponent(c.id||chave)}'">Abrir no Cadastro</button> <button onclick="history.back()">Voltar</button></section>`;
+      </div>
+      <section class="panel central-access-panel" id="centralAcessoCard">
+        <div class="central-access-heading">
+          <div><span class="central-access-kicker">Portal do cliente</span><h3>Central do Assinante</h3><p>O acesso consulta automaticamente o CPF na tabela de clientes do Supabase e reúne todos os pontos vinculados.</p></div>
+          <span id="centralAcessoStatus" class="central-access-status loading">Consultando…</span>
+        </div>
+        <div class="central-access-grid central-access-grid-cpf-only">
+          <div class="central-access-info">
+            <small>CPF de acesso</small><strong id="centralAcessoDocumento">Carregando…</strong>
+            <small>Último acesso</small><strong id="centralUltimoAcesso">Nunca acessou</strong>
+          </div>
+          <div class="central-access-info central-access-mode">
+            <small>Modo de entrada</small><strong>Somente CPF</strong>
+            <small>Fonte dos dados</small><strong>Clientes e boletos do Supabase</strong>
+          </div>
+        </div>
+        <div id="centralAcessoMensagem" class="central-access-message" hidden></div>
+        <div class="central-access-actions">
+          <button type="button" onclick="fibraSalvarAcessoCentral('${encodeURIComponent(clienteIdCentral)}')">Permitir / reativar acesso</button>
+          <button type="button" class="btn-central-secondary" onclick="fibraCopiarLinkCentral()">Copiar link da Central</button>
+          <button type="button" class="btn-central-danger" onclick="fibraDesativarAcessoCentral('${encodeURIComponent(clienteIdCentral)}')">Bloquear acesso</button>
+        </div>
+      </section>
+      <section class="panel"><h3>Ações</h3><button onclick="location.href='cadastro.html?id=${encodeURIComponent(c.id||chave)}'">Abrir no Cadastro</button> <button onclick="history.back()">Voltar</button></section>`;
+    fibraCarregarAcessoCentral(clienteIdCentral);
   }catch(e){ box.innerHTML='<section class="panel"><h3>Cliente não encontrado</h3><p>'+fibraEscapeHtml(e.message)+'</p></section>'; }
 }
+
+async function fibraCentralRequest(url, options={}){
+  const response=await fetch(url,{credentials:"same-origin",cache:"no-store",...options,headers:{"Content-Type":"application/json",...(options.headers||{})}});
+  const json=await response.json().catch(()=>({}));
+  if(!response.ok || json.ok===false) throw new Error(json.erro || `Falha HTTP ${response.status}`);
+  return json;
+}
+
+function fibraCentralDataHora(value){
+  if(!value) return "Nunca acessou";
+  const date=new Date(value);
+  if(Number.isNaN(date.getTime())) return "Nunca acessou";
+  return date.toLocaleString("pt-BR");
+}
+
+function fibraCentralMensagem(text,type){
+  const el=document.getElementById("centralAcessoMensagem");
+  if(!el) return;
+  el.textContent=text || "";
+  el.className="central-access-message " + (type || "");
+  el.hidden=!text;
+}
+
+async function fibraCarregarAcessoCentral(clienteId){
+  const status=document.getElementById("centralAcessoStatus");
+  try{
+    const json=await fibraCentralRequest("/api/clientes/"+encodeURIComponent(clienteId)+"/central-acesso");
+    const acesso=json.acesso || {};
+    document.getElementById("centralAcessoDocumento").textContent=acesso.documento || acesso.motivo || "CPF inválido";
+    document.getElementById("centralUltimoAcesso").textContent=fibraCentralDataHora(acesso.ultimoAcesso);
+    if(status){
+      status.textContent=acesso.ativo ? (acesso.automatico ? "Acesso automático" : "Acesso ativo") : "Acesso bloqueado";
+      status.className="central-access-status " + (acesso.ativo ? "active" : "inactive");
+    }
+  }catch(error){
+    if(status){ status.textContent="Falha na consulta"; status.className="central-access-status inactive"; }
+    fibraCentralMensagem(error.message,"error");
+  }
+}
+
+async function fibraSalvarAcessoCentral(clienteIdCodificado){
+  const clienteId=decodeURIComponent(clienteIdCodificado);
+  try{
+    fibraCentralMensagem("Permitindo acesso pelo CPF…","");
+    const json=await fibraCentralRequest("/api/clientes/"+encodeURIComponent(clienteId)+"/central-acesso",{
+      method:"POST",
+      body:JSON.stringify({ativo:true})
+    });
+    fibraCentralMensagem(json.mensagem || "Acesso permitido pelo CPF.","success");
+    await fibraCarregarAcessoCentral(clienteId);
+  }catch(error){
+    fibraCentralMensagem(error.message,"error");
+  }
+}
+
+async function fibraDesativarAcessoCentral(clienteIdCodificado){
+  const clienteId=decodeURIComponent(clienteIdCodificado);
+  if(!confirm("Bloquear o acesso deste CPF à Central do Assinante?")) return;
+  try{
+    const json=await fibraCentralRequest("/api/clientes/"+encodeURIComponent(clienteId)+"/central-acesso",{method:"DELETE"});
+    fibraCentralMensagem(json.mensagem || "Acesso bloqueado.","success");
+    await fibraCarregarAcessoCentral(clienteId);
+  }catch(error){
+    fibraCentralMensagem(error.message,"error");
+  }
+}
+
+async function fibraCopiarLinkCentral(){
+  const link=location.origin+"/central/";
+  try{
+    await navigator.clipboard.writeText(link);
+    fibraCentralMensagem("Link copiado: "+link,"success");
+  }catch(_){
+    prompt("Copie o link da Central:",link);
+  }
+}
+window.fibraCarregarAcessoCentral=fibraCarregarAcessoCentral;
+window.fibraSalvarAcessoCentral=fibraSalvarAcessoCentral;
+window.fibraDesativarAcessoCentral=fibraDesativarAcessoCentral;
+window.fibraCopiarLinkCentral=fibraCopiarLinkCentral;
+
 function fibraGarantirSecaoOnline(){
   if(document.getElementById("fibraOnlineSeparado")) return;
   const pagina=window.location.pathname.split('/').pop();

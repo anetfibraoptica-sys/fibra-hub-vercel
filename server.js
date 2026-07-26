@@ -406,6 +406,8 @@ function requirePermission(permission) {
 const PUBLIC_PAGES = new Set(["/", "/index.html", "/login.html", "/favicon.svg", "/style.css", "/00-fix-definitivo.js", "/supabase-client.js", "/auth-painel.js"]);
 app.use((req, res, next) => {
   if (req.method !== "GET" || req.path.startsWith("/api/") || req.path.startsWith("/socket.io/") || req.path.startsWith("/remoto/")) return next();
+  // A Central do Assinante possui uma sessão própria, separada do painel administrativo.
+  if (req.path === "/central" || req.path.startsWith("/central/")) return next();
   if (PUBLIC_PAGES.has(req.path)) return next();
   if (/\.(html)$/i.test(req.path) && !readSession(req)) return res.redirect("/login.html");
   next();
@@ -414,7 +416,7 @@ app.use((req, res, next) => {
 app.use(express.static(path.join(__dirname, "public")));
 
 app.use("/api", (req, res, next) => {
-  const publicApi = req.path.startsWith("/auth/") || req.path === "/status" || req.path === "/login-teste" || req.path === "/login" || req.path.startsWith("/efi/webhook") || req.path.startsWith("/cron/") || req.path === "/update";
+  const publicApi = req.path.startsWith("/auth/") || req.path.startsWith("/central/") || req.path === "/status" || req.path === "/login-teste" || req.path === "/login" || req.path.startsWith("/efi/webhook") || req.path.startsWith("/cron/") || req.path === "/update";
   if (publicApi) return next();
   return requireSession(req, res, next);
 });
@@ -430,6 +432,12 @@ app.use("/api", (req,res,next) => {
   if (permission && !hasPermission(req.sessionUser, permission)) return res.status(403).json({ok:false,erro:"Usuário sem permissão para esta ação."});
   next();
 });
+// A Central e o painel usam a mesma conexão PostgreSQL do projeto Supabase.
+// DATABASE_URL continua sendo o nome principal; os aliases facilitam deploys já configurados.
+if (!process.env.DATABASE_URL) {
+  process.env.DATABASE_URL = process.env.SUPABASE_DATABASE_URL || process.env.SUPABASE_DB_URL || "";
+}
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
@@ -828,8 +836,474 @@ app.post("/api/usuarios-painel", requireSession, requirePermission("usuarios"), 
 });
 
 
+/* ============================================================
+   CENTRAL DO ASSINANTE
+   - Usa o mesmo PostgreSQL/Supabase do Fibra+ Hub.
+   - Sessão própria por cookie HttpOnly.
+   - Um acesso por CPF pode reunir vários pontos/contratos.
+============================================================ */
+const CENTRAL_SESSION_COOKIE = "fibra_assinante_session";
+const CENTRAL_SESSION_TTL_SECONDS = 12 * 60 * 60;
+const CENTRAL_SESSION_REMEMBER_TTL_SECONDS = 30 * 24 * 60 * 60;
+
+function centralOnlyDigits(value) {
+  return String(value || "").replace(/\D/g, "");
+}
+
+function centralValidCpf(value) {
+  const cpf = centralOnlyDigits(value);
+  if (!/^\d{11}$/.test(cpf) || /^(\d)\1{10}$/.test(cpf)) return false;
+  let sum = 0;
+  for (let i = 0; i < 9; i += 1) sum += Number(cpf[i]) * (10 - i);
+  let digit = (sum * 10) % 11;
+  if (digit === 10) digit = 0;
+  if (digit !== Number(cpf[9])) return false;
+  sum = 0;
+  for (let i = 0; i < 10; i += 1) sum += Number(cpf[i]) * (11 - i);
+  digit = (sum * 10) % 11;
+  if (digit === 10) digit = 0;
+  return digit === Number(cpf[10]);
+}
+
+function centralMaskDocument(value) {
+  const doc = centralOnlyDigits(value);
+  if (doc.length === 11) return `***.${doc.slice(3, 6)}.${doc.slice(6, 9)}-**`;
+  return "";
+}
+
+function centralSignSession(payload) {
+  if (!SESSION_SECRET) throw new Error("SESSION_SECRET não configurado.");
+  const body = base64url(JSON.stringify({...payload, aud:"central-assinante"}));
+  const sig = crypto.createHmac("sha256", SESSION_SECRET).update(body).digest("base64url");
+  return `${body}.${sig}`;
+}
+
+function centralReadSession(req) {
+  try {
+    if (!SESSION_SECRET) return null;
+    const token = parseCookies(req)[CENTRAL_SESSION_COOKIE];
+    if (!token || !token.includes(".")) return null;
+    const [body, sig] = token.split(".");
+    const expected = crypto.createHmac("sha256", SESSION_SECRET).update(body).digest("base64url");
+    const a = Buffer.from(sig);
+    const b = Buffer.from(expected);
+    if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
+    const payload = JSON.parse(Buffer.from(body, "base64url").toString("utf8"));
+    if (payload.aud !== "central-assinante" || !payload.exp || Date.now() >= payload.exp * 1000) return null;
+    return payload;
+  } catch (_) {
+    return null;
+  }
+}
+
+function centralSetSessionCookie(res, token, maxAge) {
+  const secure = process.env.NODE_ENV === "production" || Boolean(process.env.VERCEL);
+  res.setHeader("Set-Cookie", `${CENTRAL_SESSION_COOKIE}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${secure ? "; Secure" : ""}`);
+}
+
+function centralClearSessionCookie(res) {
+  const secure = process.env.NODE_ENV === "production" || Boolean(process.env.VERCEL);
+  res.setHeader("Set-Cookie", `${CENTRAL_SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${secure ? "; Secure" : ""}`);
+}
+
+function requireCentralSession(req, res, next) {
+  const session = centralReadSession(req);
+  if (!session) return res.status(401).json({ok:false, erro:"Sessão do assinante inválida ou expirada."});
+  req.centralSession = session;
+  next();
+}
+
+async function centralEnsureTables() {
+  if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL não configurada.");
+  await fbEnsureTables();
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS central_assinantes (
+      id BIGSERIAL PRIMARY KEY,
+      documento TEXT NOT NULL UNIQUE,
+      senha_hash TEXT,
+      ativo BOOLEAN NOT NULL DEFAULT TRUE,
+      cliente_principal_id TEXT,
+      tentativas_falhas INTEGER NOT NULL DEFAULT 0,
+      bloqueado_ate TIMESTAMPTZ,
+      ultimo_acesso TIMESTAMPTZ,
+      criado_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      atualizado_em TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+  const alters = [
+    "ALTER TABLE clientes ADD COLUMN IF NOT EXISTS email TEXT;",
+    "ALTER TABLE clientes ADD COLUMN IF NOT EXISTS telefone1 TEXT;",
+    "ALTER TABLE clientes ADD COLUMN IF NOT EXISTS telefone2 TEXT;",
+    "ALTER TABLE clientes ADD COLUMN IF NOT EXISTS endereco TEXT;",
+    "ALTER TABLE clientes ADD COLUMN IF NOT EXISTS bairro TEXT;",
+    "ALTER TABLE clientes ADD COLUMN IF NOT EXISTS cidade TEXT;",
+    "ALTER TABLE clientes ADD COLUMN IF NOT EXISTS uf TEXT;",
+    "ALTER TABLE clientes ADD COLUMN IF NOT EXISTS cep TEXT;",
+    "ALTER TABLE clientes ADD COLUMN IF NOT EXISTS valor_mensal NUMERIC DEFAULT 0;",
+    "ALTER TABLE clientes ADD COLUMN IF NOT EXISTS dia_vencimento INTEGER;",
+    "ALTER TABLE clientes ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'ativo';"
+  ];
+  for (const sql of alters) await pool.query(sql);
+  await pool.query("ALTER TABLE central_assinantes ALTER COLUMN senha_hash DROP NOT NULL;");
+  await pool.query("CREATE INDEX IF NOT EXISTS idx_central_assinantes_documento ON central_assinantes(documento);");
+}
+
+function centralDados(row) {
+  const raw = row && row.dados && typeof row.dados === "object" ? row.dados : {};
+  const nested = raw && raw.dados && typeof raw.dados === "object" ? raw.dados : {};
+  return {...nested, ...raw};
+}
+
+function centralPick(objects, keys, fallback="") {
+  for (const object of objects) {
+    if (!object) continue;
+    for (const key of keys) {
+      const value = object[key];
+      if (value !== undefined && value !== null && String(value).trim() !== "") return value;
+    }
+  }
+  return fallback;
+}
+
+function centralNumber(value) {
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+  let text = String(value ?? "").trim().replace(/[R$\s]/g, "");
+  if (text.includes(",") && text.includes(".")) text = text.replace(/\./g, "").replace(",", ".");
+  else if (text.includes(",")) text = text.replace(",", ".");
+  const number = Number(text);
+  return Number.isFinite(number) ? number : 0;
+}
+
+function centralClientPublic(row) {
+  const data = centralDados(row);
+  const document = centralOnlyDigits(centralPick([row, data], ["cpf_cnpj","cpfCnpj","cpf","cnpj","documento","cadCpf"]));
+  return {
+    id: String(row.id),
+    nome: String(centralPick([row, data], ["nome","cliente","razaoSocial","razao_social"], "Assinante")),
+    documento: centralMaskDocument(document),
+    loginPppoe: String(centralPick([row, data], ["login_pppoe","loginPppoe","login","usuario","pppoe"])),
+    plano: String(centralPick([row, data], ["plano","planoCobranca","plano_cobranca","profile","perfil"], "Plano não informado")),
+    profile: String(centralPick([row, data], ["profile","perfil"])),
+    valorMensal: centralNumber(centralPick([row, data], ["valor_mensal","valorMensal","mensalidade","valorPlano","valor"])),
+    diaVencimento: Number(centralPick([row, data], ["dia_vencimento","diaVencimento","vencimento"], 0)) || null,
+    status: String(centralPick([row, data], ["status","situacao","statusCliente","status_cliente"], "ativo")),
+    telefone1: String(centralPick([row, data], ["telefone1","telefone","celular","whatsapp","fone"])),
+    telefone2: String(centralPick([row, data], ["telefone2","celular2","fone2"])),
+    email: String(centralPick([row, data], ["email","e_mail","mail"])),
+    endereco: String(centralPick([row, data], ["endereco","logradouro","rua"])),
+    bairro: String(centralPick([row, data], ["bairro"])),
+    cidade: String(centralPick([row, data], ["cidade","municipio","localidade"])),
+    uf: String(centralPick([row, data], ["uf","estado"])),
+    cep: String(centralPick([row, data], ["cep"])),
+    tecnologia: String(centralPick([row, data], ["tecnologia","tipoTecnologia","tipo_tecnologia"])),
+    servidor: String(centralPick([row, data], ["servidor","popServidor","pop_servidor"])),
+    atualizadoEm: row.atualizado_em || null
+  };
+}
+
+function centralBillPublic(row) {
+  const data = row && row.dados && typeof row.dados === "object" ? row.dados : {};
+  return {
+    id: String(row.id),
+    numero: String(centralPick([row, data], ["numero","nossoNumero","titulo"], row.id)),
+    descricao: String(centralPick([row, data], ["descricao","categoria"], "Mensalidade")),
+    categoria: String(centralPick([row, data], ["categoria"], "Mensalidade")),
+    emissao: centralPick([row, data], ["emissao"]),
+    vencimento: centralPick([row, data], ["vencimento","dataVencimento","dueDate","expire_at"]),
+    pagamento: centralPick([row, data], ["pagamento","dataPagamento"]),
+    valor: centralNumber(centralPick([row, data], ["total","valor"], 0)),
+    valorPago: centralNumber(centralPick([row, data], ["valor_pago","valorPago"], 0)),
+    status: String(centralPick([row, data], ["status","efi_status","efiStatus"], "pendente")),
+    linhaDigitavel: String(centralPick([row, data], ["linha_digitavel","linhaDigitavel"])),
+    codigoBarras: String(centralPick([row, data], ["codigo_barras","codigoBarras"])),
+    pix: String(centralPick([row, data], ["pix","codigoPix"])),
+    linkPdf: String(centralPick([row, data], ["link_pdf","linkPdf","pdf","segundaVia"])),
+    clienteId: String(centralPick([row, data], ["cliente_id","clienteId"])),
+    clienteLogin: String(centralPick([row, data], ["cliente_login","clienteLogin","login","loginPppoe"]))
+  };
+}
+
+async function centralClientsByDocument(document) {
+  await centralEnsureTables();
+  const result = await pool.query(`
+    SELECT *
+    FROM clientes
+    WHERE regexp_replace(
+      COALESCE(
+        NULLIF(cpf_cnpj,''),
+        NULLIF(dados->>'cpfCnpj',''),
+        NULLIF(dados->>'cpf_cnpj',''),
+        NULLIF(dados->>'cpf',''),
+        NULLIF(dados->>'cnpj',''),
+        NULLIF(dados->>'documento',''),
+        NULLIF(dados->>'cadCpf',''),
+        ''
+      ),
+      '[^0-9]','','g'
+    )=$1
+    ORDER BY atualizado_em DESC NULLS LAST, criado_em DESC NULLS LAST, id DESC
+  `, [document]);
+  return result.rows || [];
+}
+
+async function centralBillsForClients(document, clients) {
+  await centralEnsureTables();
+  const ids = clients.map(item => String(item.id)).filter(Boolean);
+  const logins = clients.map(item => String(centralPick([item, centralDados(item)], ["login_pppoe","loginPppoe","login","usuario","pppoe"]))).filter(Boolean);
+  const result = await pool.query(`
+    SELECT *
+    FROM boletos
+    WHERE cliente_id = ANY($1::text[])
+       OR cliente_login = ANY($2::text[])
+       OR regexp_replace(COALESCE(cpf_cnpj, dados->>'cpfCnpj', dados->>'cpf', dados->>'cnpj', ''), '[^0-9]','','g')=$3
+    ORDER BY vencimento DESC NULLS LAST, id DESC
+    LIMIT 300
+  `, [ids, logins, document]);
+  return result.rows || [];
+}
+
+async function centralClientById(id) {
+  await centralEnsureTables();
+  const result = await pool.query("SELECT * FROM clientes WHERE id::text=$1 LIMIT 1", [String(id || "")]);
+  return result.rows[0] || null;
+}
+
+function centralDocumentFromClient(client) {
+  return centralOnlyDigits(centralPick([client, centralDados(client)], ["cpf_cnpj","cpfCnpj","cpf","cnpj","documento","cadCpf"]));
+}
+
+app.get("/api/central/status", async (_req, res) => {
+  try {
+    await centralEnsureTables();
+    const check = await pool.query("SELECT to_regclass('public.clientes') AS clientes, to_regclass('public.boletos') AS boletos");
+    res.json({
+      ok:true,
+      banco:"supabase-postgresql",
+      conectado:true,
+      tabelas:{
+        clientes:Boolean(check.rows[0]?.clientes),
+        boletos:Boolean(check.rows[0]?.boletos)
+      },
+      autenticacao:"cpf-cookie-http-only"
+    });
+  } catch (error) {
+    res.status(503).json({ok:false, conectado:false, erro:error.message});
+  }
+});
+
+app.post("/api/central/login", async (req, res) => {
+  try {
+    if (!SESSION_SECRET) return res.status(503).json({ok:false, erro:"SESSION_SECRET não configurado no servidor."});
+    await centralEnsureTables();
+    const documento = centralOnlyDigits(req.body?.cpf || req.body?.documento);
+    const lembrar = Boolean(req.body?.lembrar);
+    if (!centralValidCpf(documento)) {
+      return res.status(400).json({ok:false, erro:"Informe um CPF válido."});
+    }
+
+    // O CPF é consultado diretamente na tabela clientes existente no Supabase.
+    const clients = await centralClientsByDocument(documento);
+    if (!clients.length) {
+      return res.status(401).json({ok:false, erro:"CPF não encontrado no cadastro do provedor."});
+    }
+
+    // O registro central_assinantes é apenas controle de sessão/bloqueio.
+    // Na primeira entrada ele é criado automaticamente, sem liberação manual.
+    const accessResult = await pool.query("SELECT * FROM central_assinantes WHERE documento=$1 LIMIT 1", [documento]);
+    const existingAccess = accessResult.rows[0];
+    if (existingAccess && existingAccess.ativo === false) {
+      return res.status(403).json({ok:false, erro:"O acesso deste CPF está bloqueado. Entre em contato com o provedor."});
+    }
+
+    const accessUpsert = await pool.query(`
+      INSERT INTO central_assinantes(documento, senha_hash, ativo, cliente_principal_id, atualizado_em)
+      VALUES($1, NULL, TRUE, $2, NOW())
+      ON CONFLICT(documento) DO UPDATE SET
+        cliente_principal_id=COALESCE(central_assinantes.cliente_principal_id, EXCLUDED.cliente_principal_id),
+        tentativas_falhas=0,
+        bloqueado_ate=NULL,
+        atualizado_em=NOW()
+      RETURNING *
+    `, [documento, String(clients[0].id)]);
+    const access = accessUpsert.rows[0];
+
+    const now = Math.floor(Date.now() / 1000);
+    const ttl = lembrar ? CENTRAL_SESSION_REMEMBER_TTL_SECONDS : CENTRAL_SESSION_TTL_SECONDS;
+    const token = centralSignSession({acesso_id:String(access.id), documento, iat:now, exp:now+ttl});
+    centralSetSessionCookie(res, token, ttl);
+    await pool.query(`
+      UPDATE central_assinantes
+      SET tentativas_falhas=0, bloqueado_ate=NULL, ultimo_acesso=NOW(), atualizado_em=NOW()
+      WHERE id=$1
+    `, [access.id]);
+
+    const principal = centralClientPublic(clients[0]);
+    res.json({ok:true, fonte:"supabase", assinante:{nome:principal.nome, documento:principal.documento, pontos:clients.length}});
+  } catch (error) {
+    console.error("Erro /api/central/login:", error);
+    res.status(500).json({ok:false, erro:"Não foi possível consultar os clientes no Supabase."});
+  }
+});
+
+app.post("/api/central/logout", (_req, res) => {
+  centralClearSessionCookie(res);
+  res.json({ok:true});
+});
+
+app.get("/api/central/me", requireCentralSession, async (req, res) => {
+  try {
+    const clients = await centralClientsByDocument(req.centralSession.documento);
+    if (!clients.length) {
+      centralClearSessionCookie(res);
+      return res.status(404).json({ok:false, erro:"Cadastro do assinante não encontrado."});
+    }
+    const points = clients.map(centralClientPublic);
+    res.json({
+      ok:true,
+      assinante:{
+        nome:points[0].nome,
+        documento:centralMaskDocument(req.centralSession.documento),
+        totalPontos:points.length,
+        pontos:points
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ok:false, erro:error.message});
+  }
+});
+
+app.get("/api/central/boletos", requireCentralSession, async (req, res) => {
+  try {
+    const clients = await centralClientsByDocument(req.centralSession.documento);
+    const bills = await centralBillsForClients(req.centralSession.documento, clients);
+    res.json({ok:true, total:bills.length, boletos:bills.map(centralBillPublic)});
+  } catch (error) {
+    res.status(500).json({ok:false, erro:error.message});
+  }
+});
+
+app.put("/api/central/contato", requireCentralSession, async (req, res) => {
+  try {
+    await centralEnsureTables();
+    const email = String(req.body?.email || "").trim().slice(0, 180);
+    const telefone1 = String(req.body?.telefone1 || "").trim().slice(0, 40);
+    const telefone2 = String(req.body?.telefone2 || "").trim().slice(0, 40);
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ok:false, erro:"Informe um e-mail válido."});
+    }
+    const dataPatch = JSON.stringify({email, telefone1, telefone2, atualizadoPelaCentral:true, atualizadoPelaCentralEm:new Date().toISOString()});
+    const result = await pool.query(`
+      UPDATE clientes
+      SET email=$1,
+          telefone1=$2,
+          telefone2=$3,
+          telefone=COALESCE(NULLIF($2,''), telefone),
+          dados=COALESCE(dados,'{}'::jsonb) || $4::jsonb,
+          atualizado_em=NOW()
+      WHERE regexp_replace(
+        COALESCE(NULLIF(cpf_cnpj,''), NULLIF(dados->>'cpfCnpj',''), NULLIF(dados->>'cpf',''), NULLIF(dados->>'cnpj',''), ''),
+        '[^0-9]','','g'
+      )=$5
+      RETURNING id
+    `, [email || null, telefone1 || null, telefone2 || null, dataPatch, req.centralSession.documento]);
+    res.json({ok:true, atualizados:result.rowCount});
+  } catch (error) {
+    res.status(500).json({ok:false, erro:error.message});
+  }
+});
+
+
+/* Administração do acesso da Central dentro da ficha do cliente. */
+app.get("/api/clientes/:id/central-acesso", async (req, res) => {
+  try {
+    const client = await centralClientById(req.params.id);
+    if (!client) return res.status(404).json({ok:false, erro:"Cliente não encontrado."});
+    const document = centralDocumentFromClient(client);
+    if (!centralValidCpf(document)) {
+      return res.json({ok:true, acesso:{configurado:false, ativo:false, documento:"", motivo:"Cliente sem CPF válido."}});
+    }
+    const result = await pool.query(`
+      SELECT id, ativo, cliente_principal_id, ultimo_acesso, atualizado_em
+      FROM central_assinantes
+      WHERE documento=$1
+      LIMIT 1
+    `, [document]);
+    const access = result.rows[0];
+    res.json({
+      ok:true,
+      acesso:{
+        configurado:true,
+        automatico:!access,
+        ativo:access ? Boolean(access.ativo) : true,
+        bloqueado:Boolean(access && access.ativo === false),
+        documento:centralMaskDocument(document),
+        ultimoAcesso:access?.ultimo_acesso || null,
+        atualizadoEm:access?.atualizado_em || null
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ok:false, erro:error.message});
+  }
+});
+
+app.post("/api/clientes/:id/central-acesso", async (req, res) => {
+  try {
+    const client = await centralClientById(req.params.id);
+    if (!client) return res.status(404).json({ok:false, erro:"Cliente não encontrado."});
+    const document = centralDocumentFromClient(client);
+    if (!centralValidCpf(document)) {
+      return res.status(400).json({ok:false, erro:"Cadastre um CPF válido antes de liberar a Central."});
+    }
+
+    const active = req.body?.ativo !== false;
+    const result = await pool.query(`
+      INSERT INTO central_assinantes(documento, senha_hash, ativo, cliente_principal_id, atualizado_em)
+      VALUES($1, NULL, $2, $3, NOW())
+      ON CONFLICT(documento) DO UPDATE SET
+        ativo=$2,
+        cliente_principal_id=$3,
+        tentativas_falhas=0,
+        bloqueado_ate=NULL,
+        atualizado_em=NOW()
+      RETURNING id, ativo, ultimo_acesso, atualizado_em
+    `, [document, active, String(client.id)]);
+
+    res.json({
+      ok:true,
+      mensagem:"Acesso pelo CPF permitido. O cadastro será consultado diretamente no Supabase.",
+      acesso:{
+        configurado:true,
+        ativo:Boolean(result.rows[0].ativo),
+        documento:centralMaskDocument(document),
+        ultimoAcesso:result.rows[0].ultimo_acesso || null,
+        atualizadoEm:result.rows[0].atualizado_em || null
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ok:false, erro:error.message});
+  }
+});
+
+app.delete("/api/clientes/:id/central-acesso", async (req, res) => {
+  try {
+    const client = await centralClientById(req.params.id);
+    if (!client) return res.status(404).json({ok:false, erro:"Cliente não encontrado."});
+    const document = centralDocumentFromClient(client);
+    if (!centralValidCpf(document)) return res.status(400).json({ok:false, erro:"Cliente sem CPF válido."});
+    await pool.query(`
+      UPDATE central_assinantes
+      SET ativo=FALSE, tentativas_falhas=0, bloqueado_ate=NULL, atualizado_em=NOW()
+      WHERE documento=$1
+    `, [document]);
+    res.json({ok:true, mensagem:"Acesso deste CPF bloqueado na Central."});
+  } catch (error) {
+    res.status(500).json({ok:false, erro:error.message});
+  }
+});
+
+
 app.get("/api/status",(req,res)=>{
-  res.json({ sistema:"Fibra+ Hub 2 Servidores", status:"online", banco:!!process.env.DATABASE_URL, versao:"10.0.0" });
+  res.json({ sistema:"Fibra+ Hub 2 Servidores", status:"online", banco:!!process.env.DATABASE_URL, versao:"12.0.0" });
 });
 
 app.post("/api/update",(req,res)=>{
@@ -6091,9 +6565,14 @@ const PORT=process.env.PORT || 3000;
 
 // Na Vercel, o Express precisa ser exportado como função serverless.
 // Fora da Vercel, continua rodando normal com npm start.
+async function iniciarBancoFibra() {
+  await initDb();
+  await centralEnsureTables();
+}
+
 if (process.env.VERCEL) {
-  initDb().catch(err => console.error("Erro ao iniciar banco:", err.message));
+  iniciarBancoFibra().catch(err => console.error("Erro ao iniciar banco:", err.message));
   module.exports = app;
 } else {
-  initDb().finally(() => server.listen(PORT, () => console.log("Fibra+ Hub 2 Servidores rodando na porta " + PORT)));
+  iniciarBancoFibra().finally(() => server.listen(PORT, () => console.log("Fibra+ Hub 2 Servidores rodando na porta " + PORT)));
 }
