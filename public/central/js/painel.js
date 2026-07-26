@@ -3,6 +3,7 @@
 
   const savedMessage = sessionStorage.getItem("central_conf_message");
   const savedMessageType = sessionStorage.getItem("central_conf_message_type");
+  const savedMessageClient = sessionStorage.getItem("central_conf_message_client");
   const state = {
     keepMessage: false,assinante:null, pontos:[], boletos:[], filtro:"todas", view:"visao-geral", nextBillKey:"", nextBill:null};
   const els = {
@@ -80,7 +81,7 @@
       showMessage("⏳ Aguarde enquanto estamos realizando a liberação da sua conexão.", "info");
       try{
         await CentralAPI.solicitarConfianca(id);
-        showMessage("✅ Liberação em Confiança realizada com sucesso! Sua conexão foi liberada por 24 horas.", "success", true);
+        showMessage("✅ Liberação em Confiança realizada com sucesso! Sua conexão foi liberada por 24 horas.", "success", true, id);\n        window.setTimeout(()=>{\n          const savedClient = sessionStorage.getItem("central_conf_message_client");\n          if(savedClient === String(id)){\n            sessionStorage.removeItem("central_conf_message");\n            sessionStorage.removeItem("central_conf_message_type");\n            sessionStorage.removeItem("central_conf_message_client");\n            hideMessage();\n          }\n        }, 30000);
         await loadAll(false);
       }catch(e){
         state.keepMessage = false;
@@ -399,13 +400,14 @@
     els.refresh.textContent = busy ? "Atualizando…" : "Atualizar dados";
   }
 
-  function showMessage(message,type, persist=false){
+  function showMessage(message,type, persist=false, clientId=null){
     els.message.textContent = message;
     els.message.className = `page-message ${type || "info"}`;
     els.message.hidden = false;
     if(persist){
       sessionStorage.setItem("central_conf_message", message);
       sessionStorage.setItem("central_conf_message_type", type || "info");
+      if(clientId) sessionStorage.setItem("central_conf_message_client", String(clientId));
     }
   }
   function hideMessage(){
@@ -414,7 +416,14 @@
   function restoreSavedMessage(){
     const msg = sessionStorage.getItem("central_conf_message");
     const type = sessionStorage.getItem("central_conf_message_type");
-    if(msg) showMessage(msg, type, false);
+    const clientId = sessionStorage.getItem("central_conf_message_client");
+    const currentId = state.assinante?.id || state.pontos[0]?.id;
+    if(msg && (!clientId || String(clientId) === String(currentId))) showMessage(msg, type, false);
+    else if(clientId && String(clientId) !== String(currentId)){
+      sessionStorage.removeItem("central_conf_message");
+      sessionStorage.removeItem("central_conf_message_type");
+      sessionStorage.removeItem("central_conf_message_client");
+    }
   }
 
   function compareBillsForDisplay(a,b){
