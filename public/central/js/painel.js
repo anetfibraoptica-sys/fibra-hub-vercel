@@ -154,10 +154,12 @@
     els.summaryStatus.textContent = blocked ? "Bloqueado" : inactive ? "Inativo" : "Ativo";
 
     const firstData = state.pontos[0] || {};
-    const confiancaAtiva = normalize(firstData.status).includes("confianca") || normalize(state.assinante?.status).includes("confianca");
-    // A opção de confiança só aparece para clientes bloqueados ou já em confiança.
-    // Clientes ativos não devem visualizar o card nem o botão.
-    els.trustCard.hidden = !(blocked || confiancaAtiva);
+    const statusTexto = normalize(firstData.status || state.assinante?.status || els.summaryStatus.textContent);
+    const confiancaAtiva = statusTexto.includes("confianca");
+    const clienteAtivo = !blocked && !confiancaAtiva && !inactive;
+    // O card inteiro de confiança só existe para clientes bloqueados ou já liberados em confiança.
+    // Clientes ativos não devem visualizar nenhuma parte do card.
+    els.trustCard.hidden = clienteAtivo || !(blocked || confiancaAtiva);
     if(confiancaAtiva){
       els.trustStatus.textContent = "Ativa";
       els.trustDescription.textContent = "Sua liberação em confiança está ativa.";
