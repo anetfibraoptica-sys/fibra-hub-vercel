@@ -1,6 +1,8 @@
 (function dashboardPage(){
   "use strict";
 
+  const savedMessage = sessionStorage.getItem("central_conf_message");
+  const savedMessageType = sessionStorage.getItem("central_conf_message_type");
   const state = {
     keepMessage: false,assinante:null, pontos:[], boletos:[], filtro:"todas", view:"visao-geral", nextBillKey:"", nextBill:null};
   const els = {
@@ -78,7 +80,7 @@
       showMessage("⏳ Aguarde enquanto estamos realizando a liberação da sua conexão.", "info");
       try{
         await CentralAPI.solicitarConfianca(id);
-        showMessage("✅ Liberação em Confiança realizada com sucesso! Sua conexão foi liberada por 24 horas.", "success");
+        showMessage("✅ Liberação em Confiança realizada com sucesso! Sua conexão foi liberada por 24 horas.", "success", true);
         await loadAll(false);
       }catch(e){
         state.keepMessage = false;
@@ -396,12 +398,23 @@
     els.refresh.textContent = busy ? "Atualizando…" : "Atualizar dados";
   }
 
-  function showMessage(message,type){
+  function showMessage(message,type, persist=false){
     els.message.textContent = message;
     els.message.className = `page-message ${type || "info"}`;
     els.message.hidden = false;
+    if(persist){
+      sessionStorage.setItem("central_conf_message", message);
+      sessionStorage.setItem("central_conf_message_type", type || "info");
+    }
   }
-  function hideMessage(){ els.message.hidden = true; }
+  function hideMessage(){
+    els.message.hidden = true;
+  }
+  function restoreSavedMessage(){
+    const msg = sessionStorage.getItem("central_conf_message");
+    const type = sessionStorage.getItem("central_conf_message_type");
+    if(msg) showMessage(msg, type, false);
+  }
 
   function compareBillsForDisplay(a,b){
     const groupA = billGroup(a);
