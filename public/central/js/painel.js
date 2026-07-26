@@ -81,7 +81,7 @@
       showMessage("⏳ Aguarde enquanto estamos realizando a liberação da sua conexão.", "info");
       try{
         await CentralAPI.solicitarConfianca(id);
-        showMessage("✅ Liberação em Confiança realizada com sucesso! Sua conexão foi liberada por 24 horas.", "success", true, id);\n        window.setTimeout(()=>{\n          const savedClient = sessionStorage.getItem("central_conf_message_client");\n          if(savedClient === String(id)){\n            sessionStorage.removeItem("central_conf_message");\n            sessionStorage.removeItem("central_conf_message_type");\n            sessionStorage.removeItem("central_conf_message_client");\n            hideMessage();\n          }\n        }, 30000);
+        showMessage("✅ Liberação em Confiança realizada com sucesso! Sua conexão foi liberada por 24 horas.", "success", true, id);
         await loadAll(false);
       }catch(e){
         state.keepMessage = false;
