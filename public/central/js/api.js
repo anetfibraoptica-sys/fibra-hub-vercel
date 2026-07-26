@@ -406,6 +406,7 @@
 
     const resp = await fetch("/api/mikrotik/cliente-acao", {
       method: "POST",
+      credentials: "include",
       headers: {"Content-Type":"application/json"},
       body: JSON.stringify(body)
     });
