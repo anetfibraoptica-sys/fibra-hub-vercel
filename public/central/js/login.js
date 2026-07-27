@@ -9,7 +9,7 @@
   const yearElement = document.getElementById("current-year");
   const documentError = document.getElementById("document-error");
   const documentWrap = document.getElementById("document-wrap");
-  const STORAGE_KEY = "fibra_plus_saved_cpf";
+  const STORAGE_KEY = "fibra_plus_saved_cpf"; // somente preenchimento do campo
   const supabaseStatus = document.getElementById("supabase-status");
 
   yearElement.textContent = String(new Date().getFullYear());

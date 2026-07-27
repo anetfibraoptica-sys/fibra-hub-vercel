@@ -4,8 +4,6 @@
   const config = window.FIBRA_CENTRAL_SUPABASE || {};
   const SUPABASE_URL = String(config.url || "").replace(/\/$/, "");
   const SUPABASE_KEY = String(config.key || "");
-  const SESSION_KEY = "fibra_plus_central_documento";
-  const PERSIST_KEY = "fibra_plus_central_documento_persistente";
 
   function onlyDigits(value){ return String(value || "").replace(/\D/g, ""); }
 
@@ -155,19 +153,16 @@
   }
 
   function directDocument(){
-    return hashDocument() || onlyDigits(storageGet(sessionStorage, SESSION_KEY) || storageGet(localStorage, PERSIST_KEY));
+    return "";
   }
 
-  function saveDirectSession(document, remember){
-    const cpf = onlyDigits(document);
-    storageSet(sessionStorage, SESSION_KEY, cpf);
-    if(remember) storageSet(localStorage, PERSIST_KEY, cpf);
-    else storageRemove(localStorage, PERSIST_KEY);
+  function saveDirectSession(){
+    // Sessão controlada pelo cookie HttpOnly do servidor.
+    return;
   }
 
   function clearDirectSession(){
-    storageRemove(sessionStorage, SESSION_KEY);
-    storageRemove(localStorage, PERSIST_KEY);
+    return;
   }
 
   async function backendRequest(path, options={}){
@@ -325,16 +320,19 @@
   }
 
   async function directLogin(cpf, remember){
-    const document = onlyDigits(cpf);
-    const clients = await directClients(document);
-    if(!clients.length){
-      const error = new Error("CPF não encontrado na tabela de clientes do Supabase.");
-      error.status = 404;
+    const response = await fetch("/api/central/login", {
+      method:"POST",
+      credentials:"same-origin",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({cpf:String(cpf || "").replace(/\D/g,"")})
+    });
+    const payload = await response.json().catch(()=>({}));
+    if(!response.ok || !payload.ok){
+      const error = new Error(payload.erro || "CPF não encontrado.");
+      error.status = response.status;
       throw error;
     }
-    const plansById = await directPlansForClients(clients);
-    saveDirectSession(document, Boolean(remember));
-    return {ok:true, modo:"supabase-direto", cpf:document, assinante:clientPublic(clients[0], plansById)};
+    return payload;
   }
 
   async function directMe(){
