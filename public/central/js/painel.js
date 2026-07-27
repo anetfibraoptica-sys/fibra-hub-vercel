@@ -15,6 +15,7 @@
     summaryPoints:document.getElementById("summary-points"),
     summaryNextDue:document.getElementById("summary-next-due"),
     summaryNextDescription:document.getElementById("summary-next-description"),
+    summaryNextStatus:document.getElementById("summary-next-status"),
     nextBillCard:document.getElementById("next-bill-card"),
     summaryStatus:document.getElementById("summary-status"),
     trustCard:document.getElementById("trust-card"),
@@ -193,6 +194,12 @@
     const nextDescription = next ? summaryBillDescription(next.descricao) : "Sem vencimentos pendentes";
     els.summaryNextDescription.textContent = nextDescription;
     els.summaryNextDescription.hidden = !nextDescription;
+    if(els.summaryNextStatus){
+      const overdue = next && isOverdue(next);
+      els.summaryNextStatus.textContent = overdue ? "Vencido" : "";
+      els.summaryNextStatus.classList.toggle("overdue", !!overdue);
+      els.summaryNextStatus.hidden = !overdue;
+    }
 
     const registrationAddress = [first.endereco, first.bairro, first.cidade, first.uf, first.cep].filter(Boolean).join(", ");
     els.registrationName.textContent = state.assinante?.nome || first.nome || "Não informado";
