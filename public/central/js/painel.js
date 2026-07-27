@@ -281,9 +281,9 @@
           </div>
         </div>
         <div class="bill-date"><small>Vencimento</small><strong>${dateBR(bill.vencimento)}</strong></div>
+        ${group === "pagas" && paymentDate(bill) ? `<div class="bill-date bill-paid-info"><small>Pago em</small><strong>${dateBR(paymentDate(bill))}</strong></div>` : ""}
         <div class="bill-value"><small>Valor</small><strong>${money(bill.valor)}</strong></div>
         <span class="bill-status ${status.cls}">${status.label}</span>
-        ${group === "pagas" && paymentDate(bill) ? `<div class="bill-paid-date"><small>Pago em</small><strong>${dateBR(paymentDate(bill))}</strong></div>` : ""}
         <div class="bill-actions">${actions.length ? actions.join("") : '<span class="no-action">Dados de pagamento indisponíveis</span>'}</div>
       </article>`;
     }).join("");
