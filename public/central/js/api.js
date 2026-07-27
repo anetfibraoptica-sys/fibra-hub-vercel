@@ -319,8 +319,7 @@
   }
 
   async function directLogin(cpf, remember){
-    const response = await fetch("/api/central/login", { credentials: "include", method:"POST",
-      credentials:"same-origin",
+    const response = await fetch("/api/central/login", { credentials: "include", method: "POST",
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify({cpf:String(cpf || "").replace(/\D/g,"")})
     });
@@ -334,8 +333,7 @@
   }
 
   async function directMe(){
-    const response = await fetch("/api/central/me", { credentials: "include", method:"GET",
-      credentials:"same-origin"
+    const response = await fetch("/api/central/me", { credentials: "include", method: "GET"
     });
 
     const payload = await response.json().catch(()=>({}));
