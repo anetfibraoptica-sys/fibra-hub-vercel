@@ -410,3 +410,40 @@
     somenteDigitos:onlyDigits
   };
 })();
+
+
+// Exposição única da API da Central
+window.CentralAPI = {
+  status: async function(){
+    const r = await fetch("/api/central/status", {
+      credentials: "include"
+    });
+    return await r.json();
+  },
+
+  login: async function(cpf){
+    const r = await fetch("/api/central/login", {
+      method:"POST",
+      credentials:"include",
+      headers:{
+        "Content-Type":"application/json"
+      },
+      body: JSON.stringify({cpf})
+    });
+    return await r.json();
+  },
+
+  me: async function(){
+    const r = await fetch("/api/central/me", {
+      credentials:"include"
+    });
+    return await r.json();
+  },
+
+  boletos: async function(){
+    const r = await fetch("/api/central/boletos", {
+      credentials:"include"
+    });
+    return await r.json();
+  }
+};
