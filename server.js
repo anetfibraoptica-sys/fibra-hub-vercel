@@ -6245,7 +6245,7 @@ async function autoExecutarRotinaDiaria() {
     }
   }
 
-  const dias = Math.max(0, Number(process.env.BLOQUEIO_DIAS_APOS_VENCIMENTO || 1));
+  const dias = Math.max(0, Number(process.env.BLOQUEIO_DIAS_APOS_VENCIMENTO || 4));
   const limite = Math.max(1, Math.min(500, Number(process.env.BLOQUEIO_MAX_CLIENTES_POR_EXECUCAO || 100)));
 
   const candidatos = await pool.query(`
