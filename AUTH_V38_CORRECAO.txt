@@ -1,0 +1,1 @@
+Correção: Central agora usa /api/central/me com cookie HttpOnly após login CPF.
