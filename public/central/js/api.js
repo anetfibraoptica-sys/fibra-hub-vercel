@@ -166,8 +166,7 @@
   }
 
   async function backendRequest(path, options={}){
-    const response = await fetch(path, { credentials: "same-origin",
-      credentials:"same-origin",
+    const response = await fetch(path, { credentials: "include",
       cache:"no-store",
       ...options,
       headers:{"Content-Type":"application/json", ...(options.headers || {})}
