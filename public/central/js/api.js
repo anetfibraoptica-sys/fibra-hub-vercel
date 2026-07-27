@@ -166,7 +166,8 @@
   }
 
   async function backendRequest(path, options={}){
-    const response = await fetch(path, { credentials: "include",
+    const response = await fetch(path, { credentials: "same-origin",
+      credentials:"same-origin",
       cache:"no-store",
       ...options,
       headers:{"Content-Type":"application/json", ...(options.headers || {})}
@@ -347,12 +348,21 @@
   }
 
   async function directBoletos(){
-    const document = directDocument();
-    if(!document){
-      const error = new Error("Acesso não iniciado.");
-      error.status = 401;
+    const response = await fetch("/api/central/boletos", {
+      method:"GET",
+      credentials:"include"
+    });
+
+    const payload = await response.json().catch(()=>({}));
+
+    if(!response.ok || !payload.ok){
+      const error = new Error(payload.erro || "Não foi possível carregar faturas.");
+      error.status = response.status || 401;
       throw error;
     }
+
+    return payload;
+  }
     const clients = await directClients(document);
     const bills = await directBills(document, clients);
     return {ok:true, modo:"supabase-direto", total:bills.length, boletos:bills};

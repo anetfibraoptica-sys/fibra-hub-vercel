@@ -1,0 +1,1 @@
+Correção aplicada mantendo o projeto Fibra+ Unificado completo. Alterado somente carregamento de boletos/faturas da Central para usar sessão por cookie.
