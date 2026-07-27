@@ -1,11 +1,7 @@
 (function dashboardPage(){
   "use strict";
 
-  const savedMessage = sessionStorage.getItem("central_conf_message");
-  const savedMessageType = sessionStorage.getItem("central_conf_message_type");
-  const savedMessageClient = sessionStorage.getItem("central_conf_message_client");
-  const state = {
-    keepMessage: false,assinante:null, pontos:[], boletos:[], filtro:"todas", view:"visao-geral", nextBillKey:"", nextBill:null};
+  const state = {assinante:null, pontos:[], boletos:[], filtro:"todas", view:"visao-geral", nextBillKey:"", nextBill:null};
   const els = {
     logout:document.getElementById("logout-button"),
     refresh:document.getElementById("refresh-button"),
@@ -15,13 +11,8 @@
     summaryPoints:document.getElementById("summary-points"),
     summaryNextDue:document.getElementById("summary-next-due"),
     summaryNextDescription:document.getElementById("summary-next-description"),
-    summaryNextStatus:document.getElementById("summary-next-status"),
     nextBillCard:document.getElementById("next-bill-card"),
     summaryStatus:document.getElementById("summary-status"),
-    trustCard:document.getElementById("trust-card"),
-    trustStatus:document.getElementById("trust-status"),
-    trustDescription:document.getElementById("trust-description"),
-    trustButton:document.getElementById("trust-button"),
     pointsCounter:document.getElementById("points-counter"),
     pointsGrid:document.getElementById("points-grid"),
     billsList:document.getElementById("bills-list"),
@@ -73,22 +64,6 @@
 
     els.billsList.addEventListener("click", handleBillAction);
     document.addEventListener("click", handleModalCopy);
-
-    els.trustButton.addEventListener("click", async ()=>{
-      const id = state.assinante?.id || state.pontos[0]?.id;
-      if(!id) return;
-      els.trustButton.disabled = true;
-      state.keepMessage = true;
-      showMessage("⏳ Aguarde enquanto estamos realizando a liberação da sua conexão.", "info");
-      try{
-        await CentralAPI.solicitarConfianca(id);
-        showMessage("✅ Liberação em Confiança realizada com sucesso! Sua conexão foi liberada por 24 horas.", "success", true, id);
-        await loadAll(false);
-      }catch(e){
-        state.keepMessage = false;
-        showMessage(e.message || "Não foi possível solicitar a liberação.", "error");
-      }finally{ els.trustButton.disabled = false; }
-    });
   }
 
   function readViewFromHash(){
@@ -135,8 +110,7 @@
       state.boletos = billsResult.boletos || [];
       renderAll();
       if(manual) showMessage("Dados atualizados.", "success");
-      else if(sessionStorage.getItem("central_conf_message")) restoreSavedMessage();
-      else if(!state.keepMessage) hideMessage();
+      else hideMessage();
     }catch(error){
       if(error.status === 401){
         location.replace("index.html");
@@ -160,33 +134,9 @@
     const statuses = state.pontos.map(point=>normalize(point.status));
     const blocked = statuses.some(status=>status.includes("bloque"));
     const inactive = statuses.length > 0 && statuses.every(status=>status.includes("inativ") || status.includes("cancel"));
-    els.summaryStatus.textContent = blocked ? "Bloqueado" : inactive ? "Inativo" : "Ativo";
+    els.summaryStatus.textContent = blocked ? "Atenção" : inactive ? "Inativo" : "Ativo";
 
-    const firstData = state.pontos[0] || {};
-    const statusTexto = normalize(firstData.status || state.assinante?.status || els.summaryStatus.textContent);
-    const confiancaAtiva = statusTexto.includes("confianca");
-    const clienteAtivo = !blocked && !confiancaAtiva && !inactive;
-    // O card de confiança permanece visível para informar o status.
-    // Clientes ativos não podem solicitar, por isso exibem apenas Indisponível.
-    els.trustCard.hidden = !(blocked || clienteAtivo || confiancaAtiva);
-    if(confiancaAtiva){
-      els.trustStatus.textContent = "Ativa";
-      els.trustDescription.textContent = "Sua liberação em confiança está ativa.";
-      els.trustButton.hidden = true;
-    }else if(blocked){
-      els.trustStatus.textContent = "Disponível";
-      els.trustDescription.textContent = "Solicite uma liberação temporária de 24 horas.";
-      els.trustButton.hidden = false;
-    }else{
-      els.trustStatus.textContent = "Indisponível";
-      els.trustDescription.textContent = "";
-      els.trustButton.hidden = true;
-    }
-
-    const openBills = state.boletos.filter(bill=>{
-      const status = String(bill.status || "").toLowerCase();
-      return !(status.includes("pago") || status.includes("paid") || status.includes("settled") || status.includes("baixado") || status.includes("liquidado") || status.includes("cancel"));
-    });
+    const openBills = state.boletos.filter(bill=>billGroup(bill) === "abertas");
     const next = [...openBills].filter(bill=>parseDate(bill.vencimento)).sort((a,b)=>parseDate(a.vencimento)-parseDate(b.vencimento))[0];
     state.nextBill = next || null;
     state.nextBillKey = next ? billKey(next) : "";
@@ -197,12 +147,6 @@
     const nextDescription = next ? summaryBillDescription(next.descricao) : "Sem vencimentos pendentes";
     els.summaryNextDescription.textContent = nextDescription;
     els.summaryNextDescription.hidden = !nextDescription;
-    if(els.summaryNextStatus){
-      const overdue = next && isOverdue(next);
-      els.summaryNextStatus.textContent = overdue ? "Vencido" : "";
-      els.summaryNextStatus.classList.toggle("overdue", !!overdue);
-      els.summaryNextStatus.hidden = !overdue;
-    }
 
     const registrationAddress = [first.endereco, first.bairro, first.cidade, first.uf, first.cep].filter(Boolean).join(", ");
     els.registrationName.textContent = state.assinante?.nome || first.nome || "Não informado";
@@ -243,7 +187,7 @@
         <dl>
           <div><dt>Login PPPoE</dt><dd>${escapeHtml(point.loginPppoe || "Não informado")}</dd></div>
           <div><dt>Vencimento</dt><dd>${point.diaVencimento ? `Dia ${escapeHtml(point.diaVencimento)}` : "Não informado"}</dd></div>
-          <div><dt>Tecnologia</dt><dd>${escapeHtml("Fibra Óptica")}</dd></div>
+          <div><dt>Tecnologia</dt><dd>${escapeHtml(point.tecnologia || point.profile || "Fibra")}</dd></div>
           <div><dt>Endereço</dt><dd>${escapeHtml(address || "Não informado")}</dd></div>
         </dl>
       </article>`;
@@ -283,7 +227,6 @@
         <div class="bill-date"><small>Vencimento</small><strong>${dateBR(bill.vencimento)}</strong></div>
         <div class="bill-value"><small>Valor</small><strong>${money(bill.valor)}</strong></div>
         <span class="bill-status ${status.cls}">${status.label}</span>
-        ${group === "pagas" && paymentDate(bill) ? `<div class="bill-paid-date"><small>Pago em</small><strong>${dateBR(paymentDate(bill))}</strong></div>` : ""}
         <div class="bill-actions">${actions.length ? actions.join("") : '<span class="no-action">Dados de pagamento indisponíveis</span>'}</div>
       </article>`;
     }).join("");
@@ -411,39 +354,12 @@
     els.refresh.textContent = busy ? "Atualizando…" : "Atualizar dados";
   }
 
-  let messageTimer = null;
-  function showMessage(message,type, persist=false, clientId=null){
-    if(messageTimer) clearTimeout(messageTimer);
+  function showMessage(message,type){
     els.message.textContent = message;
     els.message.className = `page-message ${type || "info"}`;
     els.message.hidden = false;
-    if(persist){
-      sessionStorage.setItem("central_conf_message", message);
-      sessionStorage.setItem("central_conf_message_type", type || "info");
-      if(clientId) sessionStorage.setItem("central_conf_message_client", String(clientId));
-      messageTimer = setTimeout(()=>{
-        hideMessage();
-        sessionStorage.removeItem("central_conf_message");
-        sessionStorage.removeItem("central_conf_message_type");
-        sessionStorage.removeItem("central_conf_message_client");
-      },30000);
-    }
   }
-  function hideMessage(){
-    els.message.hidden = true;
-  }
-  function restoreSavedMessage(){
-    const msg = sessionStorage.getItem("central_conf_message");
-    const type = sessionStorage.getItem("central_conf_message_type");
-    const clientId = sessionStorage.getItem("central_conf_message_client");
-    const currentId = state.assinante?.id || state.pontos[0]?.id;
-    if(msg && (!clientId || String(clientId) === String(currentId))) showMessage(msg, type, false);
-    else if(clientId && String(clientId) !== String(currentId)){
-      sessionStorage.removeItem("central_conf_message");
-      sessionStorage.removeItem("central_conf_message_type");
-      sessionStorage.removeItem("central_conf_message_client");
-    }
-  }
+  function hideMessage(){ els.message.hidden = true; }
 
   function compareBillsForDisplay(a,b){
     const groupA = billGroup(a);
@@ -468,9 +384,6 @@
     return String(a.numero || a.id || "").localeCompare(String(b.numero || b.id || ""), "pt-BR", {numeric:true});
   }
 
-  function paymentDate(bill){
-    return bill?.pagamento || bill?.dataPagamento || bill?.dados?.dataPagamento || null;
-  }
   function billGroup(bill){
     const status = normalize(`${bill.status || ""}`);
     if(["pago","paid","settled","baixado","recebido","liquidado"].some(value=>status.includes(value))) return "pagas";

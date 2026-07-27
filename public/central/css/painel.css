@@ -118,5 +118,3 @@ button{cursor:pointer}
 .support-card p{margin:0;color:var(--muted);}
 .whatsapp-button{background:#25d366;color:#fff;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:999px;}
 @media(max-width:600px){.support-card{flex-direction:column;align-items:stretch}.whatsapp-button{text-align:center}}
-
-.summary-status-overdue{display:block;font-weight:700;color:#dc2626;margin-top:6px}.summary-status-overdue.overdue{color:#dc2626}

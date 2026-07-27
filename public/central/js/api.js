@@ -391,39 +391,12 @@
     }
   }
 
-  async function solicitarConfianca(clienteId){
-    const me = await directMe();
-    const cliente = me?.assinante || {};
-    const ponto = Array.isArray(cliente.pontos) ? (cliente.pontos[0] || {}) : {};
-    const body = {
-      servidor: String(ponto.servidor || cliente.servidor || cliente.servidorId || cliente.mikrotik || cliente.mikrotikServidor || cliente.router || ""),
-      login: String(ponto.loginPppoe || cliente.loginPppoe || cliente.login_pppoe || cliente.login || ""),
-      acao: "confianca",
-      dias: 1,
-      profile: String(ponto.profile || cliente.profile || ""),
-      clienteId: String(clienteId || ponto.id || cliente.id || "")
-    };
-
-    const resp = await fetch("/api/mikrotik/cliente-acao", {
-      method: "POST",
-      headers: {"Content-Type":"application/json"},
-      body: JSON.stringify(body)
-    });
-
-    const json = await resp.json().catch(()=>({}));
-    if(!resp.ok || !json.ok){
-      throw new Error(json.erro || json.mensagem || "Não foi possível solicitar a liberação em confiança.");
-    }
-    return json;
-  }
-
   window.CentralAPI = {
     status:directStatus,
     login(cpf, lembrar){ return directLogin(cpf, lembrar); },
     async logout(){ clearDirectSession(); return {ok:true}; },
     me:directMe,
     boletos:directBoletos,
-    solicitarConfianca,
     documentoAtual:directDocument,
     somenteDigitos:onlyDigits
   };

@@ -6222,11 +6222,7 @@ async function autoExecutarRotinaDiaria() {
           boleto.id
         ]);
 
-        const efiTextoCompleto = autoTexto(JSON.stringify(detalhe.detalhes || {})).toLowerCase();
-        const efiConfirmadoPagamento = ["paid","settled","pago"].includes(statusAtual)
-          && !["inadimplente","vencido","pending","pendente","aguardando","waiting"].some(x => efiTextoCompleto.includes(x));
-
-        if (efiConfirmadoPagamento) {
+        if (["paid","settled","pago"].includes(statusAtual)) {
           const resultado = await autoProcessarPagamento({
             chargeId,
             numero:boleto.numero,
@@ -6237,37 +6233,7 @@ async function autoExecutarRotinaDiaria() {
           });
           conciliacaoEfi.push({ ok:true, charge_id:chargeId, pagamento:true, resultado });
         } else {
-          // Proteção: se a conciliação automática encontrou que a Efí NÃO confirmou pagamento,
-          // não pode manter uma baixa automática anterior como paga.
-          // Baixas manuais continuam preservadas.
-          await pool.query(`
-            UPDATE boletos
-            SET
-              status = CASE
-                WHEN COALESCE(dados->>'origemPagamento','') = 'baixa_manual' THEN status
-                ELSE 'pendente'
-              END,
-              valor_pago = CASE
-                WHEN COALESCE(dados->>'origemPagamento','') = 'baixa_manual' THEN valor_pago
-                ELSE NULL
-              END,
-              pagamento = CASE
-                WHEN COALESCE(dados->>'origemPagamento','') = 'baixa_manual' THEN pagamento
-                ELSE NULL
-              END,
-              dados = CASE
-                WHEN COALESCE(dados->>'origemPagamento','') = 'baixa_manual' THEN dados
-                ELSE dados - 'dataPagamento' - 'origemPagamento' || jsonb_build_object(
-                  'status','pendente',
-                  'efiStatus', statusAtual || '',
-                  'valorPago', 0
-                )
-              END,
-              atualizado_em = NOW()
-            WHERE id=$1
-          `, [boleto.id]);
-
-          conciliacaoEfi.push({ ok:true, charge_id:chargeId, status:statusAtual || "desconhecido", pagamentoConfirmado:false, baixaRevertida:true });
+          conciliacaoEfi.push({ ok:true, charge_id:chargeId, status:statusAtual || "desconhecido" });
         }
       } catch (err) {
         conciliacaoEfi.push({
