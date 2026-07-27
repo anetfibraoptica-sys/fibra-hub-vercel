@@ -129,7 +129,7 @@
     setBusy(true);
     if(manual) showMessage("Atualizando dados…", "info");
     try{
-      const [profileResult, billsResult] = await Promise.all([CentralAPI.me(), CentralAPI.boletos()]);
+      const [profileResult, billsResult] = await Promise.allSettled([CentralAPI.me(), CentralAPI.boletos()]);
       state.assinante = profileResult.assinante;
       state.pontos = profileResult.assinante?.pontos || [];
       state.boletos = billsResult.boletos || [];
