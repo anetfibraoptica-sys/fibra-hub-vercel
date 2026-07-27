@@ -183,7 +183,10 @@
       els.trustButton.hidden = true;
     }
 
-    const openBills = state.boletos.filter(bill=>billGroup(bill) === "abertas");
+    const openBills = state.boletos.filter(bill=>{
+      const status = String(bill.status || "").toLowerCase();
+      return !(status.includes("pago") || status.includes("paid") || status.includes("settled") || status.includes("baixado") || status.includes("liquidado") || status.includes("cancel"));
+    });
     const next = [...openBills].filter(bill=>parseDate(bill.vencimento)).sort((a,b)=>parseDate(a.vencimento)-parseDate(b.vencimento))[0];
     state.nextBill = next || null;
     state.nextBillKey = next ? billKey(next) : "";
