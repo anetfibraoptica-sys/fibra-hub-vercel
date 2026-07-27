@@ -336,30 +336,20 @@
   }
 
   async function directMe(){
-    const document = directDocument();
-    if(!document){
-      const error = new Error("Acesso não iniciado.");
-      error.status = 401;
+    const response = await fetch("/api/central/me", {
+      method:"GET",
+      credentials:"same-origin"
+    });
+
+    const payload = await response.json().catch(()=>({}));
+
+    if(!response.ok || !payload.ok){
+      const error = new Error(payload.erro || "Sessão expirada.");
+      error.status = response.status || 401;
       throw error;
     }
-    const clients = await directClients(document);
-    if(!clients.length){
-      clearDirectSession();
-      const error = new Error("Cadastro não encontrado.");
-      error.status = 401;
-      throw error;
-    }
-    const plansById = await directPlansForClients(clients);
-    const points = clients.map(client=>clientPublic(client, plansById));
-    return {
-      ok:true,
-      modo:"supabase-direto",
-      assinante:{
-        nome:points[0]?.nome || "Assinante",
-        documento:maskDocument(document),
-        pontos:points
-      }
-    };
+
+    return payload;
   }
 
   async function directBoletos(){
