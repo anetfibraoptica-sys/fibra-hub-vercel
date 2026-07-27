@@ -190,8 +190,7 @@
     ensureDirectConfig();
     const query = new URLSearchParams(params);
     const url = `${SUPABASE_URL}/rest/v1/${table}${query.toString() ? `?${query}` : ""}`;
-    const response = await fetch(url, {
-      method:options.method || "GET",
+    const response = await fetch(url, { credentials: "include", method:options.method || "GET",
       cache:"no-store",
       headers:{
         apikey:SUPABASE_KEY,
@@ -320,8 +319,7 @@
   }
 
   async function directLogin(cpf, remember){
-    const response = await fetch("/api/central/login", {
-      method:"POST",
+    const response = await fetch("/api/central/login", { credentials: "include", method:"POST",
       credentials:"same-origin",
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify({cpf:String(cpf || "").replace(/\D/g,"")})
@@ -336,8 +334,7 @@
   }
 
   async function directMe(){
-    const response = await fetch("/api/central/me", {
-      method:"GET",
+    const response = await fetch("/api/central/me", { credentials: "include", method:"GET",
       credentials:"same-origin"
     });
 
@@ -392,8 +389,7 @@
       clienteId: String(clienteId || ponto.id || cliente.id || "")
     };
 
-    const resp = await fetch("/api/mikrotik/cliente-acao", {
-      method: "POST",
+    const resp = await fetch("/api/mikrotik/cliente-acao", { credentials: "include", method: "POST",
       headers: {"Content-Type":"application/json"},
       body: JSON.stringify(body)
     });

@@ -69,8 +69,7 @@
     setCampo("Situação na Efí", "Consultando Efí...");
 
     try{
-      const resp = await fetch("/api/efi/boleto-importado/consultar", {
-        method:"POST",
+      const resp = await fetch("/api/efi/boleto-importado/consultar", { credentials: "include", method:"POST",
         headers:{"Content-Type":"application/json"},
         body: JSON.stringify(dados)
       });
@@ -108,8 +107,7 @@
     setCampo("Situação na Efí", "Vinculando com Efí...");
 
     try{
-      const resp = await fetch("/api/efi/boleto-importado/vincular", {
-        method:"POST",
+      const resp = await fetch("/api/efi/boleto-importado/vincular", { credentials: "include", method:"POST",
         headers:{"Content-Type":"application/json"},
         body: JSON.stringify(dados)
       });

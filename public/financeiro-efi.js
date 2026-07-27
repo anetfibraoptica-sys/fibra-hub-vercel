@@ -77,7 +77,7 @@ async function gerarBoletoEfi(i){
     conta:1
   };
   try{
-    const resp=await fetch("/api/efi/boleto/criar",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+    const resp=await fetch("/api/efi/boleto/criar", { credentials: "include", method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
     const json=await resp.json();
     if(!resp.ok || !json.ok) throw new Error(json.erro||json.mensagem||"Erro ao criar boleto");
     c.boleto=json.boleto||json.link_boleto||json.charge_id||"GERADO";
