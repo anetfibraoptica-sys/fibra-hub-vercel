@@ -6222,7 +6222,11 @@ async function autoExecutarRotinaDiaria() {
           boleto.id
         ]);
 
-        if (["paid","settled","pago"].includes(statusAtual)) {
+        const efiTextoCompleto = autoTexto(JSON.stringify(detalhe.detalhes || {})).toLowerCase();
+        const efiConfirmadoPagamento = ["paid","settled","pago"].includes(statusAtual)
+          && !["inadimplente","vencido","pending","pendente","aguardando","waiting"].some(x => efiTextoCompleto.includes(x));
+
+        if (efiConfirmadoPagamento) {
           const resultado = await autoProcessarPagamento({
             chargeId,
             numero:boleto.numero,
@@ -6233,7 +6237,7 @@ async function autoExecutarRotinaDiaria() {
           });
           conciliacaoEfi.push({ ok:true, charge_id:chargeId, pagamento:true, resultado });
         } else {
-          conciliacaoEfi.push({ ok:true, charge_id:chargeId, status:statusAtual || "desconhecido" });
+          conciliacaoEfi.push({ ok:true, charge_id:chargeId, status:statusAtual || "desconhecido", pagamentoConfirmado:false });
         }
       } catch (err) {
         conciliacaoEfi.push({
