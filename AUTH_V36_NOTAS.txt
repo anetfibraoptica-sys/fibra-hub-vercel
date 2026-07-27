@@ -1,2 +1,0 @@
-Versão v36 - preparação Auth Central.
-Base preservada: Faturas, Pago em, EFI, bloqueio 4 dias e Central.
