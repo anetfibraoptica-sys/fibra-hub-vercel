@@ -125,3 +125,8 @@ button{cursor:pointer}
 .bill-status{grid-column:5;grid-row:1;justify-self:center}.bill-actions{grid-column:6;grid-row:1;justify-self:end;align-self:center}
 
 .loading-placeholder{opacity:.65;animation:pulse-loading 1.4s ease-in-out infinite;}\n@keyframes pulse-loading{0%,100%{opacity:.45}50%{opacity:1}}\n
+/* v63 - texto do cliente após carregamento */
+#subscriber-name,
+#subscriber-document {
+  opacity: 1;
+}

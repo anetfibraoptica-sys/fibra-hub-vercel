@@ -531,3 +531,12 @@ window.atualizarWhatsAppSuporte = atualizarWhatsAppSuporte;
 atualizarWhatsAppSuporte();
 setTimeout(atualizarWhatsAppSuporte, 1000);
 setTimeout(atualizarWhatsAppSuporte, 3000);
+
+
+// v63: remove estado visual de carregamento após dados do assinante.
+
+function removeLoadingState(){
+  document.querySelectorAll('.loading-text').forEach(el => {
+    el.classList.remove('loading-text');
+  });
+}
