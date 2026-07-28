@@ -130,9 +130,11 @@
     if(manual) showMessage("Atualizando dados…", "info");
     try{
       const [profileResult, billsResult] = await Promise.allSettled([CentralAPI.me(), CentralAPI.boletos()]);
-      state.assinante = profileResult.assinante;
-      state.pontos = profileResult.assinante?.pontos || [];
-      state.boletos = billsResult.boletos || [];
+      const profile = profileResult.status === "fulfilled" ? profileResult.value : {};
+      const bills = billsResult.status === "fulfilled" ? billsResult.value : {};
+      state.assinante = profile.assinante || null;
+      state.pontos = profile.assinante?.pontos || [];
+      state.boletos = bills.boletos || [];
       renderAll();
       if(manual) showMessage("Dados atualizados.", "success");
       else if(sessionStorage.getItem("central_conf_message")) restoreSavedMessage();
