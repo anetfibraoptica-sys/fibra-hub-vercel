@@ -154,10 +154,10 @@
 
   function renderAll(){
     const first = state.pontos[0] || {};
-    els.name.textContent = state.assinante?.nome || first.nome || "cliente";
+    els.name.textContent = state.assinante?.nome || first.nome || "Carregando...";
     els.document.textContent = `${state.assinante?.documento || "Documento protegido"} · dados sincronizados com o Fibra+`;
-    els.summaryPoints.textContent = String(state.pontos.length);
-    els.pointsCounter.textContent = `${state.pontos.length} ${state.pontos.length === 1 ? "ponto" : "pontos"}`;
+    els.summaryPoints.textContent = state.assinante ? String(state.pontos.length) : "Carregando...";
+    els.pointsCounter.textContent = state.assinante ? `${state.pontos.length} ${state.pontos.length === 1 ? "ponto" : "pontos"}` : "Carregando conexões...";
 
     const statuses = state.pontos.map(point=>normalize(point.status));
     const blocked = statuses.some(status=>status.includes("bloque"));
