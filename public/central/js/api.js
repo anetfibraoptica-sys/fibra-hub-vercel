@@ -333,18 +333,28 @@
   }
 
   async function directMe(){
-    const response = await fetch("/api/central/me", { credentials: "include", method: "GET"
-    });
+    let lastPayload = {};
 
-    const payload = await response.json().catch(()=>({}));
+    for(let tentativa = 0; tentativa < 2; tentativa++){
+      const response = await fetch("/api/central/me", {
+        credentials: "include",
+        method: "GET",
+        cache: "no-store"
+      });
 
-    if(!response.ok || !payload.ok){
-      const error = new Error(payload.erro || "Sessão expirada.");
-      error.status = response.status || 401;
-      throw error;
+      const payload = await response.json().catch(()=>({}));
+      lastPayload = payload;
+
+      if(response.ok && payload.ok){
+        return payload;
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 300));
     }
 
-    return payload;
+    const error = new Error(lastPayload.erro || "Sessão expirada.");
+    error.status = 401;
+    throw error;
   }
 
   async function directBoletos(){
