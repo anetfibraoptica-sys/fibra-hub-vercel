@@ -348,9 +348,18 @@
   }
 
   async function directBoletos(){
+    const response = await fetch("/api/central/boletos", {
+      method:"GET",
+      credentials:"include"
+    });
+    const payload = await response.json().catch(()=>({}));
+    if(response.ok && payload && payload.ok){
+      return payload;
+    }
+
     const document = directDocument();
     if(!document){
-      const error = new Error("Acesso não iniciado.");
+      const error = new Error(payload.erro || "Acesso não iniciado.");
       error.status = 401;
       throw error;
     }
