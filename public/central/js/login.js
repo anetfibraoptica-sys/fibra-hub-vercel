@@ -60,7 +60,7 @@
       supabaseStatus.innerHTML = "<span></span>Banco de Dados conectado";
     }catch(_){
       supabaseStatus.className = "connection-status disconnected";
-      supabaseStatus.innerHTML = "<span></span>Não foi possível conectar ao Supabase";
+      supabaseStatus.innerHTML = "<span></span>Não foi possível verificar a conexão com o banco";
     }
   }
 

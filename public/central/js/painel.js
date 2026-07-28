@@ -131,7 +131,7 @@
     try{
       const [profileResult, billsResult] = await Promise.allSettled([CentralAPI.me(), CentralAPI.boletos()]);
       const profile = profileResult.status === "fulfilled" ? profileResult.value : {};
-      const bills = billsResult.status === "fulfilled" ? billsResult.value : {};
+      const bills = billsResult.status === "fulfilled" ? billsResult.value : { boletos: [] };
       state.assinante = profile.assinante || null;
       state.pontos = profile.assinante?.pontos || [];
       state.boletos = Array.isArray(bills.boletos) ? bills.boletos : (Array.isArray(bills) ? bills : []);
