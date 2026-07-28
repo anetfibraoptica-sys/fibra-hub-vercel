@@ -134,7 +134,7 @@
       const bills = billsResult.status === "fulfilled" ? billsResult.value : {};
       state.assinante = profile.assinante || null;
       state.pontos = profile.assinante?.pontos || [];
-      state.boletos = bills.boletos || [];
+      state.boletos = Array.isArray(bills.boletos) ? bills.boletos : (Array.isArray(bills) ? bills : []);
       renderAll();
       if(manual) showMessage("Dados atualizados.", "success");
       else if(sessionStorage.getItem("central_conf_message")) restoreSavedMessage();
