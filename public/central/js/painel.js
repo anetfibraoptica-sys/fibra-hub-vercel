@@ -42,8 +42,7 @@
   function bindEvents(){
     els.logout.addEventListener("click", async ()=>{
       els.logout.disabled = true;
-      try{
-}catch(_){ }
+      try{ await CentralAPI.logout(); }catch(_){ }
       location.replace("index.html");
     });
 

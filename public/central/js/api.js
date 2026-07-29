@@ -319,18 +319,8 @@
   }
 
   async function directLogin(cpf, remember){
-    // Limpa a sessão anterior antes de autenticar outro CPF.
-    try{
-      await fetch("/api/central/logout", {
-        method:"POST",
-        credentials:"include",
-        cache:"no-store"
-      });
-    }catch(_){}
-
     const response = await fetch("/api/central/login", { credentials: "include", method: "POST",
       headers:{"Content-Type":"application/json"},
-      cache:"no-store",
       body:JSON.stringify({cpf:String(cpf || "").replace(/\D/g,"")})
     });
     const payload = await response.json().catch(()=>({}));
