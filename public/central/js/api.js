@@ -247,75 +247,23 @@
     return plansById;
   }
 
+  
   async function directClients(document){
-    const variants = documentVariants(document);
-    const terms = [];
-    for(const value of variants){
-      terms.push(`cpf_cnpj.eq.${value}`, `cpf.eq.${value}`, `cnpj.eq.${value}`);
-      terms.push(`dados->>cpfCnpj.eq.${value}`, `dados->>cpf.eq.${value}`, `dados->>cnpj.eq.${value}`, `dados->>documento.eq.${value}`, `dados->>cadCpf.eq.${value}`);
-    }
-
-    let rows = [];
-    try{
-      rows = await supabaseRequest("clientes", {select:"*", or:`(${terms.join(",")})`, limit:"100"});
-    }catch(error){
-      // Compatibilidade com bases antigas que não possuem todos os campos JSON usados acima.
-      const simpleTerms = [];
-      for(const value of variants) simpleTerms.push(`cpf_cnpj.eq.${value}`, `cpf.eq.${value}`, `cnpj.eq.${value}`);
-      rows = await supabaseRequest("clientes", {select:"*", or:`(${simpleTerms.join(",")})`, limit:"100"});
-    }
-
-    return (Array.isArray(rows) ? rows : []).filter(row=>documentFromClient(row) === onlyDigits(document));
+    const response = await fetch("/api/central/me", {
+      credentials:"include",
+      cache:"no-store"
+    });
+    const json = await response.json().catch(()=>({}));
+    if(!response.ok || !json.ok) throw new Error(json.erro || "Sessão inválida.");
+    return json.assinante?.pontos || [];
   }
 
-  function nestedBills(clients){
-    const result = [];
-    for(const client of clients){
-      const data = rowData(client);
-      const lists = [client.boletos, data.boletos, client.faturas, data.faturas];
-      for(const list of lists){
-        if(Array.isArray(list)) result.push(...list.map(item=>({...item, cliente_id:item.cliente_id || client.id, cliente_login:item.cliente_login || client.login_pppoe || client.login})));
-      }
-    }
-    return result;
-  }
-
-  async function directBills(document, clients){
-    const terms = [];
-    for(const value of documentVariants(document)) terms.push(`cpf_cnpj.eq.${value}`);
-    for(const client of clients){
-      if(client.id !== undefined && client.id !== null && String(client.id) !== "") terms.push(`cliente_id.eq.${client.id}`);
-      const data = rowData(client);
-      const login = String(pick([client, data], ["login_pppoe","loginPppoe","login","usuario","pppoe"], "")).trim();
-      if(login) terms.push(`cliente_login.eq.${login}`);
-    }
-
-    let rows = [];
-    if(terms.length){
-      try{
-        rows = await supabaseRequest("boletos", {select:"*", or:`(${[...new Set(terms)].join(",")})`, limit:"1000"});
-      }catch(_){
-        rows = [];
-      }
-    }
-
-    const combined = [...(Array.isArray(rows) ? rows : []), ...nestedBills(clients)];
-    const unique = new Map();
-    for(const item of combined){
-      const bill = billPublic(item);
-      const key = bill.id || bill.numero || `${bill.vencimento}|${bill.valor}|${bill.descricao}`;
-      unique.set(key, bill);
-    }
-    return [...unique.values()].sort(compareBillDueDate);
-  }
-
-  async function directStatus(){
-    await supabaseRequest("clientes", {select:"id", limit:"1"});
-    let boletos = true;
-    let planosCobranca = true;
-    try { await supabaseRequest("boletos", {select:"id", limit:"1"}); } catch(_){ boletos = false; }
-    try { await supabaseRequest("planos_cobranca", {select:"id", limit:"1"}); } catch(_){ planosCobranca = false; }
-    return {ok:true, conectado:true, modo:"supabase-direto", tabelas:{clientes:true, boletos, planos_cobranca:planosCobranca}};
+async function directStatus(){
+    const response = await fetch("/api/central/status", {
+      credentials:"include",
+      cache:"no-store"
+    });
+    return await response.json();
   }
 
   async function directLogin(cpf, remember){
@@ -421,7 +369,7 @@
   window.CentralAPI = {
     status:directStatus,
     login(cpf, lembrar){ return directLogin(cpf, lembrar); },
-    async logout(){ clearDirectSession(); return {ok:true}; },
+    async logout(){ await fetch("/api/central/logout",{method:"POST",credentials:"include"}); return {ok:true}; },
     me:directMe,
     boletos:directBoletos,
     solicitarConfianca,
