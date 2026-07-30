@@ -907,10 +907,7 @@ function centralClearSessionCookie(res) {
 }
 
 function requireCentralSession(req, res, next) {
-  console.log("=== CENTRAL SESSION CHECK ===");
-  console.log("COOKIE RECEBIDO:", req.headers.cookie);
   const session = centralReadSession(req);
-  console.log("SESSION LIDA:", session);
   if (!session) return res.status(401).json({ok:false, erro:"Sessão do assinante inválida ou expirada."});
   req.centralSession = session;
   next();
@@ -2561,10 +2558,7 @@ app.post("/api/mikrotik/cliente-profile", async (req, res) => {
    Bloquear = profile BLOQUEADO, disabled=no.
    Liberar/Confiança/Pagamento = profile do cadastro, disabled=no.
 ============================================================ */
-app.post("/api/mikrotik/cliente-acao", requireCentralSession, async (req, res) {
-  console.log("=== CLIENTE ACAO ===");
-  console.log("SESSION:", req.centralSession);
-  console.log("BODY:", req.body);
+app.post("/api/mikrotik/cliente-acao", requireCentralSession, async (req, res) => {
   const normalizar = (v) => String(v || "")
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
