@@ -334,7 +334,7 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
 const TOKEN = process.env.PANEL_TOKEN || "fibra2026";
-const SESSION_SECRET = String(process.env.SESSION_SECRET || "").trim();
+const SESSION_SECRET = String(process.env.SESSION_SECRET || process.env.CRON_SECRET || "").trim();
 const SESSION_COOKIE = "fibrahub_session";
 const SESSION_TTL_SECONDS = 12 * 60 * 60;
 
@@ -365,6 +365,10 @@ function readSession(req) {
     if (!token || !token.includes(".")) return null;
     const [body, sig] = token.split(".");
     const expected = crypto.createHmac("sha256", SESSION_SECRET).update(body).digest("base64url");
+    console.log("BODY TAMANHO:", body.length);
+    console.log("SIG TAMANHO:", sig.length);
+    console.log("SIG RECEBIDA:", sig);
+    console.log("SIG CALCULADA:", expected);
     const a = Buffer.from(sig); const b = Buffer.from(expected);
     if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
     const payload = JSON.parse(Buffer.from(body, "base64url").toString("utf8"));
@@ -880,11 +884,24 @@ function centralSignSession(payload) {
 
 function centralReadSession(req) {
   try {
-    if (!SESSION_SECRET) return null;
+    console.log("=== DEBUG SESSION ===");
+    console.log("SECRET EXISTE:", !!SESSION_SECRET);
     const token = parseCookies(req)[CENTRAL_SESSION_COOKIE];
-    if (!token || !token.includes(".")) return null;
+    console.log("COOKIE EXISTE:", !!token);
+    if (!SESSION_SECRET) {
+      console.log("SEM SESSION_SECRET");
+      return null;
+    }
+    if (!token || !token.includes(".")) {
+      console.log("COOKIE INVALIDO");
+      return null;
+    }
     const [body, sig] = token.split(".");
     const expected = crypto.createHmac("sha256", SESSION_SECRET).update(body).digest("base64url");
+    console.log("BODY TAMANHO:", body.length);
+    console.log("SIG TAMANHO:", sig.length);
+    console.log("SIG RECEBIDA:", sig);
+    console.log("SIG CALCULADA:", expected);
     const a = Buffer.from(sig);
     const b = Buffer.from(expected);
     if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
