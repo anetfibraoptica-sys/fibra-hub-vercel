@@ -904,9 +904,26 @@ function centralReadSession(req) {
     console.log("SIG CALCULADA:", expected);
     const a = Buffer.from(sig);
     const b = Buffer.from(expected);
-    if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
+    if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+      console.log("ASSINATURA INVALIDA");
+      return null;
+    }
     const payload = JSON.parse(Buffer.from(body, "base64url").toString("utf8"));
-    if (payload.aud !== "central-assinante" || !payload.exp || Date.now() >= payload.exp * 1000) return null;
+    console.log("PAYLOAD:", JSON.stringify(payload));
+    console.log("AGORA:", Date.now());
+    console.log("EXP_MS:", payload.exp ? payload.exp * 1000 : null);
+    if (payload.aud !== "central-assinante") {
+      console.log("AUD INVALIDO:", payload.aud);
+      return null;
+    }
+    if (!payload.exp) {
+      console.log("SEM EXP");
+      return null;
+    }
+    if (Date.now() >= payload.exp * 1000) {
+      console.log("SESSAO EXPIRADA");
+      return null;
+    }
     return payload;
   } catch (_) {
     return null;
