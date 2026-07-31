@@ -334,7 +334,7 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
 const TOKEN = process.env.PANEL_TOKEN || "fibra2026";
-const SESSION_SECRET = String(process.env.SESSION_SECRET || process.env.CRON_SECRET || "").trim();
+const SESSION_SECRET = String(process.env.SESSION_SECRET || "").trim();
 const SESSION_COOKIE = "fibrahub_session";
 const SESSION_TTL_SECONDS = 12 * 60 * 60;
 
