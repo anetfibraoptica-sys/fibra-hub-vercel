@@ -79,6 +79,9 @@
       if(!id) return;
       els.trustButton.disabled = true;
       state.keepMessage = true;
+      // No mobile, leva o assinante até a área de retorno da operação.
+      // Mantém toda a lógica de autenticação e liberação intacta.
+      window.scrollTo({ top: 0, behavior: "smooth" });
       showMessage("⏳ Aguarde enquanto estamos realizando a liberação da sua conexão.", "info");
       try{
         await CentralAPI.solicitarConfianca(id);
