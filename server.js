@@ -416,7 +416,7 @@ app.use((req, res, next) => {
 app.use(express.static(path.join(__dirname, "public")));
 
 app.use("/api", (req, res, next) => {
-  const publicApi = req.path.startsWith("/auth/") || req.path.startsWith("/central/") || req.path === "/status" || req.path === "/login-teste" || req.path === "/login" || req.path.startsWith("/efi/webhook") || req.path.startsWith("/cron/") || req.path === "/update";
+  const publicApi = req.path.startsWith("/auth/") || req.path.startsWith("/central/") || req.path === "/status" || req.path === "/login-teste" || req.path === "/login" || req.path.startsWith("/efi/webhook") || req.path.startsWith("/cron/") || req.path === "/update" || req.path === "/mikrotik/cliente-acao";
   if (publicApi) return next();
   return requireSession(req, res, next);
 });
