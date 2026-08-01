@@ -166,7 +166,7 @@
   }
 
   async function backendRequest(path, options={}){
-    const response = await fetch(path, {
+    const response = await fetch(path, { credentials: "same-origin",
       credentials:"same-origin",
       cache:"no-store",
       ...options,
@@ -190,7 +190,7 @@
     ensureDirectConfig();
     const query = new URLSearchParams(params);
     const url = `${SUPABASE_URL}/rest/v1/${table}${query.toString() ? `?${query}` : ""}`;
-    const response = await fetch(url, { method:options.method || "GET",
+    const response = await fetch(url, { credentials: "include", method:options.method || "GET",
       cache:"no-store",
       headers:{
         apikey:SUPABASE_KEY,
@@ -342,14 +342,21 @@ async function directStatus(){
   }
 
   async function solicitarConfianca(clienteId){
-    const id = String(clienteId || "").trim();
-    if(!id) throw new Error("Ponto de acesso não identificado.");
+    const me = await directMe();
+    const cliente = me?.assinante || {};
+    const ponto = Array.isArray(cliente.pontos) ? (cliente.pontos[0] || {}) : {};
+    const body = {
+      servidor: String(ponto.servidor || cliente.servidor || cliente.servidorId || cliente.mikrotik || cliente.mikrotikServidor || cliente.router || ""),
+      login: String(ponto.loginPppoe || cliente.loginPppoe || cliente.login_pppoe || cliente.login || ""),
+      acao: "confianca",
+      dias: 1,
+      profile: String(ponto.profile || cliente.profile || ""),
+      clienteId: String(clienteId || ponto.id || cliente.id || "")
+    };
 
-    // A Central envia somente o ID. Servidor, login e profile são obtidos
-    // pelo backend a partir da sessão CPF, evitando manipulação no navegador.
-    const resp = await fetch("/api/central/confianca", { credentials: "include", method: "POST",
+    const resp = await fetch("/api/mikrotik/cliente-acao", { credentials: "include", method: "POST",
       headers: {"Content-Type":"application/json"},
-      body: JSON.stringify({clienteId:id})
+      body: JSON.stringify(body)
     });
 
     const json = await resp.json().catch(()=>({}));

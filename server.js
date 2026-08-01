@@ -1182,44 +1182,6 @@ app.get("/api/central/boletos", requireCentralSession, async (req, res) => {
   }
 });
 
-
-
-app.post("/api/central/confianca", requireCentralSession, async (req, res) => {
-  try {
-    const clienteId = String(req.body?.clienteId || req.body?.cliente_id || "").trim();
-    if (!clienteId) return res.status(400).json({ok:false, erro:"Ponto de acesso não identificado."});
-
-    const cliente = await centralClientById(clienteId);
-    if (!cliente) return res.status(404).json({ok:false, erro:"Ponto de acesso não encontrado."});
-
-    const documentoCliente = centralDocumentFromClient(cliente);
-    if (!documentoCliente || documentoCliente !== req.centralSession.documento) {
-      return res.status(403).json({ok:false, erro:"Este ponto não pertence ao assinante autenticado."});
-    }
-
-    const status = String(cliente.status || centralDados(cliente).status || "").toLowerCase();
-    if (!status.includes("bloque")) {
-      return res.status(409).json({ok:false, erro:"A liberação em confiança está disponível somente para conexão bloqueada."});
-    }
-
-    const resultado = await executarClienteAcaoMikrotik({
-      clienteBanco: cliente,
-      clienteId: String(cliente.id),
-      servidor: servidorCliente(cliente),
-      login: loginPPPoECliente(cliente),
-      profileCadastro: perfilNormalCliente(cliente),
-      acao: "confianca",
-      dias: 1,
-      sincronizarBanco: true
-    });
-
-    return res.json(resultado);
-  } catch (error) {
-    console.error("Erro /api/central/confianca:", error);
-    return res.status(Number(error.status) || 500).json({ok:false, erro:error.message});
-  }
-});
-
 app.put("/api/central/contato", requireCentralSession, async (req, res) => {
   try {
     await centralEnsureTables();
@@ -2110,22 +2072,6 @@ app.put("/api/clientes/:id", async (req, res) => {
   }
 });
 
-
-
-async function acaoPPPoECliente(cliente, acao) {
-  const acaoNormalizada = String(acao || "").toLowerCase() === "desbloquear" ? "liberar" : String(acao || "").toLowerCase();
-  return executarClienteAcaoMikrotik({
-    clienteBanco: cliente,
-    clienteId: String(cliente?.id || ""),
-    servidor: servidorCliente(cliente),
-    login: loginPPPoECliente(cliente),
-    profileCadastro: perfilNormalCliente(cliente),
-    acao: acaoNormalizada,
-    dias: 1,
-    sincronizarBanco: false
-  });
-}
-
 app.post("/api/clientes/:id/bloquear", async (req, res) => {
   try {
     const r = await pool.query("SELECT * FROM clientes WHERE id=$1", [req.params.id]);
@@ -2612,209 +2558,234 @@ app.post("/api/mikrotik/cliente-profile", async (req, res) => {
    Bloquear = profile BLOQUEADO, disabled=no.
    Liberar/Confiança/Pagamento = profile do cadastro, disabled=no.
 ============================================================ */
-function erroHttp(status, mensagem) {
-  const error = new Error(mensagem);
-  error.status = status;
-  return error;
-}
-
-function normalizarMikrotik(value) {
-  return String(value || "")
+app.post("/api/mikrotik/cliente-acao", requireCentralSession, async (req, res) => {
+  const normalizar = (v) => String(v || "")
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .trim();
-}
 
-function perfilNormalCliente(cliente, fallback="") {
-  const dados = dadosClienteObjeto(cliente);
-  const atual = String(cliente?.profile || "").trim();
-  const informado = String(fallback || "").trim();
-  return String(
-    (informado && informado.toUpperCase() !== "BLOQUEADO" ? informado : "") ||
-    dados.profileNormal || dados.profile_normal ||
-    (atual && atual.toUpperCase() !== "BLOQUEADO" ? atual : "") ||
-    cliente?.plano || dados.profile || dados.perfil || dados.plano || ""
-  ).trim();
-}
-
-async function derrubarSessaoMikrotik(cfg, login) {
-  try {
-    const resposta = await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
-      "/ppp/active/print", "?name=" + login
-    ]], 15000);
-    for (const active of parseRouterosRows(resposta)) {
-      if (!active?.[".id"]) continue;
-      await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
-        "/ppp/active/remove", "=.id=" + active[".id"]
+  async function derrubarSessao(cfg, login) {
+    try {
+      const activeResp = await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+        "/ppp/active/print",
+        "?name=" + login
       ]], 15000);
+
+      const activeRows = parseRouterosRows(activeResp);
+
+      for (const active of activeRows) {
+        if (active && active[".id"]) {
+          await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+            "/ppp/active/remove",
+            "=.id=" + active[".id"]
+          ]], 15000);
+        }
+      }
+    } catch (e) {
+      console.error("Erro ao derrubar sessão ativa:", e.message);
     }
-  } catch (error) {
-    console.error("Erro ao derrubar sessão ativa:", error.message);
   }
-}
 
-async function garantirProfileBloqueadoMikrotik(cfg) {
-  const resposta = await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [["/ppp/profile/print"]], 15000);
-  const existe = parseRouterosRows(resposta).some(profile => normalizarMikrotik(profile.name) === "bloqueado");
-  if (existe) return;
-  await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
-    "/ppp/profile/add", "=name=BLOQUEADO", "=comment=CRIADO PELO FIBRA+ HUB"
-  ]], 15000);
-}
+  async function garantirProfileBloqueado(cfg) {
+    const profilesResp = await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [["/ppp/profile/print"]], 15000);
+    const profiles = parseRouterosRows(profilesResp);
+    const existe = profiles.some((p) => normalizar(p.name) === "bloqueado");
 
-async function profileExisteMikrotik(cfg, profile) {
-  const resposta = await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
-    "/ppp/profile/print", "?name=" + profile
-  ]], 15000);
-  return parseRouterosRows(resposta).some(item => String(item.name || "").trim() === String(profile || "").trim());
-}
+    if (existe) return;
 
-async function executarClienteAcaoMikrotik(opcoes={}) {
-  let servidor = String(opcoes.servidor || "").trim();
-  let login = String(opcoes.login || "").trim();
-  const acao = String(opcoes.acao || "").trim().toLowerCase();
-  const dias = Number(opcoes.dias || 0);
-  const clienteId = String(opcoes.clienteId || opcoes.cliente_id || "").trim();
-  const sincronizarBanco = opcoes.sincronizarBanco !== false;
-  let profileCadastro = String(opcoes.profileCadastro || opcoes.profile || "").trim();
-  let clienteBanco = opcoes.clienteBanco || null;
+    await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+      "/ppp/profile/add",
+      "=name=BLOQUEADO",
+      "=comment=CRIADO PELO FIBRA+ HUB"
+    ]], 15000);
+  }
 
-  if (!clienteBanco) {
+  async function profileExiste(cfg, profile) {
+    const profilesResp = await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [["/ppp/profile/print"]], 15000);
+    const profiles = parseRouterosRows(profilesResp);
+    return profiles.some((p) => String(p.name || "").trim() === profile);
+  }
+
+  try {
+    const body = req.body || {};
+    const servidor = String(body.servidor || "").trim();
+    const login = String(body.login || "").trim();
+    const acao = String(body.acao || "").trim().toLowerCase();
+    const dias = Number(body.dias || 0);
+    let profileCadastro = String(body.profile || body.profileCadastro || "").trim();
+    const clienteId = String(body.clienteId || body.cliente_id || "").trim();
+    let clienteBanco = null;
     try {
       const consulta = clienteId
-        ? await pool.query("SELECT * FROM clientes WHERE id::text=$1 LIMIT 1", [clienteId])
-        : await pool.query(`SELECT * FROM clientes
-            WHERE login_pppoe=$1 OR pppoe=$1 OR dados->>'login'=$1 OR dados->>'loginPppoe'=$1
-            ORDER BY atualizado_em DESC NULLS LAST LIMIT 1`, [login]);
+        ? await pool.query("SELECT * FROM clientes WHERE id=$1 LIMIT 1", [clienteId])
+        : await pool.query("SELECT * FROM clientes WHERE login_pppoe=$1 OR dados->>'login'=$1 OR dados->>'loginPppoe'=$1 ORDER BY atualizado_em DESC NULLS LAST LIMIT 1", [login]);
       clienteBanco = consulta.rows[0] || null;
-    } catch (error) {
-      console.warn("Não foi possível consultar o cadastro para a ação MikroTik:", error.message);
+      const dadosBanco = clienteBanco && clienteBanco.dados && typeof clienteBanco.dados === "object" ? clienteBanco.dados : {};
+      if (acao !== "bloquear" && (!profileCadastro || String(profileCadastro).toUpperCase() === "BLOQUEADO")) {
+        profileCadastro = String(dadosBanco.profileNormal || dadosBanco.profile_normal || "").trim();
+      }
+    } catch (e) {
+      console.warn("Não foi possível consultar o cadastro para sincronizar o profile:", e.message);
     }
-  }
 
-  if (clienteBanco) {
-    servidor = servidor || servidorCliente(clienteBanco);
-    login = login || loginPPPoECliente(clienteBanco);
-    if (acao !== "bloquear") profileCadastro = perfilNormalCliente(clienteBanco, profileCadastro);
-  }
+    if (!servidor || servidor === "-" || servidor === "--" || normalizar(servidor).includes("sem servidor")) {
+      return res.status(400).json({ ok:false, erro:"Servidor não selecionado." });
+    }
 
-  if (!servidor || servidor === "-" || servidor === "--" || normalizarMikrotik(servidor).includes("sem servidor")) {
-    throw erroHttp(400, "Servidor não selecionado.");
-  }
-  if (!login) throw erroHttp(400, "Login PPPoE não informado.");
-  if (!["bloquear", "liberar", "confianca", "pagamento"].includes(acao)) {
-    throw erroHttp(400, "Ação inválida.");
-  }
+    if (!login) {
+      return res.status(400).json({ ok:false, erro:"Login PPPoE não informado." });
+    }
 
-  const cfg = servidorConfig(servidor);
-  if (!cfg.host || !cfg.user || !cfg.pass) {
-    throw erroHttp(500, "Variáveis do MikroTik não configuradas para " + (cfg.key || servidor));
-  }
+    if (!["bloquear", "liberar", "confianca", "pagamento"].includes(acao)) {
+      return res.status(400).json({ ok:false, erro:"Ação inválida." });
+    }
 
-  const secretResp = await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
-    "/ppp/secret/print", "?name=" + login
-  ]], 15000);
-  const secret = parseRouterosRows(secretResp)[0];
-  if (!secret?.[".id"]) throw erroHttp(404, "PPP Secret não encontrado no MikroTik para o login: " + login);
+    const cfg = servidorConfig(servidor);
 
-  let mensagem = "";
-  let confiancaAte = null;
+    if (!cfg.host || !cfg.user || !cfg.pass) {
+      return res.status(500).json({
+        ok:false,
+        erro:"Variáveis do MikroTik não configuradas para " + (cfg.key || servidor)
+      });
+    }
 
-  if (acao === "bloquear") {
-    await garantirProfileBloqueadoMikrotik(cfg);
-    await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
-      "/ppp/secret/set", "=.id=" + secret[".id"], "=disabled=no", "=profile=BLOQUEADO"
+    const secretResp = await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+      "/ppp/secret/print",
+      "?name=" + login
     ]], 15000);
-    await derrubarSessaoMikrotik(cfg, login);
-    mensagem = "Cliente bloqueado no MikroTik usando profile BLOQUEADO.";
-  } else {
-    if (!profileCadastro) {
-      throw erroHttp(400, acao === "confianca"
-        ? "PROFILE normal do cadastro não informado para confiança."
-        : "PROFILE normal do cadastro não informado para liberar o cliente.");
-    }
-    if (!(await profileExisteMikrotik(cfg, profileCadastro))) {
-      throw erroHttp(400, "PROFILE do cadastro não existe nesse MikroTik: " + profileCadastro);
-    }
-    if (acao === "confianca" && (!dias || dias <= 0)) {
-      throw erroHttp(400, "Informe a quantidade de dias para liberar em confiança.");
+
+    const secrets = parseRouterosRows(secretResp);
+    const secret = secrets[0];
+
+    if (!secret || !secret[".id"]) {
+      return res.status(404).json({
+        ok:false,
+        erro:"PPP Secret não encontrado no MikroTik para o login: " + login
+      });
     }
 
-    await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
-      "/ppp/secret/set", "=.id=" + secret[".id"], "=disabled=no", "=profile=" + profileCadastro
-    ]], 15000);
-    await derrubarSessaoMikrotik(cfg, login);
+    let mensagem = "";
+    let confiancaAte = null;
 
-    if (acao === "confianca") {
-      const dt = new Date();
-      dt.setDate(dt.getDate() + dias);
-      confiancaAte = dt.toISOString().slice(0, 10);
-      mensagem = "Cliente liberado em confiança por " + dias + " dia(s), até " + confiancaAte + ".";
-    } else {
+    if (acao === "bloquear") {
+      await garantirProfileBloqueado(cfg);
+
+      await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+        "/ppp/secret/set",
+        "=.id=" + secret[".id"],
+        "=disabled=no",
+        "=profile=BLOQUEADO"
+      ]], 15000);
+
+      await derrubarSessao(cfg, login);
+      mensagem = "Cliente bloqueado no MikroTik usando profile BLOQUEADO.";
+    }
+
+    if (acao === "liberar" || acao === "pagamento") {
+      if (!profileCadastro) {
+        return res.status(400).json({ ok:false, erro:"PROFILE do cadastro não informado para liberar o cliente." });
+      }
+
+      const existe = await profileExiste(cfg, profileCadastro);
+      if (!existe) {
+        return res.status(400).json({ ok:false, erro:"PROFILE do cadastro não existe nesse MikroTik: " + profileCadastro });
+      }
+
+      await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+        "/ppp/secret/set",
+        "=.id=" + secret[".id"],
+        "=disabled=no",
+        "=profile=" + profileCadastro
+      ]], 15000);
+
+      await derrubarSessao(cfg, login);
       mensagem = acao === "pagamento"
         ? "Pagamento confirmado. Cliente desbloqueado e voltou para o profile " + profileCadastro + "."
         : "Cliente liberado no MikroTik com profile " + profileCadastro + ".";
     }
-  }
 
-  const profileResultado = acao === "bloquear" ? "BLOQUEADO" : profileCadastro;
-  const profileNormal = clienteBanco
-    ? perfilNormalCliente(clienteBanco, profileCadastro)
-    : String(profileCadastro || "").trim();
+    if (acao === "confianca") {
+      if (!dias || dias <= 0) {
+        return res.status(400).json({ ok:false, erro:"Informe a quantidade de dias para liberar em confiança." });
+      }
 
-  if (sincronizarBanco && clienteBanco) {
-    const statusBanco = acao === "bloquear" ? "bloqueado" : (acao === "confianca" ? "confianca" : "ativo");
-    const complemento = {
-      status: statusBanco,
+      if (!profileCadastro) {
+        return res.status(400).json({ ok:false, erro:"PROFILE do cadastro não informado para confiança." });
+      }
+
+      const existe = await profileExiste(cfg, profileCadastro);
+      if (!existe) {
+        return res.status(400).json({ ok:false, erro:"PROFILE do cadastro não existe nesse MikroTik: " + profileCadastro });
+      }
+
+      await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+        "/ppp/secret/set",
+        "=.id=" + secret[".id"],
+        "=disabled=no",
+        "=profile=" + profileCadastro
+      ]], 15000);
+
+      await derrubarSessao(cfg, login);
+
+      const dt = new Date();
+      dt.setDate(dt.getDate() + dias);
+      confiancaAte = dt.toISOString().slice(0, 10);
+
+      mensagem = "Cliente liberado em confiança por " + dias + " dia(s), até " + confiancaAte + ".";
+    }
+
+    const profileResultado = acao === "bloquear" ? "BLOQUEADO" : profileCadastro;
+    let profileNormal = profileCadastro;
+    if (clienteBanco) {
+      const dadosBanco = clienteBanco.dados && typeof clienteBanco.dados === "object" ? clienteBanco.dados : {};
+      if (acao === "bloquear") {
+        const atual = String(clienteBanco.profile || "").trim();
+        profileNormal = String(
+          (atual && atual.toUpperCase() !== "BLOQUEADO" ? atual : "") ||
+          dadosBanco.profileNormal || dadosBanco.profile_normal || profileCadastro || ""
+        ).trim();
+      }
+      const statusBanco = acao === "bloquear" ? "bloqueado" : (acao === "confianca" ? "confianca" : "ativo");
+      const complemento = {
+        status:statusBanco,
+        profile:profileResultado,
+        perfil:profileResultado,
+        profileNormal:profileNormal,
+        profileAtualizadoEm:new Date().toISOString()
+      };
+      await pool.query(`
+        UPDATE clientes SET
+          status=$1,
+          profile=$2,
+          confianca_ate=$3,
+          dados=COALESCE(dados,'{}'::jsonb) || $4::jsonb,
+          atualizado_em=NOW()
+        WHERE id=$5
+      `, [statusBanco, profileResultado, confiancaAte || "", JSON.stringify(complemento), clienteBanco.id]);
+    }
+
+    return res.json({
+      ok:true,
+      acao,
+      login,
+      servidor: cfg.key || servidor,
       profile: profileResultado,
-      perfil: profileResultado,
       profileNormal,
-      profileAtualizadoEm: new Date().toISOString()
-    };
-    await pool.query(`
-      UPDATE clientes SET
-        status=$1,
-        profile=$2,
-        confianca_ate=$3,
-        dados=COALESCE(dados,'{}'::jsonb) || $4::jsonb,
-        atualizado_em=NOW()
-      WHERE id::text=$5
-    `, [statusBanco, profileResultado, confiancaAte || "", JSON.stringify(complemento), String(clienteBanco.id)]);
-  }
-
-  return {
-    ok:true,
-    acao,
-    login,
-    servidor:cfg.key || servidor,
-    profile:profileResultado,
-    profileNormal,
-    dias:acao === "confianca" ? dias : null,
-    confianca_ate:confiancaAte,
-    mensagem
-  };
-}
-
-// Rota exclusiva do painel administrativo. A autenticação e a permissão
-// MikroTik são aplicadas pelos middlewares globais de /api.
-app.post("/api/mikrotik/cliente-acao", async (req, res) => {
-  try {
-    const body = req.body || {};
-    const resultado = await executarClienteAcaoMikrotik({
-      servidor:body.servidor,
-      login:body.login,
-      acao:body.acao,
-      dias:body.dias,
-      profileCadastro:body.profile || body.profileCadastro,
-      clienteId:body.clienteId || body.cliente_id,
-      sincronizarBanco:true
+      dias: acao === "confianca" ? dias : null,
+      confianca_ate: confiancaAte,
+      mensagem
     });
-    return res.json(resultado);
-  } catch (error) {
-    console.error("Erro /api/mikrotik/cliente-acao:", error);
-    return res.status(Number(error.status) || 500).json({ok:false, erro:error.message});
+  } catch (err) {
+    console.error("Erro /api/mikrotik/cliente-acao:", err);
+    return res.status(500).json({ ok:false, erro:err.message });
   }
 });
+
+
+
+
+
+
 
 
 /* ============================================================

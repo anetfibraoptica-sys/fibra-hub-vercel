@@ -1,6 +1,6 @@
 {
   "name": "fibra-hub-2-servidores",
-  "version": "12.1.0",
+  "version": "12.0.0",
   "description": "Fibra+ Hub com Central do Assinante conectada ao Supabase por CPF",
   "main": "server.js",
   "scripts": {

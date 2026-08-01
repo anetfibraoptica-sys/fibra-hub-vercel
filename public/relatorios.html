@@ -109,6 +109,7 @@ async function carregarRelatorios(){
  document.getElementById('diagSemPlano').textContent=semPlano;
  document.getElementById('diagSemDescricao').textContent=semDescricao;
  document.getElementById('ultimaAtualizacao').textContent='Atualizado: '+new Date().toLocaleString('pt-BR')+' | Clientes consultados: '+clientes.length;
+ }
  }catch(e){console.error(e);}
 }
 carregarRelatorios();

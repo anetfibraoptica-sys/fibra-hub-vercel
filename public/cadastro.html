@@ -5722,7 +5722,7 @@ document.addEventListener("DOMContentLoaded", function(){
 
 <script id="fibra-v525-plano-valor-auto">
 (function(){
- async function atualizarValorPlanoResumo(){
+ async async function atualizarValorPlanoResumo(){
    try{
     const planoEl = document.getElementById('cadPlano') || document.getElementById('plano');
     if(!planoEl) return;
@@ -5756,7 +5756,7 @@ document.addEventListener("DOMContentLoaded", function(){
 <script>
 /* v53.6 - Corrige valor do plano na aba Planos sem alterar layout */
 (function(){
-  async function atualizarValorPlanoResumo(){
+  function atualizarValorPlanoResumo(){
     try{
       const c = typeof clienteDoCadastro === "function" ? clienteDoCadastro() : {};
       const planoObj = (c.plano_cobranca && typeof c.plano_cobranca === "object") ? c.plano_cobranca : {};
