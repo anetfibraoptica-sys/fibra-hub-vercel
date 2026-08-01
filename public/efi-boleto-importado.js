@@ -31,6 +31,17 @@
   function getValor(label){ return texto(getCampo(label)); }
   function setCampo(label, valor){ const c = getCampo(label); if(c){ c.textContent = valor || "—"; return true; } return false; }
 
+  let consultaEmAndamento = null;
+  let ultimaConsultaChave = "";
+  let ultimaConsultaEm = 0;
+
+  function chaveConsulta(dados){
+    return JSON.stringify([
+      dados.numero || "", dados.identificacao || "", dados.carne || "",
+      dados.cliente || "", dados.valor || "", dados.vencimento || ""
+    ]);
+  }
+
   function dadosBoletoAberto(){
     return {
       numero: getValor("Número") || getValor("Numero") || getValor("Nº"),
@@ -48,6 +59,11 @@
 
   async function consultarBoletoAbertoNaEfi(){
     const dados = dadosBoletoAberto();
+    const chave = chaveConsulta(dados);
+    const agora = Date.now();
+
+    if(consultaEmAndamento && chave === ultimaConsultaChave) return consultaEmAndamento;
+    if(chave === ultimaConsultaChave && agora - ultimaConsultaEm < 5000) return;
 
     // Boletos importados/pagos são apenas histórico.
     // Não consultar novamente na Efí.
@@ -67,32 +83,40 @@
     }
 
     setCampo("Situação na Efí", "Consultando Efí...");
+    ultimaConsultaChave = chave;
+    ultimaConsultaEm = agora;
 
-    try{
-      const resp = await fetch("/api/efi/boleto-importado/consultar", { credentials: "include", method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body: JSON.stringify(dados)
-      });
+    consultaEmAndamento = (async ()=>{
+      try{
+        const resp = await fetch("/api/efi/boleto-importado/consultar", { credentials: "include", method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body: JSON.stringify(dados)
+        });
 
-      const json = await resp.json();
-      if(!resp.ok || !json.ok){
+        const json = await resp.json();
+        if(!resp.ok || !json.ok){
+          setCampo("Situação na Efí", "Erro na consulta Efí");
+          return;
+        }
+
+        if(!json.encontrado && json.debug) console.warn("Efí boleto não localizado:", json.debug);
+
+        setCampo("Situação na Efí", json.situacao_efi || (json.encontrado ? "Registrado na Efí" : "Integrado na Efí - boleto não localizado"));
+        setCampo("Linha Digitável", json.linha_digitavel || "—");
+        setCampo("Pix Copia e Cola", json.pix_copia_cola || "—");
+
+        const btn2via = Array.from(document.querySelectorAll("button,a")).find(b => norm(b.textContent).includes("segunda via"));
+        if(btn2via && json.link_boleto){
+          btn2via.onclick = function(e){ e.preventDefault(); window.open(json.link_boleto, "_blank"); };
+        }
+      }catch(e){
         setCampo("Situação na Efí", "Erro na consulta Efí");
-        return;
+      }finally{
+        consultaEmAndamento = null;
       }
+    })();
 
-      if(!json.encontrado && json.debug) console.warn("Efí boleto não localizado:", json.debug);
-
-      setCampo("Situação na Efí", json.situacao_efi || (json.encontrado ? "Registrado na Efí" : "Integrado na Efí - boleto não localizado"));
-      setCampo("Linha Digitável", json.linha_digitavel || "—");
-      setCampo("Pix Copia e Cola", json.pix_copia_cola || "—");
-
-      const btn2via = Array.from(document.querySelectorAll("button,a")).find(b => norm(b.textContent).includes("segunda via"));
-      if(btn2via && json.link_boleto){
-        btn2via.onclick = function(e){ e.preventDefault(); window.open(json.link_boleto, "_blank"); };
-      }
-    }catch(e){
-      setCampo("Situação na Efí", "Erro na consulta Efí");
-    }
+    return consultaEmAndamento;
   }
 
 

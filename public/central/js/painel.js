@@ -75,7 +75,8 @@
     document.addEventListener("click", handleModalCopy);
 
     els.trustButton.addEventListener("click", async ()=>{
-      const id = state.assinante?.id || state.pontos[0]?.id;
+      const pontoBloqueado = state.pontos.find(point=>normalize(point.status).includes("bloque"));
+      const id = pontoBloqueado?.id || state.pontos[0]?.id;
       if(!id) return;
       els.trustButton.disabled = true;
       state.keepMessage = true;
@@ -164,7 +165,9 @@
     const inactive = statuses.length > 0 && statuses.every(status=>status.includes("inativ") || status.includes("cancel"));
     els.summaryStatus.textContent = blocked ? "Bloqueado" : inactive ? "Inativo" : "Ativo";
 
-    const firstData = state.pontos[0] || {};
+    const pontoConfianca = state.pontos.find(point=>normalize(point.status).includes("confianca"));
+    const pontoBloqueado = state.pontos.find(point=>normalize(point.status).includes("bloque"));
+    const firstData = pontoConfianca || pontoBloqueado || state.pontos[0] || {};
     const statusTexto = normalize(firstData.status || state.assinante?.status || els.summaryStatus.textContent);
     const confiancaAtiva = statusTexto.includes("confianca");
     const clienteAtivo = !blocked && !confiancaAtiva && !inactive;
