@@ -2558,7 +2558,7 @@ app.post("/api/mikrotik/cliente-profile", async (req, res) => {
    Bloquear = profile BLOQUEADO, disabled=no.
    Liberar/Confiança/Pagamento = profile do cadastro, disabled=no.
 ============================================================ */
-app.post("/api/mikrotik/cliente-acao", requireCentralSession, async (req, res) => {
+app.post("/api/mikrotik/cliente-acao", requireSession, async (req, res) => {
   const normalizar = (v) => String(v || "")
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
