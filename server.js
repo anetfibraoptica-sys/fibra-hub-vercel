@@ -2558,7 +2558,23 @@ app.post("/api/mikrotik/cliente-profile", async (req, res) => {
    Bloquear = profile BLOQUEADO, disabled=no.
    Liberar/Confiança/Pagamento = profile do cadastro, disabled=no.
 ============================================================ */
-app.post("/api/mikrotik/cliente-acao", requireSession, async (req, res) => {
+function requireFibraOuCentralSession(req, res, next) {
+  const central = centralReadSession(req);
+  if (central) {
+    req.centralSession = central;
+    return next();
+  }
+
+  const admin = readSession(req);
+  if (admin) {
+    req.session = admin;
+    return next();
+  }
+
+  return res.status(401).json({ok:false, erro:"Sessão inválida ou expirada."});
+}
+
+app.post("/api/mikrotik/cliente-acao", requireFibraOuCentralSession, async (req, res) => {
   const normalizar = (v) => String(v || "")
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
