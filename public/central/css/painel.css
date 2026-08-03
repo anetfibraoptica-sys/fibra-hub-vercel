@@ -191,3 +191,23 @@ button{cursor:pointer}
     font-size:13px;
   }
 }
+
+
+/* v79 - mobile: ações da fatura abaixo das informações */
+@media(max-width:720px){
+  .bill-card{
+    display:flex;
+    flex-direction:column;
+  }
+
+  .bill-actions{
+    order:10;
+    width:100%;
+    margin-top:18px;
+  }
+
+  .bill-main,
+  .bill-info{
+    order:1;
+  }
+}
