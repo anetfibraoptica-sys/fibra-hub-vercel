@@ -5756,7 +5756,7 @@ document.addEventListener("DOMContentLoaded", function(){
 <script>
 /* v53.6 - Corrige valor do plano na aba Planos sem alterar layout */
 (function(){
-  function atualizarValorPlanoResumo(){
+  async function atualizarValorPlanoResumo(){
     try{
       const c = typeof clienteDoCadastro === "function" ? clienteDoCadastro() : {};
       const planoObj = (c.plano_cobranca && typeof c.plano_cobranca === "object") ? c.plano_cobranca : {};
