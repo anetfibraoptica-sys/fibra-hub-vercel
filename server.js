@@ -2636,6 +2636,23 @@ app.post("/api/mikrotik/cliente-acao", requireFibraOuCentralSession, async (req,
         ? await pool.query("SELECT * FROM clientes WHERE id=$1 LIMIT 1", [clienteId])
         : await pool.query("SELECT * FROM clientes WHERE login_pppoe=$1 OR dados->>'login'=$1 OR dados->>'loginPppoe'=$1 ORDER BY atualizado_em DESC NULLS LAST LIMIT 1", [login]);
       clienteBanco = consulta.rows[0] || null;
+
+      // v83: reforço de sincronização de bloqueio.
+      // Alguns clientes são bloqueados no MikroTik mas não eram localizados
+      // pelo filtro porque o login recebido pode não ser exatamente igual ao cadastro.
+      if (!clienteBanco && login) {
+        const buscaExtra = await pool.query(`
+          SELECT *
+          FROM clientes
+          WHERE dados->>'login'=$1
+             OR dados->>'loginPppoe'=$1
+             OR dados->>'login_pppoe'=$1
+          ORDER BY atualizado_em DESC NULLS LAST
+          LIMIT 1
+        `, [login]);
+        clienteBanco = buscaExtra.rows[0] || null;
+      }
+
       const dadosBanco = clienteBanco && clienteBanco.dados && typeof clienteBanco.dados === "object" ? clienteBanco.dados : {};
       if (acao !== "bloquear" && (!profileCadastro || String(profileCadastro).toUpperCase() === "BLOQUEADO")) {
         profileCadastro = String(dadosBanco.profileNormal || dadosBanco.profile_normal || "").trim();
