@@ -130,3 +130,64 @@ button{cursor:pointer}
 #subscriber-document {
   opacity: 1;
 }
+
+
+/* v78 - correção mobile dos cards de faturas */
+@media(max-width:720px){
+  body{
+    overflow-x:hidden;
+  }
+
+  .bills-list{
+    width:100%;
+  }
+
+  .bill-card{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:14px;
+    padding:18px 14px;
+    overflow:hidden;
+  }
+
+  .bill-main{
+    grid-column:1;
+    width:100%;
+  }
+
+  .bill-copy h3{
+    white-space:normal;
+  }
+
+  .bill-point{
+    flex-wrap:wrap;
+  }
+
+  .bill-point span{
+    white-space:normal;
+  }
+
+  .bill-date,
+  .bill-value{
+    width:100%;
+  }
+
+  .bill-status{
+    grid-column:1;
+    justify-self:start;
+  }
+
+  .bill-actions{
+    grid-column:1;
+    width:100%;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+
+  .bill-action{
+    width:100%;
+    min-height:42px;
+    font-size:13px;
+  }
+}
