@@ -2797,9 +2797,9 @@ app.post("/api/mikrotik/cliente-acao", requireFibraOuCentralSession, async (req,
       `, [statusBanco, profileResultado, confiancaAte || "", JSON.stringify(complemento), clienteBanco.id]);
     }
 
-    // v87: garante sincronização do status mesmo quando o cadastro não foi localizado antes da ação.
-    // Alguns clientes chegam pelo login PPPoE com variações de campo.
-    if (acao === "bloquear" && !clienteBanco) {
+    // v88: garante sincronização do bloqueio sempre após sucesso no MikroTik.
+    // Não depende somente do carregamento inicial do cadastro.
+    if (acao === "bloquear") {
       try {
         await pool.query(`
           UPDATE clientes
