@@ -470,21 +470,13 @@ function atualizarContadores(clientes){
   }
 
   function ehBloqueado(c){
-    const s = texto(c, [
-      "status","situacao","statusCobranca","cli_status",
-      "estadoCliente","status_cliente","cobranca",
-      "statusMikrotik","status_mikrotik","mikrotikStatus",
-      "profile","perfil","pppoeProfile","pppoe_profile",
-      "acaoMikrotik","acao_mikrotik"
-    ]);
+    const s = texto(c, ["status","situacao","statusCobranca","cli_status","estadoCliente","status_cliente","cobranca"]);
+    const perfil = texto(c, ["profile","perfil","profileAtual","profile_atual","statusMikrotik","status_mikrotik","mikrotik_status"]);
     return (
       s.includes("bloque") ||
       s.includes("suspens") ||
       s.includes("cortado") ||
-      s.includes("isolado") ||
-      s.includes("blocked") ||
-      s.includes("block") ||
-      s.includes("inadimpl") ||
+      perfil.includes("bloque") ||
       temData(c, ["bloqueio","dataBloqueio","dtBloqueio","cli_bloqueado"])
     );
   }
