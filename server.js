@@ -2797,6 +2797,36 @@ app.post("/api/mikrotik/cliente-acao", requireFibraOuCentralSession, async (req,
       `, [statusBanco, profileResultado, confiancaAte || "", JSON.stringify(complemento), clienteBanco.id]);
     }
 
+    // v87: garante sincronização do status mesmo quando o cadastro não foi localizado antes da ação.
+    // Alguns clientes chegam pelo login PPPoE com variações de campo.
+    if (acao === "bloquear" && !clienteBanco) {
+      try {
+        await pool.query(`
+          UPDATE clientes
+          SET status=$1,
+              profile=$2,
+              dados=COALESCE(dados,'{}'::jsonb) || $3::jsonb,
+              atualizado_em=NOW()
+          WHERE login_pppoe=$4
+             OR dados->>'login'=$4
+             OR dados->>'loginPppoe'=$4
+             OR dados->>'login_pppoe'=$4
+        `, [
+          "bloqueado",
+          "BLOQUEADO",
+          JSON.stringify({
+            status:"bloqueado",
+            profile:"BLOQUEADO",
+            perfil:"BLOQUEADO",
+            profileAtualizadoEm:new Date().toISOString()
+          }),
+          login
+        ]);
+      } catch(e) {
+        console.warn("v87: falha na sincronização extra do bloqueio:", e.message);
+      }
+    }
+
     return res.json({
       ok:true,
       acao,
