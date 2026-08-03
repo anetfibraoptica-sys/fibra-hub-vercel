@@ -16,7 +16,7 @@ const FibraDB = {
       "Prefer": options.prefer || "return=representation"
     };
 
-    const res = await fetch(FIBRA_SUPABASE_URL + "/rest/v1/" + path, { credentials: "include", method: options.method || "GET",
+    const res = await fetch(FIBRA_SUPABASE_URL + "/rest/v1/" + path, { credentials: "omit", method: options.method || "GET",
       headers,
       body: options.body ? JSON.stringify(options.body) : undefined
     });
