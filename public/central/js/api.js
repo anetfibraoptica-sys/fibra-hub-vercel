@@ -75,7 +75,7 @@
       planoId:planId,
       plano:String(billingPlan?.descricao || "Plano de cobrança não vinculado"),
       profile:String(pick([row, data], ["profile","perfil"])),
-      valorMensal:numberValue(billingPlan?.valor),
+      valorMensal:numberValue(billingPlan?.valor ?? pick([row, data], ["valor_mensal","valorMensal","mensalidade","valorPlano","valor","valor_plano","valorPlanoCobranca"], 0)),
       diaVencimento:Number(pick([row, data], ["dia_vencimento","diaVencimento","vencimento"], 0)) || null,
       status:String(pick([row, data], ["status","situacao","statusCliente","status_cliente"], "ativo")),
       telefone1:String(pick([row, data], ["telefone1","telefone","celular","whatsapp","fone"])),
