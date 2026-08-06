@@ -48,7 +48,14 @@
 
     els.refresh.addEventListener("click", ()=>loadAll(true));
 
-    els.nextBillCard.addEventListener("click", openNextBillPayment);
+    els.nextBillCard.addEventListener("click", event=>{
+      const box = event.target.closest("[data-next-bill]");
+      if(box){
+        const bill = state.boletos.find(item=>billKey(item) === box.dataset.nextBill);
+        if(bill){ openBillModal(bill); return; }
+      }
+      openNextBillPayment();
+    });
     els.nextBillCard.addEventListener("keydown", event=>{
       if(event.key === "Enter" || event.key === " "){
         event.preventDefault();
@@ -199,20 +206,31 @@
     els.nextBillCard.setAttribute("aria-disabled", next ? "false" : "true");
     els.nextBillCard.setAttribute("aria-label", next ? `Abrir fatura com vencimento em ${dateBR(next.vencimento)}` : "Nenhuma fatura pendente");
     if(state.pontos.length > 1){
-      const pontosComVencimento = state.pontos.map((ponto, index)=>{
-        const plano = ponto.plano || ponto.nomePlano || ponto.plano_nome || "Plano";
-        const venc = ponto.vencimento || ponto.diaVencimento || "Não informado";
-        return `<div class="summary-point-due"><b>Ponto ${index + 1}</b><strong>${venc}</strong><span>${plano}</span></div>`;
-      }).join("");
-      els.summaryNextDue.textContent = "";
-      els.summaryNextDescription.innerHTML = `<div class="summary-points-due">${pontosComVencimento}</div>`;
-      els.summaryNextDescription.hidden = false;
+      els.nextBillCard.classList.add("multi-point-next");
+      els.nextBillCard.innerHTML = `<small>Próximos vencimentos</small><div class="next-points-grid">${
+        state.pontos.map((point,index)=>{
+          const pointBills = openBills.filter(bill=>{
+            const text = JSON.stringify(bill).toLowerCase();
+            const login = String(point.loginPppoe || "").toLowerCase();
+            return login && text.includes(login);
+          }).sort((a,b)=>parseDate(a.vencimento)-parseDate(b.vencimento));
+          const pointBill = pointBills[0];
+          return `<div class="next-point-box" data-next-bill="${escapeAttr(pointBill ? billKey(pointBill) : "")}">
+            <small>Ponto ${index+1}</small>
+            <strong>${pointBill ? dateBR(pointBill.vencimento) : "Sem vencimento"}</strong>
+            <span>${escapeHtml(point.plano || "Plano não informado")}</span>
+          </div>`;
+        }).join("")
+      }</div>`;
     }else{
-      els.summaryNextDue.textContent = next ? dateBR(next.vencimento) : "Tudo certo";
-      const nextDescription = next ? summaryBillDescription(next.descricao) : "Sem vencimentos pendentes";
-      els.summaryNextDescription.textContent = nextDescription;
-      els.summaryNextDescription.hidden = !nextDescription;
+      els.nextBillCard.classList.remove("multi-point-next");
+      els.nextBillCard.innerHTML = `<small>Próximo vencimento</small><strong id="summary-next-due">${next ? dateBR(next.vencimento) : "Tudo certo"}</strong><span id="summary-next-description">${next ? summaryBillDescription(next.descricao) : "Sem vencimentos pendentes"}</span><span id="summary-next-status" class="summary-status-overdue" hidden></span>`;
     }
+    const nextDescription = next ? summaryBillDescription(next.descricao) : "Sem vencimentos pendentes";
+    els.summaryNextDue = document.getElementById("summary-next-due") || els.summaryNextDue;
+    els.summaryNextDescription = document.getElementById("summary-next-description") || els.summaryNextDescription;
+    if(els.summaryNextDue) els.summaryNextDue.textContent = next ? dateBR(next.vencimento) : "Tudo certo";
+    if(els.summaryNextDescription){ els.summaryNextDescription.textContent = nextDescription; els.summaryNextDescription.hidden = !nextDescription; }
     if(els.summaryNextStatus){
       const overdue = next && isOverdue(next);
       els.summaryNextStatus.textContent = overdue ? "Vencido" : "";

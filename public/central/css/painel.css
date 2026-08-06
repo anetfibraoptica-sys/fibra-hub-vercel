@@ -212,8 +212,7 @@ button{cursor:pointer}
   }
 }
 
-/* v88 ajuste: vencimentos separados para clientes com multiplos pontos */
-.summary-points-due{display:flex;gap:10px;flex-wrap:wrap;width:100%;}
-.summary-point-due{display:flex;flex-direction:column;min-width:140px;flex:1;padding:8px;border-radius:10px;}
-.summary-point-due strong{font-size:1rem;}
-.summary-point-due span{font-size:.85rem;}
+.next-points-grid{display:flex;gap:12px;margin-top:12px;}
+.next-point-box{flex:1;border:1px solid rgba(0,0,0,.12);border-radius:12px;padding:12px;cursor:pointer;display:flex;flex-direction:column;gap:6px;}
+.next-point-box strong{font-size:1.15rem;}
+@media(max-width:700px){.next-points-grid{flex-direction:column;}}
