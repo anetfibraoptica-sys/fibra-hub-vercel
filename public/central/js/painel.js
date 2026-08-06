@@ -198,10 +198,21 @@
     els.nextBillCard.classList.toggle("disabled", !next);
     els.nextBillCard.setAttribute("aria-disabled", next ? "false" : "true");
     els.nextBillCard.setAttribute("aria-label", next ? `Abrir fatura com vencimento em ${dateBR(next.vencimento)}` : "Nenhuma fatura pendente");
-    els.summaryNextDue.textContent = next ? dateBR(next.vencimento) : "Tudo certo";
-    const nextDescription = next ? summaryBillDescription(next.descricao) : "Sem vencimentos pendentes";
-    els.summaryNextDescription.textContent = nextDescription;
-    els.summaryNextDescription.hidden = !nextDescription;
+    if(state.pontos.length > 1){
+      const pontosComVencimento = state.pontos.map((ponto, index)=>{
+        const plano = ponto.plano || ponto.nomePlano || ponto.plano_nome || "Plano";
+        const venc = ponto.vencimento || ponto.diaVencimento || "Não informado";
+        return `<div class="summary-point-due"><b>Ponto ${index + 1}</b><strong>${venc}</strong><span>${plano}</span></div>`;
+      }).join("");
+      els.summaryNextDue.textContent = "";
+      els.summaryNextDescription.innerHTML = `<div class="summary-points-due">${pontosComVencimento}</div>`;
+      els.summaryNextDescription.hidden = false;
+    }else{
+      els.summaryNextDue.textContent = next ? dateBR(next.vencimento) : "Tudo certo";
+      const nextDescription = next ? summaryBillDescription(next.descricao) : "Sem vencimentos pendentes";
+      els.summaryNextDescription.textContent = nextDescription;
+      els.summaryNextDescription.hidden = !nextDescription;
+    }
     if(els.summaryNextStatus){
       const overdue = next && isOverdue(next);
       els.summaryNextStatus.textContent = overdue ? "Vencido" : "";

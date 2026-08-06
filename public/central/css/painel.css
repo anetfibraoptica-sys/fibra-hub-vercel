@@ -211,3 +211,9 @@ button{cursor:pointer}
     order:1;
   }
 }
+
+/* v88 ajuste: vencimentos separados para clientes com multiplos pontos */
+.summary-points-due{display:flex;gap:10px;flex-wrap:wrap;width:100%;}
+.summary-point-due{display:flex;flex-direction:column;min-width:140px;flex:1;padding:8px;border-radius:10px;}
+.summary-point-due strong{font-size:1rem;}
+.summary-point-due span{font-size:.85rem;}
