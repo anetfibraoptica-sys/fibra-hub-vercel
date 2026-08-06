@@ -207,7 +207,7 @@
     els.nextBillCard.setAttribute("aria-label", next ? `Abrir fatura com vencimento em ${dateBR(next.vencimento)}` : "Nenhuma fatura pendente");
     if(state.pontos.length > 1){
       els.nextBillCard.classList.add("multi-point-next");
-      els.nextBillCard.innerHTML = `<small>Próximos vencimentos</small><div class="next-points-grid">${
+      els.nextBillCard.innerHTML = `<div class="next-points-grid">${
         state.pontos.map((point,index)=>{
           const pointBills = openBills.filter(bill=>{
             const text = JSON.stringify(bill).toLowerCase();

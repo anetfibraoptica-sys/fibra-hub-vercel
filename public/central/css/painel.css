@@ -216,3 +216,7 @@ button{cursor:pointer}
 .next-point-box{flex:1;border:1px solid rgba(0,0,0,.12);border-radius:12px;padding:12px;cursor:pointer;display:flex;flex-direction:column;gap:6px;}
 .next-point-box strong{font-size:1.15rem;}
 @media(max-width:700px){.next-points-grid{flex-direction:column;}}
+
+.next-bill-card.multi-point-next{background:transparent;border:0;padding:0;box-shadow:none;}
+.next-bill-card.multi-point-next .next-points-grid{margin-top:0;}
+.next-bill-card.multi-point-next .next-point-box{background:var(--card-bg, #fff);}
