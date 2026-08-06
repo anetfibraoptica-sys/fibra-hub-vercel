@@ -1158,7 +1158,24 @@ app.get("/api/central/me", requireCentralSession, async (req, res) => {
       centralClearSessionCookie(res);
       return res.status(404).json({ok:false, erro:"Cadastro do assinante não encontrado."});
     }
-    const points = clients.map(centralClientPublic);
+    const points = await Promise.all(clients.map(async (client) => {
+      const point = centralClientPublic(client);
+      const data = centralDados(client);
+      const planId = centralPick([client, data], ["plano_cobranca_id","planoCobrancaId","plano_id","planoId"], "");
+
+      // Mantém cada ponto independente: se o valor não veio no cadastro do ponto,
+      // busca somente o plano vinculado daquele ponto.
+      if (Number(point.valorMensal || 0) === 0 && planId) {
+        try {
+          const plan = await pool.query("SELECT descricao, valor FROM planos_cobranca WHERE id=$1 LIMIT 1", [String(planId)]);
+          if (plan.rows[0]) {
+            if (plan.rows[0].descricao) point.plano = String(plan.rows[0].descricao);
+            if (plan.rows[0].valor !== null && plan.rows[0].valor !== undefined) point.valorMensal = Number(plan.rows[0].valor) || 0;
+          }
+        } catch (_) {}
+      }
+      return point;
+    }));
     res.json({
       ok:true,
       assinante:{
