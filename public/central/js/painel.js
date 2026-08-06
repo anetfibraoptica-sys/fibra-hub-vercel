@@ -215,10 +215,12 @@
             return login && text.includes(login);
           }).sort((a,b)=>parseDate(a.vencimento)-parseDate(b.vencimento));
           const pointBill = pointBills[0];
-          return `<div class="next-point-box" data-next-bill="${escapeAttr(pointBill ? billKey(pointBill) : "")}">
-            <small>Ponto ${index+1}</small>
+          return `<div class="next-point-box next-point-card" data-next-bill="${escapeAttr(pointBill ? billKey(pointBill) : "")}">
+            <small>PRÓXIMA FATURA</small>
+            <b>PONTO ${index+1}</b>
             <strong>${pointBill ? dateBR(pointBill.vencimento) : "Sem vencimento"}</strong>
             <span>${escapeHtml(point.plano || "Plano não informado")}</span>
+            <div class="next-point-action">CLIQUE PARA VER O QR CODE</div>
           </div>`;
         }).join("")
       }</div>`;
