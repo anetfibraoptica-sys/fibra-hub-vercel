@@ -16,6 +16,7 @@
     summaryNextDue:document.getElementById("summary-next-due"),
     summaryNextDescription:document.getElementById("summary-next-description"),
     summaryNextStatus:document.getElementById("summary-next-status"),
+    nextBillArea:document.getElementById("next-bill-area"),
     nextBillCard:document.getElementById("next-bill-card"),
     summaryStatus:document.getElementById("summary-status"),
     trustCard:document.getElementById("trust-card"),
@@ -48,7 +49,7 @@
 
     els.refresh.addEventListener("click", ()=>loadAll(true));
 
-    els.nextBillCard.addEventListener("click", event=>{
+    els.nextBillArea.addEventListener("click", event=>{
       const box = event.target.closest("[data-next-bill]");
       if(box){
         const bill = state.boletos.find(item=>billKey(item) === box.dataset.nextBill);
@@ -56,7 +57,7 @@
       }
       openNextBillPayment();
     });
-    els.nextBillCard.addEventListener("keydown", event=>{
+    els.nextBillArea.addEventListener("keydown", event=>{
       if(event.key === "Enter" || event.key === " "){
         event.preventDefault();
         openNextBillPayment();
@@ -206,8 +207,7 @@
     els.nextBillCard.setAttribute("aria-disabled", next ? "false" : "true");
     els.nextBillCard.setAttribute("aria-label", next ? `Abrir fatura com vencimento em ${dateBR(next.vencimento)}` : "Nenhuma fatura pendente");
     if(state.pontos.length > 1){
-      els.nextBillCard.classList.add("multi-point-next");
-      els.nextBillCard.innerHTML = state.pontos.map((point,index)=>{
+      els.nextBillArea.innerHTML = state.pontos.map((point,index)=>{
           const pointBills = openBills.filter(bill=>{
             const text = JSON.stringify(bill).toLowerCase();
             const login = String(point.loginPppoe || "").toLowerCase();
@@ -222,8 +222,8 @@
           </article>`;
       }).join("");
     }else{
-      els.nextBillCard.classList.remove("multi-point-next");
-      els.nextBillCard.innerHTML = `<small>Próximo vencimento</small><strong id="summary-next-due">${next ? dateBR(next.vencimento) : "Tudo certo"}</strong><span id="summary-next-description">${next ? summaryBillDescription(next.descricao) : "Sem vencimentos pendentes"}</span><span id="summary-next-status" class="summary-status-overdue" hidden></span>`;
+      els.nextBillArea.innerHTML = `<article class="summary-card summary-card-link" id="next-bill-card" role="button" tabindex="0" aria-label="Abrir a próxima fatura"><small>Próximo vencimento</small><strong id="summary-next-due">${next ? dateBR(next.vencimento) : "Tudo certo"}</strong><span id="summary-next-description">${next ? summaryBillDescription(next.descricao) : "Sem vencimentos pendentes"}</span><span id="summary-next-status" class="summary-status-overdue" hidden></span></article>`;
+      els.nextBillCard = document.getElementById("next-bill-card");
     }
     const nextDescription = next ? summaryBillDescription(next.descricao) : "Sem vencimentos pendentes";
     els.summaryNextDue = document.getElementById("summary-next-due") || els.summaryNextDue;
