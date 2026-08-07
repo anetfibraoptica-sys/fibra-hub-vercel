@@ -93,7 +93,7 @@
       showMessage("⏳ Aguarde enquanto estamos realizando a liberação da sua conexão.", "info");
       try{
         await CentralAPI.solicitarConfianca(id);
-        showMessage("✅ Liberação em Confiança realizada com sucesso! Sua conexão foi liberada por 24 horas.", "success", true, id);
+        showMessage("✅ Liberação em Confiança realizada com sucesso! Sua conexão foi liberada por 24 horas.", "success");
         await loadAll(false);
       }catch(e){
         state.keepMessage = false;

@@ -6640,31 +6640,6 @@ io.on("connection",(socket)=>{
   socket.emit("mikrotik-update", geral());
 });
 
-
-// v88 CORRECAO: expira liberacao em confianca apos 24h
-async function expirarConfiancasVencidas() {
-  try {
-    const r = await pool.query(`
-      UPDATE clientes
-      SET
-        status='bloqueado',
-        profile='BLOQUEADO',
-        confianca_ate='',
-        atualizado_em=NOW()
-      WHERE status='confianca'
-        AND confianca_ate IS NOT NULL
-        AND confianca_ate <> ''
-        AND confianca_ate::timestamptz <= NOW()
-      RETURNING id, login_pppoe
-    `);
-    if (r.rows.length) {
-      console.log("Confianças expiradas:", r.rows.length);
-    }
-  } catch (e) {
-    console.error("Erro expirando confiancas:", e.message);
-  }
-}
-
 const PORT=process.env.PORT || 3000;
 
 // Na Vercel, o Express precisa ser exportado como função serverless.
@@ -6672,8 +6647,6 @@ const PORT=process.env.PORT || 3000;
 async function iniciarBancoFibra() {
   await initDb();
   await centralEnsureTables();
-  await expirarConfiancasVencidas();
-  setInterval(expirarConfiancasVencidas, 60 * 60 * 1000);
 }
 
 if (process.env.VERCEL) {
