@@ -207,23 +207,20 @@
     els.nextBillCard.setAttribute("aria-label", next ? `Abrir fatura com vencimento em ${dateBR(next.vencimento)}` : "Nenhuma fatura pendente");
     if(state.pontos.length > 1){
       els.nextBillCard.classList.add("multi-point-next");
-      els.nextBillCard.innerHTML = `<div class="next-points-grid">${
-        state.pontos.map((point,index)=>{
+      els.nextBillCard.innerHTML = state.pontos.map((point,index)=>{
           const pointBills = openBills.filter(bill=>{
             const text = JSON.stringify(bill).toLowerCase();
             const login = String(point.loginPppoe || "").toLowerCase();
             return login && text.includes(login);
           }).sort((a,b)=>parseDate(a.vencimento)-parseDate(b.vencimento));
           const pointBill = pointBills[0];
-          return `<div class="next-point-box next-point-card" data-next-bill="${escapeAttr(pointBill ? billKey(pointBill) : "")}">
+          return `<article class="summary-card summary-card-link next-point-card" data-next-bill="${escapeAttr(pointBill ? billKey(pointBill) : "")}" role="button" tabindex="0">
             <small>PRÓXIMA FATURA</small>
             <b>PONTO ${index+1}</b>
             <strong>${pointBill ? dateBR(pointBill.vencimento) : "Sem vencimento"}</strong>
             <span>${escapeHtml(point.plano || "Plano não informado")}</span>
-            <div class="next-point-action">CLIQUE PARA VER O QR CODE</div>
-          </div>`;
-        }).join("")
-      }</div>`;
+          </article>`;
+      }).join("");
     }else{
       els.nextBillCard.classList.remove("multi-point-next");
       els.nextBillCard.innerHTML = `<small>Próximo vencimento</small><strong id="summary-next-due">${next ? dateBR(next.vencimento) : "Tudo certo"}</strong><span id="summary-next-description">${next ? summaryBillDescription(next.descricao) : "Sem vencimentos pendentes"}</span><span id="summary-next-status" class="summary-status-overdue" hidden></span>`;

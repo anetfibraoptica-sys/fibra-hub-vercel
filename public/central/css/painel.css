@@ -230,3 +230,6 @@ button{cursor:pointer}
 .next-point-box strong{font-size:1.35rem;}
 .next-point-action{margin-top:auto;font-weight:800;}
 @media(max-width:700px){.next-bill-card.multi-point-next{grid-template-columns:1fr;}}
+
+.next-bill-multi-area{display:flex;gap:16px;align-items:stretch;}
+.next-bill-multi-area .next-point-card{cursor:pointer;min-width:180px;}
