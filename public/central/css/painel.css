@@ -252,3 +252,8 @@ button{cursor:pointer}
     flex-direction:column;
   }
 }
+
+/* Correcao: layout normal para cliente com 1 ponto */
+#next-bill-area:not(.multi-next-bills){display:block;}
+#next-bill-area.multi-next-bills{display:flex;gap:14px;align-items:stretch;flex-wrap:nowrap;}
+#next-bill-area.multi-next-bills .next-point-card{flex:1;min-width:0;}
