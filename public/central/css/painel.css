@@ -234,3 +234,21 @@ button{cursor:pointer}
 
 .next-bill-multi-area{display:flex;gap:16px;align-items:stretch;}
 .next-bill-multi-area .next-point-card{cursor:pointer;min-width:180px;}
+
+
+/* Ajuste: próximas faturas com múltiplos pontos no grid principal */
+#next-bill-area{
+  display:flex;
+  gap:14px;
+  align-items:stretch;
+  flex-wrap:nowrap;
+}
+#next-bill-area .next-point-card{
+  flex:1;
+  min-width:0;
+}
+@media(max-width:700px){
+  #next-bill-area{
+    flex-direction:column;
+  }
+}
