@@ -2127,7 +2127,7 @@ app.post("/api/clientes/:id/desbloquear", async (req, res) => {
 
 app.post("/api/clientes/:id/confianca", async (req, res) => {
   try {
-    const dias = Number(req.body.dias || 7);
+    const dias = Number(req.body.dias || 1);
     const ate = new Date(Date.now() + dias * 24 * 60 * 60 * 1000).toISOString();
 
     const r = await pool.query("SELECT * FROM clientes WHERE id=$1", [req.params.id]);
@@ -2780,7 +2780,7 @@ app.post("/api/mikrotik/cliente-acao", requireFibraOuCentralSession, async (req,
 
       const dt = new Date();
       dt.setDate(dt.getDate() + dias);
-      confiancaAte = dt.toISOString().slice(0, 10);
+      confiancaAte = dt.toISOString();
 
       mensagem = "Cliente liberado em confiança por " + dias + " dia(s), até " + confiancaAte + ".";
     }
