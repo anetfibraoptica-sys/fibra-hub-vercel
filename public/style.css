@@ -7216,3 +7216,73 @@ body{
 .central-access-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:18px}.central-access-actions button,.btn-central-secondary,.btn-central-danger{border:0;border-radius:9px;padding:10px 13px;font-weight:850}.central-access-actions>button:first-child{background:#e7a916;color:#17130a}.central-access-actions>button:first-child:hover{background:#f0b825}.btn-central-secondary{background:#eef1f5!important;color:#343b48!important;border:1px solid #d9dee7!important}.btn-central-danger{background:#fff0f0!important;color:#b73333!important;border:1px solid #ffd1d1!important}
 .central-access-message{margin-top:14px;padding:10px 12px;border-radius:9px;background:#f3f5f8;color:#4d5666;font-weight:750}.central-access-message.success{background:#e9f8ef;color:#16784a}.central-access-message.error{background:#fff0f0;color:#b73535}
 @media(max-width:720px){.central-access-heading{flex-direction:column}.central-access-grid{grid-template-columns:1fr}.central-password-row{flex-direction:column}.central-access-info{grid-template-columns:1fr}.central-access-actions{flex-direction:column}.central-access-actions button{width:100%}}
+
+
+/* ============================================================
+   v89 - SAIDA DE INTERNET POR CLIENTE (COLONIA)
+============================================================ */
+.fibra-rota-internet{
+  margin:14px 0 16px;
+  padding:12px;
+  border:1px solid rgba(148,163,184,.28);
+  border-radius:10px;
+  background:rgba(15,23,42,.16);
+}
+.fibra-rota-internet[hidden]{display:none !important}
+.fibra-rota-internet-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:9px;
+}
+.fibra-rota-internet-head > b{
+  font-size:11px;
+  letter-spacing:.05em;
+}
+.fibra-rota-internet-head > span{
+  font-size:11px;
+  font-weight:700;
+  opacity:.92;
+}
+.fibra-rota-internet-actions{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+}
+.resumo-receitanet-completo .fibra-rota-btn,
+.fibra-rota-btn{
+  min-height:34px;
+  border:1px solid rgba(148,163,184,.38);
+  border-radius:8px;
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.035em;
+  cursor:pointer;
+  transition:transform .12s ease, box-shadow .12s ease, opacity .12s ease;
+}
+.fibra-rota-btn.starlink{background:#172554;color:#dbeafe}
+.fibra-rota-btn.amazonet{background:#451a03;color:#ffedd5}
+.fibra-rota-btn.is-active{
+  border-color:rgba(255,255,255,.9);
+  box-shadow:0 0 0 2px rgba(255,255,255,.15), 0 6px 18px rgba(0,0,0,.16);
+  transform:translateY(-1px);
+}
+.fibra-rota-btn.is-active::before{content:"✓ ";font-weight:900}
+.fibra-rota-btn:disabled{opacity:.48;cursor:not-allowed;transform:none}
+.fibra-rota-internet small{
+  display:block;
+  margin-top:8px;
+  font-size:10px;
+  line-height:1.35;
+  opacity:.78;
+}
+body.light .fibra-rota-internet{
+  background:#f8fafc;
+  border-color:#dbe3ec;
+}
+body.light .fibra-rota-btn.starlink{background:#dbeafe;color:#1e3a8a}
+body.light .fibra-rota-btn.amazonet{background:#ffedd5;color:#9a3412}
+@media (max-width:700px){
+  .fibra-rota-internet-actions{grid-template-columns:1fr 1fr}
+}

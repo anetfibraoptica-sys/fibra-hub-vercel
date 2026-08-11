@@ -1022,6 +1022,18 @@ function fibraCadastroLimparStoragesSelecao(){
           </div>
         </div>
 
+        <div id="fibraRotaInternetBox" class="fibra-rota-internet" hidden>
+          <div class="fibra-rota-internet-head">
+            <b>SAÍDA DE INTERNET</b>
+            <span id="fibraRotaInternetStatus">Verificando...</span>
+          </div>
+          <div class="fibra-rota-internet-actions">
+            <button type="button" id="btnRotaStarlink" class="fibra-rota-btn starlink" onclick="fibraSelecionarRotaInternet('STARLINK')">STARLINK</button>
+            <button type="button" id="btnRotaAmazonet" class="fibra-rota-btn amazonet" onclick="fibraSelecionarRotaInternet('AMAZONET')">AMAZONET</button>
+          </div>
+          <small id="fibraRotaInternetInfo">Disponível somente para clientes da Colônia Antônio Aleixo.</small>
+        </div>
+
         <h4>OLTNET</h4>
         <span class="nao-identificado">Não Identificado</span>
       </div>
@@ -3224,6 +3236,191 @@ document.addEventListener("DOMContentLoaded", function(){
   document.addEventListener("change", function(e){
     if(e.target && (e.target.id === "cadServidorReceita" || e.target.id === "cadPop" || e.target.id === "cadLogin")){
       setTimeout(consultar, 200);
+    }
+  });
+})();
+</script>
+
+<script>
+/* ============================================================
+   SAIDA DE INTERNET POR CLIENTE - STARLINK / AMAZONET
+   Exibido somente para clientes da Colonia Antonio Aleixo.
+============================================================ */
+(function(){
+  let fibraRotaBusy = false;
+  let fibraRotaSeq = 0;
+
+  function norm(v){
+    return String(v || "")
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase().trim();
+  }
+  function el(id){ return document.getElementById(id); }
+  function val(id){ return (el(id)?.value || "").trim(); }
+  function txt(id){ return (el(id)?.textContent || "").trim(); }
+
+  function servidorAtual(){
+    return val("cadPop") || val("cadServidorReceita") || txt("resServidor") || "";
+  }
+  function loginAtual(){
+    return val("cadLogin") || txt("resLogin2") || txt("resLogin") || "";
+  }
+  function ehColonia(servidor){
+    const n = norm(servidor);
+    if(!n || n.includes("armando") || n.includes("zumbi")) return false;
+    return n === "colonia" || n.includes("colonia antonio aleixo") || n.includes("antonio aleixo");
+  }
+
+  function setBusy(busy){
+    fibraRotaBusy = !!busy;
+    [el("btnRotaStarlink"), el("btnRotaAmazonet")].forEach(function(btn){
+      if(btn) btn.disabled = fibraRotaBusy;
+    });
+  }
+
+  function setEstado(rota, opts){
+    opts = opts || {};
+    const bStar = el("btnRotaStarlink");
+    const bAmz = el("btnRotaAmazonet");
+    const status = el("fibraRotaInternetStatus");
+    const info = el("fibraRotaInternetInfo");
+
+    if(bStar) bStar.classList.toggle("is-active", rota === "STARLINK");
+    if(bAmz) bAmz.classList.toggle("is-active", rota === "AMAZONET");
+
+    if(status){
+      if(rota === "CONFLITO") status.textContent = "Conflito de listas";
+      else if(rota) status.textContent = "Preferência: " + rota;
+      else status.textContent = opts.online === false ? "Cliente offline" : "Não definido";
+    }
+
+    if(info){
+      if(opts.erro) info.textContent = opts.erro;
+      else if(opts.online === false) info.textContent = "O cliente precisa estar online para trocar o link.";
+      else if(opts.ip) info.textContent = "IP atual: " + opts.ip + (opts.explicita === false ? " • Starlink é a rota padrão" : "");
+      else info.textContent = "Escolha o link preferencial deste cliente.";
+    }
+
+    const desabilitarPorOffline = opts.online === false;
+    if(bStar) bStar.disabled = fibraRotaBusy || desabilitarPorOffline;
+    if(bAmz) bAmz.disabled = fibraRotaBusy || desabilitarPorOffline;
+  }
+
+  function atualizarVisibilidade(){
+    const box = el("fibraRotaInternetBox");
+    if(!box) return false;
+    const mostrar = ehColonia(servidorAtual());
+    box.hidden = !mostrar;
+    return mostrar;
+  }
+
+  async function consultarRota(){
+    if(!atualizarVisibilidade()) return;
+    const login = loginAtual();
+    const servidor = servidorAtual();
+    if(!login){
+      setEstado(null, {online:false, erro:"Informe o login PPPoE do cliente."});
+      return;
+    }
+
+    const seq = ++fibraRotaSeq;
+    setBusy(true);
+    const status = el("fibraRotaInternetStatus");
+    if(status) status.textContent = "Verificando...";
+
+    try{
+      const url = "/api/mikrotik/cliente-rota?servidor=" + encodeURIComponent(servidor) + "&login=" + encodeURIComponent(login);
+      const resp = await fetch(url, {cache:"no-store"});
+      const json = await resp.json();
+      if(seq !== fibraRotaSeq) return;
+
+      if(!resp.ok || !json.ok){
+        setEstado(null, {erro:json.erro || json.mensagem || "Falha ao consultar a rota."});
+        return;
+      }
+      setEstado(json.rota, json);
+    }catch(e){
+      if(seq === fibraRotaSeq) setEstado(null, {erro:"Erro ao consultar a rota: " + e.message});
+    }finally{
+      if(seq === fibraRotaSeq) setBusy(false);
+    }
+  }
+
+  async function selecionarRota(rota){
+    if(fibraRotaBusy) return false;
+    if(!atualizarVisibilidade()) return false;
+
+    const servidor = servidorAtual();
+    const login = loginAtual();
+    if(!login){
+      alert("Informe o login PPPoE do cliente.");
+      return false;
+    }
+
+    rota = String(rota || "").toUpperCase();
+    if(rota !== "STARLINK" && rota !== "AMAZONET") return false;
+
+    if(!confirm("Direcionar o cliente " + login + " para " + rota + "?")) return false;
+
+    setBusy(true);
+    const status = el("fibraRotaInternetStatus");
+    const info = el("fibraRotaInternetInfo");
+    if(status) status.textContent = "Alterando para " + rota + "...";
+    if(info) info.textContent = "Aplicando a rota e encerrando as conexões antigas deste IP...";
+
+    try{
+      const resp = await fetch("/api/mikrotik/cliente-rota", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          servidor,
+          login,
+          rota,
+          clienteId:window.__fibraClienteCadastro?.id || window.__fibraClienteSelecionado?.id || ""
+        })
+      });
+      const json = await resp.json();
+      if(!resp.ok || !json.ok){
+        throw new Error(json.erro || json.mensagem || "Falha ao alterar a rota.");
+      }
+
+      setEstado(json.rota, {online:true, ip:json.ip, explicita:true});
+      if(info){
+        info.textContent = "IP atual: " + json.ip + " • " + json.conexoesRemovidas + " conexão(ões) antiga(s) encerrada(s).";
+      }
+
+      if(typeof window.atualizarStatusRealCliente === "function"){
+        setTimeout(window.atualizarStatusRealCliente, 700);
+      }
+      return true;
+    }catch(e){
+      alert("Erro ao alterar link do cliente: " + e.message);
+      setEstado(null, {erro:e.message});
+      return false;
+    }finally{
+      setBusy(false);
+      setTimeout(consultarRota, 500);
+    }
+  }
+
+  window.fibraConsultarRotaInternet = consultarRota;
+  window.fibraSelecionarRotaInternet = selecionarRota;
+
+  document.addEventListener("DOMContentLoaded", function(){
+    atualizarVisibilidade();
+    setTimeout(consultarRota, 900);
+    setTimeout(consultarRota, 2400);
+  });
+
+  document.addEventListener("fibra:cliente-carregado", function(){
+    setTimeout(consultarRota, 350);
+  });
+
+  document.addEventListener("change", function(e){
+    if(!e.target) return;
+    if(["cadServidorReceita","cadPop","cadLogin"].includes(e.target.id)){
+      atualizarVisibilidade();
+      setTimeout(consultarRota, 250);
     }
   });
 })();

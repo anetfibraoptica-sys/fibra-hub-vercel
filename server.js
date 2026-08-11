@@ -2865,6 +2865,326 @@ app.post("/api/mikrotik/cliente-acao", requireFibraOuCentralSession, async (req,
 
 
 
+/* ============================================================
+   ROTA DE INTERNET POR CLIENTE - COLONIA ANTONIO ALEIXO
+   Usa o IP PPPoE ATUAL e as address-lists já preparadas na RB:
+   - CLIENTES-STARLINK
+   - CLIENTES-AMAZONET
+============================================================ */
+const FIBRA_ROTA_LISTAS = {
+  STARLINK: "CLIENTES-STARLINK",
+  AMAZONET: "CLIENTES-AMAZONET"
+};
+
+function fibraNormalizarTexto(v) {
+  return String(v || "")
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function fibraServidorEhColonia(nomeServidor) {
+  const n = fibraNormalizarTexto(nomeServidor);
+  if (!n) return false;
+  if (n.includes("armando") || n.includes("zumbi")) return false;
+  return n === "colonia" || n.includes("colonia antonio aleixo") || n.includes("antonio aleixo");
+}
+
+async function fibraSessaoPPPoEAtual(cfg, login) {
+  const resposta = await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+    "/ppp/active/print",
+    "?name=" + login,
+    "=.proplist=.id,name,address,uptime,caller-id"
+  ]], 15000);
+  const linhas = parseRouterosRows(resposta);
+  const alvo = fibraNormalizarTexto(login);
+  const sessao = linhas.find((r) => fibraNormalizarTexto(r.name) === alvo) || linhas[0] || null;
+  if (!sessao || !sessao.address) return null;
+  const ip = String(sessao.address || "").split("/")[0].trim();
+  if (net.isIP(ip) !== 4) return null;
+  return { ...sessao, ip };
+}
+
+async function fibraListarEntradasRota(cfg, lista, ip) {
+  const comando = [
+    "/ip/firewall/address-list/print",
+    "?list=" + lista,
+    "=.proplist=.id,list,address,comment,disabled"
+  ];
+  if (ip) comando.splice(2, 0, "?address=" + ip);
+  const resposta = await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [comando], 15000);
+  return parseRouterosRows(resposta);
+}
+
+async function fibraRemoverEntradasRota(cfg, login, ipAtual) {
+  const comentario = "FIBRA+ ROTA " + login;
+  const ids = new Set();
+
+  for (const lista of Object.values(FIBRA_ROTA_LISTAS)) {
+    const linhas = await fibraListarEntradasRota(cfg, lista, "");
+    for (const row of linhas) {
+      const mesmoIp = ipAtual && String(row.address || "").split("/")[0].trim() === ipAtual;
+      const mesmoLogin = String(row.comment || "").trim() === comentario;
+      if ((mesmoIp || mesmoLogin) && row[".id"]) ids.add(row[".id"]);
+    }
+  }
+
+  if (!ids.size) return 0;
+  const comandos = [...ids].map((id) => [
+    "/ip/firewall/address-list/remove",
+    "=.id=" + id
+  ]);
+  await fibraRouterosBatchStable(cfg, comandos, 20000);
+  return ids.size;
+}
+
+function fibraRouterosBatchStable(cfg, commands, timeoutMs = 20000) {
+  return new Promise((resolve, reject) => {
+    if (!Array.isArray(commands) || commands.length === 0) return resolve([]);
+
+    const socket = new net.Socket();
+    let buffer = Buffer.alloc(0);
+    let stage = "login";
+    let finished = false;
+    const doneTags = new Set();
+    const respostas = [];
+
+    const finish = (err) => {
+      if (finished) return;
+      finished = true;
+      clearTimeout(timer);
+      try { socket.destroy(); } catch (_) {}
+      if (err) reject(err);
+      else resolve(respostas);
+    };
+
+    const timer = setTimeout(() => finish(new Error("Timeout executando lote na API MikroTik")), timeoutMs);
+    socket.setTimeout(timeoutMs);
+    socket.on("timeout", () => finish(new Error("Timeout conectando na API MikroTik")));
+    socket.on("error", (err) => finish(err));
+
+    socket.on("data", (chunk) => {
+      if (finished) return;
+      buffer = Buffer.concat([buffer, chunk]);
+      const sentences = parseSentences(buffer);
+      if (!sentences.length) return;
+
+      if (stage === "login") {
+        const trap = sentences.find((sentence) => sentence.includes("!trap") || sentence.includes("!fatal"));
+        if (trap) return finish(new Error("Falha no login da API MikroTik: " + trap.join(" ")));
+        if (!sentences.some((sentence) => sentence.includes("!done"))) return;
+
+        stage = "commands";
+        buffer = Buffer.alloc(0);
+        commands.forEach((words, index) => {
+          socket.write(encodeSentence([...words, `.tag=fibra-rota-${index}`]));
+        });
+        return;
+      }
+
+      for (const sentence of sentences) {
+        const tagWord = sentence.find((word) => String(word).startsWith(".tag="));
+        const tag = tagWord ? String(tagWord).slice(5) : "";
+        if (!tag.startsWith("fibra-rota-")) continue;
+
+        if (sentence.includes("!trap") || sentence.includes("!fatal")) {
+          return finish(new Error("Erro retornado pelo MikroTik no lote: " + sentence.join(" ")));
+        }
+
+        respostas.push(sentence);
+        if (sentence.includes("!done")) doneTags.add(tag);
+      }
+
+      if (doneTags.size >= commands.length) finish(null);
+    });
+
+    socket.connect(Number(cfg.port || 8728), cfg.host, () => {
+      socket.write(encodeSentence(["/login", `=name=${cfg.user}`, `=password=${cfg.pass}`]));
+    });
+  });
+}
+
+async function fibraLimparConexoesDoIp(cfg, ip) {
+  // A API RouterOS não aceita regex em query words. Para não baixar a tabela
+  // completa com todos os campos, solicita somente .id e src-address e filtra
+  // localmente as conexões originadas pelo IP do assinante.
+  const resposta = await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+    "/ip/firewall/connection/print",
+    "=.proplist=.id,src-address"
+  ]], 20000);
+  const linhas = parseRouterosRows(resposta);
+  const ids = linhas
+    .filter((row) => {
+      const src = String(row["src-address"] || "").trim();
+      return src === ip || src.startsWith(ip + ":");
+    })
+    .map((row) => row[".id"])
+    .filter(Boolean);
+
+  if (!ids.length) return 0;
+
+  // Evita uma sentença excessivamente grande em clientes com muitas conexões.
+  const lote = 80;
+  for (let i = 0; i < ids.length; i += lote) {
+    const comandos = ids.slice(i, i + lote).map((id) => [
+      "/ip/firewall/connection/remove",
+      "=.id=" + id
+    ]);
+    await fibraRouterosBatchStable(cfg, comandos, 20000);
+  }
+  return ids.length;
+}
+
+async function fibraSalvarPreferenciaRotaBanco({ clienteId, login, rota, ip }) {
+  try {
+    let cliente = null;
+    if (clienteId) {
+      const q = await pool.query("SELECT id FROM clientes WHERE id=$1 LIMIT 1", [clienteId]);
+      cliente = q.rows[0] || null;
+    }
+    if (!cliente && login) {
+      const q = await pool.query(`
+        SELECT id FROM clientes
+        WHERE login_pppoe=$1
+           OR dados->>'login'=$1
+           OR dados->>'loginPppoe'=$1
+           OR dados->>'login_pppoe'=$1
+        ORDER BY atualizado_em DESC NULLS LAST
+        LIMIT 1
+      `, [login]);
+      cliente = q.rows[0] || null;
+    }
+    if (!cliente) return;
+
+    await pool.query(`
+      UPDATE clientes
+      SET dados=COALESCE(dados,'{}'::jsonb) || $1::jsonb,
+          atualizado_em=NOW()
+      WHERE id=$2
+    `, [JSON.stringify({
+      rotaInternet: rota,
+      rotaInternetIp: ip,
+      rotaInternetAtualizadoEm: new Date().toISOString()
+    }), cliente.id]);
+  } catch (e) {
+    console.warn("Não foi possível registrar a preferência de rota no banco:", e.message);
+  }
+}
+
+app.get("/api/mikrotik/cliente-rota", async (req, res) => {
+  try {
+    const servidor = String(req.query.servidor || "").trim();
+    const login = String(req.query.login || "").trim();
+
+    if (!fibraServidorEhColonia(servidor)) {
+      return res.status(400).json({ ok:false, erro:"A seleção de link está disponível somente para a Colônia Antônio Aleixo." });
+    }
+    if (!login) return res.status(400).json({ ok:false, erro:"Login PPPoE não informado." });
+
+    const cfg = servidorConfig(servidor);
+    if (cfg.key !== "colonia" || !cfg.host || !cfg.user || !cfg.pass) {
+      return res.status(500).json({ ok:false, erro:"MikroTik da Colônia não configurado no servidor do painel." });
+    }
+
+    const sessao = await fibraSessaoPPPoEAtual(cfg, login);
+    if (!sessao) {
+      return res.json({ ok:true, online:false, rota:null, ip:"", login, mensagem:"Cliente offline ou sem IP PPPoE ativo." });
+    }
+
+    const [star, amz] = await Promise.all([
+      fibraListarEntradasRota(cfg, FIBRA_ROTA_LISTAS.STARLINK, sessao.ip),
+      fibraListarEntradasRota(cfg, FIBRA_ROTA_LISTAS.AMAZONET, sessao.ip)
+    ]);
+
+    if (star.length && amz.length) {
+      return res.json({
+        ok:true, online:true, ip:sessao.ip, login,
+        rota:"CONFLITO", explicita:true,
+        mensagem:"O IP está nas duas listas de roteamento. Selecione STARLINK ou AMAZONET para corrigir."
+      });
+    }
+
+    const rota = amz.length ? "AMAZONET" : "STARLINK";
+    return res.json({
+      ok:true,
+      online:true,
+      ip:sessao.ip,
+      login,
+      rota,
+      explicita:Boolean(star.length || amz.length),
+      origem: amz.length ? FIBRA_ROTA_LISTAS.AMAZONET : (star.length ? FIBRA_ROTA_LISTAS.STARLINK : "ROTA PRINCIPAL DA RB")
+    });
+  } catch (err) {
+    console.error("Erro /api/mikrotik/cliente-rota GET:", err);
+    return res.status(500).json({ ok:false, erro:err.message });
+  }
+});
+
+app.post("/api/mikrotik/cliente-rota", async (req, res) => {
+  try {
+    const body = req.body || {};
+    const servidor = String(body.servidor || "").trim();
+    const login = String(body.login || "").trim();
+    const rota = String(body.rota || "").trim().toUpperCase();
+    const clienteId = String(body.clienteId || body.cliente_id || "").trim();
+
+    if (!fibraServidorEhColonia(servidor)) {
+      return res.status(400).json({ ok:false, erro:"A seleção de link está disponível somente para a Colônia Antônio Aleixo." });
+    }
+    if (!login) return res.status(400).json({ ok:false, erro:"Login PPPoE não informado." });
+    if (!Object.prototype.hasOwnProperty.call(FIBRA_ROTA_LISTAS, rota)) {
+      return res.status(400).json({ ok:false, erro:"Link inválido. Use STARLINK ou AMAZONET." });
+    }
+
+    const cfg = servidorConfig(servidor);
+    if (cfg.key !== "colonia" || !cfg.host || !cfg.user || !cfg.pass) {
+      return res.status(500).json({ ok:false, erro:"MikroTik da Colônia não configurado no servidor do painel." });
+    }
+
+    const sessao = await fibraSessaoPPPoEAtual(cfg, login);
+    if (!sessao) {
+      return res.status(409).json({ ok:false, erro:"Cliente está offline ou sem IP PPPoE ativo. A troca não foi aplicada." });
+    }
+
+    // Nunca permite o mesmo IP simultaneamente nas duas listas e também remove
+    // uma entrada antiga criada pelo Fibra+ para o mesmo login caso o IP tenha mudado.
+    const removidas = await fibraRemoverEntradasRota(cfg, login, sessao.ip);
+    const listaDestino = FIBRA_ROTA_LISTAS[rota];
+    const comentario = "FIBRA+ ROTA " + login;
+
+    await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+      "/ip/firewall/address-list/add",
+      "=list=" + listaDestino,
+      "=address=" + sessao.ip,
+      "=comment=" + comentario
+    ]], 15000);
+
+    const conexoesRemovidas = await fibraLimparConexoesDoIp(cfg, sessao.ip);
+
+    const confirmacao = await fibraListarEntradasRota(cfg, listaDestino, sessao.ip);
+    if (!confirmacao.length) {
+      throw new Error("A RB não confirmou o IP na lista " + listaDestino + ".");
+    }
+
+    await fibraSalvarPreferenciaRotaBanco({ clienteId, login, rota, ip:sessao.ip });
+
+    return res.json({
+      ok:true,
+      login,
+      ip:sessao.ip,
+      rota,
+      lista:listaDestino,
+      entradasRemovidas:removidas,
+      conexoesRemovidas,
+      mensagem:"Cliente " + login + " direcionado para " + rota + "."
+    });
+  } catch (err) {
+    console.error("Erro /api/mikrotik/cliente-rota POST:", err);
+    return res.status(500).json({ ok:false, erro:err.message });
+  }
+});
+
+
 
 
 
