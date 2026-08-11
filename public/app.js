@@ -212,6 +212,7 @@ async function carregarClienteDetalhes(){
 ============================================================ */
 (function(){
   let busy = false;
+  let consultando = false;
 
   function norm(v){
     return String(v || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
@@ -257,14 +258,28 @@ async function carregarClienteDetalhes(){
     if(bs) bs.classList.toggle("is-active", rota === "STARLINK");
     if(ba) ba.classList.toggle("is-active", rota === "AMAZONET");
     if(st){
-      if(rota === "CONFLITO") st.textContent="Conflito de listas";
-      else if(rota) st.textContent="Preferência: " + rota;
-      else st.textContent=j.online===false ? "Cliente offline" : "Não definido";
+      st.classList.remove("is-normal","is-contingencia","is-sem-rota");
+      if(rota === "CONFLITO"){
+        st.textContent="Conflito de listas";
+        st.classList.add("is-sem-rota");
+      }else if(j.online===false){
+        st.textContent="Cliente offline";
+      }else if(j.emUso){
+        st.textContent="Em uso: " + j.emUso + (j.contingencia ? " • contingência" : "");
+        st.classList.add(j.contingencia ? "is-contingencia" : "is-normal");
+      }else if(j.statusEmUso === "sem-rota-ativa"){
+        st.textContent="Sem rota ativa";
+        st.classList.add("is-sem-rota");
+      }else if(rota){
+        st.textContent="Uso atual indisponível";
+      }else{
+        st.textContent="Não definido";
+      }
     }
     if(inf){
       if(j.erro) inf.textContent=j.erro;
       else if(j.online===false) inf.textContent="O cliente precisa estar online para trocar o link.";
-      else if(j.ip) inf.textContent="IP atual: " + j.ip + (j.explicita===false ? " • Starlink é a rota padrão" : "");
+      else if(j.ip) inf.textContent="Preferência: " + (rota || "não definida") + " • IP atual: " + j.ip + (j.explicita===false ? " • Starlink é a rota padrão" : "");
       else inf.textContent="Escolha STARLINK ou AMAZONET.";
     }
     const off=j.online===false;
@@ -272,18 +287,21 @@ async function carregarClienteDetalhes(){
     if(ba) ba.disabled=busy||off;
   }
 
-  async function consultar(){
+  async function consultar(opcoes={}){
+    const silenciosa=Boolean(opcoes.silenciosa);
+    if(consultando || (busy && silenciosa)) return;
     if(!visibilidade()) return;
     const d=dados();
     if(!d.login){ estado(null,{erro:"Login PPPoE não identificado."}); return; }
-    setBusy(true);
+    consultando=true;
+    if(!silenciosa) setBusy(true);
     try{
       const r=await fetch("/api/mikrotik/cliente-rota?servidor="+encodeURIComponent(d.servidor)+"&login="+encodeURIComponent(d.login),{cache:"no-store"});
       const j=await r.json().catch(()=>({}));
       if(!r.ok || !j.ok) throw new Error(j.erro || j.mensagem || "Falha ao consultar a rota.");
       estado(j.rota,j);
     }catch(e){ estado(null,{erro:e.message}); }
-    finally{ setBusy(false); }
+    finally{ consultando=false; if(!silenciosa) setBusy(false); }
   }
 
   async function selecionar(rota){
@@ -304,7 +322,7 @@ async function carregarClienteDetalhes(){
       });
       const j=await r.json().catch(()=>({}));
       if(!r.ok || !j.ok) throw new Error(j.erro || j.mensagem || "Falha ao alterar a rota.");
-      estado(j.rota,{online:true,ip:j.ip,explicita:true});
+      estado(j.rota,{online:true,ip:j.ip,explicita:true,emUso:j.emUso,contingencia:j.contingencia,statusEmUso:j.statusEmUso});
       if(inf) inf.textContent="IP atual: " + j.ip + " • " + (j.conexoesRemovidas||0) + " conexão(ões) antiga(s) encerrada(s).";
       return true;
     }catch(e){ alert("Erro ao alterar link do cliente: " + e.message); estado(null,{erro:e.message}); return false; }
@@ -313,6 +331,11 @@ async function carregarClienteDetalhes(){
 
   window.fibraDetalhesConsultarRota=consultar;
   window.fibraDetalhesSelecionarRota=selecionar;
+
+  setInterval(function(){
+    if(document.visibilityState === "hidden" || !box()) return;
+    consultar({silenciosa:true});
+  }, 10000);
 })();
 
 async function fibraCentralRequest(url, options={}){

@@ -2876,6 +2876,11 @@ const FIBRA_ROTA_LISTAS = {
   AMAZONET: "CLIENTES-AMAZONET"
 };
 
+const FIBRA_ROTA_TABELAS = {
+  STARLINK: "CLIENTE-STARLINK",
+  AMAZONET: "CLIENTE-AMAZONET"
+};
+
 function fibraNormalizarTexto(v) {
   return String(v || "")
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
@@ -2914,6 +2919,64 @@ async function fibraListarEntradasRota(cfg, lista, ip) {
   if (ip) comando.splice(2, 0, "?address=" + ip);
   const resposta = await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [comando], 15000);
   return parseRouterosRows(resposta);
+}
+
+async function fibraListarRotasPadrao(cfg) {
+  const resposta = await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+    "/ip/route/print",
+    "?dst-address=0.0.0.0/0",
+    "=.proplist=.id,dst-address,routing-table,gateway,immediate-gw,distance,comment,active,inactive,disabled"
+  ]], 15000);
+  return parseRouterosRows(resposta);
+}
+
+function fibraRouterosVerdadeiro(valor) {
+  return ["true", "yes", "1"].includes(String(valor || "").toLowerCase());
+}
+
+function fibraIdentificarLinkDaRota(row) {
+  const gateway = String(row?.gateway || "").toLowerCase();
+  const imediato = String(row?.["immediate-gw"] || "").toLowerCase();
+  const comentario = fibraNormalizarTexto(row?.comment || "");
+
+  if (gateway.includes("208.67.222.222")) return "STARLINK";
+  if (gateway.includes("208.67.220.220")) return "AMAZONET";
+  if (imediato.includes("100.64.0.1") || imediato.includes("ether5")) return "STARLINK";
+  if (imediato.includes("192.168.1.1") || imediato.includes("ether2")) return "AMAZONET";
+  if (comentario.includes("backup amazonet")) return "AMAZONET";
+  if (comentario.includes("backup starlink")) return "STARLINK";
+  if (comentario.includes("amazonet")) return "AMAZONET";
+  if (comentario.includes("starlink")) return "STARLINK";
+  return null;
+}
+
+function fibraStatusLinkEmUso(rotas, preferencia, explicita) {
+  const tabela = explicita ? FIBRA_ROTA_TABELAS[preferencia] : "main";
+  if (!tabela || !Array.isArray(rotas)) {
+    return { emUso:null, contingencia:false, tabelaRoteamento:tabela || "" };
+  }
+
+  const candidatas = rotas.filter((row) => {
+    const tabelaRow = String(row["routing-table"] || "main").trim();
+    return tabelaRow === tabela && String(row["dst-address"] || "") === "0.0.0.0/0";
+  });
+  const ativas = candidatas.filter((row) => fibraRouterosVerdadeiro(row.active));
+  const alternativas = candidatas.filter((row) =>
+      !fibraRouterosVerdadeiro(row.disabled) &&
+      !fibraRouterosVerdadeiro(row.inactive) &&
+      Boolean(String(row["immediate-gw"] || "").trim())
+    );
+  // Ignora uma eventual rota dinâmica de terceiro link quando também existir
+  // uma rota ativa identificável do failover Starlink/Amazonet.
+  const ativa = ativas.find((row) => fibraIdentificarLinkDaRota(row)) || ativas[0] ||
+    alternativas.find((row) => fibraIdentificarLinkDaRota(row)) || alternativas[0];
+  const emUso = ativa ? fibraIdentificarLinkDaRota(ativa) : null;
+
+  return {
+    emUso,
+    contingencia:Boolean(emUso && preferencia && emUso !== preferencia),
+    tabelaRoteamento:tabela
+  };
 }
 
 async function fibraRemoverEntradasRota(cfg, login, ipAtual) {
@@ -3102,27 +3165,35 @@ app.get("/api/mikrotik/cliente-rota", async (req, res) => {
       return res.json({ ok:true, online:false, rota:null, ip:"", login, mensagem:"Cliente offline ou sem IP PPPoE ativo." });
     }
 
-    const [star, amz] = await Promise.all([
+    const [star, amz, resultadoRotas] = await Promise.all([
       fibraListarEntradasRota(cfg, FIBRA_ROTA_LISTAS.STARLINK, sessao.ip),
-      fibraListarEntradasRota(cfg, FIBRA_ROTA_LISTAS.AMAZONET, sessao.ip)
+      fibraListarEntradasRota(cfg, FIBRA_ROTA_LISTAS.AMAZONET, sessao.ip),
+      fibraListarRotasPadrao(cfg)
+        .then((rotas) => ({ rotas, erro:"" }))
+        .catch((erro) => ({ rotas:[], erro:erro.message }))
     ]);
 
     if (star.length && amz.length) {
       return res.json({
         ok:true, online:true, ip:sessao.ip, login,
         rota:"CONFLITO", explicita:true,
+        emUso:null, contingencia:false, statusEmUso:"conflito",
         mensagem:"O IP está nas duas listas de roteamento. Selecione STARLINK ou AMAZONET para corrigir."
       });
     }
 
     const rota = amz.length ? "AMAZONET" : "STARLINK";
+    const explicita = Boolean(star.length || amz.length);
+    const statusLink = fibraStatusLinkEmUso(resultadoRotas.rotas, rota, explicita);
     return res.json({
       ok:true,
       online:true,
       ip:sessao.ip,
       login,
       rota,
-      explicita:Boolean(star.length || amz.length),
+      explicita,
+      ...statusLink,
+      statusEmUso: statusLink.emUso ? "ok" : (resultadoRotas.erro ? "indisponivel" : "sem-rota-ativa"),
       origem: amz.length ? FIBRA_ROTA_LISTAS.AMAZONET : (star.length ? FIBRA_ROTA_LISTAS.STARLINK : "ROTA PRINCIPAL DA RB")
     });
   } catch (err) {
@@ -3177,6 +3248,11 @@ app.post("/api/mikrotik/cliente-rota", async (req, res) => {
       throw new Error("A RB não confirmou o IP na lista " + listaDestino + ".");
     }
 
+    const resultadoRotas = await fibraListarRotasPadrao(cfg)
+      .then((rotas) => ({ rotas, erro:"" }))
+      .catch((erro) => ({ rotas:[], erro:erro.message }));
+    const statusLink = fibraStatusLinkEmUso(resultadoRotas.rotas, rota, true);
+
     await fibraSalvarPreferenciaRotaBanco({ clienteId, login, rota, ip:sessao.ip });
 
     return res.json({
@@ -3184,6 +3260,8 @@ app.post("/api/mikrotik/cliente-rota", async (req, res) => {
       login,
       ip:sessao.ip,
       rota,
+      ...statusLink,
+      statusEmUso: statusLink.emUso ? "ok" : (resultadoRotas.erro ? "indisponivel" : "sem-rota-ativa"),
       lista:listaDestino,
       entradasRemovidas:removidas,
       conexoesRemovidas,

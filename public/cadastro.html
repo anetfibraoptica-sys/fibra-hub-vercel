@@ -9,7 +9,7 @@
 <script src="supabase-only.js"></script>
 <script src="00-fix-definitivo.js"></script>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Cadastro de Cliente - Fibra+ Hub</title><link rel="stylesheet" href="style.css?v=20260811-v93">
+  <title>Cadastro de Cliente - Fibra+ Hub</title><link rel="stylesheet" href="style.css?v=20260811-v97">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -520,6 +520,9 @@
 .fibra-rota-internet-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
 .fibra-rota-internet-head b{font-size:12px;letter-spacing:.04em}
 #fibraRotaInternetStatus{font-size:11px;opacity:.8;text-align:right}
+#fibraRotaInternetStatus.is-normal{color:#22c55e;opacity:1}
+#fibraRotaInternetStatus.is-contingencia{color:#f59e0b;opacity:1}
+#fibraRotaInternetStatus.is-sem-rota{color:#ef4444;opacity:1}
 .fibra-rota-internet-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .fibra-rota-btn{display:flex;align-items:center;justify-content:center;width:100%;min-height:38px;margin:0;padding:9px 12px;border:1px solid rgba(148,163,184,.35);border-radius:8px;background:transparent;color:inherit;font-weight:800;cursor:pointer}
 .fibra-rota-btn:hover{filter:brightness(1.08)}
@@ -1205,7 +1208,7 @@ function consultarCepContato(){
 </script>
 <script src="supabase-client.js"></script>
 <script src="auth-painel.js"></script>
-<script src="app.js?v=20260811-v95"></script>
+<script src="app.js?v=20260811-v97"></script>
 
 
 
@@ -3266,6 +3269,8 @@ document.addEventListener("DOMContentLoaded", function(){
 ============================================================ */
 (function(){
   let fibraRotaBusy = false;
+  let fibraRotaConsultando = false;
+  let fibraRotaUltimaConsulta = 0;
   let fibraRotaSeq = 0;
 
   function norm(v){
@@ -3334,15 +3339,29 @@ document.addEventListener("DOMContentLoaded", function(){
     if(bAmz) bAmz.classList.toggle("is-active", rota === "AMAZONET");
 
     if(status){
-      if(rota === "CONFLITO") status.textContent = "Conflito de listas";
-      else if(rota) status.textContent = "Preferência: " + rota;
-      else status.textContent = opts.online === false ? "Cliente offline" : "Não definido";
+      status.classList.remove("is-normal","is-contingencia","is-sem-rota");
+      if(rota === "CONFLITO"){
+        status.textContent = "Conflito de listas";
+        status.classList.add("is-sem-rota");
+      }else if(opts.online === false){
+        status.textContent = "Cliente offline";
+      }else if(opts.emUso){
+        status.textContent = "Em uso: " + opts.emUso + (opts.contingencia ? " • contingência" : "");
+        status.classList.add(opts.contingencia ? "is-contingencia" : "is-normal");
+      }else if(opts.statusEmUso === "sem-rota-ativa"){
+        status.textContent = "Sem rota ativa";
+        status.classList.add("is-sem-rota");
+      }else if(rota){
+        status.textContent = "Uso atual indisponível";
+      }else{
+        status.textContent = "Não definido";
+      }
     }
 
     if(info){
       if(opts.erro) info.textContent = opts.erro;
       else if(opts.online === false) info.textContent = "O cliente precisa estar online para trocar o link.";
-      else if(opts.ip) info.textContent = "IP atual: " + opts.ip + (opts.explicita === false ? " • Starlink é a rota padrão" : "");
+      else if(opts.ip) info.textContent = "Preferência: " + (rota || "não definida") + " • IP atual: " + opts.ip + (opts.explicita === false ? " • Starlink é a rota padrão" : "");
       else info.textContent = "Escolha o link preferencial deste cliente.";
     }
 
@@ -3386,7 +3405,10 @@ document.addEventListener("DOMContentLoaded", function(){
     return true;
   }
 
-  async function consultarRota(){
+  async function consultarRota(opcoes){
+    opcoes = opcoes || {};
+    const silenciosa = Boolean(opcoes.silenciosa);
+    if(fibraRotaConsultando || (fibraRotaBusy && silenciosa)) return;
     if(!atualizarVisibilidade()) return;
     const login = loginAtual();
     const servidor = servidorAtual();
@@ -3396,9 +3418,10 @@ document.addEventListener("DOMContentLoaded", function(){
     }
 
     const seq = ++fibraRotaSeq;
-    setBusy(true);
+    fibraRotaConsultando = true;
+    if(!silenciosa) setBusy(true);
     const status = el("fibraRotaInternetStatus");
-    if(status) status.textContent = "Verificando...";
+    if(status && !silenciosa) status.textContent = "Verificando...";
 
     try{
       const url = "/api/mikrotik/cliente-rota?servidor=" + encodeURIComponent(servidor) + "&login=" + encodeURIComponent(login);
@@ -3414,7 +3437,9 @@ document.addEventListener("DOMContentLoaded", function(){
     }catch(e){
       if(seq === fibraRotaSeq) setEstado(null, {erro:"Erro ao consultar a rota: " + e.message});
     }finally{
-      if(seq === fibraRotaSeq) setBusy(false);
+      fibraRotaUltimaConsulta = Date.now();
+      fibraRotaConsultando = false;
+      if(seq === fibraRotaSeq && !silenciosa) setBusy(false);
     }
   }
 
@@ -3456,7 +3481,7 @@ document.addEventListener("DOMContentLoaded", function(){
         throw new Error(json.erro || json.mensagem || "Falha ao alterar a rota.");
       }
 
-      setEstado(json.rota, {online:true, ip:json.ip, explicita:true});
+      setEstado(json.rota, {online:true, ip:json.ip, explicita:true, emUso:json.emUso, contingencia:json.contingencia, statusEmUso:json.statusEmUso});
       if(info){
         info.textContent = "IP atual: " + json.ip + " • " + json.conexoesRemovidas + " conexão(ões) antiga(s) encerrada(s).";
       }
@@ -3518,7 +3543,11 @@ document.addEventListener("DOMContentLoaded", function(){
       const visivel = atualizarVisibilidade();
       if(!visivel) return;
       const chave = norm(servidorAtual()) + "|" + norm(loginAtual());
-      if(chave && chave !== "|" && chave !== antes) agendarSincronizacao(0);
+      if(chave && chave !== "|" && chave !== antes){
+        agendarSincronizacao(0);
+      }else if(chave && chave !== "|" && !fibraRotaBusy && Date.now() - fibraRotaUltimaConsulta >= 10000){
+        consultarRota({silenciosa:true});
+      }
     }, 1000);
   });
 

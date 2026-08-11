@@ -7244,7 +7244,11 @@ body{
   font-size:11px;
   font-weight:700;
   opacity:.92;
+  text-align:right;
 }
+.fibra-rota-internet-head > span.is-normal{color:#22c55e;opacity:1}
+.fibra-rota-internet-head > span.is-contingencia{color:#f59e0b;opacity:1}
+.fibra-rota-internet-head > span.is-sem-rota{color:#ef4444;opacity:1}
 .fibra-rota-internet-actions{
   display:grid;
   grid-template-columns:1fr 1fr;
