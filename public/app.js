@@ -165,7 +165,16 @@ async function carregarClienteDetalhes(){
     box.innerHTML=`
       <div class="cliente-detalhes-layout">
         <section class="panel"><h3>Dados do Cliente</h3><p><b>Login:</b> ${fibraEscapeHtml(login||"--")}</p><p><b>Nome:</b> ${fibraEscapeHtml(nome||"--")}</p><p><b>Telefone:</b> ${fibraEscapeHtml(telefone||"--")}</p><p><b>Endereço:</b> ${fibraEscapeHtml(endereco||"--")}</p><p><b>Status:</b> ${fibraEscapeHtml(c.status||"--")}</p><div class="cliente-detalhes-resumo-mobile" aria-label="Resumo do cliente"><div class="cliente-resumo-card"><small>Status</small><strong>${fibraEscapeHtml(c.status||"--")}</strong></div><div class="cliente-resumo-card"><small>Plano</small><strong>${fibraEscapeHtml(plano||"--")}</strong></div><div class="cliente-resumo-card"><small>Servidor</small><strong>${fibraEscapeHtml(fibraNomeServidor(servidor)||"--")}</strong></div><div class="cliente-resumo-card"><small>Login PPPoE</small><strong>${fibraEscapeHtml(login||"--")}</strong></div></div></section>
-        <section class="panel"><h3>Conexão PPPoE</h3><p><b>Servidor:</b> ${fibraEscapeHtml(fibraNomeServidor(servidor)||"--")}</p><p><b>Plano/Profile:</b> ${fibraEscapeHtml(plano||"--")}</p><p><b>IP:</b> ${fibraEscapeHtml(ip||"--")}</p><p><b>MAC/Caller ID:</b> ${fibraEscapeHtml(mac||"--")}</p><p><b>Tempo conectado:</b> ${fibraEscapeHtml(uptime||"--")}</p></section>
+        <section class="panel"><h3>Conexão PPPoE</h3><p><b>Servidor:</b> ${fibraEscapeHtml(fibraNomeServidor(servidor)||"--")}</p><p><b>Plano/Profile:</b> ${fibraEscapeHtml(plano||"--")}</p><p><b>IP:</b> ${fibraEscapeHtml(ip||"--")}</p><p><b>MAC/Caller ID:</b> ${fibraEscapeHtml(mac||"--")}</p><p><b>Tempo conectado:</b> ${fibraEscapeHtml(uptime||"--")}</p>
+          <div id="fibraDetalhesRotaInternetBox" class="fibra-rota-internet" data-servidor="${fibraEscapeHtml(servidor||"")}" data-login="${fibraEscapeHtml(login||"")}" data-cliente-id="${fibraEscapeHtml(clienteIdCentral)}">
+            <div class="fibra-rota-internet-head"><b>SAÍDA DE INTERNET</b><span id="fibraDetalhesRotaStatus">Verificando...</span></div>
+            <div class="fibra-rota-internet-actions">
+              <button type="button" id="btnDetalhesRotaStarlink" class="fibra-rota-btn starlink" onclick="fibraDetalhesSelecionarRota('STARLINK')">STARLINK</button>
+              <button type="button" id="btnDetalhesRotaAmazonet" class="fibra-rota-btn amazonet" onclick="fibraDetalhesSelecionarRota('AMAZONET')">AMAZONET</button>
+            </div>
+            <small id="fibraDetalhesRotaInfo">Consultando a preferência atual...</small>
+          </div>
+        </section>
       </div>
       <section class="panel central-access-panel" id="centralAcessoCard">
         <div class="central-access-heading">
@@ -191,8 +200,120 @@ async function carregarClienteDetalhes(){
       </section>
       <section class="panel"><h3>Ações</h3><button onclick="location.href='cadastro.html?id=${encodeURIComponent(c.id||chave)}'">Abrir no Cadastro</button> <button onclick="history.back()">Voltar</button></section>`;
     fibraCarregarAcessoCentral(clienteIdCentral);
+    if(typeof window.fibraDetalhesConsultarRota === "function"){
+      window.fibraDetalhesConsultarRota();
+    }
   }catch(e){ box.innerHTML='<section class="panel"><h3>Cliente não encontrado</h3><p>'+fibraEscapeHtml(e.message)+'</p></section>'; }
 }
+
+/* ============================================================
+   ROTA DE INTERNET NA TELA cliente.html
+   Mantém o mesmo backend da ficha cadastro.html.
+============================================================ */
+(function(){
+  let busy = false;
+
+  function norm(v){
+    return String(v || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+  }
+  function el(id){ return document.getElementById(id); }
+  function box(){ return el("fibraDetalhesRotaInternetBox"); }
+  function dados(){
+    const b = box();
+    return {
+      servidor: String(b?.dataset?.servidor || "").trim(),
+      login: String(b?.dataset?.login || "").trim(),
+      clienteId: String(b?.dataset?.clienteId || "").trim()
+    };
+  }
+  function ehArmando(v){ const n=norm(v); return n.includes("armando") || n.includes("zumbi"); }
+  function ehColonia(v){ const n=norm(v); return !ehArmando(v) && (n === "colonia" || n.includes("colonia antonio aleixo") || n.includes("antonio aleixo")); }
+
+  function visibilidade(){
+    const b=box();
+    if(!b) return false;
+    const d=dados();
+    if(ehArmando(d.servidor)){
+      b.style.display="none";
+      return false;
+    }
+    b.style.display="";
+    const ok=ehColonia(d.servidor);
+    if(!ok){
+      const st=el("fibraDetalhesRotaStatus"), inf=el("fibraDetalhesRotaInfo");
+      if(st) st.textContent="Servidor não identificado";
+      if(inf) inf.textContent="Este controle é usado na Colônia Antônio Aleixo.";
+    }
+    return ok;
+  }
+
+  function setBusy(v){
+    busy=!!v;
+    [el("btnDetalhesRotaStarlink"),el("btnDetalhesRotaAmazonet")].forEach(btn=>{ if(btn) btn.disabled=busy; });
+  }
+
+  function estado(rota, j={}){
+    const bs=el("btnDetalhesRotaStarlink"), ba=el("btnDetalhesRotaAmazonet"), st=el("fibraDetalhesRotaStatus"), inf=el("fibraDetalhesRotaInfo");
+    if(bs) bs.classList.toggle("is-active", rota === "STARLINK");
+    if(ba) ba.classList.toggle("is-active", rota === "AMAZONET");
+    if(st){
+      if(rota === "CONFLITO") st.textContent="Conflito de listas";
+      else if(rota) st.textContent="Preferência: " + rota;
+      else st.textContent=j.online===false ? "Cliente offline" : "Não definido";
+    }
+    if(inf){
+      if(j.erro) inf.textContent=j.erro;
+      else if(j.online===false) inf.textContent="O cliente precisa estar online para trocar o link.";
+      else if(j.ip) inf.textContent="IP atual: " + j.ip + (j.explicita===false ? " • Starlink é a rota padrão" : "");
+      else inf.textContent="Escolha STARLINK ou AMAZONET.";
+    }
+    const off=j.online===false;
+    if(bs) bs.disabled=busy||off;
+    if(ba) ba.disabled=busy||off;
+  }
+
+  async function consultar(){
+    if(!visibilidade()) return;
+    const d=dados();
+    if(!d.login){ estado(null,{erro:"Login PPPoE não identificado."}); return; }
+    setBusy(true);
+    try{
+      const r=await fetch("/api/mikrotik/cliente-rota?servidor="+encodeURIComponent(d.servidor)+"&login="+encodeURIComponent(d.login),{cache:"no-store"});
+      const j=await r.json().catch(()=>({}));
+      if(!r.ok || !j.ok) throw new Error(j.erro || j.mensagem || "Falha ao consultar a rota.");
+      estado(j.rota,j);
+    }catch(e){ estado(null,{erro:e.message}); }
+    finally{ setBusy(false); }
+  }
+
+  async function selecionar(rota){
+    if(busy || !visibilidade()) return false;
+    const d=dados();
+    if(!d.login){ alert("Login PPPoE não identificado."); return false; }
+    rota=String(rota||"").toUpperCase();
+    if(rota!=="STARLINK" && rota!=="AMAZONET") return false;
+    if(!confirm("Direcionar o cliente " + d.login + " para " + rota + "?")) return false;
+    setBusy(true);
+    const st=el("fibraDetalhesRotaStatus"), inf=el("fibraDetalhesRotaInfo");
+    if(st) st.textContent="Alterando para " + rota + "...";
+    if(inf) inf.textContent="Aplicando rota e encerrando conexões antigas deste IP...";
+    try{
+      const r=await fetch("/api/mikrotik/cliente-rota",{
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({servidor:d.servidor,login:d.login,rota,clienteId:d.clienteId})
+      });
+      const j=await r.json().catch(()=>({}));
+      if(!r.ok || !j.ok) throw new Error(j.erro || j.mensagem || "Falha ao alterar a rota.");
+      estado(j.rota,{online:true,ip:j.ip,explicita:true});
+      if(inf) inf.textContent="IP atual: " + j.ip + " • " + (j.conexoesRemovidas||0) + " conexão(ões) antiga(s) encerrada(s).";
+      return true;
+    }catch(e){ alert("Erro ao alterar link do cliente: " + e.message); estado(null,{erro:e.message}); return false; }
+    finally{ setBusy(false); setTimeout(consultar,500); }
+  }
+
+  window.fibraDetalhesConsultarRota=consultar;
+  window.fibraDetalhesSelecionarRota=selecionar;
+})();
 
 async function fibraCentralRequest(url, options={}){
   const response=await fetch(url,{credentials:"same-origin",cache:"no-store",...options,headers:{"Content-Type":"application/json",...(options.headers||{})}});
