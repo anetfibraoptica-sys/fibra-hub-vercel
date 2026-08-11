@@ -514,7 +514,7 @@
 
 
 <style>
-/* v90 - seletor de saída por cliente */
+/* v91 - seletor de saída por cliente - visibilidade robusta */
 .fibra-rota-internet[hidden]{display:none !important}
 .fibra-rota-internet{margin:14px 0 16px;padding:12px;border:1px solid rgba(148,163,184,.24);border-radius:10px;background:rgba(15,23,42,.22)}
 .fibra-rota-internet-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
@@ -1037,7 +1037,7 @@ function fibraCadastroLimparStoragesSelecao(){
           </div>
         </div>
 
-        <div id="fibraRotaInternetBox" class="fibra-rota-internet" hidden>
+        <div id="fibraRotaInternetBox" class="fibra-rota-internet">
           <div class="fibra-rota-internet-head">
             <b>SAÍDA DE INTERNET</b>
             <span id="fibraRotaInternetStatus">Verificando...</span>
@@ -3168,6 +3168,9 @@ document.addEventListener("DOMContentLoaded", function(){
     setTxt("resLogin2", d.login || loginAtual(), "--");
     setTxt("resInterface", d.interface, "-");
     if(d.servidor) setTxt("resServidor", d.servidor, "-");
+    if(typeof window.fibraAtualizarVisibilidadeRotaInternet === "function") {
+      window.fibraAtualizarVisibilidadeRotaInternet();
+    }
   }
 
   function aplicarOffline(d){
@@ -3277,15 +3280,28 @@ document.addEventListener("DOMContentLoaded", function(){
   function memoriaCliente(){
     const base = window.__fibraClienteCadastro || window.__fibraClienteSelecionado || {};
     const dados = (base && base.dados && typeof base.dados === "object") ? base.dados : {};
-    return Object.assign({}, base || {}, dados);
+    const local = {};
+    ["clienteSelecionadoCompleto","clienteCadastroSelecionado","clienteEditar"].forEach(function(chave){
+      try{
+        const raw = localStorage.getItem(chave);
+        if(raw){
+          const obj = JSON.parse(raw);
+          if(obj && typeof obj === "object") Object.assign(local, obj, (obj.dados && typeof obj.dados === "object") ? obj.dados : {});
+        }
+      }catch(e){}
+    });
+    return Object.assign({}, local, base || {}, dados);
   }
 
   function servidorAtual(){
     const m = memoriaCliente();
+    const cadPop = el("cadPop");
+    const textoCadPop = cadPop && cadPop.selectedIndex >= 0 ? String(cadPop.options[cadPop.selectedIndex]?.textContent || "").trim() : "";
     return val("cadPop") ||
            val("cadServidorReceita") ||
            txt("resServidor") ||
-           String(m.popServidor || m.servidor || m.servidorReceita || m.cadPop || m.pop || "").trim();
+           String(m.popServidor || m.pop_servidor || m.servidor || m.servidorReceita || m.servidorPppoe || m.servidor_pppoe || m.cadPop || m.pop || m.server || "").trim() ||
+           textoCadPop;
   }
   function loginAtual(){
     const m = memoriaCliente();
@@ -3338,9 +3354,36 @@ document.addEventListener("DOMContentLoaded", function(){
   function atualizarVisibilidade(){
     const box = el("fibraRotaInternetBox");
     if(!box) return false;
-    const mostrar = ehColonia(servidorAtual());
-    box.hidden = !mostrar;
-    return mostrar;
+
+    const servidor = servidorAtual();
+    const n = norm(servidor);
+    const ehArmando = n.includes("armando") || n.includes("zumbi");
+    const colonia = ehColonia(servidor);
+
+    // v91: o controle nasce visível para não desaparecer por falha de
+    // sincronização entre os vários fluxos de carregamento da ficha v88.
+    // Só ocultamos quando há certeza de que o cliente pertence ao Armando.
+    box.hidden = false;
+    box.style.display = ehArmando ? "none" : "";
+
+    const status = el("fibraRotaInternetStatus");
+    const info = el("fibraRotaInternetInfo");
+    const bStar = el("btnRotaStarlink");
+    const bAmz = el("btnRotaAmazonet");
+
+    if(!colonia){
+      if(!ehArmando){
+        if(status) status.textContent = "Aguardando servidor...";
+        if(info) info.textContent = "O controle será habilitado ao identificar a Colônia Antônio Aleixo.";
+        if(bStar) bStar.disabled = true;
+        if(bAmz) bAmz.disabled = true;
+      }
+      return false;
+    }
+
+    if(bStar) bStar.disabled = fibraRotaBusy;
+    if(bAmz) bAmz.disabled = fibraRotaBusy;
+    return true;
   }
 
   async function consultarRota(){
@@ -3434,6 +3477,7 @@ document.addEventListener("DOMContentLoaded", function(){
 
   window.fibraConsultarRotaInternet = consultarRota;
   window.fibraSelecionarRotaInternet = selecionarRota;
+  window.fibraAtualizarVisibilidadeRotaInternet = atualizarVisibilidade;
 
   let fibraRotaChaveObservada = "";
   let fibraRotaTimer = null;
