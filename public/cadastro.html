@@ -980,18 +980,6 @@ function fibraCadastroLimparStoragesSelecao(){
         <button type="button">?</button>
       </div>
 
-      <div id="fibraRotaInternetBox" class="fibra-rota-internet">
-        <div class="fibra-rota-internet-head">
-          <b>SAÍDA DE INTERNET</b>
-          <span id="fibraRotaInternetStatus">Verificando...</span>
-        </div>
-        <div class="fibra-rota-internet-actions">
-          <button type="button" id="btnRotaStarlink" class="fibra-rota-btn starlink" onclick="fibraSelecionarRotaInternet('STARLINK')">STARLINK</button>
-          <button type="button" id="btnRotaAmazonet" class="fibra-rota-btn amazonet" onclick="fibraSelecionarRotaInternet('AMAZONET')">AMAZONET</button>
-        </div>
-        <small id="fibraRotaInternetInfo">Disponível somente para clientes da Colônia Antônio Aleixo.</small>
-      </div>
-
       <div class="resumo-top-grid">
         <div>
           <b>Login</b>
@@ -1047,6 +1035,18 @@ function fibraCadastroLimparStoragesSelecao(){
             <b>Profile</b>
             <span id="resProfile">--</span>
           </div>
+        </div>
+
+        <div id="fibraRotaInternetBox" class="fibra-rota-internet">
+          <div class="fibra-rota-internet-head">
+            <b>SAÍDA DE INTERNET</b>
+            <span id="fibraRotaInternetStatus">Verificando...</span>
+          </div>
+          <div class="fibra-rota-internet-actions">
+            <button type="button" id="btnRotaStarlink" class="fibra-rota-btn starlink" onclick="fibraSelecionarRotaInternet('STARLINK')">STARLINK</button>
+            <button type="button" id="btnRotaAmazonet" class="fibra-rota-btn amazonet" onclick="fibraSelecionarRotaInternet('AMAZONET')">AMAZONET</button>
+          </div>
+          <small id="fibraRotaInternetInfo">Disponível somente para clientes da Colônia Antônio Aleixo.</small>
         </div>
 
         <h4>OLTNET</h4>
@@ -1205,7 +1205,7 @@ function consultarCepContato(){
 </script>
 <script src="supabase-client.js"></script>
 <script src="auth-painel.js"></script>
-<script src="app.js?v=20260811-v94"></script>
+<script src="app.js?v=20260811-v95"></script>
 
 
 

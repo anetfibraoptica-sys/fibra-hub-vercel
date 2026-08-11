@@ -1117,18 +1117,6 @@ document.addEventListener("DOMContentLoaded", function(){
           <div class="resumo-help">?</div>
         </div>
 
-        <div id="fibraRotaInternetBox" class="fibra-rota-internet">
-          <div class="fibra-rota-internet-head">
-            <b>SAÍDA DE INTERNET</b>
-            <span id="fibraRotaInternetStatus">Verificando...</span>
-          </div>
-          <div class="fibra-rota-internet-actions">
-            <button type="button" id="btnRotaStarlink" class="fibra-rota-btn starlink" onclick="fibraSelecionarRotaInternet('STARLINK')">STARLINK</button>
-            <button type="button" id="btnRotaAmazonet" class="fibra-rota-btn amazonet" onclick="fibraSelecionarRotaInternet('AMAZONET')">AMAZONET</button>
-          </div>
-          <small id="fibraRotaInternetInfo">Disponível somente para clientes da Colônia Antônio Aleixo.</small>
-        </div>
-
         <div class="resumo-grid">
           <div class="resumo-field"><span class="resumo-label">Login</span><span class="resumo-value">✓ ${login}</span></div>
           <div class="resumo-field"><span class="resumo-label">Senha</span><span class="resumo-value">${senha}</span></div>
@@ -1144,6 +1132,18 @@ document.addEventListener("DOMContentLoaded", function(){
           <div class="resumo-field"><span class="resumo-label">INTERFACE</span><span class="resumo-value">${interfaceV}</span></div>
           <div class="resumo-field"><span class="resumo-label">ELEMENTO DE REDE</span><span class="resumo-value">Conexão<br>PPPOE</span></div>
           <div class="resumo-field"><span class="resumo-label">IP ATUAL</span><span class="resumo-value">Profile<br>${profile}</span></div>
+        </div>
+
+        <div id="fibraRotaInternetBox" class="fibra-rota-internet">
+          <div class="fibra-rota-internet-head">
+            <b>SAÍDA DE INTERNET</b>
+            <span id="fibraRotaInternetStatus">Verificando...</span>
+          </div>
+          <div class="fibra-rota-internet-actions">
+            <button type="button" id="btnRotaStarlink" class="fibra-rota-btn starlink" onclick="fibraSelecionarRotaInternet('STARLINK')">STARLINK</button>
+            <button type="button" id="btnRotaAmazonet" class="fibra-rota-btn amazonet" onclick="fibraSelecionarRotaInternet('AMAZONET')">AMAZONET</button>
+          </div>
+          <small id="fibraRotaInternetInfo">Disponível somente para clientes da Colônia Antônio Aleixo.</small>
         </div>
 
         <div class="resumo-oltnet">OLTNET</div>
