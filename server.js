@@ -2934,11 +2934,11 @@ async function fibraRemoverEntradasRota(cfg, login, ipAtual) {
     "/ip/firewall/address-list/remove",
     "=.id=" + id
   ]);
-  await fibraRouterosBatchStable(cfg, comandos, 20000);
+  await fibraRouterosBatchStable(cfg, comandos, 20000, { ignorarItemAusente:true });
   return ids.size;
 }
 
-function fibraRouterosBatchStable(cfg, commands, timeoutMs = 20000) {
+function fibraRouterosBatchStable(cfg, commands, timeoutMs = 20000, options = {}) {
   return new Promise((resolve, reject) => {
     if (!Array.isArray(commands) || commands.length === 0) return resolve([]);
 
@@ -2987,6 +2987,17 @@ function fibraRouterosBatchStable(cfg, commands, timeoutMs = 20000) {
         const tag = tagWord ? String(tagWord).slice(5) : "";
         if (!tag.startsWith("fibra-rota-")) continue;
 
+        const itemAusente = sentence.some((word) =>
+          /^=message=.*\bno such item\b/i.test(String(word))
+        );
+        if (sentence.includes("!trap") && options.ignorarItemAusente && itemAusente) {
+          // As conexões do conntrack são dinâmicas e podem expirar entre o
+          // print e o remove. Nesse caso o estado desejado já foi alcançado.
+          respostas.push(sentence);
+          doneTags.add(tag);
+          continue;
+        }
+
         if (sentence.includes("!trap") || sentence.includes("!fatal")) {
           return finish(new Error("Erro retornado pelo MikroTik no lote: " + sentence.join(" ")));
         }
@@ -3030,7 +3041,7 @@ async function fibraLimparConexoesDoIp(cfg, ip) {
       "/ip/firewall/connection/remove",
       "=.id=" + id
     ]);
-    await fibraRouterosBatchStable(cfg, comandos, 20000);
+    await fibraRouterosBatchStable(cfg, comandos, 20000, { ignorarItemAusente:true });
   }
   return ids.length;
 }
