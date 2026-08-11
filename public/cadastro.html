@@ -512,6 +512,21 @@
 }
 </style>
 
+
+<style>
+/* v90 - seletor de saída por cliente */
+.fibra-rota-internet[hidden]{display:none !important}
+.fibra-rota-internet{margin:14px 0 16px;padding:12px;border:1px solid rgba(148,163,184,.24);border-radius:10px;background:rgba(15,23,42,.22)}
+.fibra-rota-internet-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.fibra-rota-internet-head b{font-size:12px;letter-spacing:.04em}
+#fibraRotaInternetStatus{font-size:11px;opacity:.8;text-align:right}
+.fibra-rota-internet-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.fibra-rota-btn{min-height:36px;border:1px solid rgba(148,163,184,.35);border-radius:8px;background:transparent;color:inherit;font-weight:700;cursor:pointer}
+.fibra-rota-btn:hover{filter:brightness(1.08)}
+.fibra-rota-btn.is-active{outline:2px solid currentColor;outline-offset:1px;background:rgba(34,197,94,.12)}
+.fibra-rota-btn:disabled{opacity:.55;cursor:not-allowed}
+#fibraRotaInternetInfo{display:block;margin-top:9px;line-height:1.35;opacity:.75}
+</style>
 </head>
 <body onload="protegerPagina(); iniciarSocket(); carregarCadastroClienteHub();">
 
@@ -3259,11 +3274,25 @@ document.addEventListener("DOMContentLoaded", function(){
   function val(id){ return (el(id)?.value || "").trim(); }
   function txt(id){ return (el(id)?.textContent || "").trim(); }
 
+  function memoriaCliente(){
+    const base = window.__fibraClienteCadastro || window.__fibraClienteSelecionado || {};
+    const dados = (base && base.dados && typeof base.dados === "object") ? base.dados : {};
+    return Object.assign({}, base || {}, dados);
+  }
+
   function servidorAtual(){
-    return val("cadPop") || val("cadServidorReceita") || txt("resServidor") || "";
+    const m = memoriaCliente();
+    return val("cadPop") ||
+           val("cadServidorReceita") ||
+           txt("resServidor") ||
+           String(m.popServidor || m.servidor || m.servidorReceita || m.cadPop || m.pop || "").trim();
   }
   function loginAtual(){
-    return val("cadLogin") || txt("resLogin2") || txt("resLogin") || "";
+    const m = memoriaCliente();
+    return val("cadLogin") ||
+           txt("resLogin2") ||
+           txt("resLogin") ||
+           String(m.loginPppoe || m.login_pppoe || m.login || m.usuario || m.user || "").trim();
   }
   function ehColonia(servidor){
     const n = norm(servidor);
@@ -3406,21 +3435,70 @@ document.addEventListener("DOMContentLoaded", function(){
   window.fibraConsultarRotaInternet = consultarRota;
   window.fibraSelecionarRotaInternet = selecionarRota;
 
+  let fibraRotaChaveObservada = "";
+  let fibraRotaTimer = null;
+
+  function agendarSincronizacao(delay){
+    clearTimeout(fibraRotaTimer);
+    fibraRotaTimer = setTimeout(function(){
+      const visivel = atualizarVisibilidade();
+      if(!visivel) return;
+      const chave = norm(servidorAtual()) + "|" + norm(loginAtual());
+      if(!chave || chave === "|") return;
+      if(chave !== fibraRotaChaveObservada){
+        fibraRotaChaveObservada = chave;
+        consultarRota();
+      }
+    }, Number(delay || 0));
+  }
+
   document.addEventListener("DOMContentLoaded", function(){
     atualizarVisibilidade();
-    setTimeout(consultarRota, 900);
-    setTimeout(consultarRota, 2400);
+    [250, 700, 1400, 2600, 4500].forEach(function(ms){
+      setTimeout(function(){ agendarSincronizacao(0); }, ms);
+    });
+
+    const resumoServidor = el("resServidor");
+    const resumoLogin = el("resLogin2") || el("resLogin");
+    if(window.MutationObserver){
+      const obs = new MutationObserver(function(){ agendarSincronizacao(80); });
+      if(resumoServidor) obs.observe(resumoServidor, {childList:true, subtree:true, characterData:true});
+      if(resumoLogin) obs.observe(resumoLogin, {childList:true, subtree:true, characterData:true});
+    }
+
+    // A v88 possui mais de um fluxo de carregamento do cadastro.
+    // Este acompanhamento leve garante que o controle apareça também
+    // quando os campos são preenchidos programaticamente sem evento change.
+    setInterval(function(){
+      const antes = fibraRotaChaveObservada;
+      const visivel = atualizarVisibilidade();
+      if(!visivel) return;
+      const chave = norm(servidorAtual()) + "|" + norm(loginAtual());
+      if(chave && chave !== "|" && chave !== antes) agendarSincronizacao(0);
+    }, 1000);
   });
 
   document.addEventListener("fibra:cliente-carregado", function(){
-    setTimeout(consultarRota, 350);
+    fibraRotaChaveObservada = "";
+    agendarSincronizacao(120);
+  });
+  document.addEventListener("fibra:cliente-salvo", function(){
+    fibraRotaChaveObservada = "";
+    agendarSincronizacao(120);
   });
 
+  document.addEventListener("input", function(e){
+    if(!e.target) return;
+    if(["cadServidorReceita","cadPop","cadLogin"].includes(e.target.id)){
+      fibraRotaChaveObservada = "";
+      agendarSincronizacao(100);
+    }
+  });
   document.addEventListener("change", function(e){
     if(!e.target) return;
     if(["cadServidorReceita","cadPop","cadLogin"].includes(e.target.id)){
-      atualizarVisibilidade();
-      setTimeout(consultarRota, 250);
+      fibraRotaChaveObservada = "";
+      agendarSincronizacao(100);
     }
   });
 })();
