@@ -9,7 +9,7 @@
 <script src="supabase-only.js"></script>
 <script src="00-fix-definitivo.js"></script>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Cadastro de Cliente - Fibra+ Hub</title><link rel="stylesheet" href="style.css?v=20260811-v92">
+  <title>Cadastro de Cliente - Fibra+ Hub</title><link rel="stylesheet" href="style.css?v=20260811-v93">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -514,14 +514,14 @@
 
 
 <style>
-/* v91 - seletor de saída por cliente - visibilidade robusta */
+/* v93 - seletor de saída por cliente no topo do resumo */
 .fibra-rota-internet[hidden]{display:none !important}
 .fibra-rota-internet{margin:14px 0 16px;padding:12px;border:1px solid rgba(148,163,184,.24);border-radius:10px;background:rgba(15,23,42,.22)}
 .fibra-rota-internet-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
 .fibra-rota-internet-head b{font-size:12px;letter-spacing:.04em}
 #fibraRotaInternetStatus{font-size:11px;opacity:.8;text-align:right}
 .fibra-rota-internet-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.fibra-rota-btn{min-height:36px;border:1px solid rgba(148,163,184,.35);border-radius:8px;background:transparent;color:inherit;font-weight:700;cursor:pointer}
+.fibra-rota-btn{display:flex;align-items:center;justify-content:center;width:100%;min-height:38px;margin:0;padding:9px 12px;border:1px solid rgba(148,163,184,.35);border-radius:8px;background:transparent;color:inherit;font-weight:800;cursor:pointer}
 .fibra-rota-btn:hover{filter:brightness(1.08)}
 .fibra-rota-btn.is-active{outline:2px solid currentColor;outline-offset:1px;background:rgba(34,197,94,.12)}
 .fibra-rota-btn:disabled{opacity:.55;cursor:not-allowed}
@@ -980,6 +980,18 @@ function fibraCadastroLimparStoragesSelecao(){
         <button type="button">?</button>
       </div>
 
+      <div id="fibraRotaInternetBox" class="fibra-rota-internet">
+        <div class="fibra-rota-internet-head">
+          <b>SAÍDA DE INTERNET</b>
+          <span id="fibraRotaInternetStatus">Verificando...</span>
+        </div>
+        <div class="fibra-rota-internet-actions">
+          <button type="button" id="btnRotaStarlink" class="fibra-rota-btn starlink" onclick="fibraSelecionarRotaInternet('STARLINK')">STARLINK</button>
+          <button type="button" id="btnRotaAmazonet" class="fibra-rota-btn amazonet" onclick="fibraSelecionarRotaInternet('AMAZONET')">AMAZONET</button>
+        </div>
+        <small id="fibraRotaInternetInfo">Disponível somente para clientes da Colônia Antônio Aleixo.</small>
+      </div>
+
       <div class="resumo-top-grid">
         <div>
           <b>Login</b>
@@ -1035,18 +1047,6 @@ function fibraCadastroLimparStoragesSelecao(){
             <b>Profile</b>
             <span id="resProfile">--</span>
           </div>
-        </div>
-
-        <div id="fibraRotaInternetBox" class="fibra-rota-internet">
-          <div class="fibra-rota-internet-head">
-            <b>SAÍDA DE INTERNET</b>
-            <span id="fibraRotaInternetStatus">Verificando...</span>
-          </div>
-          <div class="fibra-rota-internet-actions">
-            <button type="button" id="btnRotaStarlink" class="fibra-rota-btn starlink" onclick="fibraSelecionarRotaInternet('STARLINK')">STARLINK</button>
-            <button type="button" id="btnRotaAmazonet" class="fibra-rota-btn amazonet" onclick="fibraSelecionarRotaInternet('AMAZONET')">AMAZONET</button>
-          </div>
-          <small id="fibraRotaInternetInfo">Disponível somente para clientes da Colônia Antônio Aleixo.</small>
         </div>
 
         <h4>OLTNET</h4>
@@ -1205,7 +1205,7 @@ function consultarCepContato(){
 </script>
 <script src="supabase-client.js"></script>
 <script src="auth-painel.js"></script>
-<script src="app.js?v=20260811-v92"></script>
+<script src="app.js?v=20260811-v93"></script>
 
 
 
@@ -3360,7 +3360,7 @@ document.addEventListener("DOMContentLoaded", function(){
     const ehArmando = n.includes("armando") || n.includes("zumbi");
     const colonia = ehColonia(servidor);
 
-    // v91: o controle nasce visível para não desaparecer por falha de
+    // v93: o controle nasce visível para não desaparecer por falha de
     // sincronização entre os vários fluxos de carregamento da ficha v88.
     // Só ocultamos quando há certeza de que o cliente pertence ao Armando.
     box.hidden = false;

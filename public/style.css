@@ -7252,7 +7252,13 @@ body{
 }
 .resumo-receitanet-completo .fibra-rota-btn,
 .fibra-rota-btn{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:100%;
   min-height:34px;
+  margin:0;
+  padding:9px 12px;
   border:1px solid rgba(148,163,184,.38);
   border-radius:8px;
   font-size:11px;

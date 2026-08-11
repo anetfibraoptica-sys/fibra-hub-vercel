@@ -20,6 +20,34 @@
       "dest": "/server.js"
     },
     {
+      "src": "/cadastro.html",
+      "headers": {
+        "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"
+      },
+      "dest": "/public/cadastro.html"
+    },
+    {
+      "src": "/cliente.html",
+      "headers": {
+        "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"
+      },
+      "dest": "/public/cliente.html"
+    },
+    {
+      "src": "/app.js",
+      "headers": {
+        "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"
+      },
+      "dest": "/public/app.js"
+    },
+    {
+      "src": "/style.css",
+      "headers": {
+        "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"
+      },
+      "dest": "/public/style.css"
+    },
+    {
       "src": "/central/?",
       "dest": "/public/central/index.html"
     },
