@@ -6605,47 +6605,173 @@ async function autoProcessarPagamento({ chargeId, numero, valorPago, dataPagamen
 }
 
 async function autoProcessarBloqueioCliente(cliente, boleto) {
-  const campos = autoClienteCampos(cliente, boleto);
-  const chave = "bloqueio:" + cliente.id + ":" + boleto.numero;
-  const inicio = await autoEventoIniciar(chave, "bloqueio", {
-    boleto_numero:boleto.numero,
-    cliente_login:campos.login,
-    servidor:campos.servidor
-  });
+  return autoComTravaBanco("fibra-bloqueio-cliente:" + cliente.id, async () => {
+    const campos = autoClienteCampos(cliente, boleto);
+    const jaBloqueado =
+      autoTexto(cliente.profile).toUpperCase() === "BLOQUEADO" ||
+      autoTexto(cliente.status).toLowerCase() === "bloqueado";
 
-  if (inicio.ignorar) return { ok:true, repetido:true };
+    if (jaBloqueado) {
+      return { ok:true, repetido:true, motivo:"cliente_ja_bloqueado" };
+    }
 
-  try {
-    const mikrotik = await autoExecutarMikrotik({
+  // Cada liberação em confiança cria um novo ciclo de bloqueio. Sem esse
+  // marcador, o evento do primeiro bloqueio era tratado como já concluído e
+  // impedia o MikroTik de bloquear novamente após o vencimento das 24 horas.
+    const cicloConfianca = autoTexto(cliente.confianca_ate);
+    const chave = "bloqueio:" + cliente.id + ":" + boleto.numero +
+      (cicloConfianca ? ":confianca:" + cicloConfianca : "");
+    const inicio = await autoEventoIniciar(chave, "bloqueio", {
+      boleto_numero:boleto.numero,
+      cliente_login:campos.login,
       servidor:campos.servidor,
-      login:campos.login,
-      profile:campos.profile,
-      acao:"bloquear"
+      confianca_ate:cicloConfianca
     });
 
-    await pool.query(`
-      UPDATE clientes SET
-        status='bloqueado',
-        profile='BLOQUEADO',
-        dados=COALESCE(dados,'{}'::jsonb) || $1::jsonb,
-        atualizado_em=NOW()
-      WHERE id=$2
-    `, [
-      JSON.stringify({
-        status:"bloqueado",
-        bloqueioAutomaticoEm:new Date().toISOString(),
-        boletoVencido:boleto.numero,
-        profileNormal:campos.profile
-      }),
-      cliente.id
-    ]);
+    if (inicio.ignorar) return { ok:true, repetido:true };
 
-    await autoEventoFinalizar(chave, "sucesso", "Cliente bloqueado automaticamente.", { mikrotik });
-    return { ok:true, cliente:cliente.nome, boleto:boleto.numero, mikrotik };
-  } catch (err) {
-    await autoEventoFinalizar(chave, "erro", err.message, {});
-    throw err;
+    try {
+      const mikrotik = await autoExecutarMikrotik({
+        servidor:campos.servidor,
+        login:campos.login,
+        profile:campos.profile,
+        acao:"bloquear"
+      });
+
+      await pool.query(`
+        UPDATE clientes SET
+          status='bloqueado',
+          profile='BLOQUEADO',
+          confianca_ate='',
+          dados=COALESCE(dados,'{}'::jsonb) || $1::jsonb,
+          atualizado_em=NOW()
+        WHERE id=$2
+      `, [
+        JSON.stringify({
+          status:"bloqueado",
+          bloqueioAutomaticoEm:new Date().toISOString(),
+          boletoVencido:boleto.numero,
+          profileNormal:campos.profile
+        }),
+        cliente.id
+      ]);
+
+      await autoEventoFinalizar(chave, "sucesso", "Cliente bloqueado automaticamente.", { mikrotik });
+      return { ok:true, cliente:cliente.nome, boleto:boleto.numero, mikrotik };
+    } catch (err) {
+      await autoEventoFinalizar(chave, "erro", err.message, {});
+      throw err;
+    }
+  });
+}
+
+async function autoComTravaBanco(nome, tarefa) {
+  const conexao = await pool.connect();
+  let travado = false;
+
+  try {
+    const r = await conexao.query(
+      "SELECT pg_try_advisory_lock(hashtext($1)) AS travado",
+      [nome]
+    );
+    travado = Boolean(r.rows[0]?.travado);
+
+    if (!travado) {
+      return {
+        ok:true,
+        ignorado:true,
+        motivo:"rotina_ja_em_execucao"
+      };
+    }
+
+    return await tarefa();
+  } finally {
+    if (travado) {
+      try {
+        await conexao.query("SELECT pg_advisory_unlock(hashtext($1))", [nome]);
+      } catch (err) {
+        console.error("Falha ao liberar trava da automação:", err.message);
+      }
+    }
+    conexao.release();
   }
+}
+
+async function autoExecutarConfiancasVencidas() {
+  return autoComTravaBanco("fibra-confiancas-vencidas", async () => {
+    await autoGarantirTabelas();
+
+  const dias = Math.max(0, Number(process.env.BLOQUEIO_DIAS_APOS_VENCIMENTO || 4));
+  const limite = Math.max(1, Math.min(500, Number(process.env.CONFIANCA_MAX_CLIENTES_POR_EXECUCAO || 100)));
+
+  // Esta rotina é intencionalmente curta: roda a cada minuto e trata somente
+  // clientes cuja confiança de 24 horas acabou. A conciliação Efí e os demais
+  // bloqueios continuam na rotina diária, evitando carga desnecessária.
+  const candidatos = await pool.query(`
+    SELECT DISTINCT ON (c.id)
+      c.*,
+      b.id AS boleto_id,
+      b.cliente_id AS boleto_cliente_id,
+      b.numero AS boleto_numero,
+      b.cliente_login AS boleto_login,
+      b.cliente_nome AS boleto_cliente_nome,
+      b.cpf_cnpj AS boleto_cpf_cnpj,
+      b.vencimento AS boleto_vencimento,
+      b.status AS boleto_status,
+      b.dados AS boleto_dados
+    FROM clientes c
+    JOIN boletos b ON (
+      b.cliente_id=c.id::text OR (
+        b.cliente_id IS NULL
+        AND COALESCE(c.login_pppoe,c.dados->>'loginPppoe',c.dados->>'login','') <> ''
+        AND COALESCE(c.login_pppoe,c.dados->>'loginPppoe',c.dados->>'login','')=COALESCE(b.cliente_login,b.dados->>'loginPppoe',b.dados->>'login','')
+      )
+    )
+    WHERE
+      lower(COALESCE(c.status,''))='confianca'
+      AND c.confianca_ate ~ '^\\d{4}-\\d{2}-\\d{2}T'
+      AND c.confianca_ate::timestamptz <= NOW()
+      AND lower(COALESCE(b.status,'pendente')) NOT IN ('pago','paid','cancelado','canceled')
+      AND b.vencimento IS NOT NULL
+      AND b.vencimento < (CURRENT_DATE - $1::integer)
+    ORDER BY c.id, b.vencimento ASC
+    LIMIT $2
+  `, [dias, limite]);
+
+  const resultados = [];
+
+  for (const row of candidatos.rows) {
+    const boleto = {
+      id:row.boleto_id,
+      cliente_id:row.boleto_cliente_id,
+      numero:row.boleto_numero,
+      cliente_login:row.boleto_login,
+      cliente_nome:row.boleto_cliente_nome,
+      cpf_cnpj:row.boleto_cpf_cnpj,
+      vencimento:row.boleto_vencimento,
+      status:row.boleto_status,
+      dados:row.boleto_dados || {}
+    };
+
+    try {
+      resultados.push(await autoProcessarBloqueioCliente(row, boleto));
+    } catch (err) {
+      resultados.push({
+        ok:false,
+        cliente:row.nome,
+        boleto:row.boleto_numero,
+        erro:err.message
+      });
+    }
+  }
+
+    return {
+      ok:true,
+      executadoEm:new Date().toISOString(),
+      confiancasVencidas:candidatos.rows.length,
+      bloqueios:resultados
+    };
+  });
 }
 
 async function autoExecutarRotinaDiaria() {
@@ -6760,11 +6886,12 @@ async function autoExecutarRotinaDiaria() {
       lower(COALESCE(b.status,'pendente')) NOT IN ('pago','paid','cancelado','canceled')
       AND b.vencimento IS NOT NULL
       AND b.vencimento < (CURRENT_DATE - $1::integer)
-      AND (
-        COALESCE(c.confianca_ate,'') = ''
-        OR c.confianca_ate !~ '^\\d{4}-\\d{2}-\\d{2}$'
-        OR c.confianca_ate::date < CURRENT_DATE
-      )
+      AND CASE
+        WHEN NULLIF(BTRIM(c.confianca_ate), '') IS NULL THEN TRUE
+        WHEN c.confianca_ate ~ '^\\d{4}-\\d{2}-\\d{2}T' THEN c.confianca_ate::timestamptz <= NOW()
+        WHEN c.confianca_ate ~ '^\\d{4}-\\d{2}-\\d{2}$' THEN c.confianca_ate::date < CURRENT_DATE
+        ELSE TRUE
+      END
     ORDER BY c.id, b.vencimento ASC
     LIMIT $2
   `, [dias, limite]);
@@ -6970,6 +7097,23 @@ app.get("/api/cron/bloqueios", async (req, res) => {
     return res.json(resultado);
   } catch (err) {
     console.error("Erro /api/cron/bloqueios:", err);
+    return res.status(500).json({ ok:false, erro:err.message });
+  }
+});
+
+app.get("/api/cron/confiancas", async (req, res) => {
+  const segredo = autoTexto(process.env.CRON_SECRET);
+  const recebido = autoTexto(req.headers.authorization);
+
+  if (!segredo || recebido !== "Bearer " + segredo) {
+    return res.status(401).json({ ok:false, erro:"Não autorizado." });
+  }
+
+  try {
+    const resultado = await autoExecutarConfiancasVencidas();
+    return res.json(resultado);
+  } catch (err) {
+    console.error("Erro /api/cron/confiancas:", err);
     return res.status(500).json({ ok:false, erro:err.message });
   }
 });
