@@ -1042,6 +1042,10 @@ document.addEventListener("DOMContentLoaded", function(){
     var card = document.querySelector(".cadastro-resumo-card");
     if(!card) return;
 
+    // O resumo e reconstruido varias vezes durante o carregamento do cliente.
+    // Preserve o seletor de rota para ele nao ser apagado pelo innerHTML abaixo.
+    var rotaInternetAtual = document.getElementById("fibraRotaInternetBox");
+
     var c = clienteLocal();
 
     var login = val(["input[name='login']","input[name='cli_login']","#login","#cadLogin"], pick(c,["login","usuario","loginPppoe","pppoe"], "-"));
@@ -1111,6 +1115,18 @@ document.addEventListener("DOMContentLoaded", function(){
         <div class="resumo-header">
           <h2 class="resumo-titulo">Resumo</h2>
           <div class="resumo-help">?</div>
+        </div>
+
+        <div id="fibraRotaInternetBox" class="fibra-rota-internet">
+          <div class="fibra-rota-internet-head">
+            <b>SAÍDA DE INTERNET</b>
+            <span id="fibraRotaInternetStatus">Verificando...</span>
+          </div>
+          <div class="fibra-rota-internet-actions">
+            <button type="button" id="btnRotaStarlink" class="fibra-rota-btn starlink" onclick="fibraSelecionarRotaInternet('STARLINK')">STARLINK</button>
+            <button type="button" id="btnRotaAmazonet" class="fibra-rota-btn amazonet" onclick="fibraSelecionarRotaInternet('AMAZONET')">AMAZONET</button>
+          </div>
+          <small id="fibraRotaInternetInfo">Disponível somente para clientes da Colônia Antônio Aleixo.</small>
         </div>
 
         <div class="resumo-grid">
@@ -1203,6 +1219,11 @@ document.addEventListener("DOMContentLoaded", function(){
       </div>
     `;
 
+    var rotaInternetNova = document.getElementById("fibraRotaInternetBox");
+    if(rotaInternetAtual && rotaInternetNova && rotaInternetAtual !== rotaInternetNova){
+      rotaInternetNova.replaceWith(rotaInternetAtual);
+    }
+
     if(statusAtual){
       var novoStatus = document.getElementById("resStatusOnline");
       if(novoStatus){
@@ -1217,6 +1238,10 @@ document.addEventListener("DOMContentLoaded", function(){
         el.textContent = dadosStatusAtual[id];
       }
     });
+
+    if(typeof window.fibraAtualizarVisibilidadeRotaInternet === "function"){
+      window.fibraAtualizarVisibilidadeRotaInternet();
+    }
   }
 
   window.__fibraMontarResumoCadastro = montarResumoReceitaNet;
