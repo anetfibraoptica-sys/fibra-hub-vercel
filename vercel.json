@@ -66,10 +66,6 @@
   ],
   "crons": [
     {
-      "path": "/api/cron/confiancas",
-      "schedule": "* * * * *"
-    },
-    {
       "path": "/api/cron/bloqueios",
       "schedule": "0 8 * * *"
     }

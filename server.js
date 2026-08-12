@@ -6979,6 +6979,102 @@ function autoBasePublica(req) {
   return "";
 }
 
+async function autoSalvarSegredoVault(nome, valor, descricao) {
+  const atual = await pool.query(`
+    SELECT id
+    FROM vault.decrypted_secrets
+    WHERE name=$1
+    ORDER BY updated_at DESC
+    LIMIT 1
+  `, [nome]);
+
+  if (atual.rows[0]?.id) {
+    await pool.query(
+      "SELECT vault.update_secret($1::uuid, $2, $3, $4)",
+      [atual.rows[0].id, valor, nome, descricao]
+    );
+    return atual.rows[0].id;
+  }
+
+  const criado = await pool.query(
+    "SELECT vault.create_secret($1, $2, $3) AS id",
+    [valor, nome, descricao]
+  );
+  return criado.rows[0]?.id || null;
+}
+
+async function autoConfigurarCronConfiancasGratuito(req) {
+  const baseUrl = autoBasePublica(req);
+  const segredo = autoTexto(process.env.CRON_SECRET);
+
+  if (!/^https:\/\//i.test(baseUrl)) {
+    throw new Error("URL pública do painel não identificada. Configure PUBLIC_BASE_URL na Vercel.");
+  }
+  if (!segredo) {
+    throw new Error("CRON_SECRET não configurado na Vercel.");
+  }
+
+  // A Vercel Hobby aceita apenas o cron diário. A checagem de confiança usa
+  // pg_cron + pg_net no Supabase, mantendo a execução a cada minuto sem Pro.
+  await pool.query("CREATE EXTENSION IF NOT EXISTS supabase_vault");
+  await pool.query("CREATE EXTENSION IF NOT EXISTS pg_net WITH SCHEMA extensions");
+  await pool.query("CREATE EXTENSION IF NOT EXISTS pg_cron");
+
+  await autoSalvarSegredoVault(
+    "fibra_public_base_url",
+    baseUrl.replace(/\/+$/, ""),
+    "URL do Fibra+ usada pelo cron gratuito das confianças"
+  );
+  await autoSalvarSegredoVault(
+    "fibra_cron_secret",
+    segredo,
+    "Token do endpoint de automação do Fibra+"
+  );
+
+  const nomeJob = "fibra-confiancas-vencidas-cada-minuto";
+  await pool.query(
+    "SELECT cron.unschedule(jobid) FROM cron.job WHERE jobname=$1",
+    [nomeJob]
+  );
+
+  const comando = `
+    SELECT net.http_get(
+      url := (
+        SELECT decrypted_secret
+        FROM vault.decrypted_secrets
+        WHERE name='fibra_public_base_url'
+        ORDER BY updated_at DESC
+        LIMIT 1
+      ) || '/api/cron/confiancas',
+      headers := jsonb_build_object(
+        'Authorization',
+        'Bearer ' || (
+          SELECT decrypted_secret
+          FROM vault.decrypted_secrets
+          WHERE name='fibra_cron_secret'
+          ORDER BY updated_at DESC
+          LIMIT 1
+        )
+      ),
+      timeout_milliseconds := 55000
+    ) AS request_id;
+  `;
+
+  const agendado = await pool.query(
+    "SELECT cron.schedule($1, $2, $3) AS jobid",
+    [nomeJob, "* * * * *", comando]
+  );
+
+  return {
+    ok:true,
+    ativo:true,
+    jobid:agendado.rows[0]?.jobid || null,
+    agenda:"a cada minuto",
+    executor:"Supabase Cron",
+    baseUrl:baseUrl.replace(/\/+$/, "")
+  };
+}
+
 app.post("/api/efi/webhook", async (req, res) => {
   const token = autoTexto(
     req.body?.notification ||
@@ -7114,6 +7210,50 @@ app.get("/api/cron/confiancas", async (req, res) => {
     return res.json(resultado);
   } catch (err) {
     console.error("Erro /api/cron/confiancas:", err);
+    return res.status(500).json({ ok:false, erro:err.message });
+  }
+});
+
+app.get("/api/automacao/cron-gratuito/status", async (req, res) => {
+  try {
+    const extensao = await pool.query(
+      "SELECT to_regclass('cron.job') IS NOT NULL AS disponivel"
+    );
+    if (!extensao.rows[0]?.disponivel) {
+      return res.json({ ok:true, ativo:false, motivo:"Supabase Cron ainda não ativado." });
+    }
+
+    const job = await pool.query(`
+      SELECT jobid, schedule, active
+      FROM cron.job
+      WHERE jobname='fibra-confiancas-vencidas-cada-minuto'
+      ORDER BY jobid DESC
+      LIMIT 1
+    `);
+
+    return res.json({
+      ok:true,
+      ativo:Boolean(job.rows[0]?.active),
+      jobid:job.rows[0]?.jobid || null,
+      agenda:job.rows[0]?.schedule || null,
+      executor:"Supabase Cron"
+    });
+  } catch (err) {
+    return res.status(500).json({ ok:false, erro:err.message });
+  }
+});
+
+app.post("/api/automacao/cron-gratuito/configurar", async (req, res) => {
+  if (!hasPermission(req.sessionUser, "configuracoes")) {
+    return res.status(403).json({ ok:false, erro:"Usuário sem permissão de configurações." });
+  }
+
+  try {
+    const resultado = await autoConfigurarCronConfiancasGratuito(req);
+    const verificacao = await autoExecutarConfiancasVencidas();
+    return res.json({ ...resultado, verificacao });
+  } catch (err) {
+    console.error("Erro ao configurar cron gratuito:", err);
     return res.status(500).json({ ok:false, erro:err.message });
   }
 });
