@@ -3290,9 +3290,9 @@ app.post("/api/mikrotik/rota-geral", async (req, res) => {
     if (!cfg || !cfg.host) return res.status(500).json({ok:false, erro:"MikroTik Colônia não configurada"});
     // ROTA GERAL: busca todos os PPP ativos sem proplist restrito.
     // Alguns RouterOS/API retornam lista parcial quando usamos .proplist em massa.
-    const ativos = await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+    const ativos = await routerosCommandStable(cfg, [
       "/ppp/active/print"
-    ]], 30000);
+    ], 30000);
     const clientes = parseRouterosRows(ativos).filter(x => x.name && x.address);
 
     // ROTA GERAL: limpa somente clientes das listas de rota antes de recriar.
@@ -3316,12 +3316,12 @@ app.post("/api/mikrotik/rota-geral", async (req, res) => {
         await fibraRemoverEntradasRota(cfg, c.name, ip);
         const existente = await fibraListarEntradasRota(cfg, FIBRA_ROTA_LISTAS[rota], ip);
         if (!existente.some(e => String(e.address || '').split('/')[0] === ip)) {
-          await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+          await routerosCommandStable(cfg, [
             "/ip/firewall/address-list/add",
             "=list="+FIBRA_ROTA_LISTAS[rota],
             "=address="+ip,
             "=comment=FIBRA+ ROTA GERAL "+c.name
-          ]],15000);
+          ],15000);
         }
 
         try {
