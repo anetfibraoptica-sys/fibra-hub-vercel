@@ -2980,16 +2980,15 @@ function fibraStatusLinkEmUso(rotas, preferencia, explicita) {
 }
 
 async function fibraRemoverEntradasRota(cfg, login, ipAtual) {
-  const comentario = "FIBRA+ ROTA " + login;
+  // Remove sempre pelo IP. Comentário não é confiável porque versões antigas
+  // gravaram "FIBRA+ ROTA GERAL" e novas gravam outro padrão.
   const ids = new Set();
 
   for (const lista of Object.values(FIBRA_ROTA_LISTAS)) {
     const linhas = await fibraListarEntradasRota(cfg, lista, "");
     for (const row of linhas) {
       const mesmoIp = ipAtual && String(row.address || "").split("/")[0].trim() === ipAtual;
-      const comentarioLinha = String(row.comment || "").trim();
-      const mesmoLogin = comentarioLinha === comentario || comentarioLinha === comentario + " GERAL" || comentarioLinha === (comentario + " " + login);
-      if ((mesmoIp || mesmoLogin) && row[".id"]) ids.add(row[".id"]);
+      if (mesmoIp && row[".id"]) ids.add(row[".id"]);
     }
   }
 
@@ -3297,29 +3296,13 @@ app.post("/api/mikrotik/rota-geral", async (req, res) => {
     for (const c of clientes) {
       const ip = String(c.address).split('/')[0];
       if (net.isIP(ip)!==4) continue;
-      // Remove todas as entradas antigas deste IP antes de aplicar a nova rota.
-      // A remoção é por endereço para não depender de comentários antigos.
-      for (const listaAntiga of Object.values(FIBRA_ROTA_LISTAS)) {
-        const antigas = await fibraListarEntradasRota(cfg, listaAntiga, ip);
-        for (const item of antigas) {
-          if (item[".id"]) {
-            await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
-              "/ip/firewall/address-list/remove",
-              "=.id=" + item[".id"]
-            ]],15000);
-          }
-        }
-      }
-      // Adiciona somente se ainda não existir para evitar erro "already have such entry".
-      const destino = await fibraListarEntradasRota(cfg, FIBRA_ROTA_LISTAS[rota], ip);
-      if (!destino || destino.length === 0) {
-        await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
-          "/ip/firewall/address-list/add",
-          "=list="+FIBRA_ROTA_LISTAS[rota],
-          "=address="+ip,
-          "=comment=FIBRA+ ROTA GERAL "+c.name
-        ]],15000);
-      }
+      await fibraRemoverEntradasRota(cfg, c.name, ip);
+      await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+        "/ip/firewall/address-list/add",
+        "=list="+FIBRA_ROTA_LISTAS[rota],
+        "=address="+ip,
+        "=comment=FIBRA+ ROTA GERAL "+c.name
+      ]],15000);
 
       // Limpa conexões antigas para a troca de rota ser imediata.
       // Sem isso, sessões já abertas podem continuar pelo link anterior.
