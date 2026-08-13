@@ -3145,29 +3145,6 @@ async function fibraSalvarPreferenciaRotaBanco({ clienteId, login, rota, ip }) {
   }
 }
 
-app.post("/api/mikrotik/rota-geral", requireFibraOuCentralSession, async (req, res) => {
-  try {
-    const rota = String((req.body||{}).rota||"").toUpperCase();
-    if (!FIBRA_ROTA_LISTAS[rota]) return res.status(400).json({ok:false, erro:"Rota invalida"});
-    const cfg = servidorConfig("colonia");
-    if (!cfg.host) return res.status(500).json({ok:false, erro:"MikroTik colonia nao configurado"});
-    const ativos = parseRouterosRows(await routerosSend(cfg.host,cfg.port,cfg.user,cfg.pass,[["/ppp/active/print","=.proplist=name,address"]],15000));
-    const destino=FIBRA_ROTA_LISTAS[rota];
-    const outra=rota==="STARLINK"?FIBRA_ROTA_LISTAS.AMAZONET:FIBRA_ROTA_LISTAS.STARLINK;
-    let aplicados=0;
-    for (const c of ativos){
-      const ip=String(c.address||"").split('/')[0];
-      if(!ip) continue;
-      const old=await fibraListarEntradasRota(cfg,outra,ip);
-      for(const x of old){ if(x['.id']) await routerosSend(cfg.host,cfg.port,cfg.user,cfg.pass,[["/ip/firewall/address-list/remove","=.id="+x['.id']]],10000); }
-      const atual=await fibraListarEntradasRota(cfg,destino,ip);
-      if(!atual.length){await routerosSend(cfg.host,cfg.port,cfg.user,cfg.pass,[["/ip/firewall/address-list/add","=list="+destino,"=address="+ip,"=comment=FIBRA+ ROTA GERAL"]],10000);}
-      aplicados++;
-    }
-    res.json({ok:true, rota, clientes:aplicados});
-  } catch(e){res.status(500).json({ok:false, erro:e.message});}
-});
-
 app.get("/api/mikrotik/cliente-rota", async (req, res) => {
   try {
     const servidor = String(req.query.servidor || "").trim();
@@ -3300,6 +3277,37 @@ app.post("/api/mikrotik/cliente-rota", async (req, res) => {
 
 
 
+
+
+/* ============================================================
+   CONTROLE GERAL DE ROTA - TODOS CLIENTES ATIVOS
+============================================================ */
+app.post("/api/mikrotik/rota-geral", async (req, res) => {
+  try {
+    const rota = String((req.body || {}).rota || "").toUpperCase();
+    if (!FIBRA_ROTA_LISTAS[rota]) return res.status(400).json({ok:false, erro:"Rota inválida"});
+    const cfg = servidorConfig("colonia");
+    if (!cfg || !cfg.host) return res.status(500).json({ok:false, erro:"MikroTik Colônia não configurada"});
+    const ativos = await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+      "/ppp/active/print", "=.proplist=name,address"
+    ]], 15000);
+    const clientes = parseRouterosRows(ativos).filter(x => x.name && x.address);
+    let aplicados = 0;
+    for (const c of clientes) {
+      const ip = String(c.address).split('/')[0];
+      if (net.isIP(ip)!==4) continue;
+      await fibraRemoverEntradasRota(cfg, c.name, ip);
+      await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+        "/ip/firewall/address-list/add",
+        "=list="+FIBRA_ROTA_LISTAS[rota],
+        "=address="+ip,
+        "=comment=FIBRA+ ROTA GERAL "+c.name
+      ]],15000);
+      aplicados++;
+    }
+    return res.json({ok:true, rota, aplicados, mensagem:`${aplicados} clientes enviados para ${rota}.`});
+  } catch(e){ return res.status(500).json({ok:false, erro:e.message}); }
+});
 
 /* ============================================================
    STATUS DEDICADO DO CLIENTE
