@@ -2987,7 +2987,8 @@ async function fibraRemoverEntradasRota(cfg, login, ipAtual) {
     const linhas = await fibraListarEntradasRota(cfg, lista, "");
     for (const row of linhas) {
       const mesmoIp = ipAtual && String(row.address || "").split("/")[0].trim() === ipAtual;
-      const mesmoLogin = String(row.comment || "").trim() === comentario;
+      const comentarioLinha = String(row.comment || "").trim();
+      const mesmoLogin = comentarioLinha === comentario || comentarioLinha === comentario + " GERAL" || comentarioLinha === (comentario + " " + login);
       if ((mesmoIp || mesmoLogin) && row[".id"]) ids.add(row[".id"]);
     }
   }
@@ -3296,14 +3297,7 @@ app.post("/api/mikrotik/rota-geral", async (req, res) => {
     for (const c of clientes) {
       const ip = String(c.address).split('/')[0];
       if (net.isIP(ip)!==4) continue;
-      // Remove sempre das duas listas antes de adicionar a nova rota.
-      // Isso evita cliente preso em dois links ao mesmo tempo.
-      try {
-        await fibraRemoverEntradasRota(cfg, c.name, ip);
-      } catch (e) {
-        console.log("Falha removendo rota antiga do cliente", c.name, ip, e.message);
-      }
-
+      await fibraRemoverEntradasRota(cfg, c.name, ip);
       await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
         "/ip/firewall/address-list/add",
         "=list="+FIBRA_ROTA_LISTAS[rota],
