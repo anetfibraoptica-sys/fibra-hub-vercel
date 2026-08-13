@@ -3310,12 +3310,16 @@ app.post("/api/mikrotik/rota-geral", async (req, res) => {
           }
         }
       }
-      await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
-        "/ip/firewall/address-list/add",
-        "=list="+FIBRA_ROTA_LISTAS[rota],
-        "=address="+ip,
-        "=comment=FIBRA+ ROTA GERAL "+c.name
-      ]],15000);
+      // Adiciona somente se ainda não existir para evitar erro "already have such entry".
+      const destino = await fibraListarEntradasRota(cfg, FIBRA_ROTA_LISTAS[rota], ip);
+      if (!destino || destino.length === 0) {
+        await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+          "/ip/firewall/address-list/add",
+          "=list="+FIBRA_ROTA_LISTAS[rota],
+          "=address="+ip,
+          "=comment=FIBRA+ ROTA GERAL "+c.name
+        ]],15000);
+      }
 
       // Limpa conexões antigas para a troca de rota ser imediata.
       // Sem isso, sessões já abertas podem continuar pelo link anterior.
