@@ -16,27 +16,14 @@
 <a href="cadastro.html?novo=1" class=""><span class="icon">👥</span>Cadastrar Cliente</a>
 <a href="importacao.html"><span class="icon">⬆️</span>Importação</a>
 <a href="pppoe.html" class=""><span class="icon">☰</span>PPPoE Real</a>
-<a href="mikrotik.html" class="active"><span class="icon">◔</span>MikroTik API</a>
+<a href="mikrotik.html" class="active"><span class="icon">◔</span>MikroTik API</a><a href="rotas.html"><span class="icon">🌐</span>Controle de Rotas</a>
 <a href="financeiro.html" class=""><span class="icon">▤</span>Financeiro</a>
 <a href="relatorios.html" class=""><span class="icon">▥</span>Relatórios</a>
 <a href="usuarios.html" class=""><span class="icon">👥</span>Usuários</a>
 <a href="configuracoes.html" class=""><span class="icon">⚙️</span>Configurações</a>
 <a href="backup.html" class=""><span class="icon">☁</span>Backup</a><a href="#" onclick="sair()"><span class="icon">↪</span></a></nav></aside><main class="main"><header class="topbar"><h1>MikroTik API</h1><div><b>Administrador</b></div></header><section class="content"><section class="grid-2"><div class="panel"><h3>Teste de Conexão com MikroTik</h3><p>Este botão testa as variáveis do Render:</p><p><b>MIKROTIK_HOST</b>, <b>MIKROTIK_USER</b>, <b>MIKROTIK_PASS</b>, <b>MIKROTIK_PORT</b></p><button onclick="testarMikrotik()">Testar Conexão API</button></div><div class="panel"><h3>Resultado</h3><div id="resultadoApi" class="api-box">Clique em testar conexão.</div></div></section>
-<section class="panel"><h3>Rotas para testar no navegador</h3><p>/api/status</p><p>/api/mikrotik/teste</p><p>/api/mikrotik/recursos</p><p>/api/mikrotik/pppoe</p><p>/api/mikrotik/interfaces</p></section>
-<section class="panel"><h3>Controle Geral de Rota</h3><p>Move todos os clientes PPPoE ativos entre Amazonet e Starlink usando as listas já existentes na MikroTik.</p><div style="display:flex;gap:10px;flex-wrap:wrap"><button onclick="rotaGeral('AMAZONET')">Todos para Amazonet</button><button onclick="rotaGeral('STARLINK')">Todos para Starlink</button></div><div id="resultadoRotaGeral" class="api-box" style="margin-top:12px">Nenhuma ação executada.</div></section>
-<div class="footer"><span>© 2026 Fibra+</span><span>Painel MikroTik responsivo para PC e celular</span></div></section></main></div><script src="supabase-client.js"></script>
+<section class="panel"><h3>Rotas para testar no navegador</h3><p>/api/status</p><p>/api/mikrotik/teste</p><p>/api/mikrotik/recursos</p><p>/api/mikrotik/pppoe</p><p>/api/mikrotik/interfaces</p></section><div class="footer"><span>© 2026 Fibra+</span><span>Painel MikroTik responsivo para PC e celular</span></div></section></main></div><script src="supabase-client.js"></script>
 <script src="auth-painel.js"></script>
 <script src="app.js"></script><script src="bloqueio-configuravel.js"></script>
 <script src="mobile-responsive.js"></script>
-<script>
-async function rotaGeral(rota){
- const box=document.getElementById('resultadoRotaGeral');
- box.textContent='Aplicando '+rota+'...';
- try{
-  const r=await fetch('/api/mikrotik/rota-geral',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rota})});
-  const j=await r.json();
-  box.textContent=j.mensagem || j.erro || JSON.stringify(j);
- }catch(e){ box.textContent='Erro: '+e.message; }
-}
-</script>
 </body></html>

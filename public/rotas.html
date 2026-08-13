@@ -1,0 +1,6 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Controle de Rotas</title><link rel="stylesheet" href="style.css"></head><body><div class="layout"><main class="main"><div class="content"><div class="card"><h2>Controle Geral de Rotas</h2><p>Envie todos os clientes PPPoE da Colônia Antônio Aleixo para um link.</p><button class="btn" onclick="rota('AMAZONET')">Todos para Amazonet</button> <button class="btn" onclick="rota('STARLINK')">Todos para Starlink</button><pre id="out"></pre></div></div></main></div><script>
+async function rota(r){
+ if(!confirm('Aplicar '+r+' para todos os clientes?')) return;
+ let o=document.getElementById('out'); o.textContent='Aplicando...';
+ try{let x=await fetch('/api/mikrotik/rota-geral',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rota:r})});let j=await x.json();o.textContent=JSON.stringify(j,null,2)}catch(e){o.textContent=e.message}}
+</script></body></html>
