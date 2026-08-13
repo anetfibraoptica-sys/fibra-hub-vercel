@@ -3297,7 +3297,19 @@ app.post("/api/mikrotik/rota-geral", async (req, res) => {
     for (const c of clientes) {
       const ip = String(c.address).split('/')[0];
       if (net.isIP(ip)!==4) continue;
-      await fibraRemoverEntradasRota(cfg, c.name, ip);
+      // Remove todas as entradas antigas deste IP antes de aplicar a nova rota.
+      // A remoção é por endereço para não depender de comentários antigos.
+      for (const listaAntiga of Object.values(FIBRA_ROTA_LISTAS)) {
+        const antigas = await fibraListarEntradasRota(cfg, listaAntiga, ip);
+        for (const item of antigas) {
+          if (item[".id"]) {
+            await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+              "/ip/firewall/address-list/remove",
+              "=.id=" + item[".id"]
+            ]],15000);
+          }
+        }
+      }
       await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
         "/ip/firewall/address-list/add",
         "=list="+FIBRA_ROTA_LISTAS[rota],
