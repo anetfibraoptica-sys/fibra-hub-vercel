@@ -3303,6 +3303,29 @@ app.post("/api/mikrotik/rota-geral", async (req, res) => {
         "=address="+ip,
         "=comment=FIBRA+ ROTA GERAL "+c.name
       ]],15000);
+
+      // Limpa conexões antigas para a troca de rota ser imediata.
+      // Sem isso, sessões já abertas podem continuar pelo link anterior.
+      try {
+        const connResp = await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+          "/ip/firewall/connection/print",
+          "=.proplist=.id",
+          "?src-address="+ip
+        ]],15000);
+        const conns = parseRouterosRows(connResp);
+        for (const conn of conns) {
+          const id = conn[".id"] || conn.id;
+          if (id) {
+            await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+              "/ip/firewall/connection/remove",
+              "=.id="+id
+            ]],15000);
+          }
+        }
+      } catch(e) {
+        console.log("Não foi possível limpar conntrack do cliente", ip, e.message);
+      }
+
       aplicados++;
     }
     return res.json({ok:true, rota, aplicados, mensagem:`${aplicados} clientes enviados para ${rota}.`});
