@@ -3292,6 +3292,19 @@ app.post("/api/mikrotik/rota-geral", async (req, res) => {
       "/ppp/active/print", "=.proplist=name,address"
     ]], 15000);
     const clientes = parseRouterosRows(ativos).filter(x => x.name && x.address);
+
+    // ROTA GERAL: limpa somente clientes das listas de rota antes de recriar.
+    // Mantém o IP reserva 127.0.0.1.
+    for (const lista of Object.values(FIBRA_ROTA_LISTAS)) {
+      const entradas = await fibraListarEntradasRota(cfg, lista, "");
+      const remover = entradas
+        .filter(e => String(e.address || "").split("/")[0] !== "127.0.0.1")
+        .map(e => ["/ip/firewall/address-list/remove", "=.id=" + e[".id"]]);
+      if (remover.length) {
+        await fibraRouterosBatchStable(cfg, remover, 20000, { ignorarItemAusente:true });
+      }
+    }
+
     let aplicados = 0;
     for (const c of clientes) {
       const ip = String(c.address).split('/')[0];
