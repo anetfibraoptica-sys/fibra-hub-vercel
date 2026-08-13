@@ -3306,40 +3306,43 @@ app.post("/api/mikrotik/rota-geral", async (req, res) => {
     }
 
     let aplicados = 0;
+    let erros = [];
     for (const c of clientes) {
-      const ip = String(c.address).split('/')[0];
-      if (net.isIP(ip)!==4) continue;
-      await fibraRemoverEntradasRota(cfg, c.name, ip);
-      await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
-        "/ip/firewall/address-list/add",
-        "=list="+FIBRA_ROTA_LISTAS[rota],
-        "=address="+ip,
-        "=comment=FIBRA+ ROTA GERAL "+c.name
-      ]],15000);
-
-      // Limpa conexões antigas para a troca de rota ser imediata.
-      // Sem isso, sessões já abertas podem continuar pelo link anterior.
       try {
-        const connResp = await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
-          "/ip/firewall/connection/print",
-          "=.proplist=.id",
-          "?src-address="+ip
-        ]],15000);
-        const conns = parseRouterosRows(connResp);
-        for (const conn of conns) {
-          const id = conn[".id"] || conn.id;
-          if (id) {
-            await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+        const ip = String(c.address).split('/')[0];
+        if (net.isIP(ip)!==4) continue;
+        await fibraRemoverEntradasRota(cfg, c.name, ip);
+        const existente = await fibraListarEntradasRota(cfg, FIBRA_ROTA_LISTAS[rota], ip);
+        if (!existente.some(e => String(e.address || '').split('/')[0] === ip)) {
+          await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+            "/ip/firewall/address-list/add",
+            "=list="+FIBRA_ROTA_LISTAS[rota],
+            "=address="+ip,
+            "=comment=FIBRA+ ROTA GERAL "+c.name
+          ]],15000);
+        }
+
+        try {
+          const connResp = await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+            "/ip/firewall/connection/print",
+            "=.proplist=.id",
+            "?src-address="+ip
+          ]],15000);
+          const conns = parseRouterosRows(connResp);
+          for (const conn of conns) {
+            const id = conn[".id"] || conn.id;
+            if (id) await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
               "/ip/firewall/connection/remove",
               "=.id="+id
             ]],15000);
           }
+        } catch(e) {
+          console.log("Falha limpeza conntrack", ip, e.message);
         }
-      } catch(e) {
-        console.log("Não foi possível limpar conntrack do cliente", ip, e.message);
+        aplicados++;
+      } catch(errCliente) {
+        erros.push({cliente:c.name, erro:String(errCliente.message || errCliente)});
       }
-
-      aplicados++;
     }
     return res.json({ok:true, rota, aplicados, mensagem:`${aplicados} clientes enviados para ${rota}.`});
   } catch(e){ return res.status(500).json({ok:false, erro:e.message}); }
