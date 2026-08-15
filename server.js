@@ -289,6 +289,25 @@ function servidorConfigBalanceColonia() {
   };
 }
 
+
+// RB4011 PPPoE CLIENTES: usada para clientes e alterações individuais de rota.
+// A RB3011 continua sendo usada exclusivamente para descobrir a saída de internet.
+function servidorConfigClientesColonia() {
+  const pick = (...keys) => {
+    for (const k of keys) {
+      if (process.env[k] !== undefined && String(process.env[k]).trim() !== "") return String(process.env[k]).trim();
+    }
+    return "";
+  };
+  return {
+    key: "colonia-clientes",
+    host: pick("MIKROTIK_COLONIA_CLIENTES_HOST", "MK_COLONIA_CLIENTES_HOST", "COLONIA_CLIENTES_HOST", "RB4011_HOST"),
+    port: Number(pick("MIKROTIK_COLONIA_CLIENTES_PORT", "MK_COLONIA_CLIENTES_PORT", "COLONIA_CLIENTES_PORT", "RB4011_PORT") || 8728),
+    user: pick("MIKROTIK_COLONIA_CLIENTES_USER", "MK_COLONIA_CLIENTES_USER", "COLONIA_CLIENTES_USER", "RB4011_USER"),
+    pass: pick("MIKROTIK_COLONIA_CLIENTES_PASS", "MK_COLONIA_CLIENTES_PASS", "COLONIA_CLIENTES_PASS", "RB4011_PASS")
+  };
+}
+
 async function fibraListarRotasSaidaInternet() {
   const balance = servidorConfigBalanceColonia();
   if (!balance.host || !balance.user || !balance.pass) {
@@ -3201,9 +3220,9 @@ app.get("/api/mikrotik/cliente-rota", async (req, res) => {
     }
     if (!login) return res.status(400).json({ ok:false, erro:"Login PPPoE não informado." });
 
-    const cfg = servidorConfig(servidor);
-    if (cfg.key !== "colonia" || !cfg.host || !cfg.user || !cfg.pass) {
-      return res.status(500).json({ ok:false, erro:"MikroTik da Colônia não configurado no servidor do painel." });
+    const cfg = servidorConfigClientesColonia();
+    if (!cfg.host || !cfg.user || !cfg.pass) {
+      return res.status(500).json({ ok:false, erro:"RB4011 de clientes da Colônia não configurada no servidor do painel." });
     }
 
     const sessao = await fibraSessaoPPPoEAtual(cfg, login);
@@ -3262,9 +3281,9 @@ app.post("/api/mikrotik/cliente-rota", async (req, res) => {
       return res.status(400).json({ ok:false, erro:"Link inválido. Use STARLINK ou AMAZONET." });
     }
 
-    const cfg = servidorConfig(servidor);
-    if (cfg.key !== "colonia" || !cfg.host || !cfg.user || !cfg.pass) {
-      return res.status(500).json({ ok:false, erro:"MikroTik da Colônia não configurado no servidor do painel." });
+    const cfg = servidorConfigClientesColonia();
+    if (!cfg.host || !cfg.user || !cfg.pass) {
+      return res.status(500).json({ ok:false, erro:"RB4011 de clientes da Colônia não configurada no servidor do painel." });
     }
 
     const sessao = await fibraSessaoPPPoEAtual(cfg, login);
