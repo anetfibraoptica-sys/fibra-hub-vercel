@@ -270,6 +270,35 @@ function servidorConfig(nomeServidor) {
   };
 }
 
+
+// RB3011 BALANCE: usada somente para descobrir a saída real da internet.
+// A RB4011 continua sendo usada para clientes/PPPoE.
+function servidorConfigBalanceColonia() {
+  const pick = (...keys) => {
+    for (const k of keys) {
+      if (process.env[k] !== undefined && String(process.env[k]).trim() !== "") return String(process.env[k]).trim();
+    }
+    return "";
+  };
+  return {
+    key: "colonia-balance",
+    host: pick("MIKROTIK_COLONIA_BALANCE_HOST", "MK_COLONIA_BALANCE_HOST", "COLONIA_BALANCE_HOST", "RB3011_HOST"),
+    port: Number(pick("MIKROTIK_COLONIA_BALANCE_PORT", "MK_COLONIA_BALANCE_PORT", "COLONIA_BALANCE_PORT", "RB3011_PORT") || 8728),
+    user: pick("MIKROTIK_COLONIA_BALANCE_USER", "MK_COLONIA_BALANCE_USER", "COLONIA_BALANCE_USER", "RB3011_USER"),
+    pass: pick("MIKROTIK_COLONIA_BALANCE_PASS", "MK_COLONIA_BALANCE_PASS", "COLONIA_BALANCE_PASS", "RB3011_PASS")
+  };
+}
+
+async function fibraListarRotasSaidaInternet() {
+  const balance = servidorConfigBalanceColonia();
+  if (!balance.host || !balance.user || !balance.pass) {
+    return { rotas: [], erro: "RB3011 balance não configurada" };
+  }
+  return fibraListarRotasPadrao(balance)
+    .then((rotas) => ({ rotas, erro: "" }))
+    .catch((erro) => ({ rotas: [], erro: erro.message }));
+}
+
 function diagnosticoConfigServidor(nomeServidor) {
   const cfg = servidorConfig(nomeServidor);
   return {
@@ -3185,9 +3214,7 @@ app.get("/api/mikrotik/cliente-rota", async (req, res) => {
     const [star, amz, resultadoRotas] = await Promise.all([
       fibraListarEntradasRota(cfg, FIBRA_ROTA_LISTAS.STARLINK, sessao.ip),
       fibraListarEntradasRota(cfg, FIBRA_ROTA_LISTAS.AMAZONET, sessao.ip),
-      fibraListarRotasPadrao(cfg)
-        .then((rotas) => ({ rotas, erro:"" }))
-        .catch((erro) => ({ rotas:[], erro:erro.message }))
+      fibraListarRotasSaidaInternet()
     ]);
 
     if (star.length && amz.length) {
@@ -3265,9 +3292,7 @@ app.post("/api/mikrotik/cliente-rota", async (req, res) => {
       throw new Error("A RB não confirmou o IP na lista " + listaDestino + ".");
     }
 
-    const resultadoRotas = await fibraListarRotasPadrao(cfg)
-      .then((rotas) => ({ rotas, erro:"" }))
-      .catch((erro) => ({ rotas:[], erro:erro.message }));
+    const resultadoRotas = await fibraListarRotasSaidaInternet();
     const statusLink = fibraStatusLinkEmUso(resultadoRotas.rotas, rota, true);
 
     await fibraSalvarPreferenciaRotaBanco({ clienteId, login, rota, ip:sessao.ip });
