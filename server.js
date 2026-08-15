@@ -2968,34 +2968,32 @@ function fibraIdentificarLinkDaRota(row) {
 }
 
 function fibraStatusLinkEmUso(rotas, preferencia, explicita) {
-  // O card "SAÍDA DE INTERNET" representa a saída geral da RB (tabela main).
-  // A preferência individual do cliente (STARLINK/AMAZONET) continua sendo
-  // controlada pelas address-lists, mas não deve alterar o status global.
-  const tabela = "main";
-  if (!tabela || !Array.isArray(rotas)) {
-    return { emUso:null, contingencia:false, tabelaRoteamento:tabela || "" };
+  // A saída geral do assinante deve considerar somente a tabela MAIN.
+  // Ignora tabelas de política dos clientes (CLIENTE-STARLINK/AMAZONET).
+  if (!Array.isArray(rotas)) {
+    return { emUso:null, contingencia:false, tabelaRoteamento:"main" };
   }
 
   const candidatas = rotas.filter((row) => {
     const tabelaRow = String(row["routing-table"] || "main").trim();
-    return tabelaRow === tabela && String(row["dst-address"] || "") === "0.0.0.0/0";
+    return tabelaRow === "main" && String(row["dst-address"] || "") === "0.0.0.0/0";
   });
-  const ativas = candidatas.filter((row) => fibraRouterosVerdadeiro(row.active));
-  const alternativas = candidatas.filter((row) =>
-      !fibraRouterosVerdadeiro(row.disabled) &&
-      !fibraRouterosVerdadeiro(row.inactive) &&
-      Boolean(String(row["immediate-gw"] || "").trim())
-    );
-  // Ignora uma eventual rota dinâmica de terceiro link quando também existir
-  // uma rota ativa identificável do failover Starlink/Amazonet.
-  const ativa = ativas.find((row) => fibraIdentificarLinkDaRota(row)) || ativas[0] ||
-    alternativas.find((row) => fibraIdentificarLinkDaRota(row)) || alternativas[0];
+
+  // Considera somente rotas realmente ativas.
+  const ativas = candidatas.filter((row) => {
+    return fibraRouterosVerdadeiro(row.active) && !fibraRouterosVerdadeiro(row.disabled);
+  });
+
+  // Em caso de múltiplas rotas ativas, usa menor distance.
+  ativas.sort((a,b) => Number(a.distance || 999) - Number(b.distance || 999));
+
+  const ativa = ativas.find((row) => fibraIdentificarLinkDaRota(row)) || ativas[0] || null;
   const emUso = ativa ? fibraIdentificarLinkDaRota(ativa) : null;
 
   return {
     emUso,
     contingencia:Boolean(emUso && preferencia && emUso !== preferencia),
-    tabelaRoteamento:tabela
+    tabelaRoteamento:"main"
   };
 }
 
