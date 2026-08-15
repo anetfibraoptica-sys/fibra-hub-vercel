@@ -273,21 +273,29 @@ function servidorConfig(nomeServidor) {
 
 function servidorConfigClientesColonia() {
   /*
-   * TOPOLOGIA FIXA DA COLONIA (V4):
-   * MIKROTIK_COLONIA_* representa o endpoint do túnel já existente.
-   * A porta 8728 desse endpoint é encaminhada pela RB3011 para a RB4011.
+   * TOPOLOGIA FIXA DA COLONIA (V5):
+   * - o HOST continua sendo o endpoint já funcional de MIKROTIK_COLONIA_HOST;
+   * - a porta 8728 chega à RB3011 e o CUTOVER encaminha para a RB4011;
+   * - somente USUÁRIO/SENHA podem ser próprios da RB4011.
    *
-   * IMPORTANTE: não usamos MIKROTIK_COLONIA_CLIENTES_HOST aqui. Um endereço
-   * privado como 10.10.10.2 não é alcançável diretamente pelo Vercel e causa
-   * exatamente o timeout visto no Resumo.
+   * Isso evita dois erros já diagnosticados:
+   * 1) usar 10.10.10.2 diretamente no Vercel => timeout;
+   * 2) usar a senha da RB3011 na RB4011 => falha no login.
    */
+  const pick = (...keys) => {
+    for (const k of keys) {
+      if (process.env[k] !== undefined && String(process.env[k]).trim() !== "") return String(process.env[k]).trim();
+    }
+    return "";
+  };
+
   const base = servidorConfig("colonia");
   return {
     key: "colonia",
     host: base.host,
     port: 8728,
-    user: base.user,
-    pass: base.pass
+    user: pick("MIKROTIK_COLONIA_CLIENTES_USER", "RB4011_CLIENTES_USER") || base.user,
+    pass: pick("MIKROTIK_COLONIA_CLIENTES_PASS", "MIKROTIK_COLONIA_CLIENTES_PASSWORD", "RB4011_CLIENTES_PASS") || base.pass
   };
 }
 
@@ -3224,8 +3232,13 @@ app.get("/api/versao-colonia-dual", (req, res) => {
   const links = servidorConfigLinksColonia();
   return res.json({
     ok:true,
-    versao:"COLONIA-DUAL-V4",
-    clientes:{ papel:"RB4011", porta:Number(clientes.port || 8728), hostConfigurado:Boolean(clientes.host) },
+    versao:"COLONIA-DUAL-V5",
+    clientes:{
+      papel:"RB4011",
+      porta:Number(clientes.port || 8728),
+      hostConfigurado:Boolean(clientes.host),
+      credencialSeparada:Boolean(process.env.MIKROTIK_COLONIA_CLIENTES_USER || process.env.MIKROTIK_COLONIA_CLIENTES_PASS)
+    },
     links:{ papel:"RB3011", porta:Number(links.port || 8730), hostConfigurado:Boolean(links.host) }
   });
 });
