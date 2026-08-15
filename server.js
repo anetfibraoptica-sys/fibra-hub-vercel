@@ -271,27 +271,6 @@ function servidorConfig(nomeServidor) {
 }
 
 
-// RB3011 BALANCE: usada somente para descobrir a saída real da internet.
-// A RB4011 continua sendo usada para clientes/PPPoE.
-function servidorConfigBalanceColonia() {
-  const pick = (...keys) => {
-    for (const k of keys) {
-      if (process.env[k] !== undefined && String(process.env[k]).trim() !== "") return String(process.env[k]).trim();
-    }
-    return "";
-  };
-  return {
-    key: "colonia-balance",
-    host: pick("MIKROTIK_COLONIA_BALANCE_HOST", "MK_COLONIA_BALANCE_HOST", "COLONIA_BALANCE_HOST", "RB3011_HOST", "MIKROTIK_COLONIA_HOST", "MK_COLONIA_HOST", "COLONIA_HOST"),
-    port: Number(pick("MIKROTIK_COLONIA_BALANCE_PORT", "MK_COLONIA_BALANCE_PORT", "COLONIA_BALANCE_PORT", "RB3011_PORT", "MIKROTIK_COLONIA_PORT", "MK_COLONIA_PORT", "COLONIA_PORT") || 8728),
-    user: pick("MIKROTIK_COLONIA_BALANCE_USER", "MK_COLONIA_BALANCE_USER", "COLONIA_BALANCE_USER", "RB3011_USER", "MIKROTIK_COLONIA_USER", "MK_COLONIA_USER", "COLONIA_USER"),
-    pass: pick("MIKROTIK_COLONIA_BALANCE_PASS", "MK_COLONIA_BALANCE_PASS", "COLONIA_BALANCE_PASS", "RB3011_PASS", "MIKROTIK_COLONIA_PASS", "MK_COLONIA_PASS", "COLONIA_PASS")
-  };
-}
-
-
-// RB4011 PPPoE CLIENTES: usada para clientes e alterações individuais de rota.
-// A RB3011 continua sendo usada exclusivamente para descobrir a saída de internet.
 function servidorConfigClientesColonia() {
   const pick = (...keys) => {
     for (const k of keys) {
@@ -301,24 +280,11 @@ function servidorConfigClientesColonia() {
   };
   return {
     key: "colonia-clientes",
-    // Fallback compatível com a migração RB3011 -> RB4011.
-    // Se não houver variáveis exclusivas de clientes, usa o cadastro principal.
-    // Mantém compatibilidade com instalações antigas do Fibra+.
-    host: pick("MIKROTIK_COLONIA_CLIENTES_HOST", "MK_COLONIA_CLIENTES_HOST", "COLONIA_CLIENTES_HOST", "RB4011_HOST"),
-    port: Number(pick("MIKROTIK_COLONIA_CLIENTES_PORT", "MK_COLONIA_CLIENTES_PORT", "COLONIA_CLIENTES_PORT", "RB4011_PORT") || 8728),
-    user: pick("MIKROTIK_COLONIA_CLIENTES_USER", "MK_COLONIA_CLIENTES_USER", "COLONIA_CLIENTES_USER", "RB4011_USER"),
-    pass: pick("MIKROTIK_COLONIA_CLIENTES_PASS", "MK_COLONIA_CLIENTES_PASS", "COLONIA_CLIENTES_PASS", "RB4011_PASS")
+    host: pick("MIKROTIK_COLONIA_CLIENTES_HOST", "RB4011_HOST"),
+    port: pick("MIKROTIK_COLONIA_CLIENTES_PORT", "RB4011_PORT") || 8728,
+    user: pick("MIKROTIK_COLONIA_CLIENTES_USER", "RB4011_USER"),
+    pass: pick("MIKROTIK_COLONIA_CLIENTES_PASS", "RB4011_PASS")
   };
-}
-
-async function fibraListarRotasSaidaInternet() {
-  const balance = servidorConfigBalanceColonia();
-  if (!balance.host || !balance.user || !balance.pass) {
-    return { rotas: [], erro: "RB3011 balance não configurada" };
-  }
-  return fibraListarRotasPadrao(balance)
-    .then((rotas) => ({ rotas, erro: "" }))
-    .catch((erro) => ({ rotas: [], erro: erro.message }));
 }
 
 function diagnosticoConfigServidor(nomeServidor) {
@@ -3002,39 +2968,28 @@ function fibraIdentificarLinkDaRota(row) {
 }
 
 function fibraStatusLinkEmUso(rotas, preferencia, explicita) {
-  /*
-    A saída de internet geral deve sempre representar a tabela MAIN da RB3011.
-    A RB4011 apenas aponta para a RB3011, portanto nunca deve decidir
-    Starlink/Amazonet por ela.
-
-    A preferência do cliente (STARLINK/AMAZONET) continua sendo usada
-    somente para identificar contingência do assinante.
-  */
+  // O card "SAÍDA DE INTERNET" representa a saída geral da RB (tabela main).
+  // A preferência individual do cliente (STARLINK/AMAZONET) continua sendo
+  // controlada pelas address-lists, mas não deve alterar o status global.
   const tabela = "main";
-
-  if (!Array.isArray(rotas)) {
-    return { emUso:null, contingencia:false, tabelaRoteamento:tabela };
+  if (!tabela || !Array.isArray(rotas)) {
+    return { emUso:null, contingencia:false, tabelaRoteamento:tabela || "" };
   }
 
   const candidatas = rotas.filter((row) => {
     const tabelaRow = String(row["routing-table"] || "main").trim();
     return tabelaRow === tabela && String(row["dst-address"] || "") === "0.0.0.0/0";
   });
-
   const ativas = candidatas.filter((row) => fibraRouterosVerdadeiro(row.active));
-
   const alternativas = candidatas.filter((row) =>
-    !fibraRouterosVerdadeiro(row.disabled) &&
-    !fibraRouterosVerdadeiro(row.inactive) &&
-    Boolean(String(row["immediate-gw"] || row.gateway || "").trim())
-  );
-
-  const ativa =
-    ativas.find((row) => fibraIdentificarLinkDaRota(row)) ||
-    ativas[0] ||
-    alternativas.find((row) => fibraIdentificarLinkDaRota(row)) ||
-    alternativas[0];
-
+      !fibraRouterosVerdadeiro(row.disabled) &&
+      !fibraRouterosVerdadeiro(row.inactive) &&
+      Boolean(String(row["immediate-gw"] || "").trim())
+    );
+  // Ignora uma eventual rota dinâmica de terceiro link quando também existir
+  // uma rota ativa identificável do failover Starlink/Amazonet.
+  const ativa = ativas.find((row) => fibraIdentificarLinkDaRota(row)) || ativas[0] ||
+    alternativas.find((row) => fibraIdentificarLinkDaRota(row)) || alternativas[0];
   const emUso = ativa ? fibraIdentificarLinkDaRota(ativa) : null;
 
   return {
@@ -3053,10 +3008,7 @@ async function fibraRemoverEntradasRota(cfg, login, ipAtual) {
     const linhas = await fibraListarEntradasRota(cfg, lista, "");
     for (const row of linhas) {
       const mesmoIp = ipAtual && String(row.address || "").split("/")[0].trim() === ipAtual;
-      const mesmoLogin = login && fibraNormalizarTexto(row.comment || "").includes(fibraNormalizarTexto(login));
-      // Remove registros antigos pelo IP atual ou pelo login gravado no comentário.
-      // Isso corrige clientes que trocaram de Starlink <-> Amazonet e ficaram presos na lista antiga.
-      if ((mesmoIp || mesmoLogin) && row[".id"]) ids.add(row[".id"]);
+      if (mesmoIp && row[".id"]) ids.add(row[".id"]);
     }
   }
 
@@ -3223,9 +3175,9 @@ app.get("/api/mikrotik/cliente-rota", async (req, res) => {
     }
     if (!login) return res.status(400).json({ ok:false, erro:"Login PPPoE não informado." });
 
-    const cfg = servidorConfigClientesColonia();
-    if (!cfg.host || !cfg.user || !cfg.pass) {
-      return res.status(500).json({ ok:false, erro:"RB4011 de clientes da Colônia não configurada no servidor do painel." });
+    const cfg = servidorConfig(servidor);
+    if (cfg.key !== "colonia" || !cfg.host || !cfg.user || !cfg.pass) {
+      return res.status(500).json({ ok:false, erro:"MikroTik da Colônia não configurado no servidor do painel." });
     }
 
     const sessao = await fibraSessaoPPPoEAtual(cfg, login);
@@ -3236,7 +3188,9 @@ app.get("/api/mikrotik/cliente-rota", async (req, res) => {
     const [star, amz, resultadoRotas] = await Promise.all([
       fibraListarEntradasRota(cfg, FIBRA_ROTA_LISTAS.STARLINK, sessao.ip),
       fibraListarEntradasRota(cfg, FIBRA_ROTA_LISTAS.AMAZONET, sessao.ip),
-      fibraListarRotasSaidaInternet()
+      fibraListarRotasPadrao(cfg)
+        .then((rotas) => ({ rotas, erro:"" }))
+        .catch((erro) => ({ rotas:[], erro:erro.message }))
     ]);
 
     if (star.length && amz.length) {
@@ -3284,9 +3238,9 @@ app.post("/api/mikrotik/cliente-rota", async (req, res) => {
       return res.status(400).json({ ok:false, erro:"Link inválido. Use STARLINK ou AMAZONET." });
     }
 
-    const cfg = servidorConfigClientesColonia();
-    if (!cfg.host || !cfg.user || !cfg.pass) {
-      return res.status(500).json({ ok:false, erro:"RB4011 de clientes da Colônia não configurada no servidor do painel." });
+    const cfg = servidorConfig(servidor);
+    if (cfg.key !== "colonia" || !cfg.host || !cfg.user || !cfg.pass) {
+      return res.status(500).json({ ok:false, erro:"MikroTik da Colônia não configurado no servidor do painel." });
     }
 
     const sessao = await fibraSessaoPPPoEAtual(cfg, login);
@@ -3314,7 +3268,9 @@ app.post("/api/mikrotik/cliente-rota", async (req, res) => {
       throw new Error("A RB não confirmou o IP na lista " + listaDestino + ".");
     }
 
-    const resultadoRotas = await fibraListarRotasSaidaInternet();
+    const resultadoRotas = await fibraListarRotasPadrao(cfg)
+      .then((rotas) => ({ rotas, erro:"" }))
+      .catch((erro) => ({ rotas:[], erro:erro.message }));
     const statusLink = fibraStatusLinkEmUso(resultadoRotas.rotas, rota, true);
 
     await fibraSalvarPreferenciaRotaBanco({ clienteId, login, rota, ip:sessao.ip });
