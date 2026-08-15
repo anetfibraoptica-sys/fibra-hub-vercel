@@ -272,45 +272,24 @@ function servidorConfig(nomeServidor) {
 
 
 function servidorConfigClientesColonia() {
-  const pick = (...keys) => {
-    for (const k of keys) {
-      if (process.env[k] !== undefined && String(process.env[k]).trim() !== "") {
-        return String(process.env[k]).trim();
-      }
-    }
-    return "";
-  };
-
+  /*
+   * V11 — CLIENTES DA COLÔNIA
+   *
+   * Preserva o caminho comprovadamente funcional:
+   * MIKROTIK_COLONIA_* -> porta 8728 -> CUTOVER -> RB4011.
+   *
+   * Não usa MIKROTIK_COLONIA_CLIENTES_* nem tenta 10.10.10.2
+   * diretamente a partir do Vercel.
+   */
   const base = servidorConfig("colonia");
-
-  // V10:
-  // "colonia" é UM servidor lógico no painel.
-  // Esta fonte física é a RB4011 e fornece somente clientes/IP/PPPoE.
-  //
-  // Se as variáveis RB4011 dedicadas não existirem, preserva o caminho
-  // histórico MIKROTIK_COLONIA_* que já funcionava para os clientes.
   return {
     key: "colonia",
     role: "clientes",
     identity: "RB4011-PPPOE-CLIENTES",
-    host: pick(
-      "MIKROTIK_COLONIA_RB4011_HOST",
-      "MIKROTIK_COLONIA_CLIENTES_HOST"
-    ) || base.host,
-    port: pick(
-      "MIKROTIK_COLONIA_RB4011_PORT",
-      "MIKROTIK_COLONIA_CLIENTES_PORT"
-    ) || base.port || 8728,
-    user: pick(
-      "MIKROTIK_COLONIA_RB4011_USER",
-      "MIKROTIK_COLONIA_CLIENTES_USER"
-    ) || base.user,
-    pass: pick(
-      "MIKROTIK_COLONIA_RB4011_PASS",
-      "MIKROTIK_COLONIA_RB4011_PASSWORD",
-      "MIKROTIK_COLONIA_CLIENTES_PASS",
-      "MIKROTIK_COLONIA_CLIENTES_PASSWORD"
-    ) || base.pass
+    host: base.host,
+    port: base.port || 8728,
+    user: base.user,
+    pass: base.pass
   };
 }
 
@@ -326,9 +305,12 @@ function servidorConfigLinksColonia() {
 
   const base = servidorConfig("colonia");
 
-  // V10:
-  // segunda fonte física do MESMO servidor lógico "colonia".
-  // Esta conexão é exclusivamente RB3011-BALANCE.
+  /*
+   * V11 — BALANCE DA COLÔNIA
+   *
+   * É uma conexão independente da consulta de clientes.
+   * Se ela falhar, o cliente continua aparecendo Online com IP/MAC/profile.
+   */
   return {
     key: "colonia",
     role: "balance",
@@ -3615,6 +3597,30 @@ app.get("/api/colonia/resumo-unificado", async (req, res) => {
   }
 });
 
+app.get("/api/colonia/v11", (req,res) => {
+  const clientes = servidorConfigClientesColonia();
+  const balance = servidorConfigLinksColonia();
+
+  return res.json({
+    ok:true,
+    versao:"COLONIA-V11",
+    servidorPainel:"Colônia",
+    arquitetura:{
+      clientes:{
+        equipamento:"RB4011-PPPOE-CLIENTES",
+        porta:Number(clientes.port || 8728),
+        funcao:"PPP/IP/MAC/profile/status"
+      },
+      balance:{
+        equipamento:"RB3011-BALANCE",
+        porta:Number(balance.port || 8730),
+        funcao:"STARLINK/AMAZONET/address-lists/contingencia"
+      }
+    },
+    isolamentoFalhas:true
+  });
+});
+
 app.get("/api/colonia/fontes", async (req, res) => {
   const clientes = servidorConfigClientesColonia();
   const balance = servidorConfigLinksColonia();
@@ -4041,7 +4047,7 @@ app.post("/api/mikrotik/cliente-rota", async (req, res) => {
 app.get("/api/versao-colonia-v9", (req,res) => {
   res.json({
     ok:true,
-    versao:"COLONIA-UNIFICADA-V10",
+    versao:"COLONIA-V11",
     clientes:"RB4011-PPPOE-CLIENTES",
     ipAtual:"RB4011",
     rotas:"RB3011-BALANCE",

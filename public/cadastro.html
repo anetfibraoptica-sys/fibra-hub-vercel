@@ -3235,10 +3235,7 @@ document.addEventListener("DOMContentLoaded", function(){
     aplicarVerificando();
 
     try{
-      const ehColoniaStatus = String(servidor || "").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().match(/colonia|antonio aleixo/);
-      const url = ehColoniaStatus
-        ? "/api/colonia/resumo-unificado?login=" + encodeURIComponent(login)
-        : "/api/cliente/status?login=" + encodeURIComponent(login) + "&servidor=" + encodeURIComponent(servidor);
+      const url = "/api/cliente/status?login=" + encodeURIComponent(login) + "&servidor=" + encodeURIComponent(servidor);
       const resp = await fetch(url, {cache:"no-store"});
       const data = await resp.json();
 
@@ -3248,10 +3245,7 @@ document.addEventListener("DOMContentLoaded", function(){
         aplicarOffline(data);
       }
 
-      // V10: publica a resposta unificada para o módulo de rotas.
-      if(data && data.servidor === "colonia"){
-        document.dispatchEvent(new CustomEvent("fibra:colonia-resumo-unificado", {detail:data}));
-      }
+
     }catch(e){
       console.warn("Erro status cliente:", e);
       aplicarOffline();
@@ -3448,9 +3442,7 @@ document.addEventListener("DOMContentLoaded", function(){
     if(status && !silenciosa) status.textContent = "Verificando...";
 
     try{
-      const url = ehColonia(servidor)
-        ? "/api/colonia/resumo-unificado?login=" + encodeURIComponent(login)
-        : "/api/mikrotik/cliente-rota?servidor=" + encodeURIComponent(servidor) + "&login=" + encodeURIComponent(login);
+      const url = "/api/mikrotik/cliente-rota?servidor=" + encodeURIComponent(servidor) + "&login=" + encodeURIComponent(login);
       const resp = await fetch(url, {cache:"no-store"});
       const json = await resp.json();
       if(seq !== fibraRotaSeq) return;
@@ -3461,7 +3453,9 @@ document.addEventListener("DOMContentLoaded", function(){
       }
       setEstado(json.rota, json);
     }catch(e){
-      if(seq === fibraRotaSeq) setEstado(null, {erro:"Erro ao consultar a rota: " + e.message});
+      if(seq === fibraRotaSeq) {
+        setEstado(null, {erro:"Balance RB3011 indisponível: " + e.message});
+      }
     }finally{
       fibraRotaUltimaConsulta = Date.now();
       fibraRotaConsultando = false;
@@ -3527,13 +3521,6 @@ document.addEventListener("DOMContentLoaded", function(){
   }
 
   window.fibraConsultarRotaInternet = consultarRota;
-  document.addEventListener("fibra:colonia-resumo-unificado", function(ev){
-    const data = ev && ev.detail ? ev.detail : null;
-    if(data && data.servidor === "colonia"){
-      setEstado(data.rota, data);
-    }
-  });
-
   window.fibraSelecionarRotaInternet = selecionarRota;
   window.fibraAtualizarVisibilidadeRotaInternet = atualizarVisibilidade;
 
