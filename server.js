@@ -273,29 +273,28 @@ function servidorConfig(nomeServidor) {
 
 function servidorConfigClientesColonia() {
   /*
-   * TOPOLOGIA FIXA DA COLONIA (V5):
-   * - o HOST continua sendo o endpoint já funcional de MIKROTIK_COLONIA_HOST;
-   * - a porta 8728 chega à RB3011 e o CUTOVER encaminha para a RB4011;
-   * - somente USUÁRIO/SENHA podem ser próprios da RB4011.
+   * V6 — RESTAURA O CAMINHO DE CLIENTES QUE JÁ FUNCIONAVA.
    *
-   * Isso evita dois erros já diagnosticados:
-   * 1) usar 10.10.10.2 diretamente no Vercel => timeout;
-   * 2) usar a senha da RB3011 na RB4011 => falha no login.
+   * Os clientes da Colônia usam EXATAMENTE a configuração histórica
+   * MIKROTIK_COLONIA_* (host/porta/usuário/senha).
+   *
+   * Na topologia atual, a conexão na porta 8728 chega à RB3011 e o
+   * CUTOVER existente encaminha a sessão da API para a RB4011.
+   *
+   * IMPORTANTE:
+   * - não usa MIKROTIK_COLONIA_CLIENTES_HOST;
+   * - não usa credencial separada da RB4011;
+   * - não tenta acessar 10.10.10.2 diretamente.
+   *
+   * Isso preserva exatamente o caminho que já devolveu PPPoE Online.
    */
-  const pick = (...keys) => {
-    for (const k of keys) {
-      if (process.env[k] !== undefined && String(process.env[k]).trim() !== "") return String(process.env[k]).trim();
-    }
-    return "";
-  };
-
   const base = servidorConfig("colonia");
   return {
     key: "colonia",
     host: base.host,
-    port: 8728,
-    user: pick("MIKROTIK_COLONIA_CLIENTES_USER", "RB4011_CLIENTES_USER") || base.user,
-    pass: pick("MIKROTIK_COLONIA_CLIENTES_PASS", "MIKROTIK_COLONIA_CLIENTES_PASSWORD", "RB4011_CLIENTES_PASS") || base.pass
+    port: base.port,
+    user: base.user,
+    pass: base.pass
   };
 }
 
@@ -3232,12 +3231,12 @@ app.get("/api/versao-colonia-dual", (req, res) => {
   const links = servidorConfigLinksColonia();
   return res.json({
     ok:true,
-    versao:"COLONIA-DUAL-V5",
+    versao:"COLONIA-DUAL-V6",
     clientes:{
       papel:"RB4011",
       porta:Number(clientes.port || 8728),
       hostConfigurado:Boolean(clientes.host),
-      credencialSeparada:Boolean(process.env.MIKROTIK_COLONIA_CLIENTES_USER || process.env.MIKROTIK_COLONIA_CLIENTES_PASS)
+      caminhoHistorico:true
     },
     links:{ papel:"RB3011", porta:Number(links.port || 8730), hostConfigurado:Boolean(links.host) }
   });
