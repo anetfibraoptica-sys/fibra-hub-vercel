@@ -172,7 +172,7 @@ async function carregarClienteDetalhes(){
               <button type="button" id="btnDetalhesRotaStarlink" class="fibra-rota-btn starlink" onclick="fibraDetalhesSelecionarRota('STARLINK')">STARLINK</button>
               <button type="button" id="btnDetalhesRotaAmazonet" class="fibra-rota-btn amazonet" onclick="fibraDetalhesSelecionarRota('AMAZONET')">AMAZONET</button>
             </div>
-            <small id="fibraDetalhesRotaInfo">Obtendo IP na RB4011 e consultando a rota no BALANCE RB3011...</small>
+            <small id="fibraDetalhesRotaInfo">Obtendo IP na RB4011 e consultando rota na RB3011-BALANCE...</small>
           </div>
         </section>
       </div>
@@ -1159,7 +1159,7 @@ document.addEventListener("DOMContentLoaded", function(){
           <div class="resumo-field"><span class="resumo-label">SERVIDOR</span><span id="resServidor" class="resumo-value">${fibraNomeServidor(servidor)}</span></div>
           <div class="resumo-field"><span class="resumo-label">INTERFACE</span><span class="resumo-value">${interfaceV}</span></div>
           <div class="resumo-field"><span class="resumo-label">ELEMENTO DE REDE</span><span class="resumo-value">Conexão<br>PPPOE</span></div>
-          <div class="resumo-field"><span class="resumo-label">IP ATUAL <small>(RB4011)</small></span><span class="resumo-value">Profile<br>${profile}</span></div>
+          <div class="resumo-field"><span class="resumo-label">IP ATUAL</span><span class="resumo-value">Profile<br>${profile}</span></div>
         </div>
 
         <div id="fibraRotaInternetBox" class="fibra-rota-internet">
@@ -1171,7 +1171,7 @@ document.addEventListener("DOMContentLoaded", function(){
             <button type="button" id="btnRotaStarlink" class="fibra-rota-btn starlink" onclick="fibraSelecionarRotaInternet('STARLINK')">STARLINK</button>
             <button type="button" id="btnRotaAmazonet" class="fibra-rota-btn amazonet" onclick="fibraSelecionarRotaInternet('AMAZONET')">AMAZONET</button>
           </div>
-          <small id="fibraRotaInternetInfo">IP do cliente vindo da RB4011 • Rotas e contingência no BALANCE RB3011.</small>
+          <small id="fibraRotaInternetInfo">IP do cliente: RB4011 • Rotas/contingência: RB3011-BALANCE.</small>
         </div>
 
         <div class="resumo-oltnet">OLTNET</div>

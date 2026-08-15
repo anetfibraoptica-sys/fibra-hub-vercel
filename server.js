@@ -354,186 +354,6 @@ function servidorConfigClientes(nomeServidor) {
     : servidorConfig(nomeServidor);
 }
 
-
-/**
- * COLÔNIA DUAL V8
- *
- * Fonte do IP/estado do cliente:
- *   RB4011-PPPOE-CLIENTES
- *
- * Aplicação/leitura de política de rota:
- *   RB3011-BALANCE
- *
- * O IP NÃO é descoberto na RB3011.
- * A RB3011 recebe o IP que foi obtido da sessão PPPoE da RB4011.
- */
-async function coloniaObterClienteNaRB4011(login){
-  const cfgClientes = servidorConfigClientesColonia();
-  const nome = String(login || "").trim();
-  if(!nome) throw new Error("Login do cliente não informado.");
-
-  const ativos = await mikrotikTalk(cfgClientes, [
-    "/ppp/active/print",
-    "?name=" + nome
-  ]);
-
-  const sessao = Array.isArray(ativos) && ativos.length ? ativos[0] : null;
-
-  // Se estiver offline, ainda podemos localizar o secret/profile,
-  // mas não inventamos IP atual.
-  let secret = null;
-  try{
-    const secrets = await mikrotikTalk(cfgClientes, [
-      "/ppp/secret/print",
-      "?name=" + nome
-    ]);
-    secret = Array.isArray(secrets) && secrets.length ? secrets[0] : null;
-  }catch(_){}
-
-  const ipAtual = sessao && (sessao.address || sessao["remote-address"])
-    ? String(sessao.address || sessao["remote-address"]).trim()
-    : "";
-
-  return {
-    login:nome,
-    online:Boolean(sessao),
-    ipAtual,
-    sessao,
-    secret,
-    servidor:"RB4011-PPPOE-CLIENTES"
-  };
-}
-
-async function coloniaConsultarRotaNaRB3011(ipAtual, login){
-  const cfgBalance = servidorConfigLinksColonia();
-  const ip = String(ipAtual || "").trim();
-  const nome = String(login || "").trim();
-
-  if(!ip){
-    return {
-      preferencia:null,
-      origem:null,
-      servidor:"RB3011-BALANCE",
-      motivo:"Cliente sem IP atual na RB4011."
-    };
-  }
-
-  const [star, amz] = await Promise.all([
-    mikrotikTalk(cfgBalance, [
-      "/ip/firewall/address-list/print",
-      "?list=CLIENTES-STARLINK",
-      "?address=" + ip
-    ]).catch(()=>[]),
-    mikrotikTalk(cfgBalance, [
-      "/ip/firewall/address-list/print",
-      "?list=CLIENTES-AMAZONET",
-      "?address=" + ip
-    ]).catch(()=>[])
-  ]);
-
-  let preferencia = "STARLINK"; // regra de negócio padrão
-  let origem = "PADRAO";
-
-  if(Array.isArray(amz) && amz.length){
-    preferencia = "AMAZONET";
-    origem = "CLIENTES-AMAZONET";
-  }else if(Array.isArray(star) && star.length){
-    preferencia = "STARLINK";
-    origem = "CLIENTES-STARLINK";
-  }
-
-  return {
-    preferencia,
-    origem,
-    servidor:"RB3011-BALANCE",
-    ipAtual:ip,
-    login:nome
-  };
-}
-
-async function coloniaAplicarRotaNaRB3011({login, ipAtual, rota}){
-  const cfgBalance = servidorConfigLinksColonia();
-  const nome = String(login || "").trim();
-  const ip = String(ipAtual || "").trim();
-  const destino = String(rota || "").trim().toUpperCase();
-
-  if(!nome) throw new Error("Login do cliente não informado.");
-  if(!ip) throw new Error("Cliente sem IP atual na RB4011.");
-  if(!["STARLINK","AMAZONET"].includes(destino)){
-    throw new Error("Rota inválida. Use STARLINK ou AMAZONET.");
-  }
-
-  const listas = ["CLIENTES-STARLINK","CLIENTES-AMAZONET"];
-  const comentario = "FIBRA+ ROTA " + nome;
-
-  // Remove entradas antigas por IP e também pelo comentário do login.
-  for(const lista of listas){
-    const porIp = await mikrotikTalk(cfgBalance, [
-      "/ip/firewall/address-list/print",
-      "?list=" + lista,
-      "?address=" + ip
-    ]).catch(()=>[]);
-    for(const item of (Array.isArray(porIp) ? porIp : [])){
-      if(item && item[".id"]){
-        await mikrotikTalk(cfgBalance, [
-          "/ip/firewall/address-list/remove",
-          "=.id=" + item[".id"]
-        ]).catch(()=>{});
-      }
-    }
-
-    const porComentario = await mikrotikTalk(cfgBalance, [
-      "/ip/firewall/address-list/print",
-      "?list=" + lista,
-      "?comment=" + comentario
-    ]).catch(()=>[]);
-    for(const item of (Array.isArray(porComentario) ? porComentario : [])){
-      if(item && item[".id"]){
-        await mikrotikTalk(cfgBalance, [
-          "/ip/firewall/address-list/remove",
-          "=.id=" + item[".id"]
-        ]).catch(()=>{});
-      }
-    }
-  }
-
-  // STARLINK é o padrão. Mantemos entrada explícita para o painel enxergar
-  // a preferência escolhida e permitir auditoria.
-  const listaDestino = destino === "AMAZONET"
-    ? "CLIENTES-AMAZONET"
-    : "CLIENTES-STARLINK";
-
-  await mikrotikTalk(cfgBalance, [
-    "/ip/firewall/address-list/add",
-    "=list=" + listaDestino,
-    "=address=" + ip,
-    "=comment=" + comentario
-  ]);
-
-  // Limpa conntrack do IP para a nova marca de roteamento valer imediatamente.
-  const conexoes = await mikrotikTalk(cfgBalance, [
-    "/ip/firewall/connection/print",
-    "?src-address~" + ip
-  ]).catch(()=>[]);
-  for(const c of (Array.isArray(conexoes) ? conexoes : [])){
-    if(c && c[".id"]){
-      await mikrotikTalk(cfgBalance, [
-        "/ip/firewall/connection/remove",
-        "=.id=" + c[".id"]
-      ]).catch(()=>{});
-    }
-  }
-
-  return {
-    ok:true,
-    rota:destino,
-    ipAtual:ip,
-    login:nome,
-    servidorClientes:"RB4011-PPPOE-CLIENTES",
-    servidorRotas:"RB3011-BALANCE"
-  };
-}
-
 function diagnosticoConfigServidor(nomeServidor) {
   const cfg = servidorConfig(nomeServidor);
   return {
@@ -3437,7 +3257,7 @@ app.get("/api/versao-colonia-dual", (req, res) => {
   const links = servidorConfigLinksColonia();
   return res.json({
     ok:true,
-    versao:"COLONIA-DUAL-V8",
+    versao:"COLONIA-DUAL-V7",
     clientes:{
       papel:"RB4011-PPPOE-CLIENTES",
       porta:Number(clientes.port || 8728),
@@ -3445,22 +3265,6 @@ app.get("/api/versao-colonia-dual", (req, res) => {
       caminhoHistorico:true
     },
     links:{ papel:"RB3011-BALANCE", porta:Number(links.port || 8730), hostConfigurado:Boolean(links.host) }
-  });
-});
-
-app.get("/api/arquitetura-colonia", requireLogin, (req,res)=>{
-  res.json({
-    ok:true,
-    versao:"COLONIA-DUAL-V8",
-    servidor:{
-      equipamento:"RB4011-PPPOE-CLIENTES",
-      responsabilidade:["PPPoE","IP atual","MAC","profile","sessão","interface"]
-    },
-    rotas:{
-      equipamento:"RB3011-BALANCE",
-      responsabilidade:["STARLINK","AMAZONET","address-lists","contingência","conntrack"],
-      regra:"O IP é obtido na RB4011 e aplicado/consultado na RB3011."
-    }
   });
 });
 
@@ -3502,16 +3306,153 @@ app.get("/api/mikrotik/diagnostico-colonia-dual", async (req, res) => {
   return res.json({ ok:clientes.ok && links.ok, clientes, links });
 });
 
-app.get("/api/mikrotik/cliente-rota", requireLogin, async (req,res)=>{
+
+// ===== COLÔNIA DUAL V8.2: RB4011 = CLIENTES/IP | RB3011 = BALANCE/ROTAS =====
+async function coloniaV82ClienteRB4011(login){
+  const cfg = servidorConfigClientesColonia();
+  const nome = String(login || "").trim();
+  if(!nome) throw new Error("Login do cliente não informado.");
+
+  const ativos = await mikrotikTalk(cfg, [
+    "/ppp/active/print",
+    "?name=" + nome
+  ]);
+  const sessao = Array.isArray(ativos) && ativos.length ? ativos[0] : null;
+  const ipAtual = sessao
+    ? String(sessao.address || sessao["remote-address"] || "").trim()
+    : "";
+
+  return {
+    login:nome,
+    online:Boolean(sessao),
+    ipAtual,
+    sessao,
+    servidor:"RB4011-PPPOE-CLIENTES"
+  };
+}
+
+async function coloniaV82RotaRB3011(login, ipAtual){
+  const cfg = servidorConfigLinksColonia();
+  const ip = String(ipAtual || "").trim();
+  if(!ip){
+    return {
+      preferencia:null,
+      origem:null,
+      servidor:"RB3011-BALANCE",
+      motivo:"Sem IP atual na RB4011."
+    };
+  }
+
+  const [star, amz] = await Promise.all([
+    mikrotikTalk(cfg, [
+      "/ip/firewall/address-list/print",
+      "?list=CLIENTES-STARLINK",
+      "?address=" + ip
+    ]).catch(()=>[]),
+    mikrotikTalk(cfg, [
+      "/ip/firewall/address-list/print",
+      "?list=CLIENTES-AMAZONET",
+      "?address=" + ip
+    ]).catch(()=>[])
+  ]);
+
+  if(Array.isArray(amz) && amz.length){
+    return {preferencia:"AMAZONET", origem:"CLIENTES-AMAZONET", servidor:"RB3011-BALANCE"};
+  }
+  if(Array.isArray(star) && star.length){
+    return {preferencia:"STARLINK", origem:"CLIENTES-STARLINK", servidor:"RB3011-BALANCE"};
+  }
+  return {preferencia:"STARLINK", origem:"PADRAO", servidor:"RB3011-BALANCE"};
+}
+
+async function coloniaV82AplicarRotaRB3011(login, ipAtual, rota){
+  const cfg = servidorConfigLinksColonia();
+  const nome = String(login || "").trim();
+  const ip = String(ipAtual || "").trim();
+  const destino = String(rota || "").trim().toUpperCase();
+
+  if(!nome) throw new Error("Login do cliente não informado.");
+  if(!ip) throw new Error("Cliente sem IP atual na RB4011.");
+  if(!["STARLINK","AMAZONET"].includes(destino)) throw new Error("Rota inválida.");
+
+  const comentario = "FIBRA+ ROTA " + nome;
+
+  for(const lista of ["CLIENTES-STARLINK","CLIENTES-AMAZONET"]){
+    const porIp = await mikrotikTalk(cfg, [
+      "/ip/firewall/address-list/print",
+      "?list=" + lista,
+      "?address=" + ip
+    ]).catch(()=>[]);
+
+    for(const item of (Array.isArray(porIp) ? porIp : [])){
+      if(item?.[".id"]){
+        await mikrotikTalk(cfg, [
+          "/ip/firewall/address-list/remove",
+          "=.id=" + item[".id"]
+        ]).catch(()=>{});
+      }
+    }
+
+    const porLogin = await mikrotikTalk(cfg, [
+      "/ip/firewall/address-list/print",
+      "?list=" + lista,
+      "?comment=" + comentario
+    ]).catch(()=>[]);
+
+    for(const item of (Array.isArray(porLogin) ? porLogin : [])){
+      if(item?.[".id"]){
+        await mikrotikTalk(cfg, [
+          "/ip/firewall/address-list/remove",
+          "=.id=" + item[".id"]
+        ]).catch(()=>{});
+      }
+    }
+  }
+
+  const listaDestino = destino === "AMAZONET" ? "CLIENTES-AMAZONET" : "CLIENTES-STARLINK";
+
+  await mikrotikTalk(cfg, [
+    "/ip/firewall/address-list/add",
+    "=list=" + listaDestino,
+    "=address=" + ip,
+    "=comment=" + comentario
+  ]);
+
+  const conns = await mikrotikTalk(cfg, [
+    "/ip/firewall/connection/print",
+    "?src-address~" + ip
+  ]).catch(()=>[]);
+
+  for(const c of (Array.isArray(conns) ? conns : [])){
+    if(c?.[".id"]){
+      await mikrotikTalk(cfg, [
+        "/ip/firewall/connection/remove",
+        "=.id=" + c[".id"]
+      ]).catch(()=>{});
+    }
+  }
+
+  return {
+    ok:true,
+    login:nome,
+    ipAtual:ip,
+    rota:destino,
+    servidorClientes:"RB4011-PPPOE-CLIENTES",
+    servidorRotas:"RB3011-BALANCE"
+  };
+}
+// ===== FIM COLÔNIA DUAL V8.2 =====
+
+app.get("/api/mikrotik/cliente-rota", async (req,res)=>{
   try{
     const login = String(req.query.login || req.query.usuario || "").trim();
     if(!login) return res.status(400).json({ok:false,erro:"Login do cliente não informado."});
 
-    // 1) Sempre pega IP/sessão na RB4011.
-    const cliente = await coloniaObterClienteNaRB4011(login);
+    // O IP vem sempre da RB4011.
+    const cliente = await coloniaV82ClienteRB4011(login);
 
-    // 2) Sempre lê a política do IP na RB3011 BALANCE.
-    const rota = await coloniaConsultarRotaNaRB3011(cliente.ipAtual, login);
+    // A política desse IP é consultada sempre na RB3011 BALANCE.
+    const rota = await coloniaV82RotaRB3011(login, cliente.ipAtual);
 
     return res.json({
       ok:true,
@@ -3521,44 +3462,38 @@ app.get("/api/mikrotik/cliente-rota", requireLogin, async (req,res)=>{
       preferencia:rota.preferencia,
       origem:rota.origem,
       servidorClientes:"RB4011-PPPOE-CLIENTES",
-      servidorRotas:"RB3011-BALANCE",
-      aviso: cliente.ipAtual ? null : "Cliente sem sessão PPPoE ativa na RB4011."
+      servidorRotas:"RB3011-BALANCE"
     });
   }catch(e){
-    console.error("[COLONIA-DUAL-V8][GET cliente-rota]", e);
-    return res.status(500).json({ok:false,erro:e && e.message ? e.message : String(e)});
+    console.error("[V8.2 cliente-rota GET]", e);
+    return res.status(500).json({ok:false,erro:e?.message || String(e)});
   }
 });
 
-app.post("/api/mikrotik/cliente-rota", requireLogin, async (req,res)=>{
+app.post("/api/mikrotik/cliente-rota", async (req,res)=>{
   try{
-    const login = String((req.body && (req.body.login || req.body.usuario)) || "").trim();
-    const rota = String((req.body && (req.body.rota || req.body.preferencia)) || "").trim().toUpperCase();
-
+    const login = String(req.body?.login || req.body?.usuario || "").trim();
+    const rota = String(req.body?.rota || req.body?.preferencia || "").trim().toUpperCase();
     if(!login) return res.status(400).json({ok:false,erro:"Login do cliente não informado."});
 
-    // IP vem obrigatoriamente da RB4011.
-    const cliente = await coloniaObterClienteNaRB4011(login);
+    // Primeiro consulta a sessão PPPoE/IP na RB4011.
+    const cliente = await coloniaV82ClienteRB4011(login);
+
     if(!cliente.online || !cliente.ipAtual){
       return res.status(409).json({
         ok:false,
-        erro:"Cliente sem sessão PPPoE ativa na RB4011; não há IP atual para aplicar no balance.",
+        erro:"Cliente sem sessão PPPoE ativa na RB4011.",
         servidorClientes:"RB4011-PPPOE-CLIENTES",
         servidorRotas:"RB3011-BALANCE"
       });
     }
 
-    // A política é aplicada obrigatoriamente na RB3011.
-    const resultado = await coloniaAplicarRotaNaRB3011({
-      login,
-      ipAtual:cliente.ipAtual,
-      rota
-    });
-
+    // Depois aplica esse IP no balance da RB3011.
+    const resultado = await coloniaV82AplicarRotaRB3011(login, cliente.ipAtual, rota);
     return res.json(resultado);
   }catch(e){
-    console.error("[COLONIA-DUAL-V8][POST cliente-rota]", e);
-    return res.status(500).json({ok:false,erro:e && e.message ? e.message : String(e)});
+    console.error("[V8.2 cliente-rota POST]", e);
+    return res.status(500).json({ok:false,erro:e?.message || String(e)});
   }
 });
 
