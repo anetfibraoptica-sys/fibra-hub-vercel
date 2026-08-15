@@ -2951,13 +2951,9 @@ function fibraIdentificarLinkDaRota(row) {
 }
 
 function fibraStatusLinkEmUso(rotas, preferencia, explicita) {
-  // O card SAÍDA DE INTERNET representa a saída global da RB (tabela main).
-  // A preferência individual do cliente continua sendo controlada pelas
-  // address-lists CLIENTES-STARLINK/CLIENTES-AMAZONET, mas não altera o
-  // indicador global de internet.
-  const tabela = "main";
-  if (!Array.isArray(rotas)) {
-    return { emUso:null, contingencia:false, tabelaRoteamento:tabela };
+  const tabela = explicita ? FIBRA_ROTA_TABELAS[preferencia] : "main";
+  if (!tabela || !Array.isArray(rotas)) {
+    return { emUso:null, contingencia:false, tabelaRoteamento:tabela || "" };
   }
 
   const candidatas = rotas.filter((row) => {
@@ -2992,7 +2988,10 @@ async function fibraRemoverEntradasRota(cfg, login, ipAtual) {
     const linhas = await fibraListarEntradasRota(cfg, lista, "");
     for (const row of linhas) {
       const mesmoIp = ipAtual && String(row.address || "").split("/")[0].trim() === ipAtual;
-      if (mesmoIp && row[".id"]) ids.add(row[".id"]);
+      const mesmoLogin = login && fibraNormalizarTexto(row.comment || "").includes(fibraNormalizarTexto(login));
+      // Remove registros antigos pelo IP atual ou pelo login gravado no comentário.
+      // Isso corrige clientes que trocaram de Starlink <-> Amazonet e ficaram presos na lista antiga.
+      if ((mesmoIp || mesmoLogin) && row[".id"]) ids.add(row[".id"]);
     }
   }
 
