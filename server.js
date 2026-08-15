@@ -2951,25 +2951,39 @@ function fibraIdentificarLinkDaRota(row) {
 }
 
 function fibraStatusLinkEmUso(rotas, preferencia, explicita) {
-  const tabela = explicita ? FIBRA_ROTA_TABELAS[preferencia] : "main";
-  if (!tabela || !Array.isArray(rotas)) {
-    return { emUso:null, contingencia:false, tabelaRoteamento:tabela || "" };
+  /*
+    A saída de internet geral deve sempre representar a tabela MAIN da RB3011.
+    A RB4011 apenas aponta para a RB3011, portanto nunca deve decidir
+    Starlink/Amazonet por ela.
+
+    A preferência do cliente (STARLINK/AMAZONET) continua sendo usada
+    somente para identificar contingência do assinante.
+  */
+  const tabela = "main";
+
+  if (!Array.isArray(rotas)) {
+    return { emUso:null, contingencia:false, tabelaRoteamento:tabela };
   }
 
   const candidatas = rotas.filter((row) => {
     const tabelaRow = String(row["routing-table"] || "main").trim();
     return tabelaRow === tabela && String(row["dst-address"] || "") === "0.0.0.0/0";
   });
+
   const ativas = candidatas.filter((row) => fibraRouterosVerdadeiro(row.active));
+
   const alternativas = candidatas.filter((row) =>
-      !fibraRouterosVerdadeiro(row.disabled) &&
-      !fibraRouterosVerdadeiro(row.inactive) &&
-      Boolean(String(row["immediate-gw"] || "").trim())
-    );
-  // Ignora uma eventual rota dinâmica de terceiro link quando também existir
-  // uma rota ativa identificável do failover Starlink/Amazonet.
-  const ativa = ativas.find((row) => fibraIdentificarLinkDaRota(row)) || ativas[0] ||
-    alternativas.find((row) => fibraIdentificarLinkDaRota(row)) || alternativas[0];
+    !fibraRouterosVerdadeiro(row.disabled) &&
+    !fibraRouterosVerdadeiro(row.inactive) &&
+    Boolean(String(row["immediate-gw"] || row.gateway || "").trim())
+  );
+
+  const ativa =
+    ativas.find((row) => fibraIdentificarLinkDaRota(row)) ||
+    ativas[0] ||
+    alternativas.find((row) => fibraIdentificarLinkDaRota(row)) ||
+    alternativas[0];
+
   const emUso = ativa ? fibraIdentificarLinkDaRota(ativa) : null;
 
   return {
