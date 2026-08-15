@@ -2951,9 +2951,13 @@ function fibraIdentificarLinkDaRota(row) {
 }
 
 function fibraStatusLinkEmUso(rotas, preferencia, explicita) {
-  const tabela = explicita ? FIBRA_ROTA_TABELAS[preferencia] : "main";
-  if (!tabela || !Array.isArray(rotas)) {
-    return { emUso:null, contingencia:false, tabelaRoteamento:tabela || "" };
+  // O card SAÍDA DE INTERNET representa a saída global da RB (tabela main).
+  // A preferência individual do cliente continua sendo controlada pelas
+  // address-lists CLIENTES-STARLINK/CLIENTES-AMAZONET, mas não altera o
+  // indicador global de internet.
+  const tabela = "main";
+  if (!Array.isArray(rotas)) {
+    return { emUso:null, contingencia:false, tabelaRoteamento:tabela };
   }
 
   const candidatas = rotas.filter((row) => {
