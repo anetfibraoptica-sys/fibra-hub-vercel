@@ -3235,7 +3235,10 @@ document.addEventListener("DOMContentLoaded", function(){
     aplicarVerificando();
 
     try{
-      const url = "/api/cliente/status?login=" + encodeURIComponent(login) + "&servidor=" + encodeURIComponent(servidor);
+      const ehColoniaStatus = String(servidor || "").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().match(/colonia|antonio aleixo/);
+      const url = ehColoniaStatus
+        ? "/api/colonia/resumo-unificado?login=" + encodeURIComponent(login)
+        : "/api/cliente/status?login=" + encodeURIComponent(login) + "&servidor=" + encodeURIComponent(servidor);
       const resp = await fetch(url, {cache:"no-store"});
       const data = await resp.json();
 
@@ -3243,6 +3246,11 @@ document.addEventListener("DOMContentLoaded", function(){
         aplicarOnline(data);
       }else{
         aplicarOffline(data);
+      }
+
+      // V10: publica a resposta unificada para o módulo de rotas.
+      if(data && data.servidor === "colonia"){
+        document.dispatchEvent(new CustomEvent("fibra:colonia-resumo-unificado", {detail:data}));
       }
     }catch(e){
       console.warn("Erro status cliente:", e);
@@ -3409,7 +3417,7 @@ document.addEventListener("DOMContentLoaded", function(){
     if(!colonia){
       if(!ehArmando){
         if(status) status.textContent = "Aguardando servidor...";
-        if(info) info.textContent = "O controle será habilitado ao identificar a Colônia Antônio Aleixo.";
+        if(info) info.textContent = "O controle será habilitado ao identificar o servidor Colônia.";
         if(bStar) bStar.disabled = true;
         if(bAmz) bAmz.disabled = true;
       }
@@ -3440,7 +3448,9 @@ document.addEventListener("DOMContentLoaded", function(){
     if(status && !silenciosa) status.textContent = "Verificando...";
 
     try{
-      const url = "/api/mikrotik/cliente-rota?servidor=" + encodeURIComponent(servidor) + "&login=" + encodeURIComponent(login);
+      const url = ehColonia(servidor)
+        ? "/api/colonia/resumo-unificado?login=" + encodeURIComponent(login)
+        : "/api/mikrotik/cliente-rota?servidor=" + encodeURIComponent(servidor) + "&login=" + encodeURIComponent(login);
       const resp = await fetch(url, {cache:"no-store"});
       const json = await resp.json();
       if(seq !== fibraRotaSeq) return;
@@ -3517,6 +3527,13 @@ document.addEventListener("DOMContentLoaded", function(){
   }
 
   window.fibraConsultarRotaInternet = consultarRota;
+  document.addEventListener("fibra:colonia-resumo-unificado", function(ev){
+    const data = ev && ev.detail ? ev.detail : null;
+    if(data && data.servidor === "colonia"){
+      setEstado(data.rota, data);
+    }
+  });
+
   window.fibraSelecionarRotaInternet = selecionarRota;
   window.fibraAtualizarVisibilidadeRotaInternet = atualizarVisibilidade;
 

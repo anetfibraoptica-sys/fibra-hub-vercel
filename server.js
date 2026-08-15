@@ -272,68 +272,91 @@ function servidorConfig(nomeServidor) {
 
 
 function servidorConfigClientesColonia() {
-  /*
-   * V6 — RESTAURA O CAMINHO DE CLIENTES QUE JÁ FUNCIONAVA.
-   *
-   * Os clientes da Colônia usam EXATAMENTE a configuração histórica
-   * MIKROTIK_COLONIA_* (host/porta/usuário/senha).
-   *
-   * Na topologia atual, a conexão na porta 8728 chega à RB3011 e o
-   * CUTOVER existente encaminha a sessão da API para a RB4011.
-   *
-   * IMPORTANTE:
-   * - não usa MIKROTIK_COLONIA_CLIENTES_HOST;
-   * - não usa credencial separada da RB4011;
-   * - não tenta acessar 10.10.10.2 diretamente.
-   *
-   * Isso preserva exatamente o caminho que já devolveu PPPoE Online.
-   */
+  const pick = (...keys) => {
+    for (const k of keys) {
+      if (process.env[k] !== undefined && String(process.env[k]).trim() !== "") {
+        return String(process.env[k]).trim();
+      }
+    }
+    return "";
+  };
+
   const base = servidorConfig("colonia");
+
+  // V10:
+  // "colonia" é UM servidor lógico no painel.
+  // Esta fonte física é a RB4011 e fornece somente clientes/IP/PPPoE.
+  //
+  // Se as variáveis RB4011 dedicadas não existirem, preserva o caminho
+  // histórico MIKROTIK_COLONIA_* que já funcionava para os clientes.
   return {
-    // "colonia" continua sendo a chave interna do POP para compatibilidade com o cadastro.
-    // role/identity deixam explícito que a origem dos clientes é a RB4011.
     key: "colonia",
     role: "clientes",
     identity: "RB4011-PPPOE-CLIENTES",
-    host: base.host,
-    port: base.port,
-    user: base.user,
-    pass: base.pass
+    host: pick(
+      "MIKROTIK_COLONIA_RB4011_HOST",
+      "MIKROTIK_COLONIA_CLIENTES_HOST"
+    ) || base.host,
+    port: pick(
+      "MIKROTIK_COLONIA_RB4011_PORT",
+      "MIKROTIK_COLONIA_CLIENTES_PORT"
+    ) || base.port || 8728,
+    user: pick(
+      "MIKROTIK_COLONIA_RB4011_USER",
+      "MIKROTIK_COLONIA_CLIENTES_USER"
+    ) || base.user,
+    pass: pick(
+      "MIKROTIK_COLONIA_RB4011_PASS",
+      "MIKROTIK_COLONIA_RB4011_PASSWORD",
+      "MIKROTIK_COLONIA_CLIENTES_PASS",
+      "MIKROTIK_COLONIA_CLIENTES_PASSWORD"
+    ) || base.pass
   };
 }
 
 function servidorConfigLinksColonia() {
   const pick = (...keys) => {
     for (const k of keys) {
-      if (process.env[k] !== undefined && String(process.env[k]).trim() !== "") return String(process.env[k]).trim();
+      if (process.env[k] !== undefined && String(process.env[k]).trim() !== "") {
+        return String(process.env[k]).trim();
+      }
     }
     return "";
   };
 
   const base = servidorConfig("colonia");
+
+  // V10:
+  // segunda fonte física do MESMO servidor lógico "colonia".
+  // Esta conexão é exclusivamente RB3011-BALANCE.
   return {
-    key: "rb3011-balance",
-    // V7: esta configuração é EXCLUSIVAMENTE do BALANCE/ROTAS da RB3011.
-    // Nunca é usada para consultar PPPoE/cliente.
+    key: "colonia",
+    role: "balance",
+    identity: "RB3011-BALANCE",
     host: pick(
+      "MIKROTIK_COLONIA_RB3011_HOST",
       "MIKROTIK_COLONIA_BALANCE_HOST",
       "MIKROTIK_COLONIA_LINKS_HOST",
       "RB3011_BALANCE_HOST",
       "RB3011_LINKS_HOST"
     ) || base.host,
     port: pick(
+      "MIKROTIK_COLONIA_RB3011_PORT",
       "MIKROTIK_COLONIA_BALANCE_PORT",
       "MIKROTIK_COLONIA_LINKS_PORT",
       "RB3011_BALANCE_PORT",
       "RB3011_LINKS_PORT"
     ) || 8730,
     user: pick(
+      "MIKROTIK_COLONIA_RB3011_USER",
       "MIKROTIK_COLONIA_BALANCE_USER",
       "MIKROTIK_COLONIA_LINKS_USER",
       "RB3011_BALANCE_USER",
       "RB3011_LINKS_USER"
     ) || base.user,
     pass: pick(
+      "MIKROTIK_COLONIA_RB3011_PASS",
+      "MIKROTIK_COLONIA_RB3011_PASSWORD",
       "MIKROTIK_COLONIA_BALANCE_PASS",
       "MIKROTIK_COLONIA_BALANCE_PASSWORD",
       "MIKROTIK_COLONIA_LINKS_PASS",
@@ -3308,6 +3331,333 @@ app.get("/api/mikrotik/diagnostico-colonia-dual", async (req, res) => {
 
 
 
+
+// ===== COLÔNIA V10 — SERVIDOR LÓGICO UNIFICADO =====
+//
+// No painel existe apenas: SERVIDOR = "Colônia"
+//
+// Internamente:
+//   RB4011 -> PPPoE, IP atual, MAC, profile, interface, uptime
+//   RB3011 -> address-lists, rota em uso, STARLINK/AMAZONET, contingência
+//
+// O Resumo recebe UMA resposta já mesclada pelo backend.
+
+function coloniaV10Normalizar(v) {
+  return String(v || "")
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase().trim();
+}
+
+function coloniaV10Campo(obj, nomes) {
+  for (const n of nomes) {
+    if (obj && obj[n] !== undefined && obj[n] !== null && String(obj[n]).trim() !== "") {
+      return String(obj[n]).trim();
+    }
+  }
+  return "";
+}
+
+function coloniaV10Habilitado(row) {
+  const disabled = coloniaV10Normalizar(coloniaV10Campo(row, ["disabled"]));
+  return disabled !== "yes" && disabled !== "true";
+}
+
+async function coloniaV10DadosClienteRB4011(login) {
+  const cfg = servidorConfigClientesColonia();
+  const nome = String(login || "").trim();
+
+  if (!nome) throw new Error("Login do cliente não informado.");
+  if (!cfg.host || !cfg.user || !cfg.pass) {
+    throw new Error("Fonte de clientes da Colônia (RB4011) não configurada.");
+  }
+
+  const consultar = async (comando, timeout = 12000) => {
+    const resposta = await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [comando], timeout);
+    return parseRouterosRows(resposta);
+  };
+
+  const [activeRows, secretRows, pppoeInterfaceRows, pppoeServerRows] = await Promise.all([
+    consultar(["/ppp/active/print", "?name=" + nome]),
+    consultar(["/ppp/secret/print", "?name=" + nome]).catch(() => []),
+    consultar(["/interface/pppoe-server/print", "?user=" + nome]).catch(() => []),
+    consultar(["/interface/pppoe-server/server/print"]).catch(() => [])
+  ]);
+
+  const alvo = coloniaV10Normalizar(nome);
+
+  const active = activeRows.find((row) =>
+    coloniaV10Normalizar(coloniaV10Campo(row, ["name","user","usuario","login"])) === alvo
+  ) || activeRows[0] || null;
+
+  const secret = secretRows.find((row) =>
+    coloniaV10Normalizar(coloniaV10Campo(row, ["name","user","usuario","login"])) === alvo
+  ) || secretRows[0] || null;
+
+  const pppoeInterface = pppoeInterfaceRows.find((row) => {
+    const user = coloniaV10Campo(row, ["user","name","usuario","login"]);
+    if (coloniaV10Normalizar(user) === alvo) return true;
+
+    const nomeDinamico = coloniaV10Normalizar(coloniaV10Campo(row, ["name"]))
+      .replace(/^<pppoe-/, "")
+      .replace(/>$/, "");
+
+    return nomeDinamico === alvo;
+  }) || pppoeInterfaceRows[0] || null;
+
+  const servicosCandidatos = [
+    coloniaV10Campo(pppoeInterface, ["service-name","service"]),
+    coloniaV10Campo(active, ["service-name","service"]),
+    coloniaV10Campo(secret, ["service-name"])
+  ].filter((v) => {
+    const n = coloniaV10Normalizar(v);
+    return n && n !== "pppoe" && n !== "any";
+  });
+
+  let pppoeServer = null;
+
+  for (const nomeServico of servicosCandidatos) {
+    pppoeServer = pppoeServerRows.find((row) =>
+      coloniaV10Normalizar(coloniaV10Campo(row, ["service-name","service"])) ===
+      coloniaV10Normalizar(nomeServico)
+    );
+    if (pppoeServer) break;
+  }
+
+  if (!pppoeServer) {
+    const interfaceDinamica = coloniaV10Campo(pppoeInterface, ["server-interface","interface"]);
+    if (interfaceDinamica) {
+      pppoeServer = pppoeServerRows.find((row) =>
+        coloniaV10Normalizar(coloniaV10Campo(row, ["interface"])) ===
+        coloniaV10Normalizar(interfaceDinamica)
+      ) || null;
+    }
+  }
+
+  if (!pppoeServer) {
+    const habilitados = pppoeServerRows.filter(coloniaV10Habilitado);
+    pppoeServer = habilitados[0] || pppoeServerRows[0] || null;
+  }
+
+  const online = Boolean(active);
+  const ip = coloniaV10Campo(active, ["address","remote-address","remote_address","ip"]);
+  const mac =
+    coloniaV10Campo(active, ["caller-id","caller_id","callerId","mac-address","mac_address","mac"]) ||
+    coloniaV10Campo(pppoeInterface, ["caller-id","caller_id","callerId","mac-address","mac_address","mac"]);
+
+  const uptime =
+    coloniaV10Campo(active, ["uptime","session-time","session_time","tempo"]) ||
+    coloniaV10Campo(pppoeInterface, ["uptime","session-time","session_time","tempo"]);
+
+  const profile =
+    coloniaV10Campo(secret, ["profile","perfil","plano"]) ||
+    coloniaV10Campo(active, ["profile","perfil","plano"]) ||
+    "Nenhum profile encontrado";
+
+  const servico =
+    coloniaV10Campo(pppoeInterface, ["service-name","service"]) ||
+    coloniaV10Campo(pppoeServer, ["service-name","service"]) ||
+    coloniaV10Campo(active, ["service-name","service"]) ||
+    coloniaV10Campo(secret, ["service"]) ||
+    "-";
+
+  const interfaceFisica =
+    coloniaV10Campo(pppoeServer, ["interface"]) ||
+    coloniaV10Campo(pppoeInterface, ["server-interface","interface"]) ||
+    coloniaV10Campo(active, ["interface"]) ||
+    "-";
+
+  const mtu =
+    coloniaV10Campo(pppoeInterface, ["actual-mtu","actual_mtu","mtu"]) ||
+    coloniaV10Campo(active, ["actual-mtu","actual_mtu","mtu"]) ||
+    coloniaV10Campo(pppoeServer, ["max-mtu","max_mtu","mtu"]) ||
+    "1480";
+
+  const mru =
+    coloniaV10Campo(pppoeInterface, ["actual-mru","actual_mru","mru"]) ||
+    coloniaV10Campo(active, ["actual-mru","actual_mru","mru"]) ||
+    coloniaV10Campo(pppoeServer, ["max-mru","max_mru","mru"]) ||
+    "1480";
+
+  const loginReal =
+    coloniaV10Campo(active, ["name","user","usuario","login"]) ||
+    coloniaV10Campo(pppoeInterface, ["user","usuario","login"]) ||
+    coloniaV10Campo(secret, ["name","user","usuario","login"]) ||
+    nome;
+
+  return {
+    online,
+    login: loginReal,
+    ip: online ? ip : "",
+    ipAtual: online ? ip : "",
+    mac: online ? mac : "",
+    uptime: online ? uptime : "",
+    interface: interfaceFisica,
+    servico,
+    profile,
+    mtu,
+    mru
+  };
+}
+
+async function coloniaV10ResumoUnificado(login) {
+  // Primeiro a RB4011 resolve cliente + IP.
+  const cliente = await coloniaV10DadosClienteRB4011(login);
+
+  const resultado = {
+    ok: true,
+    servidor: "colonia",
+    servidorLabel: "Colônia",
+
+    // Dados de cliente (RB4011)
+    online: cliente.online,
+    login: cliente.login,
+    ip: cliente.ip,
+    ipAtual: cliente.ipAtual,
+    mac: cliente.mac,
+    uptime: cliente.uptime,
+    interface: cliente.interface,
+    servico: cliente.servico,
+    profile: cliente.profile,
+    mtu: cliente.mtu,
+    mru: cliente.mru,
+
+    // Dados de rota (RB3011), preenchidos abaixo.
+    rota: null,
+    preferencia: null,
+    explicita: false,
+    origem: null,
+    emUso: null,
+    contingencia: false,
+    statusEmUso: cliente.online ? "consultando-balance" : "cliente-offline",
+    tabelaRoteamento: null,
+
+    fontes: {
+      clientes: { equipamento: "RB4011-PPPOE-CLIENTES", ok: true },
+      balance: { equipamento: "RB3011-BALANCE", ok: false }
+    }
+  };
+
+  if (!cliente.online || !cliente.ipAtual) {
+    resultado.origem = "SEM_SESSAO_RB4011";
+    return resultado;
+  }
+
+  // Depois a RB3011 recebe o IP encontrado na RB4011 e resolve a rota.
+  try {
+    const cfgBalance = servidorConfigLinksColonia();
+
+    if (!cfgBalance.host || !cfgBalance.user || !cfgBalance.pass) {
+      throw new Error("Fonte de balance da Colônia (RB3011) não configurada.");
+    }
+
+    const preferencia = await coloniaV9PreferenciaRB3011(
+      cfgBalance,
+      cliente.login,
+      cliente.ipAtual
+    );
+
+    resultado.rota = preferencia.rota;
+    resultado.preferencia = preferencia.preferencia;
+    resultado.explicita = preferencia.explicita;
+    resultado.origem = preferencia.origem;
+
+    if (preferencia.rota === "CONFLITO") {
+      resultado.statusEmUso = "conflito";
+      resultado.fontes.balance.ok = true;
+      return resultado;
+    }
+
+    const rotas = await fibraListarRotasPadrao(cfgBalance);
+    const link = coloniaV9StatusLink(
+      rotas,
+      preferencia.preferencia,
+      preferencia.explicita
+    );
+
+    resultado.emUso = link.emUso;
+    resultado.contingencia = link.contingencia;
+    resultado.statusEmUso = link.statusEmUso;
+    resultado.tabelaRoteamento = link.tabelaRoteamento;
+    resultado.fontes.balance.ok = true;
+
+    return resultado;
+  } catch (erroBalance) {
+    // Não derruba o status do cliente se somente o balance estiver inacessível.
+    resultado.rota = "STARLINK";
+    resultado.preferencia = "STARLINK";
+    resultado.explicita = false;
+    resultado.origem = "PADRAO_STARLINK";
+    resultado.statusEmUso = "balance-indisponivel";
+    resultado.erroBalance = erroBalance && erroBalance.message
+      ? erroBalance.message
+      : String(erroBalance);
+    resultado.fontes.balance.erro = resultado.erroBalance;
+    return resultado;
+  }
+}
+
+app.get("/api/colonia/resumo-unificado", async (req, res) => {
+  try {
+    const login = String(req.query.login || "").trim();
+    if (!login) {
+      return res.status(400).json({ok:false, erro:"Login do cliente não informado."});
+    }
+
+    const resumo = await coloniaV10ResumoUnificado(login);
+    return res.json(resumo);
+  } catch (erro) {
+    return res.status(500).json({
+      ok:false,
+      servidor:"colonia",
+      servidorLabel:"Colônia",
+      erro: erro && erro.message ? erro.message : String(erro)
+    });
+  }
+});
+
+app.get("/api/colonia/fontes", async (req, res) => {
+  const clientes = servidorConfigClientesColonia();
+  const balance = servidorConfigLinksColonia();
+
+  const testar = async (cfg) => {
+    try {
+      const resposta = await routerosSend(
+        cfg.host, cfg.port, cfg.user, cfg.pass,
+        [["/system/identity/print"]],
+        7000
+      );
+      const rows = parseRouterosRows(resposta);
+      return {
+        ok:true,
+        host:String(cfg.host || ""),
+        port:Number(cfg.port || 8728),
+        identity:rows[0]?.name || ""
+      };
+    } catch (e) {
+      return {
+        ok:false,
+        host:String(cfg.host || ""),
+        port:Number(cfg.port || 8728),
+        erro:e && e.message ? e.message : String(e)
+      };
+    }
+  };
+
+  const [fonteClientes, fonteBalance] = await Promise.all([
+    testar(clientes),
+    testar(balance)
+  ]);
+
+  return res.json({
+    ok:Boolean(fonteClientes.ok && fonteBalance.ok),
+    servidor:"colonia",
+    servidorLabel:"Colônia",
+    clientes:fonteClientes,
+    balance:fonteBalance
+  });
+});
+// ===== FIM COLÔNIA V10 =====
+
 // ===== COLÔNIA DUAL V9 — ARQUITETURA DEFINITIVA =====
 //
 // RB4011-PPPOE-CLIENTES:
@@ -3691,7 +4041,7 @@ app.post("/api/mikrotik/cliente-rota", async (req, res) => {
 app.get("/api/versao-colonia-v9", (req,res) => {
   res.json({
     ok:true,
-    versao:"COLONIA-DUAL-V9",
+    versao:"COLONIA-UNIFICADA-V10",
     clientes:"RB4011-PPPOE-CLIENTES",
     ipAtual:"RB4011",
     rotas:"RB3011-BALANCE",
@@ -3979,7 +4329,7 @@ app.get("/api/cliente/status", async (req, res) => {
       profile,
       mtu,
       mru,
-      servidor: cfg.key || servidorNome
+      servidor: fibraServidorEhColonia(servidorNome) ? "colonia" : (cfg.key || servidorNome)
     });
   } catch (err) {
     console.error("Erro /api/cliente/status:", err);

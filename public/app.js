@@ -94,7 +94,7 @@ function fibraChaveCliente(c){
 function fibraNomeServidor(chave){
   const k=String(chave||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
   if(k.includes("arm") || k.includes("zumbi")) return "Armando Mendes";
-  if(k.includes("colonia") || k.includes("antonio aleixo") || k === "col") return "RB4011-PPPOE-CLIENTES";
+  if(k.includes("colonia") || k.includes("antonio aleixo") || k === "col") return "Colônia";
   return chave || "Servidor";
 }
 async function fibraFetchJson(path){
@@ -1171,7 +1171,7 @@ document.addEventListener("DOMContentLoaded", function(){
             <button type="button" id="btnRotaStarlink" class="fibra-rota-btn starlink" onclick="fibraSelecionarRotaInternet('STARLINK')">STARLINK</button>
             <button type="button" id="btnRotaAmazonet" class="fibra-rota-btn amazonet" onclick="fibraSelecionarRotaInternet('AMAZONET')">AMAZONET</button>
           </div>
-          <small id="fibraRotaInternetInfo">IP do cliente: RB4011 • Rotas/contingência: RB3011-BALANCE.</small>
+          <small id="fibraRotaInternetInfo">Servidor Colônia: clientes + rotas consultados em conjunto.</small>
         </div>
 
         <div class="resumo-oltnet">OLTNET</div>
