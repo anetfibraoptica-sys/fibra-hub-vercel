@@ -278,13 +278,58 @@ function servidorConfigClientesColonia() {
     }
     return "";
   };
+
+  /*
+   * IMPORTANTE - topologia Colonia:
+   * O endpoint legado MIKROTIK_COLONIA_*:8728 já é o caminho funcional do painel
+   * e, na rede, é encaminhado pela RB3011 para a API da RB4011.
+   * Portanto os clientes PPPoE devem PRIORIZAR esse caminho conhecido.
+   * As variáveis *_CLIENTES_* ficam apenas como fallback para instalações que
+   * tenham um endpoint direto e realmente alcançável para a RB4011.
+   */
   return {
-    key: "colonia-clientes",
-    host: pick("MIKROTIK_COLONIA_CLIENTES_HOST", "RB4011_HOST"),
-    port: pick("MIKROTIK_COLONIA_CLIENTES_PORT", "RB4011_PORT") || 8728,
-    user: pick("MIKROTIK_COLONIA_CLIENTES_USER", "RB4011_USER"),
-    pass: pick("MIKROTIK_COLONIA_CLIENTES_PASS", "RB4011_PASS")
+    key: "colonia",
+    host: pick(
+      "MIKROTIK_COLONIA_HOST", "MK_COLONIA_HOST", "COLONIA_HOST", "MIKROTIK_HOST_COLONIA", "MIKROTIK2_HOST",
+      "MIKROTIK_COLONIA_CLIENTES_HOST", "RB4011_HOST"
+    ),
+    port: pick(
+      "MIKROTIK_COLONIA_PORT", "MK_COLONIA_PORT", "COLONIA_PORT", "MIKROTIK_PORT_COLONIA", "MIKROTIK2_PORT",
+      "MIKROTIK_COLONIA_CLIENTES_PORT", "RB4011_PORT"
+    ) || 8728,
+    user: pick(
+      "MIKROTIK_COLONIA_USER", "MK_COLONIA_USER", "COLONIA_USER", "MIKROTIK_USER_COLONIA", "MIKROTIK2_USER",
+      "MIKROTIK_COLONIA_CLIENTES_USER", "RB4011_USER"
+    ),
+    pass: pick(
+      "MIKROTIK_COLONIA_PASS", "MIKROTIK_COLONIA_PASSWORD", "MK_COLONIA_PASS", "COLONIA_PASS", "MIKROTIK_PASS_COLONIA", "MIKROTIK2_PASS",
+      "MIKROTIK_COLONIA_CLIENTES_PASS", "RB4011_PASS"
+    )
   };
+}
+
+function servidorConfigLinksColonia() {
+  const pick = (...keys) => {
+    for (const k of keys) {
+      if (process.env[k] !== undefined && String(process.env[k]).trim() !== "") return String(process.env[k]).trim();
+    }
+    return "";
+  };
+
+  const base = servidorConfig("colonia");
+  return {
+    key: "colonia-links",
+    // Mesmo endpoint/tunel do painel, mas em uma porta separada que deve terminar
+    // LOCALMENTE na API 8728 da RB3011 (sem cair no CUTOVER para a RB4011).
+    host: pick("MIKROTIK_COLONIA_LINKS_HOST", "RB3011_LINKS_HOST") || base.host,
+    port: pick("MIKROTIK_COLONIA_LINKS_PORT", "RB3011_LINKS_PORT") || 8730,
+    user: pick("MIKROTIK_COLONIA_LINKS_USER", "RB3011_LINKS_USER") || base.user,
+    pass: pick("MIKROTIK_COLONIA_LINKS_PASS", "MIKROTIK_COLONIA_LINKS_PASSWORD", "RB3011_LINKS_PASS") || base.pass
+  };
+}
+
+function servidorConfigLinks(nomeServidor) {
+  return fibraServidorEhColonia(nomeServidor) ? servidorConfigLinksColonia() : servidorConfig(nomeServidor);
 }
 
 function servidorConfigClientes(nomeServidor) {
@@ -3196,6 +3241,44 @@ async function fibraSalvarPreferenciaRotaBanco({ clienteId, login, rota, ip }) {
   }
 }
 
+app.get("/api/mikrotik/diagnostico-colonia-dual", async (req, res) => {
+  const cfgClientes = servidorConfigClientes("colonia");
+  const cfgLinks = servidorConfigLinks("colonia");
+
+  const testar = async (cfg, papel) => {
+    const inicio = Date.now();
+    try {
+      if (!cfg.host || !cfg.user || !cfg.pass) throw new Error("Configuração incompleta");
+      const resposta = await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+        "/system/identity/print",
+        "=.proplist=name"
+      ]], 10000);
+      const rows = parseRouterosRows(resposta);
+      return {
+        papel,
+        ok:true,
+        identidade:String(rows[0]?.name || ""),
+        porta:Number(cfg.port || 8728),
+        ms:Date.now()-inicio
+      };
+    } catch (e) {
+      return {
+        papel,
+        ok:false,
+        porta:Number(cfg.port || 8728),
+        erro:String(e.message || e),
+        ms:Date.now()-inicio
+      };
+    }
+  };
+
+  const [clientes, links] = await Promise.all([
+    testar(cfgClientes, "RB4011-clientes"),
+    testar(cfgLinks, "RB3011-links")
+  ]);
+  return res.json({ ok:clientes.ok && links.ok, clientes, links });
+});
+
 app.get("/api/mikrotik/cliente-rota", async (req, res) => {
   try {
     const servidor = String(req.query.servidor || "").trim();
@@ -3206,10 +3289,10 @@ app.get("/api/mikrotik/cliente-rota", async (req, res) => {
     }
     if (!login) return res.status(400).json({ ok:false, erro:"Login PPPoE não informado." });
 
-    const cfgLinks = servidorConfig(servidor);              // RB3011: links, rotas e address-lists
+    const cfgLinks = servidorConfigLinks(servidor);         // RB3011: links, rotas e address-lists
     const cfgClientes = servidorConfigClientes(servidor);  // RB4011: PPPoE
 
-    if (cfgLinks.key !== "colonia" || !cfgLinks.host || !cfgLinks.user || !cfgLinks.pass) {
+    if (!cfgLinks.host || !cfgLinks.user || !cfgLinks.pass) {
       return res.status(500).json({ ok:false, erro:"RB3011 de links da Colônia não configurada no servidor do painel." });
     }
     if (!cfgClientes.host || !cfgClientes.user || !cfgClientes.pass) {
@@ -3274,10 +3357,10 @@ app.post("/api/mikrotik/cliente-rota", async (req, res) => {
       return res.status(400).json({ ok:false, erro:"Link inválido. Use STARLINK ou AMAZONET." });
     }
 
-    const cfgLinks = servidorConfig(servidor);              // RB3011: links, rotas e address-lists
+    const cfgLinks = servidorConfigLinks(servidor);         // RB3011: links, rotas e address-lists
     const cfgClientes = servidorConfigClientes(servidor);  // RB4011: PPPoE
 
-    if (cfgLinks.key !== "colonia" || !cfgLinks.host || !cfgLinks.user || !cfgLinks.pass) {
+    if (!cfgLinks.host || !cfgLinks.user || !cfgLinks.pass) {
       return res.status(500).json({ ok:false, erro:"RB3011 de links da Colônia não configurada no servidor do painel." });
     }
     if (!cfgClientes.host || !cfgClientes.user || !cfgClientes.pass) {
@@ -3347,7 +3430,7 @@ app.post("/api/mikrotik/rota-geral", async (req, res) => {
   try {
     const rota = String((req.body || {}).rota || "").toUpperCase();
     if (!FIBRA_ROTA_LISTAS[rota]) return res.status(400).json({ok:false, erro:"Rota inválida"});
-    const cfgLinks = servidorConfig("colonia");
+    const cfgLinks = servidorConfigLinks("colonia");
     const cfgClientes = servidorConfigClientes("colonia");
     if (!cfgLinks || !cfgLinks.host) return res.status(500).json({ok:false, erro:"RB3011 de links não configurada"});
     if (!cfgClientes || !cfgClientes.host) return res.status(500).json({ok:false, erro:"RB4011 de clientes não configurada"});
@@ -3388,7 +3471,7 @@ app.post("/api/mikrotik/rota-geral", async (req, res) => {
         }
 
         try {
-          const connResp = await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+          const connResp = await routerosSend(cfgLinks.host, cfgLinks.port, cfgLinks.user, cfgLinks.pass, [[
             "/ip/firewall/connection/print",
             "=.proplist=.id",
             "?src-address="+ip
@@ -3396,7 +3479,7 @@ app.post("/api/mikrotik/rota-geral", async (req, res) => {
           const conns = parseRouterosRows(connResp);
           for (const conn of conns) {
             const id = conn[".id"] || conn.id;
-            if (id) await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+            if (id) await routerosSend(cfgLinks.host, cfgLinks.port, cfgLinks.user, cfgLinks.pass, [[
               "/ip/firewall/connection/remove",
               "=.id="+id
             ]],15000);
