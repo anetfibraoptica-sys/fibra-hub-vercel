@@ -221,14 +221,19 @@ async function carregarClienteDetalhes(){
   function box(){ return el("fibraDetalhesRotaInternetBox"); }
   function dados(){
     const b = box();
+    const bruto = String(b?.dataset?.servidor || "").trim();
+    const n = norm(bruto);
+    const servidor = (n.includes("armando") || n.includes("zumbi"))
+      ? "armando"
+      : ((n.includes("colonia") || n.includes("antonio aleixo")) ? "colonia" : bruto);
     return {
-      servidor: String(b?.dataset?.servidor || "").trim(),
+      servidor,
       login: String(b?.dataset?.login || "").trim(),
       clienteId: String(b?.dataset?.clienteId || "").trim()
     };
   }
   function ehArmando(v){ const n=norm(v); return n.includes("armando") || n.includes("zumbi"); }
-  function ehColonia(v){ const n=norm(v); return !ehArmando(v) && (n === "colonia" || n.includes("colonia antonio aleixo") || n.includes("antonio aleixo")); }
+  function ehColonia(v){ const n=norm(v); return !ehArmando(v) && (n.includes("colonia") || n.includes("antonio aleixo")); }
 
   function visibilidade(){
     const b=box();

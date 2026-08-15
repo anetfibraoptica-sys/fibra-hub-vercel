@@ -3130,6 +3130,12 @@ document.addEventListener("DOMContentLoaded", function(){
   function norm(v){
     return String(v || "").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
   }
+  function canonServidor(v){
+    const n = norm(v);
+    if(n.includes("armando") || n.includes("zumbi")) return "armando";
+    if(n.includes("colonia") || n.includes("antonio aleixo")) return "colonia";
+    return String(v || "").trim();
+  }
   function getVal(id){ return (document.getElementById(id)?.value || "").trim(); }
   function getTxt(id){ return (document.getElementById(id)?.textContent || "").trim(); }
   function setTxt(id, valor, fallback){
@@ -3148,10 +3154,12 @@ document.addEventListener("DOMContentLoaded", function(){
   }
 
   function servidorAtual(){
-    return getVal("cadServidorReceita") ||
-           getVal("cadPop") ||
-           getTxt("resServidor") ||
-           "";
+    return canonServidor(
+      getVal("cadServidorReceita") ||
+      getVal("cadPop") ||
+      getTxt("resServidor") ||
+      ""
+    );
   }
 
   function servidorValido(s){
@@ -3281,6 +3289,12 @@ document.addEventListener("DOMContentLoaded", function(){
   function el(id){ return document.getElementById(id); }
   function val(id){ return (el(id)?.value || "").trim(); }
   function txt(id){ return (el(id)?.textContent || "").trim(); }
+  function canonServidor(v){
+    const n = norm(v);
+    if(n.includes("armando") || n.includes("zumbi")) return "armando";
+    if(n.includes("colonia") || n.includes("antonio aleixo")) return "colonia";
+    return String(v || "").trim();
+  }
 
   function memoriaCliente(){
     const base = window.__fibraClienteCadastro || window.__fibraClienteSelecionado || {};
@@ -3302,11 +3316,13 @@ document.addEventListener("DOMContentLoaded", function(){
     const m = memoriaCliente();
     const cadPop = el("cadPop");
     const textoCadPop = cadPop && cadPop.selectedIndex >= 0 ? String(cadPop.options[cadPop.selectedIndex]?.textContent || "").trim() : "";
-    return val("cadPop") ||
-           val("cadServidorReceita") ||
-           txt("resServidor") ||
-           String(m.popServidor || m.pop_servidor || m.servidor || m.servidorReceita || m.servidorPppoe || m.servidor_pppoe || m.cadPop || m.pop || m.server || "").trim() ||
-           textoCadPop;
+    return canonServidor(
+      val("cadPop") ||
+      val("cadServidorReceita") ||
+      txt("resServidor") ||
+      String(m.popServidor || m.pop_servidor || m.servidor || m.servidorReceita || m.servidorPppoe || m.servidor_pppoe || m.cadPop || m.pop || m.server || "").trim() ||
+      textoCadPop
+    );
   }
   function loginAtual(){
     const m = memoriaCliente();
@@ -3318,7 +3334,7 @@ document.addEventListener("DOMContentLoaded", function(){
   function ehColonia(servidor){
     const n = norm(servidor);
     if(!n || n.includes("armando") || n.includes("zumbi")) return false;
-    return n === "colonia" || n.includes("colonia antonio aleixo") || n.includes("antonio aleixo");
+    return n.includes("colonia") || n.includes("antonio aleixo");
   }
 
   function setBusy(busy){

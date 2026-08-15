@@ -272,39 +272,22 @@ function servidorConfig(nomeServidor) {
 
 
 function servidorConfigClientesColonia() {
-  const pick = (...keys) => {
-    for (const k of keys) {
-      if (process.env[k] !== undefined && String(process.env[k]).trim() !== "") return String(process.env[k]).trim();
-    }
-    return "";
-  };
-
   /*
-   * IMPORTANTE - topologia Colonia:
-   * O endpoint legado MIKROTIK_COLONIA_*:8728 já é o caminho funcional do painel
-   * e, na rede, é encaminhado pela RB3011 para a API da RB4011.
-   * Portanto os clientes PPPoE devem PRIORIZAR esse caminho conhecido.
-   * As variáveis *_CLIENTES_* ficam apenas como fallback para instalações que
-   * tenham um endpoint direto e realmente alcançável para a RB4011.
+   * TOPOLOGIA FIXA DA COLONIA (V4):
+   * MIKROTIK_COLONIA_* representa o endpoint do túnel já existente.
+   * A porta 8728 desse endpoint é encaminhada pela RB3011 para a RB4011.
+   *
+   * IMPORTANTE: não usamos MIKROTIK_COLONIA_CLIENTES_HOST aqui. Um endereço
+   * privado como 10.10.10.2 não é alcançável diretamente pelo Vercel e causa
+   * exatamente o timeout visto no Resumo.
    */
+  const base = servidorConfig("colonia");
   return {
     key: "colonia",
-    host: pick(
-      "MIKROTIK_COLONIA_HOST", "MK_COLONIA_HOST", "COLONIA_HOST", "MIKROTIK_HOST_COLONIA", "MIKROTIK2_HOST",
-      "MIKROTIK_COLONIA_CLIENTES_HOST", "RB4011_HOST"
-    ),
-    port: pick(
-      "MIKROTIK_COLONIA_PORT", "MK_COLONIA_PORT", "COLONIA_PORT", "MIKROTIK_PORT_COLONIA", "MIKROTIK2_PORT",
-      "MIKROTIK_COLONIA_CLIENTES_PORT", "RB4011_PORT"
-    ) || 8728,
-    user: pick(
-      "MIKROTIK_COLONIA_USER", "MK_COLONIA_USER", "COLONIA_USER", "MIKROTIK_USER_COLONIA", "MIKROTIK2_USER",
-      "MIKROTIK_COLONIA_CLIENTES_USER", "RB4011_USER"
-    ),
-    pass: pick(
-      "MIKROTIK_COLONIA_PASS", "MIKROTIK_COLONIA_PASSWORD", "MK_COLONIA_PASS", "COLONIA_PASS", "MIKROTIK_PASS_COLONIA", "MIKROTIK2_PASS",
-      "MIKROTIK_COLONIA_CLIENTES_PASS", "RB4011_PASS"
-    )
+    host: base.host,
+    port: 8728,
+    user: base.user,
+    pass: base.pass
   };
 }
 
@@ -333,16 +316,9 @@ function servidorConfigLinks(nomeServidor) {
 }
 
 function servidorConfigClientes(nomeServidor) {
-  const nome = String(nomeServidor || "")
-    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .trim();
-
-  const ehColonia = nome === "colonia" ||
-    nome.includes("colonia antonio aleixo") ||
-    nome.includes("antonio aleixo");
-
-  return ehColonia ? servidorConfigClientesColonia() : servidorConfig(nomeServidor);
+  return fibraServidorEhColonia(nomeServidor)
+    ? servidorConfigClientesColonia()
+    : servidorConfig(nomeServidor);
 }
 
 function diagnosticoConfigServidor(nomeServidor) {
@@ -2967,7 +2943,9 @@ function fibraServidorEhColonia(nomeServidor) {
   const n = fibraNormalizarTexto(nomeServidor);
   if (!n) return false;
   if (n.includes("armando") || n.includes("zumbi")) return false;
-  return n === "colonia" || n.includes("colonia antonio aleixo") || n.includes("antonio aleixo");
+  // Aceita também aliases internos/salvos no banco, como "colonia-clientes"
+  // e "colonia-links", sempre tratando-os como a mesma POP Colônia.
+  return n === "colonia" || n.includes("colonia") || n.includes("antonio aleixo");
 }
 
 async function fibraSessaoPPPoEAtual(cfg, login) {
@@ -3240,6 +3218,17 @@ async function fibraSalvarPreferenciaRotaBanco({ clienteId, login, rota, ip }) {
     console.warn("Não foi possível registrar a preferência de rota no banco:", e.message);
   }
 }
+
+app.get("/api/versao-colonia-dual", (req, res) => {
+  const clientes = servidorConfigClientesColonia();
+  const links = servidorConfigLinksColonia();
+  return res.json({
+    ok:true,
+    versao:"COLONIA-DUAL-V4",
+    clientes:{ papel:"RB4011", porta:Number(clientes.port || 8728), hostConfigurado:Boolean(clientes.host) },
+    links:{ papel:"RB3011", porta:Number(links.port || 8730), hostConfigurado:Boolean(links.host) }
+  });
+});
 
 app.get("/api/mikrotik/diagnostico-colonia-dual", async (req, res) => {
   const cfgClientes = servidorConfigClientes("colonia");
