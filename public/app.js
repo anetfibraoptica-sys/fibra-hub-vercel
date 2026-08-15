@@ -284,7 +284,7 @@ async function carregarClienteDetalhes(){
     if(inf){
       if(j.erro) inf.textContent=j.erro;
       else if(j.online===false) inf.textContent="O cliente precisa estar online para trocar o link.";
-      else if(j.ip) inf.textContent="Preferência: " + (rota || "não definida") + " • IP atual: " + j.ip + (j.explicita===false ? " • Starlink é a rota padrão" : "");
+      else if(j.ip) inf.textContent="Preferência: " + (rota || "não definida") + " • IP atual (RB4011): " + j.ip + (j.explicita===false ? " • STARLINK padrão (sem lista na RB3011)" : " • escolha manual na RB3011");
       else inf.textContent="Escolha STARLINK ou AMAZONET.";
     }
     const off=j.online===false;
