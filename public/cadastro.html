@@ -5031,10 +5031,18 @@ document.addEventListener("DOMContentLoaded", function(){
   }
 
   function statusBoleto(b){
-    const raw = texto(b.status || b.situacao || b.efiStatus).toLowerCase();
-    if(raw.includes("pago") || raw.includes("paid") || raw.includes("settled") || raw.includes("baixado")) return "pago";
-    if(raw.includes("cancel")) return "cancelado";
-    if(raw.includes("venc") || raw.includes("expired")) return "vencido";
+    const chargeId = texto(b.efiChargeId || b.efi_charge_id || "");
+    const efiRaw = texto(b.efiStatus || b.efi_status || "").toLowerCase();
+    const localRaw = texto(b.status || b.situacao || "").toLowerCase();
+    const raw = (chargeId && efiRaw) ? efiRaw : localRaw;
+
+    const limpo = raw.normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim();
+    const tokens = limpo.split(/[^a-z0-9_]+/).filter(Boolean);
+
+    if(tokens.includes("unpaid") || limpo.includes("inadimpl")) return "vencido";
+    if(tokens.includes("paid") || tokens.includes("settled") || tokens.includes("pago") || tokens.includes("baixado")) return "pago";
+    if(tokens.includes("canceled") || tokens.includes("cancelado") || limpo.includes("cancel")) return "cancelado";
+    if(tokens.includes("expired") || limpo.includes("venc")) return "vencido";
 
     const venc = texto(b.vencimento).slice(0,10);
     if(venc){
@@ -5063,7 +5071,8 @@ document.addEventListener("DOMContentLoaded", function(){
       cliente_id: c.id || c.clienteId || c.cliente_id || window.__fibraClienteSelecionado?.id || window.__fibraClienteCadastro?.id || "",
       login: c.login,
       cpf: c.cpf,
-      nome: c.nome
+      nome: c.nome,
+      atualizar_efi: "1"
     });
 
     const resp = await fetch("/api/boletos/cliente?" + params.toString(), {

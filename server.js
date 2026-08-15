@@ -4722,12 +4722,36 @@ function efiExtractArray(json) {
   return [];
 }
 
+function efiStatusCanonico(s) {
+  const status = String(s || "")
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase().trim();
+
+  if (status === "unpaid" || status.includes("inadimpl") || status === "nao pago") return "unpaid";
+  if (status === "paid" || status === "pago") return "paid";
+  if (status === "settled" || status.includes("liquidado") || status.includes("quitado")) return "settled";
+  if (status === "identified" || status.includes("identificado")) return "identified";
+  if (status === "waiting" || status === "wait" || status.includes("aguardando") || status.includes("pendente")) return "waiting";
+  if (status === "new" || status === "novo" || status === "nova") return "new";
+  if (status === "canceled" || status === "cancelled" || status.includes("cancel")) return "canceled";
+  if (status === "expired" || status.includes("expir") || status.includes("venc")) return "expired";
+
+  return status;
+}
+
+function efiStatusPago(s) {
+  const st = efiStatusCanonico(s);
+  return st === "paid" || st === "settled";
+}
+
 function efiStatusLabel(s) {
-  const status = String(s || "").toLowerCase();
-  if (status.includes("paid") || status.includes("pago") || status.includes("settled")) return "Pago";
-  if (status.includes("wait") || status.includes("pend") || status.includes("new") || status.includes("unpaid")) return "Aguardando pagamento";
-  if (status.includes("cancel")) return "Cancelado";
-  if (status.includes("expire") || status.includes("venc")) return "Vencido";
+  const st = efiStatusCanonico(s);
+  if (st === "paid" || st === "settled") return "Pago";
+  if (st === "unpaid") return "Inadimplente";
+  if (st === "waiting" || st === "new") return "Aguardando pagamento";
+  if (st === "identified") return "Identificado";
+  if (st === "canceled") return "Cancelado";
+  if (st === "expired") return "Vencido";
   return s || "Registrado na Efí";
 }
 
@@ -6719,16 +6743,71 @@ app.get("/api/clientes", async (req,res)=>{
   }
 });
 
+
+async function fbSincronizarStatusEfiBoleto(row) {
+  const chargeId = String(row?.efi_charge_id || "").trim();
+  if (!chargeId) return row;
+
+  const dados = row?.dados && typeof row.dados === "object" ? row.dados : {};
+  const conta = Number(dados.contaEfi || dados.conta_efi || dados.efiConta || dados.efi_conta || 1) || 1;
+
+  try {
+    const cfg = await efiCarregarConfig(conta);
+    if (!cfg || !cfg.ClientId || !cfg.ClientSecret) return row;
+
+    const detalhe = await efiDetalharPorId(cfg, chargeId);
+    if (!detalhe.ok || !detalhe.detalhes) return row;
+
+    const situacao = String(detalhe.detalhes.situacao_efi || "").trim();
+    if (!situacao) return row;
+
+    const momento = new Date().toISOString();
+    await pool.query(`
+      UPDATE boletos SET
+        efi_status=$1,
+        dados=COALESCE(dados,'{}'::jsonb) || $2::jsonb,
+        atualizado_em=NOW()
+      WHERE id=$3
+    `, [
+      situacao,
+      JSON.stringify({
+        efiStatus:situacao,
+        efiStatusConsultadoEm:momento,
+        efiStatusFonte:"consulta_online_efi"
+      }),
+      row.id
+    ]);
+
+    return {
+      ...row,
+      efi_status:situacao,
+      dados:{...dados, efiStatus:situacao, efiStatusConsultadoEm:momento, efiStatusFonte:"consulta_online_efi"}
+    };
+  } catch (e) {
+    console.warn("Falha ao atualizar status Efí do boleto", row?.numero, e.message);
+    return row;
+  }
+}
+
 app.get("/api/boletos/cliente", async (req,res)=>{
   try{
     await fbEnsureTables();
     const clienteId=String(req.query.cliente_id || req.query.clienteId || req.query.id || "").trim();
     const login=String(req.query.login || req.query.loginPppoe || "").trim();
+    const atualizarEfi=String(req.query.atualizar_efi || req.query.atualizarEfi || "") === "1";
     let r;
     if(clienteId) r=await pool.query(`SELECT * FROM boletos WHERE cliente_id=$1 OR (cliente_id IS NULL AND $2<>'' AND cliente_login=$2) ORDER BY vencimento ASC NULLS LAST,id DESC`,[clienteId,login]);
     else if(login) r=await pool.query(`SELECT * FROM boletos WHERE cliente_login=$1 OR (dados IS NOT NULL AND (dados->>'login'=$1 OR dados->>'loginPppoe'=$1 OR dados->>'clienteLogin'=$1)) ORDER BY vencimento ASC NULLS LAST,id DESC`,[login]);
     else return res.status(400).json({ok:false,erro:"Informe o ID do cadastro ou o login PPPoE do ponto."});
-    res.json({ok:true,total:r.rows.length,boletos:r.rows.map(fbBoletoRow)});
+
+    let rows=r.rows || [];
+    if(atualizarEfi){
+      const atualizadas=[];
+      for(const row of rows.slice(0,25)) atualizadas.push(await fbSincronizarStatusEfiBoleto(row));
+      rows=[...atualizadas,...rows.slice(25)];
+    }
+
+    res.json({ok:true,total:rows.length,boletos:rows.map(fbBoletoRow)});
   }catch(err){console.error("Erro /api/boletos/cliente:",err);res.status(500).json({ok:false,erro:err.message});}
 });
 
@@ -6807,10 +6886,11 @@ function dashboardValorCliente(row) {
 
 function dashboardStatusBoleto(row) {
   const dados = dashboardDados(row);
-  return dashboardTexto([
-    dashboardPrimeiro([row, dados], ["status", "situacao", "estado"]),
-    dashboardPrimeiro([row, dados], ["efi_status", "efiStatus", "statusEfi"])
-  ].filter(Boolean).join(" "));
+  const chargeId = dashboardPrimeiro([row, dados], ["efi_charge_id","efiChargeId","charge_id","chargeId"]);
+  const statusEfi = dashboardPrimeiro([row, dados], ["efi_status","efiStatus","statusEfi"]);
+  const statusLocal = dashboardPrimeiro([row, dados], ["status","situacao","estado"]);
+  if (chargeId && statusEfi) return dashboardTexto(statusEfi);
+  return dashboardTexto(statusLocal);
 }
 
 function dashboardBoletoCancelado(row) {
@@ -6834,14 +6914,20 @@ function dashboardValorPagoBoleto(row) {
 
 function dashboardBoletoPago(row) {
   const dados = dashboardDados(row);
+  const chargeId = dashboardPrimeiro([row, dados], ["efi_charge_id","efiChargeId","charge_id","chargeId"]);
+  const statusEfi = dashboardPrimeiro([row, dados], ["efi_status","efiStatus","statusEfi"]);
+
+  if (chargeId && statusEfi) return efiStatusPago(statusEfi);
+
   const status = dashboardStatusBoleto(row);
   const total = dashboardValorTotalBoleto(row);
   const pago = dashboardValorPagoBoleto(row);
   const dataPagamento = dashboardPrimeiro([row, dados], [
     "pagamento", "data_pagamento", "dataPagamento", "recebidoEm", "dataRecebimento", "paid_at"
   ]);
+  const tokens = String(status || "").split(/[^a-z0-9_]+/).filter(Boolean);
   return Boolean(dataPagamento) ||
-    ["pago", "paid", "baixado", "recebido", "liquidado", "quitado", "settled"].some(palavra => status.includes(palavra)) ||
+    ["pago","paid","baixado","recebido","liquidado","quitado","settled"].some(palavra => tokens.includes(palavra)) ||
     (total > 0 && pago >= total);
 }
 
@@ -6913,6 +6999,20 @@ app.get("/api/dashboard/financeiro", async (req, res) => {
     console.error("Erro /api/dashboard/financeiro:", err);
     return res.status(500).json({ ok:false, erro:err.message });
   }
+});
+
+app.get("/api/efi/status-parser-teste", (req,res)=>{
+  const exemplos=["paid","unpaid","waiting","settled","expired","canceled","identified"];
+  res.json({
+    ok:true,
+    versao:"EFI-STATUS-V12",
+    exemplos:exemplos.map(status=>({
+      status,
+      canonico:efiStatusCanonico(status),
+      label:efiStatusLabel(status),
+      pago:efiStatusPago(status)
+    }))
+  });
 });
 
 app.get("/api/debug/boletos", async (req,res)=>{

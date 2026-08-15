@@ -198,7 +198,7 @@
 
     const openBills = state.boletos.filter(bill=>{
       const status = String(bill.status || "").toLowerCase();
-      return !(status.includes("pago") || status.includes("paid") || status.includes("settled") || status.includes("baixado") || status.includes("liquidado") || status.includes("cancel"));
+      const tokens=status.split(/[^a-z0-9_]+/).filter(Boolean); return !(tokens.includes("pago") || tokens.includes("paid") || tokens.includes("settled") || tokens.includes("baixado") || tokens.includes("liquidado") || status.includes("cancel"));
     });
     const next = [...openBills].filter(bill=>parseDate(bill.vencimento)).sort((a,b)=>parseDate(a.vencimento)-parseDate(b.vencimento))[0];
     state.nextBill = next || null;
@@ -510,7 +510,7 @@
   }
   function billGroup(bill){
     const status = normalize(`${bill.status || ""}`);
-    if(["pago","paid","settled","baixado","recebido","liquidado"].some(value=>status.includes(value))) return "pagas";
+    const tokens=status.split(/[^a-z0-9_]+/).filter(Boolean); if(tokens.includes("unpaid") || status.includes("inadimpl")) return "abertas"; if(["pago","paid","settled","baixado","recebido","liquidado"].some(value=>tokens.includes(value))) return "pagas";
     if(["cancel","estorn","refund","devolv"].some(value=>status.includes(value))) return "pagas";
     return "abertas";
   }
