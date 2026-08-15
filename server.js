@@ -287,6 +287,19 @@ function servidorConfigClientesColonia() {
   };
 }
 
+function servidorConfigClientes(nomeServidor) {
+  const nome = String(nomeServidor || "")
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+
+  const ehColonia = nome === "colonia" ||
+    nome.includes("colonia antonio aleixo") ||
+    nome.includes("antonio aleixo");
+
+  return ehColonia ? servidorConfigClientesColonia() : servidorConfig(nomeServidor);
+}
+
 function diagnosticoConfigServidor(nomeServidor) {
   const cfg = servidorConfig(nomeServidor);
   return {
@@ -314,7 +327,7 @@ function montarComentarioClienteMikrotik(cliente = {}) {
 }
 
 async function criarPPPoECliente(cliente) {
-  const cfg = servidorConfig(servidorCliente(cliente));
+  const cfg = servidorConfigClientes(servidorCliente(cliente));
   if (!cfg.host || !cfg.user || !cfg.pass) {
     throw new Error("Variáveis do MikroTik não configuradas no Render para " + cfg.key);
   }
@@ -613,7 +626,7 @@ function rateLimitPorPlano(plano) {
 }
 
 async function criarPPPoEClienteComProfile(cliente) {
-  const cfg = servidorConfig(servidorCliente(cliente));
+  const cfg = servidorConfigClientes(servidorCliente(cliente));
   if (!cfg.host || !cfg.user || !cfg.pass) {
     throw new Error("Variáveis do MikroTik não configuradas no Render para " + cfg.key);
   }
@@ -690,7 +703,7 @@ function parseRouterosRows(sentences) {
 
 
 async function consultarStatusMikroTik(cliente) {
-  const cfg = servidorConfig(servidorCliente(cliente));
+  const cfg = servidorConfigClientes(servidorCliente(cliente));
   if (!cfg.host || !cfg.user || !cfg.pass) {
     throw new Error("Variáveis do MikroTik não configuradas para " + cfg.key);
   }
@@ -1728,7 +1741,7 @@ app.get("/api/clientes/:id/acesso-remoto", async (req, res) => {
 
 
 async function obterIpAtualCliente(cliente) {
-  const cfg = servidorConfig(servidorCliente(cliente));
+  const cfg = servidorConfigClientes(servidorCliente(cliente));
   if (!cfg.host || !cfg.user || !cfg.pass) {
     throw new Error("Variáveis do MikroTik não configuradas para " + cfg.key);
   }
@@ -1877,7 +1890,7 @@ app.get("/api/clientes/:id/status-mikrotik", async (req, res) => {
 
 
 async function consultarIpPPPoECliente(cliente) {
-  const cfg = servidorConfig(servidorCliente(cliente));
+  const cfg = servidorConfigClientes(servidorCliente(cliente));
   if (!cfg.host || !cfg.user || !cfg.pass) {
     throw new Error("Variáveis do MikroTik não configuradas para " + cfg.key);
   }
@@ -1963,7 +1976,7 @@ async function removerPPPoEDoServidor(cliente, servidorAntigo) {
   const servidor = String(
     servidorAntigo || cliente.servidor || cliente.pop_servidor || dados.popServidor || dados.servidor || ""
   ).trim();
-  const cfg = servidorConfig(servidor);
+  const cfg = servidorConfigClientes(servidor);
 
   if (!servidor) throw new Error("Cliente sem Servidor/POP selecionado.");
   if (!cfg.host || !cfg.user || !cfg.pass) {
@@ -2235,7 +2248,7 @@ app.delete("/api/clientes/:id", async (req, res) => {
 app.get("/api/mikrotik/test", async (req, res) => {
   try {
     const servidor = req.query.servidor || "COLONIA ANTONIO ALEIXO";
-    const cfg = servidorConfig(servidor);
+    const cfg = servidorConfigClientes(servidor);
     if (!cfg.host || !cfg.user || !cfg.pass) {
       return res.status(500).json({ ok: false, erro: "Variáveis do MikroTik não configuradas", servidor: cfg.key });
     }
@@ -2250,7 +2263,7 @@ app.get("/api/mikrotik/test", async (req, res) => {
 
 
 async function consultarOnlineServidor(nomeServidor) {
-  const cfg = servidorConfig(nomeServidor);
+  const cfg = servidorConfigClientes(nomeServidor);
 
   if (!cfg.host || !cfg.user || !cfg.pass) {
     return { ok: false, servidor: cfg.key, erro: "Variáveis do MikroTik não configuradas para " + cfg.key, clientes: [], total: 0 };
@@ -2276,7 +2289,7 @@ async function consultarOnlineServidor(nomeServidor) {
 }
 
 async function consultarStatusServidor(nomeServidor) {
-  const cfg = servidorConfig(nomeServidor);
+  const cfg = servidorConfigClientes(nomeServidor);
   if (!cfg.host || !cfg.user || !cfg.pass) {
     return { ok: false, servidor: cfg.key, erro: "Variáveis do MikroTik não configuradas para " + cfg.key };
   }
@@ -2366,8 +2379,8 @@ app.get("/api/mikrotik/profiles", async (req, res) => {
       return res.json({ ok:true, servidor:servidorNome, profiles:cache.profiles, cache:true });
     }
 
-    // Usa a mesma base do /api/online: servidorConfig + routerosSend + parseRouterosRows.
-    const cfg = servidorConfig(servidorNome);
+    // Profiles PPP pertencem ao concentrador de clientes (RB4011 na Colônia).
+    const cfg = servidorConfigClientes(servidorNome);
 
     if (!cfg.host || !cfg.user || !cfg.pass) {
       return res.status(500).json({
@@ -2472,7 +2485,7 @@ app.post("/api/mikrotik/cliente-profile", async (req, res) => {
       return res.status(400).json({ ok:false, erro:"PROFILE não selecionado." });
     }
 
-    const cfg = servidorConfig(servidor);
+    const cfg = servidorConfigClientes(servidor);
 
     if (!cfg.host || !cfg.user || !cfg.pass) {
       return res.status(500).json({
@@ -2481,7 +2494,7 @@ app.post("/api/mikrotik/cliente-profile", async (req, res) => {
       });
     }
 
-    // Confere se o profile existe no MikroTik.
+    // Confere se o profile existe no concentrador PPPoE.
     const profilesResp = await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [["/ppp/profile/print"]], 15000);
     const profiles = parseRouterosRows(profilesResp);
     const profileExiste = profiles.some((p) => String(p.name || "").trim() === profile);
@@ -2708,7 +2721,7 @@ app.post("/api/mikrotik/cliente-acao", requireFibraOuCentralSession, async (req,
       return res.status(400).json({ ok:false, erro:"Ação inválida." });
     }
 
-    const cfg = servidorConfig(servidor);
+    const cfg = servidorConfigClientes(servidor);
 
     if (!cfg.host || !cfg.user || !cfg.pass) {
       return res.status(500).json({
@@ -2968,45 +2981,65 @@ function fibraIdentificarLinkDaRota(row) {
 }
 
 function fibraStatusLinkEmUso(rotas, preferencia, explicita) {
-  // A saída geral do assinante deve considerar somente a tabela MAIN.
-  // Ignora tabelas de política dos clientes (CLIENTE-STARLINK/AMAZONET).
+  // A saída global é decidida EXCLUSIVAMENTE pela tabela main da RB3011.
+  // As tabelas CLIENTE-* e a preferência individual não entram na escolha do link em uso.
+  const tabela = "main";
   if (!Array.isArray(rotas)) {
-    return { emUso:null, contingencia:false, tabelaRoteamento:"main" };
+    return { emUso:null, contingencia:false, tabelaRoteamento:tabela };
   }
 
-  const candidatas = rotas.filter((row) => {
-    const tabelaRow = String(row["routing-table"] || "main").trim();
-    return tabelaRow === "main" && String(row["dst-address"] || "") === "0.0.0.0/0";
-  });
+  const candidatas = rotas
+    .filter((row) => {
+      const tabelaRow = String(row["routing-table"] || "main").trim();
+      return tabelaRow === tabela &&
+        String(row["dst-address"] || "") === "0.0.0.0/0" &&
+        !fibraRouterosVerdadeiro(row.disabled);
+    })
+    .sort((a, b) => {
+      const da = Number(a.distance ?? 9999);
+      const db = Number(b.distance ?? 9999);
+      return da - db;
+    });
 
-  // Considera somente rotas realmente ativas.
-  const ativas = candidatas.filter((row) => {
-    return fibraRouterosVerdadeiro(row.active) && !fibraRouterosVerdadeiro(row.disabled);
-  });
+  // RouterOS expõe active=true para a rota efetivamente instalada.
+  let ativa = candidatas.find((row) => fibraRouterosVerdadeiro(row.active));
 
-  // Em caso de múltiplas rotas ativas, usa menor distance.
-  ativas.sort((a,b) => Number(a.distance || 999) - Number(b.distance || 999));
+  // Fallback apenas para versões/respostas em que "active" não venha na proplist:
+  // considera rota não-inativa com immediate-gw e respeita a menor distance.
+  if (!ativa) {
+    ativa = candidatas.find((row) =>
+      !fibraRouterosVerdadeiro(row.inactive) &&
+      Boolean(String(row["immediate-gw"] || "").trim())
+    );
+  }
 
-  const ativa = ativas.find((row) => fibraIdentificarLinkDaRota(row)) || ativas[0] || null;
   const emUso = ativa ? fibraIdentificarLinkDaRota(ativa) : null;
 
   return {
     emUso,
     contingencia:Boolean(emUso && preferencia && emUso !== preferencia),
-    tabelaRoteamento:"main"
+    tabelaRoteamento:tabela
   };
 }
 
 async function fibraRemoverEntradasRota(cfg, login, ipAtual) {
-  // Remove sempre pelo IP. Comentário não é confiável porque versões antigas
-  // gravaram "FIBRA+ ROTA GERAL" e novas gravam outro padrão.
+  // Limpa a rota anterior pelo IP atual E pelo comentário do Fibra+.
+  // Isso evita o caso em que o PPPoE troca de IP e a entrada antiga fica presa.
   const ids = new Set();
+  const loginNorm = fibraNormalizarTexto(login);
+  const marcadorLogin = loginNorm ? "fibra+ rota " + loginNorm : "";
 
   for (const lista of Object.values(FIBRA_ROTA_LISTAS)) {
     const linhas = await fibraListarEntradasRota(cfg, lista, "");
     for (const row of linhas) {
-      const mesmoIp = ipAtual && String(row.address || "").split("/")[0].trim() === ipAtual;
-      if (mesmoIp && row[".id"]) ids.add(row[".id"]);
+      const endereco = String(row.address || "").split("/")[0].trim();
+      if (endereco === "127.0.0.1") continue; // reserva do painel
+
+      const mesmoIp = Boolean(ipAtual && endereco === ipAtual);
+      const comentarioNorm = fibraNormalizarTexto(row.comment || "");
+      const mesmoLogin = Boolean(marcadorLogin && comentarioNorm.includes(marcadorLogin));
+
+      if ((mesmoIp || mesmoLogin) && row[".id"]) ids.add(row[".id"]);
     }
   }
 
@@ -3173,20 +3206,25 @@ app.get("/api/mikrotik/cliente-rota", async (req, res) => {
     }
     if (!login) return res.status(400).json({ ok:false, erro:"Login PPPoE não informado." });
 
-    const cfg = servidorConfig(servidor);
-    if (cfg.key !== "colonia" || !cfg.host || !cfg.user || !cfg.pass) {
-      return res.status(500).json({ ok:false, erro:"MikroTik da Colônia não configurado no servidor do painel." });
+    const cfgLinks = servidorConfig(servidor);              // RB3011: links, rotas e address-lists
+    const cfgClientes = servidorConfigClientes(servidor);  // RB4011: PPPoE
+
+    if (cfgLinks.key !== "colonia" || !cfgLinks.host || !cfgLinks.user || !cfgLinks.pass) {
+      return res.status(500).json({ ok:false, erro:"RB3011 de links da Colônia não configurada no servidor do painel." });
+    }
+    if (!cfgClientes.host || !cfgClientes.user || !cfgClientes.pass) {
+      return res.status(500).json({ ok:false, erro:"RB4011 de clientes da Colônia não configurada no servidor do painel." });
     }
 
-    const sessao = await fibraSessaoPPPoEAtual(cfg, login);
+    const sessao = await fibraSessaoPPPoEAtual(cfgClientes, login);
     if (!sessao) {
       return res.json({ ok:true, online:false, rota:null, ip:"", login, mensagem:"Cliente offline ou sem IP PPPoE ativo." });
     }
 
     const [star, amz, resultadoRotas] = await Promise.all([
-      fibraListarEntradasRota(cfg, FIBRA_ROTA_LISTAS.STARLINK, sessao.ip),
-      fibraListarEntradasRota(cfg, FIBRA_ROTA_LISTAS.AMAZONET, sessao.ip),
-      fibraListarRotasPadrao(cfg)
+      fibraListarEntradasRota(cfgLinks, FIBRA_ROTA_LISTAS.STARLINK, sessao.ip),
+      fibraListarEntradasRota(cfgLinks, FIBRA_ROTA_LISTAS.AMAZONET, sessao.ip),
+      fibraListarRotasPadrao(cfgLinks)
         .then((rotas) => ({ rotas, erro:"" }))
         .catch((erro) => ({ rotas:[], erro:erro.message }))
     ]);
@@ -3236,37 +3274,42 @@ app.post("/api/mikrotik/cliente-rota", async (req, res) => {
       return res.status(400).json({ ok:false, erro:"Link inválido. Use STARLINK ou AMAZONET." });
     }
 
-    const cfg = servidorConfig(servidor);
-    if (cfg.key !== "colonia" || !cfg.host || !cfg.user || !cfg.pass) {
-      return res.status(500).json({ ok:false, erro:"MikroTik da Colônia não configurado no servidor do painel." });
+    const cfgLinks = servidorConfig(servidor);              // RB3011: links, rotas e address-lists
+    const cfgClientes = servidorConfigClientes(servidor);  // RB4011: PPPoE
+
+    if (cfgLinks.key !== "colonia" || !cfgLinks.host || !cfgLinks.user || !cfgLinks.pass) {
+      return res.status(500).json({ ok:false, erro:"RB3011 de links da Colônia não configurada no servidor do painel." });
+    }
+    if (!cfgClientes.host || !cfgClientes.user || !cfgClientes.pass) {
+      return res.status(500).json({ ok:false, erro:"RB4011 de clientes da Colônia não configurada no servidor do painel." });
     }
 
-    const sessao = await fibraSessaoPPPoEAtual(cfg, login);
+    const sessao = await fibraSessaoPPPoEAtual(cfgClientes, login);
     if (!sessao) {
       return res.status(409).json({ ok:false, erro:"Cliente está offline ou sem IP PPPoE ativo. A troca não foi aplicada." });
     }
 
     // Nunca permite o mesmo IP simultaneamente nas duas listas e também remove
     // uma entrada antiga criada pelo Fibra+ para o mesmo login caso o IP tenha mudado.
-    const removidas = await fibraRemoverEntradasRota(cfg, login, sessao.ip);
+    const removidas = await fibraRemoverEntradasRota(cfgLinks, login, sessao.ip);
     const listaDestino = FIBRA_ROTA_LISTAS[rota];
     const comentario = "FIBRA+ ROTA " + login;
 
-    await routerosSend(cfg.host, cfg.port, cfg.user, cfg.pass, [[
+    await routerosSend(cfgLinks.host, cfgLinks.port, cfgLinks.user, cfgLinks.pass, [[
       "/ip/firewall/address-list/add",
       "=list=" + listaDestino,
       "=address=" + sessao.ip,
       "=comment=" + comentario
     ]], 15000);
 
-    const conexoesRemovidas = await fibraLimparConexoesDoIp(cfg, sessao.ip);
+    const conexoesRemovidas = await fibraLimparConexoesDoIp(cfgLinks, sessao.ip);
 
-    const confirmacao = await fibraListarEntradasRota(cfg, listaDestino, sessao.ip);
+    const confirmacao = await fibraListarEntradasRota(cfgLinks, listaDestino, sessao.ip);
     if (!confirmacao.length) {
       throw new Error("A RB não confirmou o IP na lista " + listaDestino + ".");
     }
 
-    const resultadoRotas = await fibraListarRotasPadrao(cfg)
+    const resultadoRotas = await fibraListarRotasPadrao(cfgLinks)
       .then((rotas) => ({ rotas, erro:"" }))
       .catch((erro) => ({ rotas:[], erro:erro.message }));
     const statusLink = fibraStatusLinkEmUso(resultadoRotas.rotas, rota, true);
@@ -3304,11 +3347,13 @@ app.post("/api/mikrotik/rota-geral", async (req, res) => {
   try {
     const rota = String((req.body || {}).rota || "").toUpperCase();
     if (!FIBRA_ROTA_LISTAS[rota]) return res.status(400).json({ok:false, erro:"Rota inválida"});
-    const cfg = servidorConfig("colonia");
-    if (!cfg || !cfg.host) return res.status(500).json({ok:false, erro:"MikroTik Colônia não configurada"});
-    // ROTA GERAL: busca todos os PPP ativos sem proplist restrito.
+    const cfgLinks = servidorConfig("colonia");
+    const cfgClientes = servidorConfigClientes("colonia");
+    if (!cfgLinks || !cfgLinks.host) return res.status(500).json({ok:false, erro:"RB3011 de links não configurada"});
+    if (!cfgClientes || !cfgClientes.host) return res.status(500).json({ok:false, erro:"RB4011 de clientes não configurada"});
+    // ROTA GERAL: busca todos os PPP ativos na RB4011.
     // Alguns RouterOS/API retornam lista parcial quando usamos .proplist em massa.
-    const ativos = await routerosCommandStable(cfg, [
+    const ativos = await routerosCommandStable(cfgClientes, [
       "/ppp/active/print"
     ], 30000);
     const clientes = parseRouterosRows(ativos).filter(x => x.name && x.address);
@@ -3316,12 +3361,12 @@ app.post("/api/mikrotik/rota-geral", async (req, res) => {
     // ROTA GERAL: limpa somente clientes das listas de rota antes de recriar.
     // Mantém o IP reserva 127.0.0.1.
     for (const lista of Object.values(FIBRA_ROTA_LISTAS)) {
-      const entradas = await fibraListarEntradasRota(cfg, lista, "");
+      const entradas = await fibraListarEntradasRota(cfgLinks, lista, "");
       const remover = entradas
         .filter(e => String(e.address || "").split("/")[0] !== "127.0.0.1")
         .map(e => ["/ip/firewall/address-list/remove", "=.id=" + e[".id"]]);
       if (remover.length) {
-        await fibraRouterosBatchStable(cfg, remover, 20000, { ignorarItemAusente:true });
+        await fibraRouterosBatchStable(cfgLinks, remover, 20000, { ignorarItemAusente:true });
       }
     }
 
@@ -3331,10 +3376,10 @@ app.post("/api/mikrotik/rota-geral", async (req, res) => {
       try {
         const ip = String(c.address).split('/')[0];
         if (net.isIP(ip)!==4) continue;
-        await fibraRemoverEntradasRota(cfg, c.name, ip);
-        const existente = await fibraListarEntradasRota(cfg, FIBRA_ROTA_LISTAS[rota], ip);
+        await fibraRemoverEntradasRota(cfgLinks, c.name, ip);
+        const existente = await fibraListarEntradasRota(cfgLinks, FIBRA_ROTA_LISTAS[rota], ip);
         if (!existente.some(e => String(e.address || '').split('/')[0] === ip)) {
-          await routerosCommandStable(cfg, [
+          await routerosCommandStable(cfgLinks, [
             "/ip/firewall/address-list/add",
             "=list="+FIBRA_ROTA_LISTAS[rota],
             "=address="+ip,
@@ -3440,7 +3485,7 @@ app.get("/api/cliente/status", async (req, res) => {
       });
     }
 
-    const cfg = servidorConfig(servidorNome);
+    const cfg = servidorConfigClientes(servidorNome);
     if (!cfg.host || !cfg.user || !cfg.pass) {
       return res.status(500).json({
         online:false,
@@ -6535,7 +6580,7 @@ async function autoExecutarMikrotik({ servidor, login, profile, acao }) {
   if (!servidor) throw new Error("Servidor MikroTik não definido no cadastro do cliente.");
   if (!login) throw new Error("Login PPPoE não definido no cadastro do cliente.");
 
-  const cfg = servidorConfig(servidor);
+  const cfg = servidorConfigClientes(servidor);
   if (!cfg.host || !cfg.user || !cfg.pass) {
     throw new Error("Variáveis do MikroTik não configuradas para " + (cfg.key || servidor));
   }
