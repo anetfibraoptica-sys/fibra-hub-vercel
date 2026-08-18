@@ -5034,6 +5034,9 @@ document.addEventListener("DOMContentLoaded", function(){
     const chargeId = texto(b.efiChargeId || b.efi_charge_id || "");
     const efiRaw = texto(b.efiStatus || b.efi_status || "").toLowerCase();
     const localRaw = texto(b.status || b.situacao || "").toLowerCase();
+    const origemPagamento = texto(b.origemPagamento || b.origem_pagamento || "").toLowerCase();
+    const baixaManualPaga = (localRaw === "pago" || localRaw === "paid") && (origemPagamento === "baixa_manual" || efiRaw.includes("baixa manual"));
+    if(baixaManualPaga) return "pago";
     const raw = (chargeId && efiRaw) ? efiRaw : localRaw;
 
     const limpo = raw.normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim();

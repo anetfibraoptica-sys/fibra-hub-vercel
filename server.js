@@ -6654,7 +6654,8 @@ function fbBoletoRow(row){
     efiStatus: row.efi_status || d.efiStatus || "",
     efiContaNome: row.efi_conta_nome || d.efiContaNome || "",
     observacao: row.observacao || d.observacao || "",
-    origem: row.origem || d.origem || ""
+    origem: row.origem || d.origem || "",
+    origemPagamento: d.origemPagamento || d.origem_pagamento || ""
   };
 }
 
@@ -6889,8 +6890,13 @@ function dashboardStatusBoleto(row) {
   const chargeId = dashboardPrimeiro([row, dados], ["efi_charge_id","efiChargeId","charge_id","chargeId"]);
   const statusEfi = dashboardPrimeiro([row, dados], ["efi_status","efiStatus","statusEfi"]);
   const statusLocal = dashboardPrimeiro([row, dados], ["status","situacao","estado"]);
-  if (chargeId && statusEfi) return dashboardTexto(statusEfi);
-  return dashboardTexto(statusLocal);
+  const origemPagamento = dashboardTexto(dashboardPrimeiro([row, dados], ["origem_pagamento","origemPagamento"]));
+  const statusLocalTexto = dashboardTexto(statusLocal);
+  const statusEfiTexto = dashboardTexto(statusEfi);
+  const baixaManualPaga = ["pago","paid"].includes(statusLocalTexto) && (origemPagamento === "baixa_manual" || statusEfiTexto.includes("baixa manual"));
+  if (baixaManualPaga) return statusLocalTexto;
+  if (chargeId && statusEfi) return statusEfiTexto;
+  return statusLocalTexto;
 }
 
 function dashboardBoletoCancelado(row) {
@@ -6916,7 +6922,12 @@ function dashboardBoletoPago(row) {
   const dados = dashboardDados(row);
   const chargeId = dashboardPrimeiro([row, dados], ["efi_charge_id","efiChargeId","charge_id","chargeId"]);
   const statusEfi = dashboardPrimeiro([row, dados], ["efi_status","efiStatus","statusEfi"]);
+  const statusLocal = dashboardTexto(dashboardPrimeiro([row, dados], ["status","situacao","estado"]));
+  const origemPagamento = dashboardTexto(dashboardPrimeiro([row, dados], ["origem_pagamento","origemPagamento"]));
+  const statusEfiTexto = dashboardTexto(statusEfi);
+  const baixaManualPaga = ["pago","paid"].includes(statusLocal) && (origemPagamento === "baixa_manual" || statusEfiTexto.includes("baixa manual"));
 
+  if (baixaManualPaga) return true;
   if (chargeId && statusEfi) return efiStatusPago(statusEfi);
 
   const status = dashboardStatusBoleto(row);
