@@ -2978,11 +2978,12 @@ app.post("/api/mikrotik/cliente-acao", requireFibraOuCentralSession, async (req,
    Usa o IP PPPoE ATUAL e as address-lists já preparadas na RB:
    - CLIENTES-STARLINK
    - CLIENTES-AMAZONET
-   - sem lista exclusiva = MISTA / PCC 7:5
+   - CLIENTES-MISTA = PCC 7:5
 ============================================================ */
 const FIBRA_ROTA_LISTAS = {
   STARLINK: "CLIENTES-STARLINK",
-  AMAZONET: "CLIENTES-AMAZONET"
+  AMAZONET: "CLIENTES-AMAZONET",
+  MISTA: "CLIENTES-MISTA"
 };
 
 const FIBRA_ROTA_TABELAS = {
@@ -3692,12 +3693,13 @@ app.get("/api/colonia/fontes", async (req, res) => {
 //   - IP atual do cliente
 //
 // RB3011-BALANCE:
-//   - CLIENTES-STARLINK / CLIENTES-AMAZONET
+//   - CLIENTES-STARLINK / CLIENTES-AMAZONET / CLIENTES-MISTA
 //   - tabela main e tabelas CLIENTE-*
 //   - link efetivamente em uso / contingência
 //
 // Regra de negócio:
-//   - se o IP NÃO estiver em nenhuma lista => MISTA / PCC 7:5;
+//   - CLIENTES-MISTA => PCC 7:5;
+//   - sem address-list => preferência não definida;
 //   - uma entrada só é criada quando o operador escolhe uma rota manualmente;
 //   - o IP usado na RB3011 SEMPRE é obtido primeiro da RB4011.
 
@@ -3742,9 +3744,10 @@ async function coloniaV9PreferenciaRB3011(cfg, login, ipAtual) {
     };
   }
 
-  const [star, amz] = await Promise.all([
+  const [star, amz, mista] = await Promise.all([
     fibraListarEntradasRota(cfg, FIBRA_ROTA_LISTAS.STARLINK, ip),
-    fibraListarEntradasRota(cfg, FIBRA_ROTA_LISTAS.AMAZONET, ip)
+    fibraListarEntradasRota(cfg, FIBRA_ROTA_LISTAS.AMAZONET, ip),
+    fibraListarEntradasRota(cfg, FIBRA_ROTA_LISTAS.MISTA, ip)
   ]);
 
   const temStar = star.some(row =>
@@ -3757,12 +3760,27 @@ async function coloniaV9PreferenciaRB3011(cfg, login, ipAtual) {
     String(row.address || "").split("/")[0].trim() !== "127.0.0.1"
   );
 
-  if (temStar && temAmz) {
+  const temMista = mista.some(row =>
+    String(row.address || "").split("/")[0].trim() === ip &&
+    String(row.address || "").split("/")[0].trim() !== "127.0.0.1"
+  );
+
+  const totalListas = Number(temStar) + Number(temAmz) + Number(temMista);
+  if (totalListas > 1) {
     return {
       rota: "CONFLITO",
       preferencia: "CONFLITO",
       explicita: true,
       origem: "CONFLITO_LISTAS"
+    };
+  }
+
+  if (temMista) {
+    return {
+      rota: "MISTA",
+      preferencia: "MISTA",
+      explicita: true,
+      origem: FIBRA_ROTA_LISTAS.MISTA
     };
   }
 
@@ -3784,12 +3802,12 @@ async function coloniaV9PreferenciaRB3011(cfg, login, ipAtual) {
     };
   }
 
-  // Sem entrada nas listas exclusivas = cliente MISTA no PCC 7:5.
+  // Sem entrada em nenhuma lista = preferência não definida.
   return {
-    rota: "MISTA",
-    preferencia: "MISTA",
-    explicita: true,
-    origem: "PCC_7_5"
+    rota: null,
+    preferencia: null,
+    explicita: false,
+    origem: "SEM_PREFERENCIA"
   };
 }
 
@@ -3865,17 +3883,15 @@ async function coloniaV9AplicarRotaRB3011(cfg, login, ipAtual, rota) {
   // Limpa qualquer preferência exclusiva antiga por IP e por login.
   await fibraRemoverEntradasRota(cfg, nome, ip);
 
-  // STARLINK/AMAZONET entram em listas exclusivas.
-  // MISTA fica fora das duas listas para cair no PCC 7:5 já existente.
-  if (destino !== "MISTA") {
-    const listaDestino = FIBRA_ROTA_LISTAS[destino];
-    await routerosCommandStable(cfg, [
-      "/ip/firewall/address-list/add",
-      "=list=" + listaDestino,
-      "=address=" + ip,
-      "=comment=FIBRA+ ROTA " + nome
-    ], 15000);
-  }
+  // Cada opção é explícita por address-list.
+  // CLIENTES-MISTA é capturada apenas pelas regras PCC 7:5 da RB3011.
+  const listaDestino = FIBRA_ROTA_LISTAS[destino];
+  await routerosCommandStable(cfg, [
+    "/ip/firewall/address-list/add",
+    "=list=" + listaDestino,
+    "=address=" + ip,
+    "=comment=FIBRA+ ROTA " + nome
+  ], 15000);
 
   // Encerra somente as conexões atuais desse cliente para a nova política
   // valer imediatamente.
@@ -4053,7 +4069,7 @@ app.post("/api/mikrotik/cliente-rota", async (req, res) => {
       rota,
       preferencia: rota,
       explicita: true,
-      origem: rota === "MISTA" ? "PCC_7_5" : FIBRA_ROTA_LISTAS[rota],
+      origem: FIBRA_ROTA_LISTAS[rota],
       emUso: link.emUso,
       contingencia: link.contingencia,
       statusEmUso: link.statusEmUso,
@@ -4082,7 +4098,7 @@ app.get("/api/versao-colonia-v9", (req,res) => {
     clientes:"RB4011-PPPOE-CLIENTES",
     ipAtual:"RB4011",
     rotas:"RB3011-BALANCE",
-    regraPadrao:"SEM ADDRESS-LIST = MISTA / PCC 7:5"
+    regraPadrao:"CLIENTES-MISTA = PCC 7:5; sem lista = não definido"
   });
 });
 
@@ -4090,7 +4106,7 @@ app.get("/api/versao-colonia-v9", (req,res) => {
 app.post("/api/mikrotik/rota-geral", async (req, res) => {
   try {
     const rota = String((req.body || {}).rota || "").toUpperCase();
-    if (!FIBRA_ROTA_LISTAS[rota]) return res.status(400).json({ok:false, erro:"Rota inválida"});
+    if (!["STARLINK", "AMAZONET"].includes(rota)) return res.status(400).json({ok:false, erro:"Rota geral aceita STARLINK ou AMAZONET"});
     const cfgLinks = servidorConfigLinks("colonia");
     const cfgClientes = servidorConfigClientes("colonia");
     if (!cfgLinks || !cfgLinks.host) return res.status(500).json({ok:false, erro:"RB3011 de links não configurada"});
