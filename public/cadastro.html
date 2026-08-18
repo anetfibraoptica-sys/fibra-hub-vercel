@@ -4668,9 +4668,13 @@ document.addEventListener("DOMContentLoaded", function(){
       "";
 
     function calcularPrimeiraParcelaProporcional(valorPlano, inicio, vencimento){
-      // Usa exatamente o valor calculado no modal quando existir.
+      // Respeita a escolha do modal: "Não" cobra o valor integral do plano.
+      const usarProporcional = document.getElementById("mensalidadeUsarProporcional")?.value === "sim";
+      if(!usarProporcional) return Number(valorPlano);
+
+      // Em "Sim", usa exatamente o valor proporcional calculado no modal quando existir.
       const calculado = fibraNumero(document.getElementById("mensalidadeValorProporcional")?.value || "");
-      if(document.getElementById("mensalidadeUsarProporcional")?.value === "sim" && calculado > 0){
+      if(calculado > 0){
         return Number(calculado.toFixed(2));
       }
       if(!inicio || !vencimento) return Number(valorPlano);
