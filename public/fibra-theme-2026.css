@@ -570,3 +570,393 @@ body.light .card h2,body.light .panel h2,body.light .panel h3,body.light .efi-co
 body.light input:not([type="checkbox"]):not([type="radio"]),body.light select,body.light textarea{background:#fff !important;color:#172235 !important;border-color:#dbe3ed !important}
 body.light td{color:#344257 !important;border-bottom-color:#edf1f5 !important}
 body.light th{background:#f7f9fc !important;color:#69798c !important;border-bottom-color:#e4eaf1 !important}
+
+/* ===== MODAIS MOBILE FIBRA+ 2026 v2 ===== */
+@media (max-width: 768px){
+  body:has(#modalPlanosCadastro.aberto),
+  body:has(#modalBoletosCliente.aberto),
+  body:has(.fibra-submodal.aberto){
+    overflow:hidden !important;
+    overscroll-behavior:none;
+  }
+
+  /* Modal de planos: folha móvel com cabeçalho fixo e corpo rolável. */
+  #modalPlanosCadastro{
+    padding:max(8px,env(safe-area-inset-top)) 0 0 !important;
+    align-items:flex-end !important;
+    justify-content:center !important;
+  }
+  #modalPlanosCadastro .planos-cadastro-backdrop{
+    background:rgba(2,8,18,.78) !important;
+    backdrop-filter:blur(6px);
+  }
+  #modalPlanosCadastro .planos-cadastro-box{
+    width:100% !important;
+    max-width:none !important;
+    height:auto !important;
+    max-height:calc(100dvh - max(8px,env(safe-area-inset-top))) !important;
+    margin:0 !important;
+    border-radius:22px 22px 0 0 !important;
+    border-bottom:0 !important;
+    overflow:hidden !important;
+  }
+  #modalPlanosCadastro .planos-cadastro-header{
+    flex:0 0 auto;
+    position:relative;
+    z-index:3;
+    padding:16px 14px 12px !important;
+    align-items:center !important;
+    background:rgba(12,25,42,.98) !important;
+    backdrop-filter:blur(14px);
+  }
+  #modalPlanosCadastro .planos-cadastro-header h3{
+    font-size:20px !important;
+    line-height:1.2 !important;
+  }
+  #modalPlanosCadastro .planos-cadastro-header p{
+    font-size:12px !important;
+    line-height:1.35 !important;
+  }
+  #modalPlanosCadastro .planos-cadastro-fechar{
+    width:46px !important;
+    height:46px !important;
+    min-width:46px !important;
+    min-height:46px !important;
+    border-radius:12px !important;
+    font-size:27px !important;
+    background:#172b46 !important;
+    color:#fff !important;
+    border-color:rgba(148,163,184,.25) !important;
+  }
+  #modalPlanosCadastro .planos-cadastro-corpo{
+    flex:1 1 auto;
+    min-height:0;
+    padding:12px 12px calc(18px + env(safe-area-inset-bottom)) !important;
+    overflow-y:auto !important;
+    overflow-x:hidden !important;
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior:contain;
+  }
+  #modalPlanosCadastro .planos-cadastro-grade{
+    grid-template-columns:1fr !important;
+    gap:12px !important;
+  }
+  #modalPlanosCadastro .planos-cadastro-painel{
+    min-height:0 !important;
+    border-radius:14px !important;
+    overflow:hidden;
+  }
+  #modalPlanosCadastro .planos-cadastro-painel h4{
+    font-size:18px !important;
+    padding:13px 14px 10px !important;
+  }
+  #modalPlanosCadastro .planos-cadastro-status{
+    margin:0 12px 10px !important;
+  }
+  #modalPlanosCadastro .planos-cadastro-tabela-wrap{
+    padding:0 10px 14px !important;
+    overflow-x:auto !important;
+    -webkit-overflow-scrolling:touch;
+  }
+  #modalPlanosCadastro .planos-cadastro-tabela{
+    min-width:520px;
+  }
+  #modalPlanosCadastro .planos-cadastro-form{
+    padding:0 12px 14px !important;
+  }
+  #modalPlanosCadastro .planos-cadastro-botoes{
+    display:grid !important;
+    grid-template-columns:1fr !important;
+    gap:8px !important;
+  }
+  #modalPlanosCadastro .planos-cadastro-botoes button,
+  #modalPlanosCadastro .btn-planos-incluir,
+  #modalPlanosCadastro .btn-planos-atualizar,
+  #modalPlanosCadastro .btn-planos-novo,
+  #modalPlanosCadastro .btn-planos-cancelar,
+  #modalPlanosCadastro .btn-planos-salvar-novo{
+    width:100% !important;
+    min-height:48px !important;
+    border-radius:10px !important;
+  }
+
+  /* Lista de boletos: ocupa a tela útil e mantém ações sempre alcançáveis. */
+  .fibra-modal-boletos.aberto{
+    display:flex !important;
+    align-items:flex-end !important;
+    justify-content:center !important;
+    padding:max(8px,env(safe-area-inset-top)) 0 0 !important;
+  }
+  .fibra-modal-boletos-backdrop{
+    background:rgba(2,8,18,.8) !important;
+    backdrop-filter:blur(6px);
+  }
+  .fibra-modal-boletos-box{
+    position:relative !important;
+    display:flex !important;
+    flex-direction:column !important;
+    width:100% !important;
+    max-width:none !important;
+    height:calc(100dvh - max(8px,env(safe-area-inset-top))) !important;
+    max-height:none !important;
+    min-height:0 !important;
+    margin:0 !important;
+    padding:0 !important;
+    overflow:hidden !important;
+    border-radius:22px 22px 0 0 !important;
+    border-bottom:0 !important;
+  }
+  .fibra-modal-boletos-header{
+    flex:0 0 auto;
+    margin:0 !important;
+    padding:16px 14px 11px !important;
+    background:rgba(12,25,42,.98) !important;
+    border-bottom:1px solid rgba(148,163,184,.14) !important;
+  }
+  .fibra-modal-title strong{
+    font-size:20px !important;
+    line-height:1.2 !important;
+  }
+  .fibra-boletos-resumo{
+    flex:0 0 auto;
+    display:grid !important;
+    grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+    gap:6px !important;
+    margin:10px 10px 8px !important;
+  }
+  .fibra-boleto-card{
+    min-width:0;
+    padding:9px 5px !important;
+    border-radius:10px !important;
+    font-size:11px !important;
+    line-height:1.25 !important;
+    overflow-wrap:anywhere;
+  }
+  .fibra-boleto-card strong{
+    display:block;
+    margin-top:3px;
+    font-size:12px !important;
+    line-height:1.2;
+  }
+  .fibra-boletos-table-wrap{
+    flex:1 1 auto !important;
+    min-height:0 !important;
+    overflow-y:auto !important;
+    overflow-x:hidden !important;
+    padding:0 10px 12px !important;
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior:contain;
+  }
+  .fibra-boletos-table{
+    display:block !important;
+    width:100% !important;
+    min-width:0 !important;
+    background:transparent !important;
+  }
+  .fibra-boletos-table thead{
+    position:absolute !important;
+    width:1px !important;
+    height:1px !important;
+    overflow:hidden !important;
+    clip:rect(0 0 0 0) !important;
+    white-space:nowrap !important;
+  }
+  .fibra-boletos-table tbody{
+    display:grid !important;
+    gap:10px !important;
+    width:100% !important;
+  }
+  .fibra-boletos-table tbody tr{
+    display:block !important;
+    width:100% !important;
+    padding:8px 12px !important;
+    background:rgba(15,28,46,.94) !important;
+    border:1px solid rgba(148,163,184,.16) !important;
+    border-radius:14px !important;
+    box-shadow:0 8px 22px rgba(0,0,0,.16);
+  }
+  .fibra-boletos-table tbody td{
+    display:grid !important;
+    grid-template-columns:minmax(78px,31%) minmax(0,1fr) !important;
+    gap:10px !important;
+    align-items:center !important;
+    width:100% !important;
+    padding:9px 0 !important;
+    border-bottom:1px solid rgba(148,163,184,.12) !important;
+    white-space:normal !important;
+    overflow-wrap:anywhere !important;
+  }
+  .fibra-boletos-table tbody td:last-child{
+    border-bottom:0 !important;
+  }
+  .fibra-boletos-table tbody td::before{
+    color:#8fa2ba;
+    font-size:11px;
+    font-weight:800;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+  }
+  .fibra-boletos-table tbody td:nth-child(1)::before{content:"Boleto"}
+  .fibra-boletos-table tbody td:nth-child(2)::before{content:"Datas"}
+  .fibra-boletos-table tbody td:nth-child(3)::before{content:"Valor"}
+  .fibra-boletos-table tbody td:nth-child(4)::before{content:"Total"}
+  .fibra-boletos-table tbody td:nth-child(5)::before{content:"Status"}
+  .fibra-boletos-table tbody td:nth-child(6){
+    grid-template-columns:1fr !important;
+    gap:8px !important;
+  }
+  .fibra-boletos-table tbody td:nth-child(6)::before{content:"Ações"}
+  .boleto-acoes{
+    display:grid !important;
+    grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+    gap:8px !important;
+    width:100% !important;
+    white-space:normal !important;
+  }
+  .boleto-acoes button{
+    width:100% !important;
+    min-width:0 !important;
+    min-height:46px !important;
+    margin:0 !important;
+    padding:8px !important;
+    border-radius:10px !important;
+    font-size:18px !important;
+  }
+  .fibra-boletos-footer{
+    flex:0 0 auto;
+    display:grid !important;
+    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+    gap:8px !important;
+    margin:0 !important;
+    padding:10px 10px calc(10px + env(safe-area-inset-bottom)) !important;
+    background:rgba(9,20,33,.99) !important;
+    border-top:1px solid rgba(148,163,184,.16) !important;
+    box-shadow:0 -10px 28px rgba(0,0,0,.2);
+  }
+  .fibra-boletos-footer button{
+    width:100% !important;
+    min-width:0 !important;
+    min-height:48px !important;
+    margin:0 !important;
+    padding:9px 8px !important;
+    border-radius:10px !important;
+    font-size:13px !important;
+    white-space:normal !important;
+  }
+
+  /* Submodais: folha inferior, campos grandes e scroll suave. */
+  .fibra-submodal{
+    padding:max(8px,env(safe-area-inset-top)) 0 0 !important;
+    align-items:flex-end !important;
+    justify-content:center !important;
+    background:rgba(2,8,18,.78) !important;
+    backdrop-filter:blur(6px) !important;
+    overflow:hidden !important;
+  }
+  .fibra-submodal-box,
+  .fibra-submodal-box.detalhe-box{
+    width:100% !important;
+    max-width:none !important;
+    max-height:calc(100dvh - max(8px,env(safe-area-inset-top))) !important;
+    margin:0 !important;
+    padding:16px 14px calc(16px + env(safe-area-inset-bottom)) !important;
+    overflow-y:auto !important;
+    overflow-x:hidden !important;
+    border-radius:22px 22px 0 0 !important;
+    border-bottom:0 !important;
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior:contain;
+    scroll-padding-bottom:90px;
+  }
+  .fibra-submodal-box h3{
+    margin:0 0 14px !important;
+    padding:2px 0 12px !important;
+    font-size:20px !important;
+    line-height:1.2;
+    text-align:left !important;
+    border-bottom:1px solid rgba(148,163,184,.14);
+  }
+  .fibra-submodal-box label{
+    margin-top:12px !important;
+    font-size:13px !important;
+  }
+  .fibra-submodal-box input,
+  .fibra-submodal-box select,
+  .fibra-submodal-box textarea{
+    min-height:48px !important;
+    margin-top:6px !important;
+    padding:11px 12px !important;
+    border-radius:10px !important;
+    font-size:16px !important;
+  }
+  .fibra-submodal-box textarea{
+    min-height:96px !important;
+    resize:vertical;
+  }
+  .fibra-submodal-box > button{
+    width:100% !important;
+    min-height:48px !important;
+    margin-top:10px !important;
+    border-radius:10px !important;
+  }
+  .fibra-submodal-actions{
+    display:grid !important;
+    grid-template-columns:1fr !important;
+    gap:8px !important;
+    width:100% !important;
+    margin-top:18px !important;
+    padding-top:12px !important;
+    border-top:1px solid rgba(148,163,184,.14);
+  }
+  .fibra-submodal-actions button{
+    width:100% !important;
+    min-height:48px !important;
+    margin:0 !important;
+    padding:10px 12px !important;
+    border-radius:10px !important;
+    font-size:14px !important;
+    white-space:normal !important;
+  }
+  .detalhe-grid{
+    grid-template-columns:1fr !important;
+    gap:8px !important;
+  }
+  .detalhe-grid p{
+    padding:11px !important;
+  }
+
+  /* Fallback para qualquer modal/dialog genérico do painel. */
+  dialog,
+  .modal-content,
+  .modal-box{
+    width:100% !important;
+    max-width:none !important;
+    max-height:calc(100dvh - max(12px,env(safe-area-inset-top))) !important;
+    overflow-y:auto !important;
+    border-radius:20px 20px 0 0 !important;
+    -webkit-overflow-scrolling:touch;
+  }
+}
+
+@media (max-width: 390px){
+  .fibra-boletos-resumo{gap:4px !important;margin-left:7px !important;margin-right:7px !important}
+  .fibra-boleto-card{padding:8px 3px !important;font-size:10px !important}
+  .fibra-boleto-card strong{font-size:11px !important}
+  .fibra-boletos-table-wrap{padding-left:7px !important;padding-right:7px !important}
+  .fibra-boletos-table tbody tr{padding:7px 10px !important}
+  .fibra-boletos-table tbody td{grid-template-columns:1fr !important;gap:4px !important}
+  .boleto-acoes{grid-template-columns:repeat(3,minmax(0,1fr)) !important}
+  .fibra-boletos-footer{padding-left:7px !important;padding-right:7px !important}
+  .fibra-boletos-footer button{font-size:12px !important}
+}
+
+@media (max-width: 768px) and (orientation: landscape){
+  #modalPlanosCadastro .planos-cadastro-box,
+  .fibra-modal-boletos-box,
+  .fibra-submodal-box,
+  .fibra-submodal-box.detalhe-box{
+    max-height:100dvh !important;
+    border-radius:16px 16px 0 0 !important;
+  }
+  .fibra-boletos-resumo{grid-template-columns:repeat(3,minmax(0,1fr)) !important}
+}

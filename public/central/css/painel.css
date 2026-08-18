@@ -257,3 +257,111 @@ button{cursor:pointer}
 #next-bill-area:not(.multi-next-bills){display:block;}
 #next-bill-area.multi-next-bills{display:flex;gap:14px;align-items:stretch;flex-wrap:nowrap;}
 #next-bill-area.multi-next-bills .next-point-card{flex:1;min-width:0;}
+
+/* ===== MODAL PIX MOBILE 2026 v2 ===== */
+@media (max-width: 720px){
+  body:has(.bill-modal.show){
+    overflow:hidden;
+    overscroll-behavior:none;
+  }
+  .bill-modal{
+    align-items:flex-end !important;
+    justify-content:center !important;
+    padding:max(8px,env(safe-area-inset-top)) 0 0 !important;
+    overflow:hidden !important;
+    background:rgba(0,0,0,.76) !important;
+    backdrop-filter:blur(6px);
+  }
+  .bill-modal .bill-modal-card{
+    width:100% !important;
+    max-width:none !important;
+    max-height:calc(100dvh - max(8px,env(safe-area-inset-top))) !important;
+    margin:0 !important;
+    padding:14px 14px calc(16px + env(safe-area-inset-bottom)) !important;
+    overflow-y:auto !important;
+    overflow-x:hidden !important;
+    border-radius:22px 22px 0 0 !important;
+    border-bottom:0 !important;
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior:contain;
+  }
+  .bill-modal .close-modal{
+    position:sticky !important;
+    top:0 !important;
+    display:grid !important;
+    place-items:center !important;
+    float:none !important;
+    width:46px !important;
+    height:46px !important;
+    min-height:46px !important;
+    margin:0 0 -42px auto !important;
+    border:1px solid rgba(255,255,255,.12) !important;
+    border-radius:13px !important;
+    background:#1a2230 !important;
+    font-size:28px !important;
+    z-index:4 !important;
+  }
+  .bill-modal-card > p{
+    margin:10px 54px 8px 2px !important;
+    line-height:1.4;
+  }
+  .bill-modal-card > p + p{
+    margin-top:4px !important;
+  }
+  .bill-modal .pix-box{
+    margin-top:16px !important;
+    padding:14px !important;
+    border-radius:16px !important;
+  }
+  .bill-modal .pix-box h3{
+    margin:0 0 10px !important;
+    font-size:19px !important;
+  }
+  .bill-modal .pix-qr-area{
+    width:min(72vw,250px) !important;
+    height:auto !important;
+    min-height:0 !important;
+    aspect-ratio:1 / 1;
+    margin:10px auto !important;
+    padding:10px !important;
+    border-radius:14px !important;
+  }
+  .bill-modal .pix-qr-area img{
+    width:100% !important;
+    height:100% !important;
+    max-width:220px !important;
+    max-height:220px !important;
+    object-fit:contain !important;
+    padding:8px !important;
+  }
+  .bill-modal .pix-description{
+    margin:10px 0 !important;
+    font-size:13px !important;
+    line-height:1.4;
+  }
+  .bill-modal .bill-action,
+  .bill-modal .modal-copy-button{
+    width:100% !important;
+    min-height:48px !important;
+    margin-top:10px !important;
+    padding:11px 12px !important;
+    border-radius:11px !important;
+    font-size:14px !important;
+  }
+}
+
+@media (max-width: 390px){
+  .bill-modal .bill-modal-card{padding-left:10px !important;padding-right:10px !important}
+  .bill-modal .pix-box{padding:10px !important}
+  .bill-modal .pix-qr-area{width:min(68vw,220px) !important}
+}
+
+@media (max-width: 720px) and (orientation: landscape){
+  .bill-modal .bill-modal-card{
+    max-height:100dvh !important;
+    border-radius:16px 16px 0 0 !important;
+  }
+  .bill-modal .pix-qr-area{
+    width:min(42vh,200px) !important;
+  }
+}
