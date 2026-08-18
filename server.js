@@ -2893,6 +2893,25 @@ app.post("/api/mikrotik/cliente-acao", requireFibraOuCentralSession, async (req,
         profileNormal:profileNormal,
         profileAtualizadoEm:new Date().toISOString()
       };
+      if (acao === "pagamento" || acao === "liberar") {
+        Object.assign(complemento, {
+          bloqueio:"",
+          dataBloqueio:"",
+          data_bloqueio:"",
+          dtBloqueio:"",
+          cli_bloqueado:"",
+          motivoBloqueio:"",
+          motivo_bloqueio:"",
+          boletoBloqueioNumero:"",
+          boleto_bloqueio_numero:"",
+          boletoBloqueioVencimento:"",
+          boleto_bloqueio_vencimento:"",
+          diasAtrasoBloqueio:0,
+          dias_atraso_bloqueio:0,
+          bloqueioAutomaticoEm:"",
+          boletoVencido:""
+        });
+      }
       await pool.query(`
         UPDATE clientes SET
           status=$1,
@@ -6593,9 +6612,25 @@ function fbClienteRow(r){
   const interno = bruto.dados && typeof bruto.dados === "object" ? bruto.dados : {};
   const d = {...interno, ...bruto};
   delete d.dados;
+
+  // O status salvo dentro de `dados` preserva corretamente importações antigas.
+  // Quando o cliente já foi liberado/pago, marcadores históricos de bloqueio
+  // não podem mantê-lo visualmente em "Bloqueados" no painel.
+  const statusEfetivo = String(d.status || r.status || "ativo").trim();
+  const profileEfetivo = String(r.profile || d.profile || d.perfil || d.plano || "").trim();
+  const aindaBloqueado =
+    statusEfetivo.toLowerCase().includes("bloque") ||
+    profileEfetivo.toLowerCase().includes("bloque");
+
   return {
     ...d,
     id: r.id,
+    status: statusEfetivo,
+    bloqueio: aindaBloqueado ? (d.bloqueio || d.dataBloqueio || d.data_bloqueio || d.dtBloqueio || d.cli_bloqueado || "") : "",
+    dataBloqueio: aindaBloqueado ? (d.dataBloqueio || d.data_bloqueio || d.bloqueio || d.dtBloqueio || d.cli_bloqueado || "") : "",
+    data_bloqueio: aindaBloqueado ? (d.data_bloqueio || d.dataBloqueio || d.bloqueio || d.dtBloqueio || d.cli_bloqueado || "") : "",
+    dtBloqueio: aindaBloqueado ? (d.dtBloqueio || d.dataBloqueio || d.data_bloqueio || d.bloqueio || d.cli_bloqueado || "") : "",
+    cli_bloqueado: aindaBloqueado ? (d.cli_bloqueado || d.dataBloqueio || d.data_bloqueio || d.bloqueio || d.dtBloqueio || "") : "",
     loginPppoe: r.login_pppoe || d.loginPppoe || d.login || "",
     login: r.login_pppoe || d.login || d.loginPppoe || "",
     nome: r.nome || d.nome || d.cliente || "",
@@ -7539,6 +7574,23 @@ async function autoProcessarPagamento({ chargeId, numero, valorPago, dataPagamen
         profile:campos.profile,
         perfil:campos.profile,
         profileNormal:campos.profile,
+        // Limpa todos os marcadores históricos que o painel usa para classificar
+        // o cliente como bloqueado. O histórico do pagamento continua no boleto.
+        bloqueio:"",
+        dataBloqueio:"",
+        data_bloqueio:"",
+        dtBloqueio:"",
+        cli_bloqueado:"",
+        motivoBloqueio:"",
+        motivo_bloqueio:"",
+        boletoBloqueioNumero:"",
+        boleto_bloqueio_numero:"",
+        boletoBloqueioVencimento:"",
+        boleto_bloqueio_vencimento:"",
+        diasAtrasoBloqueio:0,
+        dias_atraso_bloqueio:0,
+        bloqueioAutomaticoEm:"",
+        boletoVencido:"",
         ultimoDesbloqueioAutomatico:new Date().toISOString(),
         ultimoPagamentoChargeId:autoTexto(chargeId)
       }),
