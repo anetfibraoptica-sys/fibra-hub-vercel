@@ -7251,7 +7251,7 @@ body{
 .fibra-rota-internet-head > span.is-sem-rota{color:#ef4444;opacity:1}
 .fibra-rota-internet-actions{
   display:grid;
-  grid-template-columns:1fr 1fr;
+  grid-template-columns:repeat(3,minmax(0,1fr));
   gap:8px;
 }
 .resumo-receitanet-completo .fibra-rota-btn,
@@ -7273,6 +7273,7 @@ body{
 }
 .fibra-rota-btn.starlink{background:#172554;color:#dbeafe}
 .fibra-rota-btn.amazonet{background:#451a03;color:#ffedd5}
+.fibra-rota-btn.mista{background:#064e3b;color:#d1fae5}
 .fibra-rota-btn.is-active{
   border-color:rgba(255,255,255,.9);
   box-shadow:0 0 0 2px rgba(255,255,255,.15), 0 6px 18px rgba(0,0,0,.16);
@@ -7293,6 +7294,8 @@ body.light .fibra-rota-internet{
 }
 body.light .fibra-rota-btn.starlink{background:#dbeafe;color:#1e3a8a}
 body.light .fibra-rota-btn.amazonet{background:#ffedd5;color:#9a3412}
+body.light .fibra-rota-btn.mista{background:#d1fae5;color:#065f46}
 @media (max-width:700px){
-  .fibra-rota-internet-actions{grid-template-columns:1fr 1fr}
+  .fibra-rota-internet-actions{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .fibra-rota-btn{padding:9px 7px;font-size:10px}
 }

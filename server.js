@@ -2978,6 +2978,7 @@ app.post("/api/mikrotik/cliente-acao", requireFibraOuCentralSession, async (req,
    Usa o IP PPPoE ATUAL e as address-lists já preparadas na RB:
    - CLIENTES-STARLINK
    - CLIENTES-AMAZONET
+   - sem lista exclusiva = MISTA / PCC 7:5
 ============================================================ */
 const FIBRA_ROTA_LISTAS = {
   STARLINK: "CLIENTES-STARLINK",
@@ -3696,7 +3697,7 @@ app.get("/api/colonia/fontes", async (req, res) => {
 //   - link efetivamente em uso / contingência
 //
 // Regra de negócio:
-//   - se o IP NÃO estiver em nenhuma lista => STARLINK PADRÃO;
+//   - se o IP NÃO estiver em nenhuma lista => MISTA / PCC 7:5;
 //   - uma entrada só é criada quando o operador escolhe uma rota manualmente;
 //   - o IP usado na RB3011 SEMPRE é obtido primeiro da RB4011.
 
@@ -3783,21 +3784,29 @@ async function coloniaV9PreferenciaRB3011(cfg, login, ipAtual) {
     };
   }
 
-  // REGRA CORRETA: sem entrada = STARLINK PADRÃO.
+  // Sem entrada nas listas exclusivas = cliente MISTA no PCC 7:5.
   return {
-    rota: "STARLINK",
-    preferencia: "STARLINK",
-    explicita: false,
-    origem: "PADRAO_STARLINK"
+    rota: "MISTA",
+    preferencia: "MISTA",
+    explicita: true,
+    origem: "PCC_7_5"
   };
 }
 
 function coloniaV9StatusLink(rotas, preferencia, explicita) {
-  // Cliente sem escolha manual usa MAIN.
-  // Cliente marcado manualmente usa sua tabela CLIENTE-*.
+  // STARLINK/AMAZONET usam tabelas exclusivas.
+  // MISTA usa o PCC 7:5 já existente, que marca cada conexão para uma dessas tabelas.
   let tabela = "main";
   if (explicita && preferencia === "STARLINK") tabela = "CLIENTE-STARLINK";
   if (explicita && preferencia === "AMAZONET") tabela = "CLIENTE-AMAZONET";
+  if (preferencia === "MISTA") {
+    return {
+      emUso: "MISTA",
+      contingencia: false,
+      statusEmUso: "pcc-7-5",
+      tabelaRoteamento: "PCC 7:5"
+    };
+  }
 
   if (!Array.isArray(rotas)) {
     return {
@@ -3849,21 +3858,24 @@ async function coloniaV9AplicarRotaRB3011(cfg, login, ipAtual, rota) {
 
   if (!nome) throw new Error("Login do cliente não informado.");
   if (!ip) throw new Error("Cliente sem IP atual na RB4011.");
-  if (!["STARLINK", "AMAZONET"].includes(destino)) {
-    throw new Error("Rota inválida. Use STARLINK ou AMAZONET.");
+  if (!["STARLINK", "AMAZONET", "MISTA"].includes(destino)) {
+    throw new Error("Rota inválida. Use STARLINK, AMAZONET ou MISTA.");
   }
 
-  // Limpa qualquer preferência antiga por IP e por login.
+  // Limpa qualquer preferência exclusiva antiga por IP e por login.
   await fibraRemoverEntradasRota(cfg, nome, ip);
 
-  // Só criamos entrada porque houve uma ESCOLHA MANUAL no painel.
-  const listaDestino = FIBRA_ROTA_LISTAS[destino];
-  await routerosCommandStable(cfg, [
-    "/ip/firewall/address-list/add",
-    "=list=" + listaDestino,
-    "=address=" + ip,
-    "=comment=FIBRA+ ROTA " + nome
-  ], 15000);
+  // STARLINK/AMAZONET entram em listas exclusivas.
+  // MISTA fica fora das duas listas para cair no PCC 7:5 já existente.
+  if (destino !== "MISTA") {
+    const listaDestino = FIBRA_ROTA_LISTAS[destino];
+    await routerosCommandStable(cfg, [
+      "/ip/firewall/address-list/add",
+      "=list=" + listaDestino,
+      "=address=" + ip,
+      "=comment=FIBRA+ ROTA " + nome
+    ], 15000);
+  }
 
   // Encerra somente as conexões atuais desse cliente para a nova política
   // valer imediatamente.
@@ -4000,7 +4012,7 @@ app.post("/api/mikrotik/cliente-rota", async (req, res) => {
     if (!login) {
       return res.status(400).json({ ok:false, erro:"Login do cliente não informado." });
     }
-    if (!["STARLINK", "AMAZONET"].includes(rota)) {
+    if (!["STARLINK", "AMAZONET", "MISTA"].includes(rota)) {
       return res.status(400).json({ ok:false, erro:"Rota inválida." });
     }
 
@@ -4041,7 +4053,7 @@ app.post("/api/mikrotik/cliente-rota", async (req, res) => {
       rota,
       preferencia: rota,
       explicita: true,
-      origem: FIBRA_ROTA_LISTAS[rota],
+      origem: rota === "MISTA" ? "PCC_7_5" : FIBRA_ROTA_LISTAS[rota],
       emUso: link.emUso,
       contingencia: link.contingencia,
       statusEmUso: link.statusEmUso,
@@ -4070,7 +4082,7 @@ app.get("/api/versao-colonia-v9", (req,res) => {
     clientes:"RB4011-PPPOE-CLIENTES",
     ipAtual:"RB4011",
     rotas:"RB3011-BALANCE",
-    regraPadrao:"SEM ADDRESS-LIST = STARLINK"
+    regraPadrao:"SEM ADDRESS-LIST = MISTA / PCC 7:5"
   });
 });
 

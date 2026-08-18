@@ -1049,6 +1049,7 @@ function fibraCadastroLimparStoragesSelecao(){
           <div class="fibra-rota-internet-actions">
             <button type="button" id="btnRotaStarlink" class="fibra-rota-btn starlink" onclick="fibraSelecionarRotaInternet('STARLINK')">STARLINK</button>
             <button type="button" id="btnRotaAmazonet" class="fibra-rota-btn amazonet" onclick="fibraSelecionarRotaInternet('AMAZONET')">AMAZONET</button>
+            <button type="button" id="btnRotaMista" class="fibra-rota-btn mista" onclick="fibraSelecionarRotaInternet('MISTA')">MISTA</button>
           </div>
           <small id="fibraRotaInternetInfo">Disponível somente para clientes da Colônia Antônio Aleixo.</small>
         </div>
@@ -3342,7 +3343,7 @@ document.addEventListener("DOMContentLoaded", function(){
 
   function setBusy(busy){
     fibraRotaBusy = !!busy;
-    [el("btnRotaStarlink"), el("btnRotaAmazonet")].forEach(function(btn){
+    [el("btnRotaStarlink"), el("btnRotaAmazonet"), el("btnRotaMista")].forEach(function(btn){
       if(btn) btn.disabled = fibraRotaBusy;
     });
   }
@@ -3351,11 +3352,13 @@ document.addEventListener("DOMContentLoaded", function(){
     opts = opts || {};
     const bStar = el("btnRotaStarlink");
     const bAmz = el("btnRotaAmazonet");
+    const bMista = el("btnRotaMista");
     const status = el("fibraRotaInternetStatus");
     const info = el("fibraRotaInternetInfo");
 
     if(bStar) bStar.classList.toggle("is-active", rota === "STARLINK");
     if(bAmz) bAmz.classList.toggle("is-active", rota === "AMAZONET");
+    if(bMista) bMista.classList.toggle("is-active", rota === "MISTA");
 
     if(status){
       status.classList.remove("is-normal","is-contingencia","is-sem-rota");
@@ -3364,6 +3367,9 @@ document.addEventListener("DOMContentLoaded", function(){
         status.classList.add("is-sem-rota");
       }else if(opts.online === false){
         status.textContent = "Cliente offline";
+      }else if(rota === "MISTA" || opts.statusEmUso === "pcc-7-5"){
+        status.textContent = "MISTA • PCC 7:5";
+        status.classList.add("is-normal");
       }else if(opts.emUso){
         status.textContent = "Em uso: " + opts.emUso + (opts.contingencia ? " • contingência" : "");
         status.classList.add(opts.contingencia ? "is-contingencia" : "is-normal");
@@ -3380,13 +3386,16 @@ document.addEventListener("DOMContentLoaded", function(){
     if(info){
       if(opts.erro) info.textContent = opts.erro;
       else if(opts.online === false) info.textContent = "O cliente precisa estar online para trocar o link.";
-      else if(opts.ip) info.textContent = "Preferência: " + (rota || "não definida") + " • IP atual: " + opts.ip + (opts.explicita === false ? " • Starlink é a rota padrão" : "");
+      else if(opts.ip) info.textContent = rota === "MISTA"
+        ? "Preferência: MISTA • PCC 7:5 • IP atual: " + opts.ip + " • conexões distribuídas entre Starlink e Amazonet"
+        : "Preferência: " + (rota || "não definida") + " • IP atual: " + opts.ip;
       else info.textContent = "Escolha o link preferencial deste cliente.";
     }
 
     const desabilitarPorOffline = opts.online === false;
     if(bStar) bStar.disabled = fibraRotaBusy || desabilitarPorOffline;
     if(bAmz) bAmz.disabled = fibraRotaBusy || desabilitarPorOffline;
+    if(bMista) bMista.disabled = fibraRotaBusy || desabilitarPorOffline;
   }
 
   function atualizarVisibilidade(){
@@ -3408,6 +3417,7 @@ document.addEventListener("DOMContentLoaded", function(){
     const info = el("fibraRotaInternetInfo");
     const bStar = el("btnRotaStarlink");
     const bAmz = el("btnRotaAmazonet");
+    const bMista = el("btnRotaMista");
 
     if(!colonia){
       if(!ehArmando){
@@ -3415,12 +3425,14 @@ document.addEventListener("DOMContentLoaded", function(){
         if(info) info.textContent = "O controle será habilitado ao identificar o servidor Colônia.";
         if(bStar) bStar.disabled = true;
         if(bAmz) bAmz.disabled = true;
+        if(bMista) bMista.disabled = true;
       }
       return false;
     }
 
     if(bStar) bStar.disabled = fibraRotaBusy;
     if(bAmz) bAmz.disabled = fibraRotaBusy;
+    if(bMista) bMista.disabled = fibraRotaBusy;
     return true;
   }
 
@@ -3476,7 +3488,7 @@ document.addEventListener("DOMContentLoaded", function(){
     }
 
     rota = String(rota || "").toUpperCase();
-    if(rota !== "STARLINK" && rota !== "AMAZONET") return false;
+    if(rota !== "STARLINK" && rota !== "AMAZONET" && rota !== "MISTA") return false;
 
     if(!confirm("Direcionar o cliente " + login + " para " + rota + "?")) return false;
 
@@ -3484,7 +3496,7 @@ document.addEventListener("DOMContentLoaded", function(){
     const status = el("fibraRotaInternetStatus");
     const info = el("fibraRotaInternetInfo");
     if(status) status.textContent = "Alterando para " + rota + "...";
-    if(info) info.textContent = "Aplicando a rota e encerrando as conexões antigas deste IP...";
+    if(info) info.textContent = "Aplicando a política e encerrando as conexões antigas deste IP...";
 
     try{
       const resp = await fetch("/api/mikrotik/cliente-rota", {

@@ -474,6 +474,7 @@ tbody tr:hover{background:rgba(47,125,246,.055) !important}
 .fibra-rota-internet{background:rgba(5,12,21,.58) !important;border-color:var(--fx-line) !important}
 .fibra-rota-btn.starlink{background:linear-gradient(135deg,#142d62,#1e4f9b) !important;color:#dceaff !important}
 .fibra-rota-btn.amazonet{background:linear-gradient(135deg,#57330a,#9b6412) !important;color:#fff1d5 !important}
+.fibra-rota-btn.mista{background:linear-gradient(135deg,#07543f,#0f8a6a) !important;color:#ddfff4 !important}
 
 /* ===== Login ===== */
 .login-body{

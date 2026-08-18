@@ -171,6 +171,7 @@ async function carregarClienteDetalhes(){
             <div class="fibra-rota-internet-actions">
               <button type="button" id="btnDetalhesRotaStarlink" class="fibra-rota-btn starlink" onclick="fibraDetalhesSelecionarRota('STARLINK')">STARLINK</button>
               <button type="button" id="btnDetalhesRotaAmazonet" class="fibra-rota-btn amazonet" onclick="fibraDetalhesSelecionarRota('AMAZONET')">AMAZONET</button>
+              <button type="button" id="btnDetalhesRotaMista" class="fibra-rota-btn mista" onclick="fibraDetalhesSelecionarRota('MISTA')">MISTA</button>
             </div>
             <small id="fibraDetalhesRotaInfo">Obtendo IP na RB4011 e consultando rota na RB3011-BALANCE...</small>
           </div>
@@ -255,13 +256,14 @@ async function carregarClienteDetalhes(){
 
   function setBusy(v){
     busy=!!v;
-    [el("btnDetalhesRotaStarlink"),el("btnDetalhesRotaAmazonet")].forEach(btn=>{ if(btn) btn.disabled=busy; });
+    [el("btnDetalhesRotaStarlink"),el("btnDetalhesRotaAmazonet"),el("btnDetalhesRotaMista")].forEach(btn=>{ if(btn) btn.disabled=busy; });
   }
 
   function estado(rota, j={}){
-    const bs=el("btnDetalhesRotaStarlink"), ba=el("btnDetalhesRotaAmazonet"), st=el("fibraDetalhesRotaStatus"), inf=el("fibraDetalhesRotaInfo");
+    const bs=el("btnDetalhesRotaStarlink"), ba=el("btnDetalhesRotaAmazonet"), bm=el("btnDetalhesRotaMista"), st=el("fibraDetalhesRotaStatus"), inf=el("fibraDetalhesRotaInfo");
     if(bs) bs.classList.toggle("is-active", rota === "STARLINK");
     if(ba) ba.classList.toggle("is-active", rota === "AMAZONET");
+    if(bm) bm.classList.toggle("is-active", rota === "MISTA");
     if(st){
       st.classList.remove("is-normal","is-contingencia","is-sem-rota");
       if(rota === "CONFLITO"){
@@ -269,6 +271,9 @@ async function carregarClienteDetalhes(){
         st.classList.add("is-sem-rota");
       }else if(j.online===false){
         st.textContent="Cliente offline";
+      }else if(rota === "MISTA" || j.statusEmUso === "pcc-7-5"){
+        st.textContent="MISTA • PCC 7:5";
+        st.classList.add("is-normal");
       }else if(j.emUso){
         st.textContent="Em uso: " + j.emUso + (j.contingencia ? " • contingência" : "");
         st.classList.add(j.contingencia ? "is-contingencia" : "is-normal");
@@ -284,12 +289,15 @@ async function carregarClienteDetalhes(){
     if(inf){
       if(j.erro) inf.textContent=j.erro;
       else if(j.online===false) inf.textContent="O cliente precisa estar online para trocar o link.";
-      else if(j.ip) inf.textContent="Preferência: " + (rota || "não definida") + " • IP atual (RB4011): " + j.ip + (j.explicita===false ? " • STARLINK padrão (sem lista na RB3011)" : " • escolha manual na RB3011");
-      else inf.textContent="Escolha STARLINK ou AMAZONET.";
+      else if(j.ip) inf.textContent=rota === "MISTA"
+        ? "Preferência: MISTA • PCC 7:5 • IP atual (RB4011): " + j.ip + " • conexões distribuídas entre Starlink e Amazonet"
+        : "Preferência: " + (rota || "não definida") + " • IP atual (RB4011): " + j.ip + " • escolha manual na RB3011";
+      else inf.textContent="Escolha STARLINK, AMAZONET ou MISTA.";
     }
     const off=j.online===false;
     if(bs) bs.disabled=busy||off;
     if(ba) ba.disabled=busy||off;
+    if(bm) bm.disabled=busy||off;
   }
 
   async function consultar(opcoes={}){
@@ -314,12 +322,12 @@ async function carregarClienteDetalhes(){
     const d=dados();
     if(!d.login){ alert("Login PPPoE não identificado."); return false; }
     rota=String(rota||"").toUpperCase();
-    if(rota!=="STARLINK" && rota!=="AMAZONET") return false;
+    if(rota!=="STARLINK" && rota!=="AMAZONET" && rota!=="MISTA") return false;
     if(!confirm("Direcionar o cliente " + d.login + " para " + rota + "?")) return false;
     setBusy(true);
     const st=el("fibraDetalhesRotaStatus"), inf=el("fibraDetalhesRotaInfo");
     if(st) st.textContent="Alterando para " + rota + "...";
-    if(inf) inf.textContent="Aplicando rota e encerrando conexões antigas deste IP...";
+    if(inf) inf.textContent="Aplicando política e encerrando conexões antigas deste IP...";
     try{
       const r=await fetch("/api/mikrotik/cliente-rota",{
         method:"POST", headers:{"Content-Type":"application/json"},
@@ -1170,6 +1178,7 @@ document.addEventListener("DOMContentLoaded", function(){
           <div class="fibra-rota-internet-actions">
             <button type="button" id="btnRotaStarlink" class="fibra-rota-btn starlink" onclick="fibraSelecionarRotaInternet('STARLINK')">STARLINK</button>
             <button type="button" id="btnRotaAmazonet" class="fibra-rota-btn amazonet" onclick="fibraSelecionarRotaInternet('AMAZONET')">AMAZONET</button>
+            <button type="button" id="btnRotaMista" class="fibra-rota-btn mista" onclick="fibraSelecionarRotaInternet('MISTA')">MISTA</button>
           </div>
           <small id="fibraRotaInternetInfo">Servidor Colônia: clientes + rotas consultados em conjunto.</small>
         </div>
