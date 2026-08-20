@@ -34,6 +34,6 @@
   }
   window.FibraBloqueio = {
     DEFAULT_DIAS_BLOQUEIO, norm, doc, parseData, diasAtraso, boletoQuitado, mesmoCliente,
-    boletoVencido(b={}, limite=DEFAULT_DIAS_BLOQUEIO){ return !boletoQuitado(b) && diasAtraso(b.vencimento)>=Number(limite || DEFAULT_DIAS_BLOQUEIO); }
+    boletoVencido(b={}, limite=DEFAULT_DIAS_BLOQUEIO){ return !boletoQuitado(b) && diasAtraso(b.vencimento)>Number(limite || DEFAULT_DIAS_BLOQUEIO); }
   };
 })();
