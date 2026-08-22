@@ -7772,7 +7772,7 @@ async function autoExecutarConfiancasVencidas() {
       AND c.confianca_ate::timestamptz <= NOW()
       AND lower(COALESCE(b.status,'pendente')) NOT IN ('pago','paid','cancelado','canceled')
       AND b.vencimento IS NOT NULL
-      AND b.vencimento < (CURRENT_DATE - $1::integer)
+      AND (b.vencimento + $1::integer) < CURRENT_DATE
     ORDER BY c.id, b.vencimento ASC
     LIMIT $2
   `, [dias, limite]);
@@ -7924,7 +7924,7 @@ async function autoExecutarRotinaDiaria() {
     WHERE
       lower(COALESCE(b.status,'pendente')) NOT IN ('pago','paid','cancelado','canceled')
       AND b.vencimento IS NOT NULL
-      AND b.vencimento < (CURRENT_DATE - $1::integer)
+      AND (b.vencimento + $1::integer) < CURRENT_DATE
       AND CASE
         WHEN NULLIF(BTRIM(c.confianca_ate), '') IS NULL THEN TRUE
         WHEN c.confianca_ate ~ '^\\d{4}-\\d{2}-\\d{2}T' THEN c.confianca_ate::timestamptz <= NOW()
