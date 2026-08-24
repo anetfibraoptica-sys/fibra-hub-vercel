@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Cron gratuito - Fibra+ Hub</title>
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    body{min-height:100vh;display:grid;place-items:center;padding:20px;background:#070d19;color:#eef4ff}
+    .cron-card{width:min(620px,100%);padding:26px;border:1px solid rgba(255,255,255,.12);border-radius:16px;background:#0b1424;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+    .cron-card h1{margin:0 0 10px;font-size:25px}.cron-card p{color:#aebdd2;line-height:1.5}
+    .cron-status{margin:18px 0;padding:14px;border-radius:10px;background:#101d31;border:1px solid rgba(255,255,255,.08)}
+    .cron-actions{display:flex;gap:10px;flex-wrap:wrap}.cron-actions button,.cron-actions a{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 17px;border:0;border-radius:9px;text-decoration:none;font-weight:700;cursor:pointer}
+    .cron-actions button{background:#16a34a;color:#fff}.cron-actions button:disabled{opacity:.55;cursor:wait}.cron-actions a{background:#1b2a42;color:#dbeafe}
+    .ok{color:#4ade80}.erro{color:#fb7185}
+  </style>
+  <link rel="stylesheet" href="/fibra-theme-2026.css?v=20260818-ui1">
+</head>
+<body>
+  <main class="cron-card">
+    <h1>Rotina gratuita de 24 horas</h1>
+    <p>Ativa no Supabase a checagem de confianças vencidas a cada minuto. A Vercel continua no plano gratuito.</p>
+    <div id="status" class="cron-status">Verificando...</div>
+    <div class="cron-actions">
+      <button id="ativar" type="button">Ativar rotina gratuita</button>
+      <a href="/configuracoes.html">Voltar</a>
+    </div>
+  </main>
+  <script>
+    const statusEl = document.getElementById("status");
+    const botao = document.getElementById("ativar");
+
+    async function lerJson(res){
+      const json = await res.json().catch(() => ({}));
+      if(!res.ok || !json.ok) throw new Error(json.erro || "Falha na solicitação.");
+      return json;
+    }
+
+    async function atualizarStatus(){
+      try{
+        const json = await lerJson(await fetch("/api/automacao/cron-gratuito/status", {credentials:"same-origin", cache:"no-store"}));
+        if(json.ativo){
+          statusEl.className = "cron-status ok";
+          statusEl.textContent = "Ativa: checagem automática a cada minuto pelo Supabase.";
+          botao.textContent = "Reconfigurar rotina";
+        }else{
+          statusEl.className = "cron-status";
+          statusEl.textContent = "Ainda não ativada.";
+        }
+      }catch(err){
+        statusEl.className = "cron-status erro";
+        statusEl.textContent = err.message;
+      }
+    }
+
+    botao.addEventListener("click", async () => {
+      botao.disabled = true;
+      statusEl.className = "cron-status";
+      statusEl.textContent = "Ativando...";
+      try{
+        await lerJson(await fetch("/api/automacao/cron-gratuito/configurar", {
+          method:"POST",
+          credentials:"same-origin",
+          headers:{"Content-Type":"application/json"},
+          body:"{}"
+        }));
+        await atualizarStatus();
+      }catch(err){
+        statusEl.className = "cron-status erro";
+        statusEl.textContent = err.message;
+      }finally{
+        botao.disabled = false;
+      }
+    });
+
+    atualizarStatus();
+  </script>
+</body>
+</html>

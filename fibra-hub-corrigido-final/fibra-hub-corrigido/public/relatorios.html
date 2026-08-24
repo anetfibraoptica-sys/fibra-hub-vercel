@@ -1,0 +1,125 @@
+<!DOCTYPE html><html lang="pt-BR"><head>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=20260717">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=20260717">
+    <link rel="shortcut icon" href="/favicon.svg?v=20260717">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=20260717">
+
+<script src="00-fix-definitivo.js"></script><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Relatórios - Fibra+ Hub</title><link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="fibra-theme-2026.css?v=20260818-ui1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+</head><body onload="protegerPagina(); carregarDashboard(); iniciarSocket();"><div class="sidebar-overlay" onclick="fecharMenuLateral()"></div>
+<button id="mobileMenuBtn" class="mobile-menu-btn" type="button" onclick="abrirMenuLateral()">☰ Menu</button>
+<div id="mobileMenuOverlay" class="mobile-menu-overlay" onclick="closeMobileMenu()"></div><div class="mobile-top"><button class="menu-btn" onclick="abrirMenuLateral()">☰</button><div><div class="logo-wrap"><div class="brand"><span class="fibra">Fibra</span><span class="brand-dot"></span><span class="plus">+</span></div><div class="slogan">HUB DE CONTROLE</div></div></div></div><div class="layout"><div class="overlay" onclick="fecharMenu()"></div><aside class="sidebar"><div class="logo-wrap"><div class="brand"><span class="fibra">Fibra</span><span class="brand-dot"></span><span class="plus">+</span></div><div class="slogan">HUB DE CONTROLE</div></div><nav class="nav"><a href="dashboard.html" class=""><span class="icon">🏠</span>Dashboard</a>
+<a href="clientes.html" class=""><span class="icon">👤</span>Clientes</a>
+<a href="cadastro.html?novo=1" class=""><span class="icon">👥</span>Cadastrar Cliente</a>
+<a href="importacao.html"><span class="icon">⬆️</span>Importação</a>
+<a href="financeiro.html" class=""><span class="icon">▤</span>Financeiro</a>
+<a href="chamados.html" class=""><span class="icon">🔧</span>Chamados</a>
+<a href="rotas.html"><span class="icon">🌐</span>Controle de Rotas</a><a href="relatorios.html" class="active"><span class="icon">▥</span>Relatórios</a>
+<a href="usuarios.html" class=""><span class="icon">👥</span>Usuários</a>
+<a href="configuracoes.html" class=""><span class="icon">⚙️</span>Configurações</a>
+<a href="backup.html" class=""><span class="icon">☁</span>Backup</a><a href="#" onclick="sair()"><span class="icon">↪</span></a></nav></aside><main class="main"><header class="topbar"><h1>Relatórios</h1><div class="topbar-right"><span id="liveStatus" class="badge badge-off">CONECTANDO</span><span class="badge">2 Servidores</span><span class="badge">Administrador</span></div></header><section class="content"><section class="panel">
+<h3>Controle e Diagnóstico</h3><button onclick="carregarRelatorios()" style="margin-top:10px">🔄 Atualizar Diagnóstico</button><span id="ultimaAtualizacao" style="margin-left:10px;color:#666"></span>
+<div class="cards-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:15px;margin-top:20px;">
+<div class="card"><h4>📡 MikroTik</h4><strong id="diagServidores">0</strong><p>Servidores cadastrados</p></div>
+<div class="card"><h4>🟢 Online</h4><strong id="diagOnline">0</strong><p>Clientes conectados</p></div>
+<div class="card"><h4>⚠️ Sem Plano</h4><strong id="diagSemPlano">0</strong><p>Clientes sem cobrança</p></div>
+<div class="card"><h4>⚠️ Sem Descrição</h4><strong id="diagSemDescricao">0</strong><p>Boleto sem descrição</p></div>
+</div>
+</section>
+<section class="panel">
+<h3>Diagnóstico de Clientes</h3>
+<div style="overflow:auto">
+<table class="table" style="width:100%">
+<thead><tr><th>Cliente</th><th>Status</th><th>Plano Cobrança</th><th>Problema</th></tr></thead>
+<tbody id="listaDiagnostico"></tbody>
+</table>
+</div>
+</section>
+<section class="panel">
+<h3>📡 Monitoramento da Rede</h3>
+<div class="cards-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:15px;margin-top:20px;">
+<div class="card"><h4>🌐 Comunicação</h4><strong id="redeStatus">Ativo</strong><p>Status do monitoramento</p></div>
+<div class="card"><h4>⚠️ Pendências</h4><strong id="redePendencias">0</strong><p>Problemas encontrados</p></div>
+</div>
+</section>
+<section class="panel">
+<h3>📝 Auditoria (Preparação)</h3>
+<p style="color:#666">Histórico de alterações será registrado nesta área.</p>
+</section>
+
+<script>
+async function carregarRelatorios(){
+ try{
+ const r=await fetch('/api/clientes');
+ const dados=await r.json();
+ const clientes=Array.isArray(dados)?dados:(dados.clientes||[]);
+ try{
+ const mk=await fetch('/api/mikrotiks');
+ if(mk.ok){
+  const mks=await mk.json();
+  const lista=Array.isArray(mks)?mks:(mks.mikrotiks||mks.data||[]);
+  document.getElementById('diagServidores').textContent=lista.length;
+ }else{
+  document.getElementById('diagServidores').textContent='-';
+ }
+}catch(e){
+ document.getElementById('diagServidores').textContent='-';
+}
+ let online=0, semPlano=0, semDescricao=0;
+ const tbody=document.getElementById('listaDiagnostico');
+ tbody.innerHTML='';
+ clientes.forEach(c=>{
+   const status=String(
+     c.statusMikrotik ||
+     c.status_mikrotik ||
+     c.statusPPP ||
+     c.status_ppp ||
+     c.status ||
+     ''
+   ).toUpperCase();
+   const conectado = c.online === true || c.conectado === true || c.online === 'true' ||
+                     status.includes('ONLINE') || status.includes('CONECTADO') || status.includes('ATIVO');
+   if(conectado) online++;
+   const plano=String(
+     c.planoCobrancaDescricao ||
+     c.plano_cobranca_descricao ||
+     c.planoCobranca ||
+     c.plano_cobranca ||
+     c.plano ||
+     ''
+   ).trim();
+   const descricao=String(
+     c.descricaoBoleto ||
+     c.descricao_boleto ||
+     c.descricaoPlano ||
+     c.descricao_plano ||
+     ''
+   ).trim();
+   let problemas=[];
+   if(!plano){ semPlano++; problemas.push('Sem Plano de Cobrança'); }
+   if(!descricao){ semDescricao++; problemas.push('Sem descrição boleto'); }
+   if(problemas.length){
+    tbody.innerHTML += '<tr><td>'+((c.nome||c.nomeCliente||'-'))+'</td><td>'+status+'</td><td>'+ (plano||'-') +'</td><td>'+problemas.join(', ')+'</td></tr>';
+   }
+ });
+ document.getElementById('diagOnline').textContent=online;
+ document.getElementById('diagSemPlano').textContent=semPlano;
+ document.getElementById('diagSemDescricao').textContent=semDescricao;
+ document.getElementById('ultimaAtualizacao').textContent='Atualizado: '+new Date().toLocaleString('pt-BR')+' | Clientes consultados: '+clientes.length;
+ }
+ }catch(e){console.error(e);}
+}
+carregarRelatorios();
+</script>
+<div class="footer"><span>© 2026 Fibra+</span><span>Hub com 2 servidores MikroTik</span></div></section></main></div><script src="supabase-client.js"></script>
+<script src="auth-painel.js"></script>
+<script src="app.js"></script>
+<script src="pppoe-stable.js"></script>
+<script src="pppoe-search.js"></script>
+<script src="bloqueio-configuravel.js"></script>
+<script src="mobile-responsive.js"></script>
+</body></html>
