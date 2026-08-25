@@ -302,12 +302,9 @@ function normalizarTexto(v){
   return String(v || "").toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g,"");
 }
 function primeiroValor(c, campos){
-  const fontes = [c, c && c.dados, c && c.cliente, c && c.cadastro].filter(x => x && typeof x === "object");
-  for(const fonte of fontes){
-    for(const campo of campos){
-      if(fonte[campo] !== undefined && fonte[campo] !== null && String(fonte[campo]).trim() !== ""){
-        return String(fonte[campo]).trim();
-      }
+  for(const campo of campos){
+    if(c && c[campo] !== undefined && c[campo] !== null && String(c[campo]).trim() !== ""){
+      return String(c[campo]).trim();
     }
   }
   return "";
@@ -474,14 +471,18 @@ function atualizarContadores(clientes){
   }
 
   function ehBloqueado(c){
-    const s = texto(c, ["status","situacao","statusCobranca","cli_status","estadoCliente","status_cliente","cobranca"]);
-    const perfil = texto(c, ["profile","perfil","profileAtual","profile_atual","statusMikrotik","status_mikrotik","mikrotik_status"]);
+    const base = Object.assign({}, c || {}, (c && typeof c.dados === "object" ? c.dados : {}), (c && typeof c.cliente === "object" ? c.cliente : {}));
+    const s = texto(base, ["status","situacao","statusCobranca","cli_status","estadoCliente","status_cliente","cobranca"]);
+    const perfil = texto(base, ["profile","perfil","profileAtual","profile_atual","statusMikrotik","status_mikrotik","mikrotik_status"]);
+    const disabled = texto(base, ["disabled","desabilitado","habilitado"]);
     return (
       s.includes("bloque") ||
       s.includes("suspens") ||
       s.includes("cortado") ||
       perfil.includes("bloque") ||
-      temData(c, ["bloqueio","dataBloqueio","dtBloqueio","cli_bloqueado"])
+      disabled.includes("true") ||
+      disabled.includes("yes") ||
+      temData(base, ["bloqueio","dataBloqueio","dtBloqueio","cli_bloqueado"])
     );
   }
 
@@ -599,12 +600,14 @@ document.addEventListener("keydown", function(evento){
 });
 
 function clienteEstaBloqueadoParaFiltro(c){
-  const textoStatus = normalizarTexto(primeiroValor(c, ["status","situacao","statusCobranca","cli_status","estadoCliente","status_cliente","cobranca"]) || "");
+  const base = Object.assign({}, c || {}, (c && typeof c.dados === "object" ? c.dados : {}), (c && typeof c.cliente === "object" ? c.cliente : {}));
+  const textoStatus = normalizarTexto(primeiroValor(base, ["status","situacao","statusCobranca","cli_status","estadoCliente","status_cliente","cobranca"]) || "");
+  const disabled = normalizarTexto(primeiroValor(base, ["disabled","desabilitado","habilitado"]) || "");
   const temDataBloqueio = ["bloqueio","dataBloqueio","dtBloqueio","cli_bloqueado"].some(k => {
-    const v = c && c[k];
+    const v = base && base[k];
     return v !== undefined && v !== null && String(v).trim() !== "" && String(v).trim() !== "0000-00-00";
   });
-  return textoStatus.includes("bloque") || textoStatus.includes("suspens") || textoStatus.includes("cortado") || temDataBloqueio;
+  return textoStatus.includes("bloque") || textoStatus.includes("suspens") || textoStatus.includes("cortado") || disabled.includes("true") || disabled.includes("yes") || temDataBloqueio;
 }
 
 function textoStatusClienteParaFiltro(c){
