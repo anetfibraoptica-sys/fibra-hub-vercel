@@ -302,9 +302,12 @@ function normalizarTexto(v){
   return String(v || "").toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g,"");
 }
 function primeiroValor(c, campos){
-  for(const campo of campos){
-    if(c && c[campo] !== undefined && c[campo] !== null && String(c[campo]).trim() !== ""){
-      return String(c[campo]).trim();
+  const fontes = [c, c && c.dados, c && c.cliente, c && c.cadastro].filter(x => x && typeof x === "object");
+  for(const fonte of fontes){
+    for(const campo of campos){
+      if(fonte[campo] !== undefined && fonte[campo] !== null && String(fonte[campo]).trim() !== ""){
+        return String(fonte[campo]).trim();
+      }
     }
   }
   return "";
