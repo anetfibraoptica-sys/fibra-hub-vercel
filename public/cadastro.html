@@ -4829,7 +4829,9 @@ document.addEventListener("DOMContentLoaded", function(){
     c.telefone1 = c.telefone1 || c.telefone || c.celular || field("telefone1") || field("telefone") || field("celular");
     c.servidor = c.servidor || c.popServidor || c.pop || field("servidor") || field("popServidor");
     c.profile = c.profile || c.perfil || c.planoVelocidade || c.plano || field("profile") || field("perfil") || field("plano");
-    c.id = c.id || c.clienteId || c.cliente_id || window.__fibraClienteSelecionado?.id || window.__fibraClienteCadastro?.id || 0;
+    // CORREÇÃO FIBRA+: garante o ID na edição para não criar cliente duplicado
+    const idUrl = new URLSearchParams(window.location.search).get("id") || "";
+    c.id = c.id || c.clienteId || c.cliente_id || window.__fibraClienteSelecionado?.id || window.__fibraClienteCadastro?.id || idUrl || 0;
     c.clienteId = c.clienteId || c.id || 0;
     c.cliente_id = c.cliente_id || c.id || 0;
     return c;
