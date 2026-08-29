@@ -516,6 +516,7 @@ app.use("/api", (req,res,next) => {
   if (req.method === "DELETE") permission = "excluir";
   else if (req.path === "/boletos/baixa-manual") permission = "baixa";
   else if (req.path.startsWith("/efi/salvar-config") || req.path.startsWith("/efi/testar-conexao")) permission = "configuracoes";
+  else if (req.path.startsWith("/whatsapp/cobranca")) permission = "financeiro";
   else if (req.path.startsWith("/mikrotik/") || /\/(bloquear|desbloquear|confianca)$/.test(req.path)) permission = "mikrotik";
   else if (req.method !== "GET" && req.path.startsWith("/clientes")) permission = "cadastro";
   if (permission && !hasPermission(req.sessionUser, permission)) return res.status(403).json({ok:false,erro:"Usuário sem permissão para esta ação."});
@@ -6883,6 +6884,345 @@ app.get("/api/boletos", async (req,res)=>{
   }catch(err){
     console.error("Erro /api/boletos:", err);
     res.status(500).json({ok:false, erro:err.message});
+  }
+});
+
+
+/* COBRANÇA POR WHATSAPP — somente envio de mensagem; não cria nem altera boletos. */
+function waTexto(valor) {
+  return String(valor ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function waSomenteDigitos(valor) {
+  return String(valor || "").replace(/\D/g, "");
+}
+
+function waNormalizarTelefone(valor) {
+  let numero = waSomenteDigitos(valor);
+  if (!numero) return "";
+  numero = numero.replace(/^0+/, "");
+  if ((numero.length === 10 || numero.length === 11) && !numero.startsWith("55")) numero = "55" + numero;
+  if (!numero.startsWith("55") || numero.length < 12 || numero.length > 13) return "";
+  return numero;
+}
+
+function waDataBR(iso) {
+  const m = String(iso || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : String(iso || "");
+}
+
+function waDinheiro(valor) {
+  return Number(valor || 0).toLocaleString("pt-BR", { style:"currency", currency:"BRL" });
+}
+
+function waPrimeiroNome(nome) {
+  return String(nome || "Cliente").trim().split(/\s+/)[0] || "Cliente";
+}
+
+function waStatusBoletoIgnorado(row) {
+  const status = waTexto([row?.status, row?.efi_status, row?.dados?.status, row?.dados?.efiStatus].filter(Boolean).join(" "));
+  return /\b(pago|paid|settled|quitado|cancelado|cancelled|canceled|estornado|refunded)\b/.test(status);
+}
+
+function waClienteIgnorado(cliente) {
+  if (!cliente) return { ignorar:false, motivo:"" };
+  const c = fbClienteRow(cliente);
+  const geral = waTexto([c.status, c.situacao, c.status_cliente, c.estadoCliente].filter(Boolean).join(" "));
+  const cobranca = waTexto([c.statusCobranca, c.status_cobranca, c.cadStatusCobranca, c.cli_boleto, c.boleto, c.tipoCobranca].filter(Boolean).join(" "));
+  if (/cancelad|inativ|excluid/.test(geral)) return { ignorar:true, motivo:"Cliente cancelado/inativo" };
+  if (/isento|nao cobrar|não cobrar/.test(cobranca) || cobranca === "n") return { ignorar:true, motivo:"Cliente isento/não cobrar" };
+  return { ignorar:false, motivo:"" };
+}
+
+function waTelefoneCliente(cliente, boleto) {
+  const cd = cliente?.dados && typeof cliente.dados === "object" ? cliente.dados : {};
+  const bd = boleto?.dados && typeof boleto.dados === "object" ? boleto.dados : {};
+  const candidatos = [
+    cliente?.telefone1, cliente?.telefone, cliente?.telefone2, cliente?.telefone3,
+    cd.telefone1, cd.telefone, cd.celular, cd.whatsapp, cd.fone, cd.telefone2, cd.telefone3,
+    bd.telefone1, bd.telefone, bd.celular, bd.whatsapp, bd.fone
+  ];
+  for (const candidato of candidatos) {
+    const numero = waNormalizarTelefone(candidato);
+    if (numero) return numero;
+  }
+  return "";
+}
+
+function waChaveCliente(cliente, boleto) {
+  const id = String(cliente?.id || boleto?.cliente_id || boleto?.dados?.clienteId || boleto?.dados?.cliente_id || "").trim();
+  if (id) return `id:${id}`;
+  const login = String(cliente?.login_pppoe || boleto?.cliente_login || boleto?.dados?.loginPppoe || boleto?.dados?.login || "").trim().toLowerCase();
+  if (login) return `login:${login}`;
+  const cpf = waSomenteDigitos(cliente?.cpf_cnpj || boleto?.cpf_cnpj || boleto?.dados?.cpfCnpj || boleto?.dados?.cpf || "");
+  if (cpf) return `cpf:${cpf}`;
+  const telefone = waTelefoneCliente(cliente, boleto);
+  return telefone ? `tel:${telefone}` : `boleto:${boleto?.id || boleto?.numero || crypto.randomUUID()}`;
+}
+
+function waConfig() {
+  const token = String(process.env.WHATSAPP_CLOUD_TOKEN || "").trim();
+  const phoneNumberId = String(process.env.WHATSAPP_CLOUD_PHONE_NUMBER_ID || "").trim();
+  const templateName = String(process.env.WHATSAPP_CLOUD_TEMPLATE_NAME || "").trim();
+  const language = String(process.env.WHATSAPP_CLOUD_TEMPLATE_LANGUAGE || "pt_BR").trim();
+  const apiVersion = String(process.env.WHATSAPP_CLOUD_API_VERSION || "v23.0").trim();
+  return { token, phoneNumberId, templateName, language, apiVersion, configurado:Boolean(token && phoneNumberId && templateName) };
+}
+
+async function waEnsureLogTable() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS whatsapp_cobrancas (
+      id BIGSERIAL PRIMARY KEY,
+      cliente_id TEXT,
+      cliente_chave TEXT NOT NULL,
+      cliente_nome TEXT,
+      telefone TEXT,
+      vencimento DATE NOT NULL,
+      valor NUMERIC DEFAULT 0,
+      boleto_ids JSONB DEFAULT '[]'::jsonb,
+      data_envio DATE NOT NULL DEFAULT CURRENT_DATE,
+      status TEXT NOT NULL DEFAULT 'enviando',
+      provider_message_id TEXT,
+      erro TEXT,
+      mensagem TEXT,
+      criado_por TEXT,
+      criado_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      atualizado_em TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+  await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_whatsapp_cobranca_unica_dia ON whatsapp_cobrancas(cliente_chave, vencimento, data_envio);`);
+}
+
+function waDataLocalHoje() {
+  const timeZone = String(process.env.APP_TIMEZONE || "America/Manaus");
+  try {
+    const parts = new Intl.DateTimeFormat("en-US", { timeZone, year:"numeric", month:"2-digit", day:"2-digit" }).formatToParts(new Date());
+    const mapa = Object.fromEntries(parts.map(p => [p.type, p.value]));
+    return `${mapa.year}-${mapa.month}-${mapa.day}`;
+  } catch (_) {
+    return new Date().toISOString().slice(0, 10);
+  }
+}
+
+async function waMontarCobrancasPorData(vencimento) {
+  await fbEnsureTables();
+  await waEnsureLogTable();
+  const data = String(vencimento || "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) throw new Error("Informe uma data de vencimento válida.");
+
+  const [boletosRes, clientesRes, enviadosRes] = await Promise.all([
+    pool.query(`SELECT * FROM boletos WHERE vencimento=$1::date ORDER BY cliente_nome NULLS LAST, id`, [data]),
+    pool.query(`SELECT * FROM clientes ORDER BY id`),
+    pool.query(`SELECT cliente_chave,status FROM whatsapp_cobrancas WHERE vencimento=$1::date AND data_envio=$2::date`, [data, waDataLocalHoje()])
+  ]);
+
+  const clientesPorId = new Map();
+  const clientesPorLogin = new Map();
+  for (const cliente of clientesRes.rows || []) {
+    clientesPorId.set(String(cliente.id), cliente);
+    const login = String(cliente.login_pppoe || cliente.dados?.loginPppoe || cliente.dados?.login || "").trim().toLowerCase();
+    if (login) clientesPorLogin.set(login, cliente);
+  }
+  const statusHoje = new Map((enviadosRes.rows || []).map(r => [String(r.cliente_chave), String(r.status || "")]));
+
+  const grupos = new Map();
+  const ignorados = [];
+
+  for (const boleto of boletosRes.rows || []) {
+    if (waStatusBoletoIgnorado(boleto)) {
+      ignorados.push({ nome:boleto.cliente_nome || "Cliente", motivo:"Boleto já pago/cancelado", boleto_id:boleto.id });
+      continue;
+    }
+
+    const login = String(boleto.cliente_login || boleto.dados?.loginPppoe || boleto.dados?.login || "").trim().toLowerCase();
+    const cliente = clientesPorId.get(String(boleto.cliente_id || "")) || (login ? clientesPorLogin.get(login) : null) || null;
+    const regraCliente = waClienteIgnorado(cliente);
+    if (regraCliente.ignorar) {
+      ignorados.push({ nome:cliente?.nome || boleto.cliente_nome || "Cliente", motivo:regraCliente.motivo, boleto_id:boleto.id });
+      continue;
+    }
+
+    const telefone = waTelefoneCliente(cliente, boleto);
+    if (!telefone) {
+      ignorados.push({ nome:cliente?.nome || boleto.cliente_nome || "Cliente", motivo:"Sem telefone WhatsApp válido", boleto_id:boleto.id });
+      continue;
+    }
+
+    const chave = waChaveCliente(cliente, boleto);
+    const nome = String(cliente?.nome || boleto.cliente_nome || boleto.dados?.nome || "Cliente").trim();
+    const valor = Number(boleto.total || boleto.valor || boleto.dados?.total || boleto.dados?.valor || 0);
+    if (!grupos.has(chave)) {
+      grupos.set(chave, {
+        cliente_id:String(cliente?.id || boleto.cliente_id || "") || null,
+        cliente_chave:chave,
+        nome,
+        telefone,
+        vencimento:data,
+        valor:0,
+        boleto_ids:[],
+        ja_enviado_hoje:statusHoje.get(chave) === "enviado"
+      });
+    }
+    const grupo = grupos.get(chave);
+    grupo.valor += Number.isFinite(valor) ? valor : 0;
+    grupo.boleto_ids.push(boleto.id);
+  }
+
+  const aptos = [...grupos.values()].sort((a,b) => a.nome.localeCompare(b.nome, "pt-BR"));
+  return {
+    vencimento:data,
+    total_boletos:(boletosRes.rows || []).length,
+    aptos,
+    ignorados,
+    total_clientes:aptos.length,
+    ja_enviados_hoje:aptos.filter(x => x.ja_enviado_hoje).length,
+    pendentes_envio:aptos.filter(x => !x.ja_enviado_hoje).length
+  };
+}
+
+async function waEnviarTemplateCloud(item) {
+  const cfg = waConfig();
+  if (!cfg.configurado) throw new Error("WhatsApp Cloud API não configurada no servidor.");
+  const url = `https://graph.facebook.com/${encodeURIComponent(cfg.apiVersion)}/${encodeURIComponent(cfg.phoneNumberId)}/messages`;
+  const payload = {
+    messaging_product:"whatsapp",
+    recipient_type:"individual",
+    to:item.telefone,
+    type:"template",
+    template:{
+      name:cfg.templateName,
+      language:{ code:cfg.language },
+      components:[{
+        type:"body",
+        parameters:[
+          { type:"text", text:waPrimeiroNome(item.nome) },
+          { type:"text", text:waDataBR(item.vencimento) },
+          { type:"text", text:waDinheiro(item.valor) }
+        ]
+      }]
+    }
+  };
+
+  const resp = await fetch(url, {
+    method:"POST",
+    headers:{ "Authorization":`Bearer ${cfg.token}`, "Content-Type":"application/json" },
+    body:JSON.stringify(payload)
+  });
+  const json = await resp.json().catch(() => ({}));
+  if (!resp.ok) {
+    const detalhe = json?.error?.message || json?.message || `HTTP ${resp.status}`;
+    throw new Error(detalhe);
+  }
+  return { id:String(json?.messages?.[0]?.id || ""), resposta:json };
+}
+
+async function waReservarEnvio(item, usuario) {
+  const dataEnvio = waDataLocalHoje();
+  const mensagem = `Olá, ${waPrimeiroNome(item.nome)}. Sua mensalidade Fibra+ com vencimento em ${waDataBR(item.vencimento)} está pendente. Valor: ${waDinheiro(item.valor)}. Caso já tenha pago, desconsidere esta mensagem.`;
+  const insert = await pool.query(`
+    INSERT INTO whatsapp_cobrancas
+      (cliente_id,cliente_chave,cliente_nome,telefone,vencimento,valor,boleto_ids,data_envio,status,mensagem,criado_por,atualizado_em)
+    VALUES($1,$2,$3,$4,$5::date,$6,$7::jsonb,$8::date,'enviando',$9,$10,NOW())
+    ON CONFLICT (cliente_chave,vencimento,data_envio) DO NOTHING
+    RETURNING id
+  `, [item.cliente_id,item.cliente_chave,item.nome,item.telefone,item.vencimento,item.valor,JSON.stringify(item.boleto_ids),dataEnvio,mensagem,usuario]);
+  if (insert.rows[0]) return { reservado:true, id:insert.rows[0].id, mensagem };
+
+  const atual = await pool.query(`SELECT id,status,atualizado_em FROM whatsapp_cobrancas WHERE cliente_chave=$1 AND vencimento=$2::date AND data_envio=$3::date LIMIT 1`, [item.cliente_chave,item.vencimento,dataEnvio]);
+  const row = atual.rows[0];
+  if (!row) return { reservado:false, motivo:"Não foi possível reservar o envio." };
+  if (String(row.status) === "enviado") return { reservado:false, motivo:"Já enviado hoje." };
+
+  const retry = await pool.query(`
+    UPDATE whatsapp_cobrancas SET status='enviando',erro=NULL,telefone=$1,valor=$2,boleto_ids=$3::jsonb,mensagem=$4,criado_por=$5,atualizado_em=NOW()
+    WHERE id=$6 AND (status='erro' OR (status='enviando' AND atualizado_em < NOW() - INTERVAL '10 minutes'))
+    RETURNING id
+  `, [item.telefone,item.valor,JSON.stringify(item.boleto_ids),mensagem,usuario,row.id]);
+  return retry.rows[0] ? { reservado:true, id:retry.rows[0].id, mensagem } : { reservado:false, motivo:"Envio já está em processamento." };
+}
+
+app.get("/api/whatsapp/cobranca/status", requirePermission("financeiro"), async (req,res) => {
+  try {
+    const cfg = waConfig();
+    res.json({
+      ok:true,
+      configurado:cfg.configurado,
+      provider:"WhatsApp Cloud API (Meta)",
+      template:cfg.templateName || null,
+      idioma:cfg.language,
+      faltando:[
+        !cfg.token && "WHATSAPP_CLOUD_TOKEN",
+        !cfg.phoneNumberId && "WHATSAPP_CLOUD_PHONE_NUMBER_ID",
+        !cfg.templateName && "WHATSAPP_CLOUD_TEMPLATE_NAME"
+      ].filter(Boolean)
+    });
+  } catch (err) {
+    res.status(500).json({ok:false,erro:err.message});
+  }
+});
+
+app.get("/api/whatsapp/cobranca/preview", requirePermission("financeiro"), async (req,res) => {
+  try {
+    const resultado = await waMontarCobrancasPorData(req.query.vencimento);
+    res.json({ok:true,...resultado});
+  } catch (err) {
+    console.error("Erro preview cobrança WhatsApp:", err);
+    res.status(500).json({ok:false,erro:err.message});
+  }
+});
+
+app.post("/api/whatsapp/cobranca/enviar", requirePermission("financeiro"), async (req,res) => {
+  try {
+    if (req.body?.confirmar !== true) return res.status(400).json({ok:false,erro:"Confirme o envio das mensagens."});
+    const cfg = waConfig();
+    if (!cfg.configurado) return res.status(400).json({ok:false,erro:"WhatsApp Cloud API não configurada.",faltando:[!cfg.token&&"WHATSAPP_CLOUD_TOKEN",!cfg.phoneNumberId&&"WHATSAPP_CLOUD_PHONE_NUMBER_ID",!cfg.templateName&&"WHATSAPP_CLOUD_TEMPLATE_NAME"].filter(Boolean)});
+
+    const resultado = await waMontarCobrancasPorData(req.body?.vencimento);
+    const fila = resultado.aptos.filter(x => !x.ja_enviado_hoje).slice(0, 200);
+    const usuario = String(req.sessionUser?.usuario || req.sessionUser?.nome || "painel");
+    const enviados = [];
+    const erros = [];
+    const ignorados = [];
+
+    async function processar(item) {
+      const reserva = await waReservarEnvio(item, usuario);
+      if (!reserva.reservado) {
+        ignorados.push({nome:item.nome,telefone:item.telefone,motivo:reserva.motivo});
+        return;
+      }
+      try {
+        const retorno = await waEnviarTemplateCloud(item);
+        await pool.query(`UPDATE whatsapp_cobrancas SET status='enviado',provider_message_id=$1,erro=NULL,atualizado_em=NOW() WHERE id=$2`, [retorno.id || null,reserva.id]);
+        enviados.push({nome:item.nome,telefone:item.telefone,message_id:retorno.id || null});
+      } catch (err) {
+        const erro = String(err.message || err).slice(0, 1000);
+        await pool.query(`UPDATE whatsapp_cobrancas SET status='erro',erro=$1,atualizado_em=NOW() WHERE id=$2`, [erro,reserva.id]);
+        erros.push({nome:item.nome,telefone:item.telefone,erro});
+      }
+    }
+
+    const concorrencia = 5;
+    for (let i = 0; i < fila.length; i += concorrencia) {
+      await Promise.all(fila.slice(i, i + concorrencia).map(processar));
+    }
+
+    res.json({
+      ok:erros.length === 0,
+      vencimento:resultado.vencimento,
+      encontrados:resultado.total_clientes,
+      enviados:enviados.length,
+      ja_enviados_hoje:resultado.ja_enviados_hoje,
+      ignorados:[...resultado.ignorados,...ignorados],
+      erros,
+      detalhes_enviados:enviados
+    });
+  } catch (err) {
+    console.error("Erro envio cobrança WhatsApp:", err);
+    res.status(500).json({ok:false,erro:err.message});
   }
 });
 

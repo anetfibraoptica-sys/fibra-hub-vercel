@@ -12,6 +12,7 @@
   <title>Financeiro Efí - Fibra+ Hub</title>
   <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="fibra-theme-2026.css?v=20260818-ui1">
+<link rel="stylesheet" href="whatsapp-cobranca.css?v=20260829-1">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -43,6 +44,40 @@
   </header>
 
   <section class="content financeiro-efi-config-only">
+    <section class="card wa-cobranca-card">
+      <div class="wa-cobranca-head">
+        <div>
+          <h2>Cobrança por WhatsApp</h2>
+          <p>Selecione o vencimento, confira os clientes e envie a mensagem para todos de uma vez. Esta função <strong>não gera, não cancela e não altera boletos</strong>.</p>
+        </div>
+        <div id="waProviderStatus" class="wa-provider warn">Verificando WhatsApp…</div>
+      </div>
+
+      <div class="wa-cobranca-controls">
+        <div>
+          <label for="waCobrancaData">Data de vencimento</label>
+          <input id="waCobrancaData" type="date">
+        </div>
+        <button id="waBtnBuscar" type="button" class="btn-secondary">Buscar da data</button>
+        <button id="waBtnEnviar" type="button" class="btn-primary" disabled>Cobrar todos por WhatsApp</button>
+      </div>
+
+      <div id="waCobrancaStatus" class="wa-status">Selecione uma data e clique em “Buscar da data”.</div>
+      <div id="waCobrancaResumo" class="wa-resumo"></div>
+
+      <div class="wa-table-wrap">
+        <table class="wa-table">
+          <thead><tr><th>Cliente</th><th>WhatsApp</th><th>Vencimento</th><th>Valor pendente</th><th>Envio</th></tr></thead>
+          <tbody id="waCobrancaTabelaBody"><tr><td colspan="5" class="wa-empty">Nenhuma data consultada.</td></tr></tbody>
+        </table>
+      </div>
+      <div id="waCobrancaIgnorados" class="wa-ignorados"></div>
+      <div class="wa-template-note">
+        Template esperado na WhatsApp Cloud API: <code>Olá, {{1}}. Sua mensalidade Fibra+ com vencimento em {{2}} está pendente. Valor: {{3}}. Caso já tenha pago, desconsidere esta mensagem.</code>
+        O envio usa template oficial aprovado para mensagens iniciadas pela empresa.
+      </div>
+    </section>
+
     <section class="card efi-config-intro">
       <h2>Configuração da Integração Efí</h2>
       <p>Cadastre as contas Efí que serão usadas no sistema. Cada conta pode pertencer a um CPF/CNPJ diferente e depois poderá ser selecionada no cadastro/cobrança do cliente.</p>
@@ -330,5 +365,6 @@
 <script src="app.js"></script><script src="financeiro-efi.js"></script>
 <script src="bloqueio-configuravel.js"></script>
 <script src="efi-boleto-importado.js"></script>
+<script src="whatsapp-cobranca.js?v=20260829-1"></script>
 <script src="mobile-responsive.js"></script>
 </body></html>
